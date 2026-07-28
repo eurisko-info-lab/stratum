@@ -1,0 +1,10 @@
+schemaVersion = 1
+dependencyMode = "immutable-git-commit"
+cairnSourceRepository = "https://github.com/eurisko-info-lab/cairn"
+cairnSourceCommit = "2a943f50bc093db704f97b6a3c1bf212b1cb7dca"
+cairnBootstrapVersion = "v1-draft"
+scalaHostDigest = "pending-cairn-host-scala-digest"
+rustHostDigest = "pending-cairn-host-rust-digest"
+genesisSeedDigest = "pending-cairn-genesis-seed-digest"
+canonTestVectorDigest = "pending-cairn-canon-test-vector-digest"
+metaMachineTestVectorDigest = "pending-cairn-metamachine-test-vector-digest"
