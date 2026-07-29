@@ -1,0 +1,10 @@
+; delta-meta for F8 -> F9: Meta gains replicas, proposals, votes, certificates,
+; views, transitions and equivocation evidence.
+(change
+  (kind delta-meta)
+  (name "F8->F9 delta-meta")
+  (replace
+    (ReplaceChange
+      publication-authority
+      (single designated)
+      (constituted federation))))
