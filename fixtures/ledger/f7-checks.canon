@@ -1,0 +1,123 @@
+; Executable acceptance checks for F7: the signed publication ledger.
+[
+  ; ------------------------------------------------------------------ replay
+
+  (check chain-replays-from-genesis
+    (call ChainHeight
+      (call ReplayFromGenesis
+        (call ChainAuthority)
+        (call GoodChain
+          (q (file "languages/lambda/lambda.generated.grammar"))
+          (q (file "languages/lambda/lambda.generated.meta")))))
+    (value 2))
+
+  (check broken-predecessor-links-are-rejected
+    (call ChainRejection
+      (call ReplayFromGenesis
+        (call ChainAuthority)
+        (call BrokenChain
+          (q (file "languages/lambda/lambda.generated.grammar"))
+          (q (file "languages/lambda/lambda.generated.meta")))))
+    (value broken-predecessor-link))
+
+  (check unentitled-publishers-are-rejected
+    (call ChainRejection
+      (call ReplayFromGenesis
+        (call ChainAuthority)
+        (call ForgedChain (q (file "languages/lambda/lambda.generated.grammar")))))
+    (value unentitled-author))
+
+  (check invalid-transaction-signatures-are-rejected
+    (call ChainRejection
+      (call ReplayFromGenesis
+        (call ChainAuthority)
+        (call TamperedChain
+          (q (file "languages/lambda/lambda.generated.grammar"))
+          (q (file "languages/lambda/lambda.generated.meta")))))
+    (value bad-transaction-signature))
+
+  (check publication-of-an-unaccepted-head-is-rejected
+    (call ChainRejection
+      (call ReplayFromGenesis
+        (call ChainAuthority)
+        (call UnacceptedChain (q (file "languages/lambda/lambda.generated.grammar")))))
+    (value unaccepted-repository-head))
+
+  ; ------------------------------------------------------------ publications
+
+  (check a-language-version-is-published
+    (prim tag
+      (call PublishedRoot
+        (call ReplayFromGenesis
+          (call ChainAuthority)
+          (call GoodChain
+            (q (file "languages/lambda/lambda.generated.grammar"))
+            (q (file "languages/lambda/lambda.generated.meta"))))
+        (q language)))
+    (value some))
+
+  (check a-program-version-is-published
+    (prim tag
+      (call PublishedRoot
+        (call ReplayFromGenesis
+          (call ChainAuthority)
+          (call GoodChain
+            (q (file "languages/lambda/lambda.generated.grammar"))
+            (q (file "languages/lambda/lambda.generated.meta"))))
+        (q program)))
+    (value some))
+
+  ; --------------------------------------------------- branch from checkpoint
+
+  (check a-local-branch-is-created-from-a-chain-checkpoint
+    (prim tag
+      (call BranchFromCheckpoint
+        (call ReplayFromGenesis
+          (call ChainAuthority)
+          (call GoodChain
+            (q (file "languages/lambda/lambda.generated.grammar"))
+            (q (file "languages/lambda/lambda.generated.meta"))))
+        (q language)
+        (call EmptyRepository)
+        (q main)))
+    (value checkout))
+
+  ; ------------------------------------------ reconstruct from chain + closure
+
+  (check published-state-is-reconstructed-from-chain-plus-closure
+    (prim eq
+      (call ReconstructPublished
+        (call ReplayFromGenesis
+          (call ChainAuthority)
+          (call GoodChain
+            (q (file "languages/lambda/lambda.generated.grammar"))
+            (q (file "languages/lambda/lambda.generated.meta"))))
+        (q language)
+        (q grammar))
+      (mk some (q (grammar
+        (name "lambda")
+        (start term)
+        (token ident sym "[A-Za-z_][A-Za-z0-9_']*")
+        (category term
+          (prod Lam [(kw "\\") (bind name ident) (kw ".") (bind body term)])
+          (pass app))
+        (category app (fold App atom))
+        (category atom
+          (prod Var [(bind name ident)])
+          (paren "(" term ")"))))))
+    (value #t))
+
+  ; ------------------------------- earlier foundation behaviour is intact
+
+  (check foundation-protocol-unchanged
+    (call ProfileNames)
+    (value [meta0-grammar0 hosts canonical]))
+
+  (check repository-replay-unchanged
+    (call OrderOneState)
+    (value {A ten B twenty}))
+
+  (check lambda-behaviour-unchanged
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+]
