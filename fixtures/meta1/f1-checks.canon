@@ -1,0 +1,104 @@
+; Executable acceptance checks for F1.
+;
+; Meta1 and Grammar1 describe themselves, the lambda language is reconstructed
+; from surface sources, and lambda behaviour is identical to F0.
+[
+  ; ------------------------------------------------------- self description
+
+  (check meta1-parse-print-roundtrip
+    (call RoundTrip
+      (q (file "languages/meta1/meta1.generated.grammar"))
+      (call SourceText (q (text-file "languages/lambda/lambda.meta"))))
+    (value (roundtrip ok)))
+
+  (check grammar1-parse-print-roundtrip
+    (call RoundTrip
+      (q (file "languages/grammar1/grammar1.generated.grammar"))
+      (call SourceText (q (text-file "languages/grammar1/grammar1.grammar"))))
+    (value (roundtrip ok)))
+
+  ; Grammar1 parses its own grammar and reconstructs the committed artifact.
+  (check grammar1-describes-itself
+    (call GrammarReconstructs
+      (q (file "languages/grammar1/grammar1.generated.grammar"))
+      (call SourceText (q (text-file "languages/grammar1/grammar1.grammar")))
+      (q (file "languages/grammar1/grammar1.generated.grammar")))
+    (value (reconstruct ok)))
+
+  ; Meta1's own grammar is reconstructed from Grammar1 source.
+  (check meta1-grammar-reconstructs
+    (call GrammarReconstructs
+      (q (file "languages/grammar1/grammar1.generated.grammar"))
+      (call SourceText (q (text-file "languages/meta1/meta1.grammar")))
+      (q (file "languages/meta1/meta1.generated.grammar")))
+    (value (reconstruct ok)))
+
+  ; The lambda language is reconstructed, not re-authored.
+  (check lambda-grammar-reconstructs
+    (call GrammarReconstructs
+      (q (file "languages/grammar1/grammar1.generated.grammar"))
+      (call SourceText (q (text-file "languages/lambda/lambda.grammar")))
+      (q (file "languages/lambda/lambda.bootstrap.grammar")))
+    (value (reconstruct ok)))
+
+  ; Meta0(Meta1) = Meta1 at the canonical artifact level.
+  (check lambda-program-fixpoint
+    (call SelfDescriptionFixpoint
+      (q (file "languages/meta1/meta1.generated.grammar"))
+      (call SourceText (q (text-file "languages/lambda/lambda.meta")))
+      (q (file "languages/lambda/lambda.generated.meta")))
+    (value (fixpoint ok)))
+
+  (check elaboration-stable-under-printing
+    (call ElaborationStable
+      (q (file "languages/meta1/meta1.generated.grammar"))
+      (call SourceText (q (text-file "languages/lambda/lambda.meta"))))
+    (value #t))
+
+  ; ------------------------------------------------------- canonical change
+
+  (check delta-meta-applies
+    (call ApplyDelta (q (file "changes/F0-F1/delta-meta.canon")) (q (bootstrap meta0)))
+    (value (applied (surface meta1))))
+
+  (check delta-grammar-applies
+    (call ApplyDelta (q (file "changes/F0-F1/delta-grammar.canon")) (q (bootstrap grammar0)))
+    (value (applied (surface grammar1))))
+
+  (check delta-meta-is-predecessor-bound
+    (call ApplyDelta (q (file "changes/F0-F1/delta-meta.canon")) (q (surface meta1)))
+    (value (rejected predecessor-mismatch)))
+
+  ; ------------------------------- lambda behaviour is identical to F0
+
+  (check parse-print-roundtrip
+    (call RoundTrip (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. x) y"))
+    (value (roundtrip ok)))
+
+  (check beta-deterministic
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+
+  (check beta-church-two
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\f. \\x. f (f x)) g y"))
+    (value "g (g y)"))
+
+  (check alpha-equivalent
+    (call AlphaEquivalent (q (file "languages/lambda/lambda.generated.grammar")) (q "\\x. x") (q "\\y. y"))
+    (value #t))
+
+  (check alpha-distinct
+    (call AlphaEquivalent (q (file "languages/lambda/lambda.generated.grammar")) (q "\\x. \\y. x") (q "\\x. \\y. y"))
+    (value #f))
+
+  (check free-variables
+    (call FreeVariables
+      (call Parse (q (file "languages/lambda/lambda.generated.grammar")) (q "\\x. f x y"))
+      (q []))
+    (value [f y]))
+
+  (check resource-exhaustion-is-a-verdict
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. x x) (\\x. x x)"))
+    (error resource-exhausted)
+    (budget (steps 20000) (depth 400)))
+]
