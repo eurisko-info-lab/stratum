@@ -1,0 +1,59 @@
+# F7 acceptance transcript: the signed publication ledger.
+
+$ foundation verify --dir foundations/F7
+> foundation F7
+> digest 2a2f33611d7ed200e13cd83c29cb960c3524dbdf8eb7b9b035b0f83a87f318f7
+> closure 56 artifacts
+> check chain-replays-from-genesis ok
+> check broken-predecessor-links-are-rejected ok
+> check unentitled-publishers-are-rejected ok
+> check invalid-transaction-signatures-are-rejected ok
+> check publication-of-an-unaccepted-head-is-rejected ok
+> check a-language-version-is-published ok
+> check a-program-version-is-published ok
+> check a-local-branch-is-created-from-a-chain-checkpoint ok
+> check published-state-is-reconstructed-from-chain-plus-closure ok
+> check foundation-protocol-unchanged ok
+> check repository-replay-unchanged ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F6 --successor foundations/F7
+> predecessor F6
+> successor F7
+> result (valid #ddc6b2c869e3d19c4041d42072583975062922e7f6188206df7258940d49452e0)
+
+$ foundation reconstruct --dir foundations/F7
+> reconstructed F7
+> digest 2a2f33611d7ed200e13cd83c29cb960c3524dbdf8eb7b9b035b0f83a87f318f7
+> stable yes
+> closure 56 artifacts
+> checks 12 ok
+
+$ foundation attest --dir foundations/F7
+> (attestation (name "F7") (foundation #d2a2f33611d7ed200e13cd83c29cb960c3524dbdf8eb7b9b035b0f83a87f318f7) (application #d49001343bc7ebeb0bb2e2f5399192c0069d245756c71ecb7a3ae04f1e3b3001c) (meta #db8bfcc19e24c231683499e42104596c85071a90cd577e7b9751da6120b6d1c49) (closure 56) (kinds {application 8 change 9 foundation 8 grammar 3 meta-program 24 source 4}) (complete #t))
+> attestation b109ea6ec7c94a68b42317170babe6d04b8da17d690c25cd8df49dfc60e609b5
+
+# The chain replays from genesis.
+$ derive --foundation foundations/F7 --goal '(call ChainHeight (call ReplayFromGenesis (call ChainAuthority) (call GoodChain (grammar lambda) (file "languages/lambda/lambda.generated.meta"))))'
+> 2
+
+# A broken predecessor link is rejected.
+$ derive --foundation foundations/F7 --goal '(call ChainRejection (call ReplayFromGenesis (call ChainAuthority) (call BrokenChain (grammar lambda) (file "languages/lambda/lambda.generated.meta"))))'
+> broken-predecessor-link
+
+# An unentitled publisher is rejected.
+$ derive --foundation foundations/F7 --goal '(call ChainRejection (call ReplayFromGenesis (call ChainAuthority) (call ForgedChain (grammar lambda))))'
+> unentitled-author
+
+# An altered transaction fails signature verification.
+$ derive --foundation foundations/F7 --goal '(call ChainRejection (call ReplayFromGenesis (call ChainAuthority) (call TamperedChain (grammar lambda) (file "languages/lambda/lambda.generated.meta"))))'
+> bad-transaction-signature
+
+# Publishing an unaccepted repository head is rejected.
+$ derive --foundation foundations/F7 --goal '(call ChainRejection (call ReplayFromGenesis (call ChainAuthority) (call UnacceptedChain (grammar lambda))))'
+> unaccepted-repository-head
+
+# A local branch is created from a finalized checkpoint.
+$ derive --foundation foundations/F7 --goal '(prim tag (call BranchFromCheckpoint (call ReplayFromGenesis (call ChainAuthority) (call GoodChain (grammar lambda) (file "languages/lambda/lambda.generated.meta"))) (q language) (call EmptyRepository) (q main)))'
+> checkout

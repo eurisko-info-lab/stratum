@@ -1,0 +1,271 @@
+module ledger
+
+; A signed append only chain for publication and foundation history.
+;
+; There is no network and no agreement protocol yet: the chain has one
+; designated authority. The chain does not contain development activity, it
+; anchors accepted publication events.
+
+record Publication [kind root supersedes references]
+record Transaction [kind root accepted publications author signature]
+record Block [predecessor transactions author signature]
+record ChainState [height head publications]
+record ChainPosition [height block]
+
+; ------------------------------------------------------------------ subjects
+
+judgment TransactionSubject [kind root accepted publications] =
+  mk #transaction-subject [kind root accepted publications]
+
+judgment BlockSubject [predecessor transactions] =
+  mk #block-subject [predecessor transactions]
+
+judgment MakeTransaction [secret kind root accepted publications] =
+  call Transaction [
+    kind root accepted publications
+    call PublicKey [secret]
+    call SignSubject [secret call TransactionSubject [kind root accepted publications]]
+  ]
+
+judgment MakeBlock [secret predecessor transactions] =
+  call Block [
+    predecessor transactions
+    call PublicKey [secret]
+    call SignSubject [secret call BlockSubject [predecessor transactions]]
+  ]
+
+judgment BlockIdentity [block] = prim #digest [block]
+
+; --------------------------------------------------------------- validation
+
+judgment ValidateTransaction [authority transaction] =
+  if prim #eq [call Transaction'author [transaction] authority]
+  then
+    if call VerifySubject [
+         call Transaction'author [transaction]
+         call TransactionSubject [
+           call Transaction'kind [transaction]
+           call Transaction'root [transaction]
+           call Transaction'accepted [transaction]
+           call Transaction'publications [transaction]
+         ]
+         call Transaction'signature [transaction]
+       ]
+    then
+      if call Transaction'accepted [transaction]
+      then mk #valid []
+      else mk #invalid [#unaccepted-repository-head]
+    else mk #invalid [#bad-transaction-signature]
+  else mk #invalid [#unentitled-author]
+
+judgment ValidateTransactions [authority transactions] =
+  match transactions {
+    case [] -> mk #valid []
+    case head :: rest ->
+      match call ValidateTransaction [authority head] {
+        case (#valid) -> call ValidateTransactions [authority rest]
+        case (#invalid reason) -> mk #invalid [reason]
+      }
+  }
+
+judgment ValidateBlock [authority previous block] =
+  if prim #eq [call Block'predecessor [block] previous]
+  then
+    if prim #eq [call Block'author [block] authority]
+    then
+      if call VerifySubject [
+           call Block'author [block]
+           call BlockSubject [call Block'predecessor [block] call Block'transactions [block]]
+           call Block'signature [block]
+         ]
+      then call ValidateTransactions [authority call Block'transactions [block]]
+      else mk #invalid [#bad-block-signature]
+    else mk #invalid [#wrong-authority]
+  else mk #invalid [#broken-predecessor-link]
+
+; ------------------------------------------------------------------- replay
+
+judgment GenesisHead [] = #genesis
+
+judgment GenesisState [] = call ChainState [0 call GenesisHead [] list []]
+
+judgment PublicationsOf [transactions] =
+  match transactions {
+    case [] -> list []
+    case head :: rest ->
+      prim #append [call Transaction'publications [head] call PublicationsOf [rest]]
+  }
+
+judgment ApplyBlock [state block] =
+  call ChainState [
+    prim #add [call ChainState'height [state] 1]
+    call BlockIdentity [block]
+    call Union [
+      call ChainState'publications [state]
+      call PublicationsOf [call Block'transactions [block]]
+    ]
+  ]
+
+judgment ReplayChain [authority blocks previous state] =
+  match blocks {
+    case [] -> mk #chain [state]
+    case block :: rest ->
+      match call ValidateBlock [authority previous block] {
+        case (#valid) ->
+          call ReplayChain [
+            authority rest
+            call BlockIdentity [block]
+            call ApplyBlock [state block]
+          ]
+        case (#invalid reason) -> mk #rejected [reason]
+      }
+  }
+
+judgment ReplayFromGenesis [authority blocks] =
+  call ReplayChain [authority blocks call GenesisHead [] call GenesisState []]
+
+judgment ChainHeight [result] =
+  match result {
+    case (#chain state) -> call ChainState'height [state]
+    case (#rejected reason) -> mk #rejected [reason]
+  }
+
+judgment ChainRejection [result] =
+  match result {
+    case (#chain state) -> mk #accepted []
+    case (#rejected reason) -> reason
+  }
+
+; --------------------------------------------------------------- checkpoints
+
+judgment PublishedRoot [result kind] =
+  match result {
+    case (#chain state) -> call FindPublication [call ChainState'publications [state] kind]
+    case (#rejected reason) -> mk #none []
+  }
+
+judgment FindPublication [publications kind] =
+  match publications {
+    case [] -> mk #none []
+    case head :: rest ->
+      if prim #eq [call Publication'kind [head] kind]
+      then mk #some [call Publication'root [head]]
+      else call FindPublication [rest kind]
+  }
+
+; A developer chooses a finalized publication and branches a local repository
+; from its root. The chain anchors the root; replay produces the state.
+judgment BranchFromCheckpoint [result kind repository branch] =
+  match call PublishedRoot [result kind] {
+    case (#none) -> mk #no-such-publication [kind]
+    case (#some root) ->
+      mk #checkout [
+        root
+        call RecordPatch [repository branch list [] list [mk #Replace [mk #absent [] root]]]
+      ]
+  }
+
+; The published state is reconstructed from the chain plus the closure.
+judgment ReconstructPublished [result kind artifactKind] =
+  match call PublishedRoot [result kind] {
+    case (#none) -> mk #none []
+    case (#some root) -> call Fetch [root artifactKind]
+  }
+
+; ----------------------------------------------------------------- scenarios
+
+judgment ChainSecret [] = "chain-authority"
+judgment ChainAuthority [] = call PublicKey [call ChainSecret []]
+judgment IntruderSecret [] = "intruder"
+
+judgment LanguagePublication [root] =
+  call Publication [#language root list [] list []]
+
+judgment ProgramPublication [root] =
+  call Publication [#program root list [] list []]
+
+judgment AcceptedTransaction [root publications] =
+  call MakeTransaction [call ChainSecret [] #publish root true publications]
+
+judgment UnacceptedTransaction [root publications] =
+  call MakeTransaction [call ChainSecret [] #publish root false publications]
+
+judgment ForgedTransaction [root publications] =
+  call MakeTransaction [call IntruderSecret [] #publish root true publications]
+
+; Signed by the authority, then altered.
+judgment TamperedTransaction [root other publications] =
+  let signed = call AcceptedTransaction [root publications] in
+  call Transaction [
+    call Transaction'kind [signed]
+    other
+    call Transaction'accepted [signed]
+    call Transaction'publications [signed]
+    call Transaction'author [signed]
+    call Transaction'signature [signed]
+  ]
+
+judgment GoodChain [languageRoot programRoot] =
+  let first = call MakeBlock [
+    call ChainSecret []
+    call GenesisHead []
+    list [call AcceptedTransaction [languageRoot list [call LanguagePublication [languageRoot]]]]
+  ] in
+  let second = call MakeBlock [
+    call ChainSecret []
+    call BlockIdentity [first]
+    list [call AcceptedTransaction [programRoot list [call ProgramPublication [programRoot]]]]
+  ] in
+  list [first second]
+
+judgment BrokenChain [languageRoot programRoot] =
+  let first = call MakeBlock [
+    call ChainSecret []
+    call GenesisHead []
+    list [call AcceptedTransaction [languageRoot list [call LanguagePublication [languageRoot]]]]
+  ] in
+  let second = call MakeBlock [
+    call ChainSecret []
+    #not-the-previous-block
+    list [call AcceptedTransaction [programRoot list [call ProgramPublication [programRoot]]]]
+  ] in
+  list [first second]
+
+judgment ForgedChain [languageRoot] =
+  list [
+    call Block [
+      call GenesisHead []
+      list [call ForgedTransaction [languageRoot list [call LanguagePublication [languageRoot]]]]
+      call ChainAuthority []
+      call SignSubject [
+        call ChainSecret []
+        call BlockSubject [
+          call GenesisHead []
+          list [call ForgedTransaction [languageRoot list [call LanguagePublication [languageRoot]]]]
+        ]
+      ]
+    ]
+  ]
+
+judgment UnacceptedChain [languageRoot] =
+  list [
+    call MakeBlock [
+      call ChainSecret []
+      call GenesisHead []
+      list [call UnacceptedTransaction [languageRoot list [call LanguagePublication [languageRoot]]]]
+    ]
+  ]
+
+judgment TamperedChain [languageRoot programRoot] =
+  list [
+    call MakeBlock [
+      call ChainSecret []
+      call GenesisHead []
+      list [
+        call TamperedTransaction [
+          languageRoot programRoot
+          list [call LanguagePublication [languageRoot]]
+        ]
+      ]
+    ]
+  ]

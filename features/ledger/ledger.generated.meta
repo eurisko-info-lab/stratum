@@ -1,0 +1,860 @@
+; Generated from features/ledger/ledger.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module ledger)
+  (judgment
+    Publication
+    [kind root supersedes references]
+    (mk
+      Publication
+      (v kind)
+      (v root)
+      (v supersedes)
+      (v references)))
+  (judgment
+    Publication'kind
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Publication'root
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Publication'supersedes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Publication'references
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    Transaction
+    [kind root accepted publications author signature]
+    (mk
+      Transaction
+      (v kind)
+      (v root)
+      (v accepted)
+      (v publications)
+      (v author)
+      (v signature)))
+  (judgment
+    Transaction'kind
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Transaction'root
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Transaction'accepted
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Transaction'publications
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    Transaction'author
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    Transaction'signature
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    Block
+    [predecessor transactions author signature]
+    (mk
+      Block
+      (v predecessor)
+      (v transactions)
+      (v author)
+      (v signature)))
+  (judgment
+    Block'predecessor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Block'transactions
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Block'author
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Block'signature
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    ChainState
+    [height head publications]
+    (mk
+      ChainState
+      (v height)
+      (v head)
+      (v publications)))
+  (judgment
+    ChainState'height
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ChainState'head
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ChainState'publications
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ChainPosition
+    [height block]
+    (mk
+      ChainPosition
+      (v height)
+      (v block)))
+  (judgment
+    ChainPosition'height
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ChainPosition'block
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    TransactionSubject
+    [kind root accepted publications]
+    (mk
+      transaction-subject
+      (v kind)
+      (v root)
+      (v accepted)
+      (v publications)))
+  (judgment
+    BlockSubject
+    [predecessor transactions]
+    (mk
+      block-subject
+      (v predecessor)
+      (v transactions)))
+  (judgment
+    MakeTransaction
+    [secret kind root accepted publications]
+    (call
+      Transaction
+      (v kind)
+      (v root)
+      (v accepted)
+      (v publications)
+      (call
+        PublicKey
+        (v secret))
+      (call
+        SignSubject
+        (v secret)
+        (call
+          TransactionSubject
+          (v kind)
+          (v root)
+          (v accepted)
+          (v publications)))))
+  (judgment
+    MakeBlock
+    [secret predecessor transactions]
+    (call
+      Block
+      (v predecessor)
+      (v transactions)
+      (call
+        PublicKey
+        (v secret))
+      (call
+        SignSubject
+        (v secret)
+        (call
+          BlockSubject
+          (v predecessor)
+          (v transactions)))))
+  (judgment
+    BlockIdentity
+    [block]
+    (prim
+      digest
+      (v block)))
+  (judgment
+    ValidateTransaction
+    [authority transaction]
+    (if
+      (prim
+        eq
+        (call
+          Transaction'author
+          (v transaction))
+        (v authority))
+      (if
+        (call
+          VerifySubject
+          (call
+            Transaction'author
+            (v transaction))
+          (call
+            TransactionSubject
+            (call
+              Transaction'kind
+              (v transaction))
+            (call
+              Transaction'root
+              (v transaction))
+            (call
+              Transaction'accepted
+              (v transaction))
+            (call
+              Transaction'publications
+              (v transaction)))
+          (call
+            Transaction'signature
+            (v transaction)))
+        (if
+          (call
+            Transaction'accepted
+            (v transaction))
+          (mk valid)
+          (mk
+            invalid
+            (q unaccepted-repository-head)))
+        (mk
+          invalid
+          (q bad-transaction-signature)))
+      (mk
+        invalid
+        (q unentitled-author))))
+  (judgment
+    ValidateTransactions
+    [authority transactions]
+    (match
+      (v transactions)
+      (case
+        (pnil)
+        (mk valid))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            ValidateTransaction
+            (v authority)
+            (v head))
+          (case
+            (pm valid)
+            (call
+              ValidateTransactions
+              (v authority)
+              (v rest)))
+          (case
+            (pm
+              invalid
+              (pv reason))
+            (mk
+              invalid
+              (v reason)))))))
+  (judgment
+    ValidateBlock
+    [authority previous block]
+    (if
+      (prim
+        eq
+        (call
+          Block'predecessor
+          (v block))
+        (v previous))
+      (if
+        (prim
+          eq
+          (call
+            Block'author
+            (v block))
+          (v authority))
+        (if
+          (call
+            VerifySubject
+            (call
+              Block'author
+              (v block))
+            (call
+              BlockSubject
+              (call
+                Block'predecessor
+                (v block))
+              (call
+                Block'transactions
+                (v block)))
+            (call
+              Block'signature
+              (v block)))
+          (call
+            ValidateTransactions
+            (v authority)
+            (call
+              Block'transactions
+              (v block)))
+          (mk
+            invalid
+            (q bad-block-signature)))
+        (mk
+          invalid
+          (q wrong-authority)))
+      (mk
+        invalid
+        (q broken-predecessor-link))))
+  (judgment
+    GenesisHead
+    []
+    (q genesis))
+  (judgment
+    GenesisState
+    []
+    (call
+      ChainState
+      (q 0)
+      (call GenesisHead)
+      (lst)))
+  (judgment
+    PublicationsOf
+    [transactions]
+    (match
+      (v transactions)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          append
+          (call
+            Transaction'publications
+            (v head))
+          (call
+            PublicationsOf
+            (v rest))))))
+  (judgment
+    ApplyBlock
+    [state block]
+    (call
+      ChainState
+      (prim
+        add
+        (call
+          ChainState'height
+          (v state))
+        (q 1))
+      (call
+        BlockIdentity
+        (v block))
+      (call
+        Union
+        (call
+          ChainState'publications
+          (v state))
+        (call
+          PublicationsOf
+          (call
+            Block'transactions
+            (v block))))))
+  (judgment
+    ReplayChain
+    [authority blocks previous state]
+    (match
+      (v blocks)
+      (case
+        (pnil)
+        (mk
+          chain
+          (v state)))
+      (case
+        (pcons
+          (pv block)
+          (pv rest))
+        (match
+          (call
+            ValidateBlock
+            (v authority)
+            (v previous)
+            (v block))
+          (case
+            (pm valid)
+            (call
+              ReplayChain
+              (v authority)
+              (v rest)
+              (call
+                BlockIdentity
+                (v block))
+              (call
+                ApplyBlock
+                (v state)
+                (v block))))
+          (case
+            (pm
+              invalid
+              (pv reason))
+            (mk
+              rejected
+              (v reason)))))))
+  (judgment
+    ReplayFromGenesis
+    [authority blocks]
+    (call
+      ReplayChain
+      (v authority)
+      (v blocks)
+      (call GenesisHead)
+      (call GenesisState)))
+  (judgment
+    ChainHeight
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          chain
+          (pv state))
+        (call
+          ChainState'height
+          (v state)))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (mk
+          rejected
+          (v reason)))))
+  (judgment
+    ChainRejection
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          chain
+          (pv state))
+        (mk accepted))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (v reason))))
+  (judgment
+    PublishedRoot
+    [result kind]
+    (match
+      (v result)
+      (case
+        (pm
+          chain
+          (pv state))
+        (call
+          FindPublication
+          (call
+            ChainState'publications
+            (v state))
+          (v kind)))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (mk none))))
+  (judgment
+    FindPublication
+    [publications kind]
+    (match
+      (v publications)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (call
+              Publication'kind
+              (v head))
+            (v kind))
+          (mk
+            some
+            (call
+              Publication'root
+              (v head)))
+          (call
+            FindPublication
+            (v rest)
+            (v kind))))))
+  (judgment
+    BranchFromCheckpoint
+    [result kind repository branch]
+    (match
+      (call
+        PublishedRoot
+        (v result)
+        (v kind))
+      (case
+        (pm none)
+        (mk
+          no-such-publication
+          (v kind)))
+      (case
+        (pm
+          some
+          (pv root))
+        (mk
+          checkout
+          (v root)
+          (call
+            RecordPatch
+            (v repository)
+            (v branch)
+            (lst)
+            (lst
+              (mk
+                Replace
+                (mk absent)
+                (v root))))))))
+  (judgment
+    ReconstructPublished
+    [result kind artifactKind]
+    (match
+      (call
+        PublishedRoot
+        (v result)
+        (v kind))
+      (case
+        (pm none)
+        (mk none))
+      (case
+        (pm
+          some
+          (pv root))
+        (call
+          Fetch
+          (v root)
+          (v artifactKind)))))
+  (judgment
+    ChainSecret
+    []
+    (q "chain-authority"))
+  (judgment
+    ChainAuthority
+    []
+    (call
+      PublicKey
+      (call ChainSecret)))
+  (judgment
+    IntruderSecret
+    []
+    (q "intruder"))
+  (judgment
+    LanguagePublication
+    [root]
+    (call
+      Publication
+      (q language)
+      (v root)
+      (lst)
+      (lst)))
+  (judgment
+    ProgramPublication
+    [root]
+    (call
+      Publication
+      (q program)
+      (v root)
+      (lst)
+      (lst)))
+  (judgment
+    AcceptedTransaction
+    [root publications]
+    (call
+      MakeTransaction
+      (call ChainSecret)
+      (q publish)
+      (v root)
+      (q #t)
+      (v publications)))
+  (judgment
+    UnacceptedTransaction
+    [root publications]
+    (call
+      MakeTransaction
+      (call ChainSecret)
+      (q publish)
+      (v root)
+      (q #f)
+      (v publications)))
+  (judgment
+    ForgedTransaction
+    [root publications]
+    (call
+      MakeTransaction
+      (call IntruderSecret)
+      (q publish)
+      (v root)
+      (q #t)
+      (v publications)))
+  (judgment
+    TamperedTransaction
+    [root other publications]
+    (let
+      signed
+      (call
+        AcceptedTransaction
+        (v root)
+        (v publications))
+      (call
+        Transaction
+        (call
+          Transaction'kind
+          (v signed))
+        (v other)
+        (call
+          Transaction'accepted
+          (v signed))
+        (call
+          Transaction'publications
+          (v signed))
+        (call
+          Transaction'author
+          (v signed))
+        (call
+          Transaction'signature
+          (v signed)))))
+  (judgment
+    GoodChain
+    [languageRoot programRoot]
+    (let
+      first
+      (call
+        MakeBlock
+        (call ChainSecret)
+        (call GenesisHead)
+        (lst
+          (call
+            AcceptedTransaction
+            (v languageRoot)
+            (lst
+              (call
+                LanguagePublication
+                (v languageRoot))))))
+      (let
+        second
+        (call
+          MakeBlock
+          (call ChainSecret)
+          (call
+            BlockIdentity
+            (v first))
+          (lst
+            (call
+              AcceptedTransaction
+              (v programRoot)
+              (lst
+                (call
+                  ProgramPublication
+                  (v programRoot))))))
+        (lst
+          (v first)
+          (v second)))))
+  (judgment
+    BrokenChain
+    [languageRoot programRoot]
+    (let
+      first
+      (call
+        MakeBlock
+        (call ChainSecret)
+        (call GenesisHead)
+        (lst
+          (call
+            AcceptedTransaction
+            (v languageRoot)
+            (lst
+              (call
+                LanguagePublication
+                (v languageRoot))))))
+      (let
+        second
+        (call
+          MakeBlock
+          (call ChainSecret)
+          (q not-the-previous-block)
+          (lst
+            (call
+              AcceptedTransaction
+              (v programRoot)
+              (lst
+                (call
+                  ProgramPublication
+                  (v programRoot))))))
+        (lst
+          (v first)
+          (v second)))))
+  (judgment
+    ForgedChain
+    [languageRoot]
+    (lst
+      (call
+        Block
+        (call GenesisHead)
+        (lst
+          (call
+            ForgedTransaction
+            (v languageRoot)
+            (lst
+              (call
+                LanguagePublication
+                (v languageRoot)))))
+        (call ChainAuthority)
+        (call
+          SignSubject
+          (call ChainSecret)
+          (call
+            BlockSubject
+            (call GenesisHead)
+            (lst
+              (call
+                ForgedTransaction
+                (v languageRoot)
+                (lst
+                  (call
+                    LanguagePublication
+                    (v languageRoot))))))))))
+  (judgment
+    UnacceptedChain
+    [languageRoot]
+    (lst
+      (call
+        MakeBlock
+        (call ChainSecret)
+        (call GenesisHead)
+        (lst
+          (call
+            UnacceptedTransaction
+            (v languageRoot)
+            (lst
+              (call
+                LanguagePublication
+                (v languageRoot))))))))
+  (judgment
+    TamperedChain
+    [languageRoot programRoot]
+    (lst
+      (call
+        MakeBlock
+        (call ChainSecret)
+        (call GenesisHead)
+        (lst
+          (call
+            TamperedTransaction
+            (v languageRoot)
+            (v programRoot)
+            (lst
+              (call
+                LanguagePublication
+                (v languageRoot)))))))))

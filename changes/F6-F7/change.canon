@@ -1,0 +1,16 @@
+; The canonical change from F6 to F7.
+;
+; The chain anchors accepted publication events. It does not contain local
+; development activity, and it has no network and no agreement protocol yet.
+(change
+  (kind foundation)
+  (name "F6->F7")
+  (predecessor (foundation-of "foundations/F6"))
+  (delta-meta (file "changes/F6-F7/delta-meta.canon"))
+  (delta-grammar (file "changes/F6-F7/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "signed publication ledger")
+      (programs [(file "features/ledger/ledger.generated.meta")])
+      (sources [(text-file "features/ledger/ledger.meta")])
+      (authority designated-single))))

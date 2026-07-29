@@ -1,0 +1,9 @@
+; delta-grammar for F6 -> F7: Grammar gains publication vocabulary.
+(change
+  (kind delta-grammar)
+  (name "F6->F7 delta-grammar")
+  (replace
+    (ReplaceChange
+      ledger-syntax
+      (absent)
+      (present [transaction publish block chain checkpoint supersedes references]))))

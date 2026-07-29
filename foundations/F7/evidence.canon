@@ -1,0 +1,15 @@
+
+artifactevidence
+evidence
+checkchain-replays-from-genesisok
+check%broken-predecessor-links-are-rejectedok
+check"unentitled-publishers-are-rejectedok
+check+invalid-transaction-signatures-are-rejectedok
+check-publication-of-an-unaccepted-head-is-rejectedok
+checka-language-version-is-publishedok
+checka-program-version-is-publishedok
+check1a-local-branch-is-created-from-a-chain-checkpointok
+check8published-state-is-reconstructed-from-chain-plus-closureok
+checkfoundation-protocol-unchangedok
+checkrepository-replay-unchangedok
+checklambda-behaviour-unchangedok
