@@ -9,9 +9,17 @@
           (if (prim eq (v character) (q "\\"))
               (call Unescape (v text) (prim add (v index) (q 2))
                 (prim scat (v accumulator)
-                  (prim ssub (v text) (prim add (v index) (q 1)) (prim add (v index) (q 2)))))
+                  (call EscapeValue
+                    (prim ssub (v text) (prim add (v index) (q 1)) (prim add (v index) (q 2))))))
               (call Unescape (v text) (prim add (v index) (q 1))
                 (prim scat (v accumulator) (v character)))))))
+
+  (judgment EscapeValue [character]
+    (if (prim eq (v character) (q "n"))
+        (q "\n")
+        (if (prim eq (v character) (q "t"))
+            (q "\t")
+            (if (prim eq (v character) (q "r")) (q "\r") (v character)))))
 
   (judgment TextValue [literal]
     (call Unescape (call Unquote (v literal)) (q 0) (q "")))
@@ -32,6 +40,7 @@
       (case (pm Token (pv name) (pv kind) (pv pattern))
         (prim node (q token)
           (prim cons (v name) (prim cons (v kind) (prim cons (call TextValue (v pattern)) (q []))))))
+      (case (pm Skip (pv pattern)) (mk skip (call TextValue (v pattern))))
       (case (pm Category (pv name) (pv productions))
         (prim node (q category)
           (prim cons (v name)

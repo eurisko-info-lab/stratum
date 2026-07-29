@@ -1,0 +1,74 @@
+# F2 acceptance transcript: the generic semantic change calculus.
+
+$ foundation verify --dir foundations/F2
+> foundation F2
+> digest 3a5591f985d56be387815ade4f36e195c62fd68a0636e4d2724370705d37c5ba
+> closure 29 artifacts
+> check identity-law ok
+> check composition-law ok
+> check derived-change-language-is-deterministic ok
+> check derived-change-languages-differ-by-shape ok
+> check field-edit-survives-reformatting ok
+> check lambda-change-edits-a-term ok
+> check keyed-edit-survives-reordering ok
+> check invalid-typed-path-is-rejected ok
+> check wrong-constructor-is-rejected ok
+> check meta-change-adds-a-declaration ok
+> check grammar-change-adds-syntax ok
+> check independent-changes-commute ok
+> check independence-is-path-disjointness ok
+> check overlapping-changes-are-not-independent ok
+> check overlapping-incompatible-changes-conflict ok
+> check disjoint-changes-report-independence ok
+> check change-witness-names-its-programs ok
+> check change-witness-carries-its-descriptions ok
+> check change-witness-derives-the-change-description ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F1 --successor foundations/F2
+> predecessor F1
+> successor F2
+> result (valid #dc17548b9954e8e1968d005e77728465d50c9218a4c7c09b0e0a1711e56cc1449)
+
+$ foundation reconstruct --dir foundations/F2
+> reconstructed F2
+> digest 3a5591f985d56be387815ade4f36e195c62fd68a0636e4d2724370705d37c5ba
+> stable yes
+> closure 29 artifacts
+> checks 20 ok
+
+# Apply(x, identity) = x
+$ derive --foundation foundations/F2 --goal '(call Apply (call DescLambda) (q (Lam x (Var x))) (q (Identity)))'
+> (applied (Lam x (Var x)))
+
+# Semantic paths address field identities, not source offsets.
+$ derive --foundation foundations/F2 --goal '(call EditLambdaSource (grammar lambda) (q "\\x. x") (q (AtConstructor Lam (AtField body (Replace (Var x) (Var z))))))'
+> "\\ x. z"
+
+$ derive --foundation foundations/F2 --goal '(call EditLambdaSource (grammar lambda) (q "\\x.        x") (q (AtConstructor Lam (AtField body (Replace (Var x) (Var z))))))'
+> "\\ x. z"
+
+# An invalid typed path is rejected rather than guessed.
+$ derive --foundation foundations/F2 --goal '(call Apply (call DescLambda) (q (Lam x (Var x))) (q (AtConstructor Lam (AtField missing (Replace (Var x) (Var z))))))'
+> (conflict unknown-field)
+
+# A Meta change adds a declaration.
+$ derive --foundation foundations/F2 --goal '(call Apply (call DescProgram) (q {A (judgment A [] (q 1))}) (q (InsertKey B (judgment B [] (q 2)))))'
+> (applied {A (judgment A [] (q 1)) B (judgment B [] (q 2))})
+
+# Independent changes commute.
+$ derive --foundation foundations/F2 --goal '(call Commutes (call DescProgram) (q {A (judgment A [] (q 1)) B (judgment B [] (q 2))}) (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 10))))) (q (AtKey B (Replace (judgment B [] (q 2)) (judgment B [] (q 20))))))'
+> #t
+
+# Overlapping incompatible changes become an explicit conflict artifact.
+$ derive --foundation foundations/F2 --goal '(call ConflictOf (call DescProgram) (q {A (judgment A [] (q 1))}) (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 10))))) (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 11))))))'
+> (conflict predecessor-mismatch)
+
+# The derived change language of a shape is deterministic.
+$ derive --foundation foundations/F2 --goal '(prim eq (call DeltaLambda) (call FreeChange (call DescLambda)))'
+> #t
+
+# Earlier foundation behaviour is intact.
+$ derive --foundation foundations/F2 --goal '(call NormalizeToText (grammar lambda) (q "(\\f. \\x. f (f x)) g y"))'
+> "g (g y)"
