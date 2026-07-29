@@ -1,0 +1,19 @@
+; F0: the minimal Scala bootstrap plus one local untyped lambda world.
+(build
+  (name "F0")
+  (bootstrap "StratumHost0/1")
+  (predecessor (none))
+  (change (none))
+  (application
+    (application
+      (name "stratum-f0")
+      (meta (program-of [
+        (file "languages/meta/prelude.meta")
+        (file "languages/lambda/lambda.bootstrap.meta")
+        (file "languages/foundation/foundation.meta")
+      ]))
+      (grammars { lambda (file "languages/lambda/lambda.bootstrap.grammar") })
+      (entries {})
+      (checks (include "fixtures/lambda/f0-checks.canon"))
+      (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print)))
+      (resources (budget (steps 2000000) (depth 4000))))))

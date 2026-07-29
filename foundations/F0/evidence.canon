@@ -1,0 +1,14 @@
+
+artifactevidence
+evidence
+
+checkparse-print-roundtripok
+checkparse-print-roundtrip-nestedok
+checkbeta-deterministicok
+checkbeta-church-twook
+checkalpha-equivalentok
+checkalpha-distinctok
+checkfree-variablesok
+checkreplacement-appliedok
+checkreplacement-rejectedok
+check resource-exhaustion-is-a-verdictok

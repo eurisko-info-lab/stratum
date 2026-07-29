@@ -1,0 +1,46 @@
+; Executable acceptance checks for F0.
+; Each check is derived by MetaMachine0 and compared against a canonical value.
+[
+  (check parse-print-roundtrip
+    (call RoundTrip (q (file "languages/lambda/lambda.bootstrap.grammar")) (q "(\\x. x) y"))
+    (value (roundtrip ok)))
+
+  (check parse-print-roundtrip-nested
+    (call RoundTrip (q (file "languages/lambda/lambda.bootstrap.grammar")) (q "\\f. \\x. f (f x)"))
+    (value (roundtrip ok)))
+
+  (check beta-deterministic
+    (call NormalizeToText (q (file "languages/lambda/lambda.bootstrap.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+
+  (check beta-church-two
+    (call NormalizeToText (q (file "languages/lambda/lambda.bootstrap.grammar")) (q "(\\f. \\x. f (f x)) g y"))
+    (value "g (g y)"))
+
+  (check alpha-equivalent
+    (call AlphaEquivalent (q (file "languages/lambda/lambda.bootstrap.grammar")) (q "\\x. x") (q "\\y. y"))
+    (value #t))
+
+  (check alpha-distinct
+    (call AlphaEquivalent (q (file "languages/lambda/lambda.bootstrap.grammar")) (q "\\x. \\y. x") (q "\\x. \\y. y"))
+    (value #f))
+
+  (check free-variables
+    (call FreeVariables
+      (call Parse (q (file "languages/lambda/lambda.bootstrap.grammar")) (q "\\x. f x y"))
+      (q []))
+    (value [f y]))
+
+  (check replacement-applied
+    (call ApplyReplace (q (ReplaceChange main (Var a) (Var b))) (q (Var a)))
+    (value (applied (Var b))))
+
+  (check replacement-rejected
+    (call ApplyReplace (q (ReplaceChange main (Var a) (Var b))) (q (Var c)))
+    (value (rejected predecessor-mismatch)))
+
+  (check resource-exhaustion-is-a-verdict
+    (call NormalizeToText (q (file "languages/lambda/lambda.bootstrap.grammar")) (q "(\\x. x x) (\\x. x x)"))
+    (error resource-exhausted)
+    (budget (steps 20000) (depth 400)))
+]
