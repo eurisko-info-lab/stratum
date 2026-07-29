@@ -42,9 +42,16 @@ object FoundationCommands:
 
   private def resolveTemplate(root: Path, cas: Cas, c: Canon): Either[String, Canon] = c match
     case Canon.Node("file", Vector(Canon.S(path))) =>
-      readCanonSource(root, path).map { value =>
-        Canon.R(cas.put(Artifact(kindOf(value), value)))
-      }
+      val p = root.resolve(path)
+      if !Files.exists(p) then Left(s"no such file: $path")
+      else
+        // A committed artifact file is already canonical; a source file is text.
+        Artifact.decode(Files.readAllBytes(p)) match
+          case Right(artifact) => Right(Canon.R(cas.put(artifact)))
+          case Left(_) =>
+            readCanonSource(root, path).map { value =>
+              Canon.R(cas.put(Artifact(kindOf(value), value)))
+            }
     case Canon.Node("include", Vector(Canon.S(path))) =>
       readCanonSource(root, path).flatMap(resolveTemplate(root, cas, _))
     case Canon.Node("text-file", Vector(Canon.S(path))) =>
