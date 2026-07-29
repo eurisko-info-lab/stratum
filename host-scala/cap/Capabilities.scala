@@ -117,12 +117,12 @@ final class SignatureCapability extends CapabilityHandler:
 
   def handle(req: CapabilityRequest): CapabilityResponse = (req.name, req.args) match
     case ("public-key", Vector(Canon.S(secret))) =>
-      CapabilityResponse(true, Canon.S(publicOf(secret)))
+      CapabilityResponse(true, Canon.S(SignatureCapability.register(secret)))
     case ("sign", Vector(Canon.S(secret), message)) =>
+      SignatureCapability.register(secret)
       CapabilityResponse(true, Canon.Y(mac(secret, message)))
     case ("verify", Vector(Canon.S(pk), message, Canon.Y(sig))) =>
-      // A signature verifies when it is the MAC of some secret whose public key is `pk`.
-      // The host cannot invert the key, so it recomputes from the registered secret table.
+      // The host verifies the cryptographic equation only.
       SignatureCapability.secretFor(pk) match
         case Some(secret) => CapabilityResponse(true, Canon.B(mac(secret, message) == sig))
         case None         => CapabilityResponse(true, Canon.B(false))

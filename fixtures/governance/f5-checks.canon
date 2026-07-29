@@ -1,0 +1,107 @@
+; Executable acceptance checks for F5: constitution-relative governance.
+[
+  ; ------------------------------------------------------------ acceptances
+
+  (check accepted-under-a-single-author-constitution
+    (call AcceptedLocal)
+    (value accepted))
+
+  (check accepted-under-a-test-requiring-constitution
+    (call AcceptedWithTests)
+    (value accepted))
+
+  (check accepted-under-a-proof-requiring-constitution
+    (call AcceptedWithProof)
+    (value accepted))
+
+  (check meta-change-accepted-under-the-strict-constitution
+    (call AcceptedMetaChange)
+    (value accepted))
+
+  ; ------------------------------------------------------------- rejections
+
+  (check reject-signature-by-the-wrong-identity
+    (call RejectWrongIdentity)
+    (value bad-signature))
+
+  (check reject-correct-signature-over-the-wrong-patch
+    (call RejectWrongPatch)
+    (value bad-signature))
+
+  (check reject-evidence-for-another-claim
+    (call RejectEvidenceForAnotherClaim)
+    (value missing-proof))
+
+  (check reject-expired-authority
+    (call RejectExpiredAuthority)
+    (value expired-authority))
+
+  (check reject-insufficient-resource-budget
+    (call RejectInsufficientBudget)
+    (value insufficient-resource-budget))
+
+  (check reject-kind-only-acceptance-shortcut
+    (call RejectKindOnlyShortcut)
+    (value missing-test-evidence))
+
+  (check reject-failing-test-evidence
+    (call RejectFailingTest)
+    (value failing-test))
+
+  (check reject-meta-change-under-an-ordinary-code-constitution
+    (call RejectMetaUnderCodeConstitution)
+    (value kind-not-governed))
+
+  ; --------------------------------------------------------- proof checking
+
+  (check proof-requires-a-justified-axiom
+    (call CheckProof
+      (q [])
+      (call ProofGoal (q (well-founded p)))
+      (call ProofTerm (call ProofGoal (q (well-founded p))) (q [(axiom (well-founded p))])))
+    (value (invalid unjustified-axiom)))
+
+  (check modus-ponens-is-checked
+    (call CheckProof
+      (q [(implies (a) (b)) (a)])
+      (call ProofGoal (q (b)))
+      (call ProofTerm
+        (call ProofGoal (q (b)))
+        (q [(axiom (implies (a) (b))) (axiom (a)) (modusPonens (implies (a) (b)) (a))])))
+    (value (valid)))
+
+  (check modus-ponens-rejects-a-mismatched-antecedent
+    (call CheckProof
+      (q [(implies (a) (b)) (c)])
+      (call ProofGoal (q (b)))
+      (call ProofTerm
+        (call ProofGoal (q (b)))
+        (q [(axiom (implies (a) (b))) (axiom (c)) (modusPonens (implies (a) (b)) (c))])))
+    (value (invalid antecedent-mismatch)))
+
+  ; ------------------------------------------------------ acceptance binding
+
+  (check acceptance-binds-the-predecessor
+    (prim eq (call AcceptanceBindsPredecessor) (call PredecessorDigest))
+    (value #t))
+
+  ; ---------------------------------------------------- repository integration
+
+  (check a-branch-with-an-unaccepted-patch-is-not-publishable
+    (call BranchWithUnacceptedPatch)
+    (value (blocked unaccepted-patches)))
+
+  (check a-fully-accepted-branch-is-publishable
+    (call BranchFullyAccepted)
+    (value (publishable)))
+
+  ; ------------------------------- earlier foundation behaviour is intact
+
+  (check toolchain-derivation-unchanged
+    (call CompiledExecutionAgrees (q (file "languages/lambda/lambda.generated.grammar")))
+    (value #t))
+
+  (check lambda-behaviour-unchanged
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+]

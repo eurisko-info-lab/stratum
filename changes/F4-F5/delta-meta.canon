@@ -1,0 +1,10 @@
+; delta-meta for F4 -> F5: Meta gains identities, claims, proofs, entitlement
+; and acceptance constitutions.
+(change
+  (kind delta-meta)
+  (name "F4->F5 delta-meta")
+  (replace
+    (ReplaceChange
+      acceptance-model
+      (well-formedness-only)
+      (constitution-relative))))
