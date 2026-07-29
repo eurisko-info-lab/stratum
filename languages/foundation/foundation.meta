@@ -1,0 +1,76 @@
+; Foundation identity, bootstrap replacement changes and local history.
+;
+; Before the generic free-change calculus exists (F2), every language changes
+; through a predecessor-bound whole-value replacement.
+(program
+  (module foundation)
+
+  ; ------------------------------------------------- bootstrap replacement
+
+  (judgment ApplyReplace [change current]
+    (match (v change)
+      (case (pm ReplaceChange (pv key) (pv expected) (pv replacement))
+        (if (prim eq (v current) (v expected))
+            (mk applied (v replacement))
+            (mk rejected (q predecessor-mismatch))))
+      (case _ (mk rejected (q not-a-replacement)))))
+
+  (judgment ApplyReplaceIn [change store]
+    (match (v change)
+      (case (pm ReplaceChange (pv key) (pv expected) (pv replacement))
+        (if (prim eq (prim mget (v store) (v key) (mk absent)) (v expected))
+            (mk applied (prim mput (v store) (v key) (v replacement)))
+            (mk rejected (q predecessor-mismatch))))
+      (case _ (mk rejected (q not-a-replacement)))))
+
+  ; ------------------------------------------------------- local history
+
+  (judgment RootOf [predecessor application meta grammar closure]
+    (mk FoundationRoot
+      (mk predecessor (v predecessor))
+      (mk application (v application))
+      (mk meta (v meta))
+      (mk grammar (v grammar))
+      (mk closure (v closure))))
+
+  (judgment HistoryValid [history]
+    (match (v history)
+      (case (pnil) (q #t))
+      (case (pl (pv only)) (q #t))
+      (case (pcons (pv earlier) (pv rest))
+        (let later (prim head (v rest))
+          (if (prim eq (call Require (v later) (q predecessor)) (mk some (prim digest (v earlier))))
+              (call HistoryValid (v rest))
+              (q #f))))))
+
+  ; ------------------------------------------------ successor verification
+
+  (judgment VerifyApplication [applicationReference]
+    (match (call Fetch (v applicationReference) (q application))
+      (case (pm none) (mk invalid (q application-missing)))
+      (case (pm some (pv application))
+        (match (call Field (v application) (q meta))
+          (case (pm none) (mk invalid (q application-without-meta)))
+          (case (pm some (pv metaReference))
+            (match (call Fetch (v metaReference) (q meta-program))
+              (case (pm none) (mk invalid (q meta-program-missing)))
+              (case (pm some (pv program)) (mk valid (prim digest (v application))))))))))
+
+  ; A predecessor validates a successor foundation from the successor manifest
+  ; and the predecessor's own digest.
+  (judgment VerifyFoundation [successor predecessorReference]
+    (match (v successor)
+      (case (pnode (pq foundation) (pv fields))
+        (match (call FieldOf (v fields) (q predecessor))
+          (case (pm none) (mk invalid (q predecessor-field-missing)))
+          (case (pm some (pv declared))
+            (match (v declared)
+              (case (pm none) (mk invalid (q successor-without-predecessor)))
+              (case (pm some (pv actual))
+                (if (prim eq (v actual) (v predecessorReference))
+                    (match (call FieldOf (v fields) (q application))
+                      (case (pm none) (mk invalid (q application-field-missing)))
+                      (case (pm some (pv applicationReference))
+                        (call VerifyApplication (v applicationReference))))
+                    (mk invalid (q wrong-predecessor))))))))
+      (case _ (mk invalid (q not-a-foundation))))))

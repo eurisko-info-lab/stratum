@@ -1,0 +1,17 @@
+; Grammar0 declaration of the untyped lambda language.
+; The host contains no syntax: tokens, categories and constructors are data.
+(grammar
+  (name "lambda")
+  (start term)
+  (token ident sym "[A-Za-z_][A-Za-z0-9_']*")
+
+  (category term
+    (prod Lam [(kw "\\") (bind name ident) (kw ".") (bind body term)])
+    (pass app))
+
+  (category app
+    (fold App atom))
+
+  (category atom
+    (prod Var [(bind name ident)])
+    (paren "(" term ")")))
