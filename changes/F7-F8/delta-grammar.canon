@@ -1,0 +1,9 @@
+; delta-grammar for F7 -> F8: Grammar gains the synchronization vocabulary.
+(change
+  (kind delta-grammar)
+  (name "F7->F8 delta-grammar")
+  (replace
+    (ReplaceChange
+      sync-syntax
+      (absent)
+      (present [peer connect fetch pull push advertise need offer sync resume]))))

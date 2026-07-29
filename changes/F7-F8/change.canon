@@ -1,0 +1,17 @@
+; The canonical change from F7 to F8.
+;
+; The host gains only generic transport. Message schemas, negotiation, closure
+; selection and validation remain Meta-level features, and nothing received
+; from a peer is trusted implicitly.
+(change
+  (kind foundation)
+  (name "F7->F8")
+  (predecessor (foundation-of "foundations/F7"))
+  (delta-meta (file "changes/F7-F8/delta-meta.canon"))
+  (delta-grammar (file "changes/F7-F8/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "distributed closure and branch synchronization")
+      (programs [(file "features/sync/sync.generated.meta")])
+      (sources [(text-file "features/sync/sync.meta")])
+      (transport [send receive open-connection close-connection]))))
