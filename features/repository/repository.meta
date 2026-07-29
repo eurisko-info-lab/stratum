@@ -1,0 +1,219 @@
+module repository
+
+; A local Pijul-like semantic repository.
+;
+; A patch carries semantic changes and causal dependencies. A branch is a
+; membership set over the patch graph, never a copied snapshot. Repository
+; state is always derived by replay.
+
+record Patch [identity dependencies changes]
+record Repository [patches branches]
+record PatchConflict [patch reason]
+
+judgment PatchIdentity [dependencies changes] =
+  prim #digest [mk #patch-content [dependencies changes]]
+
+judgment NewPatch [dependencies changes] =
+  call Patch [call PatchIdentity [dependencies changes] dependencies changes]
+
+judgment EmptyRepository [] = call Repository [prim #mnew [] prim #mnew []]
+
+judgment Members [repository branch] =
+  prim #mget [call Repository'branches [repository] branch list []]
+
+judgment Heads [repository branch] = prim #sort [call Members [repository branch]]
+
+judgment PatchOf [repository identity] =
+  prim #mget [call Repository'patches [repository] identity mk #absent []]
+
+judgment Dependencies [repository identity] =
+  call Patch'dependencies [call PatchOf [repository identity]]
+
+; ------------------------------------------------------------- recording
+
+judgment RecordPatch [repository branch dependencies changes] =
+  let patch = call NewPatch [dependencies changes] in
+  let identity = call Patch'identity [patch] in
+  call Repository [
+    prim #mput [call Repository'patches [repository] identity patch]
+    prim #mput [
+      call Repository'branches [repository]
+      branch
+      prim #snoc [call Members [repository branch] identity]
+    ]
+  ]
+
+judgment LastRecorded [repository branch] =
+  let members = call Members [repository branch] in
+  prim #nth [members prim #sub [prim #len [members] 1]]
+
+judgment Contains [items value] = prim #contains [items value]
+
+judgment Without [items value] =
+  match items {
+    case [] -> list []
+    case head :: rest ->
+      if prim #eq [head value]
+      then call Without [rest value]
+      else prim #cons [head call Without [rest value]]
+  }
+
+; A local unrecord changes branch membership. History is never deleted.
+judgment UnapplyPatch [repository branch identity] =
+  call Repository [
+    call Repository'patches [repository]
+    prim #mput [
+      call Repository'branches [repository]
+      branch
+      call Without [call Members [repository branch] identity]
+    ]
+  ]
+
+judgment DependenciesSatisfied [members dependencies] =
+  match dependencies {
+    case [] -> true
+    case head :: rest ->
+      if prim #contains [members head]
+      then call DependenciesSatisfied [members rest]
+      else false
+  }
+
+judgment ApplyPatch [repository branch identity] =
+  let members = call Members [repository branch] in
+  if prim #contains [members identity]
+  then mk #ok [repository]
+  else
+    if call DependenciesSatisfied [members call Dependencies [repository identity]]
+    then
+      mk #ok [
+        call Repository [
+          call Repository'patches [repository]
+          prim #mput [call Repository'branches [repository] branch prim #snoc [members identity]]
+        ]
+      ]
+    else mk #missing-dependencies [call Dependencies [repository identity]]
+
+; A branch is created from any repository state by copying a frontier.
+judgment CreateBranch [repository from to] =
+  call Repository [
+    call Repository'patches [repository]
+    prim #mput [call Repository'branches [repository] to call Members [repository from]]
+  ]
+
+judgment MergeBranch [repository into from] =
+  call Repository [
+    call Repository'patches [repository]
+    prim #mput [
+      call Repository'branches [repository]
+      into
+      call Union [call Members [repository into] call Members [repository from]]
+    ]
+  ]
+
+; --------------------------------------------------------------- ordering
+
+judgment ReadyPatches [repository members emitted] =
+  match members {
+    case [] -> list []
+    case head :: rest ->
+      if prim #contains [emitted head]
+      then call ReadyPatches [repository rest emitted]
+      else
+        if call DependenciesSatisfied [emitted call Dependencies [repository head]]
+        then prim #cons [head call ReadyPatches [repository rest emitted]]
+        else call ReadyPatches [repository rest emitted]
+  }
+
+; Deterministic topological order: the least ready identity is always next, so
+; the recording order of independent patches cannot affect the result.
+judgment TopoOrder [repository members emitted] =
+  let ready = prim #sort [call ReadyPatches [repository members emitted]] in
+  match ready {
+    case [] -> emitted
+    case next :: rest -> call TopoOrder [repository members prim #snoc [emitted next]]
+  }
+
+judgment BranchOrder [repository branch] =
+  call TopoOrder [repository call Members [repository branch] list []]
+
+; ----------------------------------------------------------------- replay
+
+judgment ApplyChanges [desc state changes] =
+  match changes {
+    case [] -> mk #applied [state]
+    case head :: rest ->
+      match call Apply [desc state head] {
+        case (#applied next) -> call ApplyChanges [desc next rest]
+        case (#conflict reason) -> mk #conflict [reason]
+      }
+  }
+
+judgment ReplaySequence [desc state repository order] =
+  match order {
+    case [] -> mk #state [state]
+    case identity :: rest ->
+      match call ApplyChanges [desc state call Patch'changes [call PatchOf [repository identity]]] {
+        case (#applied next) -> call ReplaySequence [desc next repository rest]
+        case (#conflict reason) -> mk #conflicted [call PatchConflict [identity reason]]
+      }
+  }
+
+judgment Replay [desc initial repository branch] =
+  call ReplaySequence [desc initial repository call BranchOrder [repository branch]]
+
+; Conflicts are canonical artifacts, never host exceptions. A tolerant replay
+; keeps going and reports every conflicting patch.
+judgment ReplayTolerantSequence [desc state repository order conflicts] =
+  match order {
+    case [] -> mk #replayed [state conflicts]
+    case identity :: rest ->
+      match call ApplyChanges [desc state call Patch'changes [call PatchOf [repository identity]]] {
+        case (#applied next) -> call ReplayTolerantSequence [desc next repository rest conflicts]
+        case (#conflict reason) ->
+          call ReplayTolerantSequence [
+            desc state repository rest
+            prim #snoc [conflicts call PatchConflict [identity reason]]
+          ]
+      }
+  }
+
+judgment ReplayTolerant [desc initial repository branch] =
+  call ReplayTolerantSequence [desc initial repository call BranchOrder [repository branch] list []]
+
+judgment ReplayState [desc initial repository branch] =
+  match call ReplayTolerant [desc initial repository branch] {
+    case (#replayed state conflicts) -> state
+  }
+
+judgment ReplayConflicts [desc initial repository branch] =
+  match call ReplayTolerant [desc initial repository branch] {
+    case (#replayed state conflicts) -> conflicts
+  }
+
+; --------------------------------------------------------------- reporting
+
+judgment Log [repository branch] = call BranchOrder [repository branch]
+
+judgment Diff [desc initial repository left right] =
+  mk #diff [
+    call ReplayState [desc initial repository left]
+    call ReplayState [desc initial repository right]
+  ]
+
+judgment SameState [desc initial repository left right] =
+  prim #eq [
+    call ReplayState [desc initial repository left]
+    call ReplayState [desc initial repository right]
+  ]
+
+; --------------------------------------------- successor from a branch state
+
+; A foundation manifest reconstructed from replayed branch state.
+judgment FoundationFromBranch [desc initial repository branch name predecessor] =
+  mk #foundation [
+    mk #name [name]
+    mk #bootstrap ["StratumHost0/1"]
+    mk #application [call ReplayState [desc initial repository branch]]
+    mk #predecessor [predecessor]
+    mk #change [mk #some [call Heads [repository branch]]]
+  ]

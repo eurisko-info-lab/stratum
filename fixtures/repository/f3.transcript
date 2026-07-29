@@ -1,0 +1,76 @@
+# F3 acceptance transcript: the local causal semantic repository.
+
+$ foundation verify --dir foundations/F3
+> foundation F3
+> digest 276065d759fd215357c6f7c52536fc264d78fa79aad10a8e87959a496e7bafbf
+> closure 35 artifacts
+> check two-branches-diverge ok
+> check branch-state-is-derived-by-replay ok
+> check independent-patches-commute ok
+> check replay-is-deterministic ok
+> check merge-is-a-frontier-union ok
+> check patch-identity-is-independent-of-branch-names ok
+> check overlapping-patches-produce-an-explicit-conflict ok
+> check conflict-is-a-canonical-artifact ok
+> check conflict-is-resolved-by-a-patch ok
+> check unrecord-changes-membership-only ok
+> check unrecord-retains-history ok
+> check meta-is-edited-on-a-branch ok
+> check grammar-is-edited-on-a-branch ok
+> check successor-is-reconstructed-from-a-branch ok
+> check successor-application-comes-from-replay ok
+> check change-calculus-still-applies ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F2 --successor foundations/F3
+> predecessor F2
+> successor F3
+> result (valid #d3a41fa3c7ba659d77a02bfeca0effd73b507324e9d3023caf7f6b4c6ec16dfc0)
+
+$ foundation reconstruct --dir foundations/F3
+> reconstructed F3
+> digest 276065d759fd215357c6f7c52536fc264d78fa79aad10a8e87959a496e7bafbf
+> stable yes
+> closure 35 artifacts
+> checks 17 ok
+
+# Two local branches diverge from the same patch graph.
+$ derive --foundation foundations/F3 --goal '(call BranchesAgree)'
+> #f
+
+$ derive --foundation foundations/F3 --goal '(call TopicState)'
+> {A ten B twenty}
+
+# Independent patches applied in different orders reach identical state.
+$ derive --foundation foundations/F3 --goal '(call IndependentOrderAgrees)'
+> #t
+
+# Patch identity does not depend on a mutable branch name.
+$ derive --foundation foundations/F3 --goal '(call IdentityIndependentOfBranch)'
+> #t
+
+# An overlapping conflict becomes a canonical artifact.
+$ derive --foundation foundations/F3 --goal '(call ConflictReason)'
+> predecessor-mismatch
+
+$ derive --foundation foundations/F3 --goal '(call ResolvedState)'
+> {A resolved B two}
+
+# Unrecording changes branch membership without deleting history.
+$ derive --foundation foundations/F3 --goal '(call UnrecordedState)'
+> {A one B twenty}
+
+$ derive --foundation foundations/F3 --goal '(call HistoryRetainedAfterUnrecord)'
+> #t
+
+# Language, code and data all change through the same mechanism.
+$ derive --foundation foundations/F3 --goal '(call MetaEditState)'
+> {A one B two C three}
+
+$ derive --foundation foundations/F3 --goal '(call GrammarEditState)'
+> {atom [(entry Var varprod) (entry Hole holeprod)]}
+
+# A successor foundation is reconstructed from replayed branch state.
+$ derive --foundation foundations/F3 --goal '(call SuccessorApplication)'
+> {A ten B twenty}
