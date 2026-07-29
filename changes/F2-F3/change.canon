@@ -1,0 +1,22 @@
+; The canonical change from F2 to F3.
+;
+; A local causal semantic repository: patches, dependencies, branches as
+; frontiers, deterministic replay and explicit conflicts. No network and no
+; publication ledger exist at this step.
+(change
+  (kind foundation)
+  (name "F2->F3")
+  (predecessor (foundation-of "foundations/F2"))
+  (delta-meta (file "changes/F2-F3/delta-meta.canon"))
+  (delta-grammar (file "changes/F2-F3/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "local causal semantic repository")
+      (programs [
+        (file "features/repository/repository.generated.meta")
+        (file "features/repository/scenarios.generated.meta")
+      ])
+      (sources [
+        (text-file "features/repository/repository.meta")
+        (text-file "features/repository/scenarios.meta")
+      ]))))

@@ -1,0 +1,84 @@
+; Executable acceptance checks for F3: the local causal semantic repository.
+[
+  ; ------------------------------------------------------ branches and replay
+
+  (check two-branches-diverge
+    (call BranchesAgree)
+    (value #f))
+
+  (check branch-state-is-derived-by-replay
+    (call TopicState)
+    (value {A ten B twenty}))
+
+  (check independent-patches-commute
+    (call IndependentOrderAgrees)
+    (value #t))
+
+  (check replay-is-deterministic
+    (call OrderOneState)
+    (value {A ten B twenty}))
+
+  (check merge-is-a-frontier-union
+    (call MergedState)
+    (value {A ten B twenty}))
+
+  ; ------------------------------------------------------- patch identities
+
+  (check patch-identity-is-independent-of-branch-names
+    (call IdentityIndependentOfBranch)
+    (value #t))
+
+  ; -------------------------------------------------------------- conflicts
+
+  (check overlapping-patches-produce-an-explicit-conflict
+    (call ConflictCount)
+    (value 1))
+
+  (check conflict-is-a-canonical-artifact
+    (call ConflictReason)
+    (value predecessor-mismatch))
+
+  (check conflict-is-resolved-by-a-patch
+    (call ResolvedState)
+    (value {A resolved B two}))
+
+  ; ------------------------------------------------------------- unrecord
+
+  (check unrecord-changes-membership-only
+    (call UnrecordedState)
+    (value {A one B twenty}))
+
+  (check unrecord-retains-history
+    (call HistoryRetainedAfterUnrecord)
+    (value #t))
+
+  ; ------------------------------------------- language, code and data changes
+
+  (check meta-is-edited-on-a-branch
+    (call MetaEditState)
+    (value {A one B two C three}))
+
+  (check grammar-is-edited-on-a-branch
+    (call GrammarEditState)
+    (value {atom [(entry Var varprod) (entry Hole holeprod)]}))
+
+  ; ------------------------------------------- successor from a branch state
+
+  (check successor-is-reconstructed-from-a-branch
+    (call SuccessorFromBranch)
+    (value (name "F3-successor")))
+
+  (check successor-application-comes-from-replay
+    (call SuccessorApplication)
+    (value {A ten B twenty}))
+
+  ; ------------------------------------- earlier foundation behaviour is intact
+
+  (check change-calculus-still-applies
+    (call Apply (call DescLambda) (q (Lam x (Var x))) (q (Identity)))
+    (value (applied (Lam x (Var x)))))
+
+  (check lambda-behaviour-unchanged
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+]

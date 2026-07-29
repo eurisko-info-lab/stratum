@@ -25,13 +25,11 @@ run meta elaborate --grammar languages/meta1/meta1.generated.grammar $META \
   --source languages/lambda/lambda.meta \
   --out languages/lambda/lambda.generated.meta
 
-for feature in change repository tooling governance foundation ledger sync federation retention studio; do
-  src="features/$feature/$feature.meta"
-  if [ -f "$src" ]; then
-    run meta elaborate --grammar languages/meta1/meta1.generated.grammar $META \
-      --source "$src" \
-      --out "features/$feature/$feature.generated.meta"
-  fi
+for source in $(find features -name '*.meta' ! -name '*.generated.meta' | sort); do
+  echo "  $source"
+  run meta elaborate --grammar languages/meta1/meta1.generated.grammar $META \
+    --source "$source" \
+    --out "${source%.meta}.generated.meta"
 done
 
 echo "done"

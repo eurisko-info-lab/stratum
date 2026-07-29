@@ -1,0 +1,431 @@
+; Generated from features/repository/scenarios.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module repositoryscenarios)
+  (judgment
+    BaseState
+    []
+    (mp
+      (q A)
+      (q one)
+      (q B)
+      (q two)))
+  (judgment
+    ChangeA
+    []
+    (mk
+      AtKey
+      (q A)
+      (mk
+        Replace
+        (q one)
+        (q ten))))
+  (judgment
+    ChangeB
+    []
+    (mk
+      AtKey
+      (q B)
+      (mk
+        Replace
+        (q two)
+        (q twenty))))
+  (judgment
+    ChangeAConflicting
+    []
+    (mk
+      AtKey
+      (q A)
+      (mk
+        Replace
+        (q one)
+        (q eleven))))
+  (judgment
+    RepoOrderOne
+    []
+    (let
+      empty
+      (call EmptyRepository)
+      (let
+        first
+        (call
+          RecordPatch
+          (v empty)
+          (q main)
+          (lst)
+          (lst
+            (call ChangeA)))
+        (call
+          RecordPatch
+          (v first)
+          (q main)
+          (lst)
+          (lst
+            (call ChangeB))))))
+  (judgment
+    RepoOrderTwo
+    []
+    (let
+      empty
+      (call EmptyRepository)
+      (let
+        first
+        (call
+          RecordPatch
+          (v empty)
+          (q main)
+          (lst)
+          (lst
+            (call ChangeB)))
+        (call
+          RecordPatch
+          (v first)
+          (q main)
+          (lst)
+          (lst
+            (call ChangeA))))))
+  (judgment
+    IndependentOrderAgrees
+    []
+    (prim
+      eq
+      (call
+        ReplayState
+        (call DescProgram)
+        (call BaseState)
+        (call RepoOrderOne)
+        (q main))
+      (call
+        ReplayState
+        (call DescProgram)
+        (call BaseState)
+        (call RepoOrderTwo)
+        (q main))))
+  (judgment
+    OrderOneState
+    []
+    (call
+      ReplayState
+      (call DescProgram)
+      (call BaseState)
+      (call RepoOrderOne)
+      (q main)))
+  (judgment
+    IdentityIndependentOfBranch
+    []
+    (let
+      empty
+      (call EmptyRepository)
+      (let
+        onMain
+        (call
+          RecordPatch
+          (v empty)
+          (q main)
+          (lst)
+          (lst
+            (call ChangeA)))
+        (let
+          onOther
+          (call
+            RecordPatch
+            (v empty)
+            (q other)
+            (lst)
+            (lst
+              (call ChangeA)))
+          (prim
+            eq
+            (prim
+              head
+              (call
+                Members
+                (v onMain)
+                (q main)))
+            (prim
+              head
+              (call
+                Members
+                (v onOther)
+                (q other))))))))
+  (judgment
+    TwoBranches
+    []
+    (let
+      empty
+      (call EmptyRepository)
+      (let
+        recorded
+        (call
+          RecordPatch
+          (v empty)
+          (q main)
+          (lst)
+          (lst
+            (call ChangeA)))
+        (let
+          branched
+          (call
+            CreateBranch
+            (v recorded)
+            (q main)
+            (q topic))
+          (call
+            RecordPatch
+            (v branched)
+            (q topic)
+            (lst)
+            (lst
+              (call ChangeB)))))))
+  (judgment
+    BranchesAgree
+    []
+    (call
+      SameState
+      (call DescProgram)
+      (call BaseState)
+      (call TwoBranches)
+      (q main)
+      (q topic)))
+  (judgment
+    TopicState
+    []
+    (call
+      ReplayState
+      (call DescProgram)
+      (call BaseState)
+      (call TwoBranches)
+      (q topic)))
+  (judgment
+    MergedState
+    []
+    (call
+      ReplayState
+      (call DescProgram)
+      (call BaseState)
+      (call
+        MergeBranch
+        (call TwoBranches)
+        (q main)
+        (q topic))
+      (q main)))
+  (judgment
+    ConflictRepo
+    []
+    (let
+      empty
+      (call EmptyRepository)
+      (let
+        first
+        (call
+          RecordPatch
+          (v empty)
+          (q main)
+          (lst)
+          (lst
+            (call ChangeA)))
+        (call
+          RecordPatch
+          (v first)
+          (q main)
+          (lst)
+          (lst
+            (call ChangeAConflicting))))))
+  (judgment
+    ConflictCount
+    []
+    (prim
+      len
+      (call
+        ReplayConflicts
+        (call DescProgram)
+        (call BaseState)
+        (call ConflictRepo)
+        (q main))))
+  (judgment
+    ConflictReason
+    []
+    (match
+      (call
+        ReplayConflicts
+        (call DescProgram)
+        (call BaseState)
+        (call ConflictRepo)
+        (q main))
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          PatchConflict'reason
+          (v head)))))
+  (judgment
+    ConflictedValue
+    []
+    (prim
+      mget
+      (call
+        ReplayState
+        (call DescProgram)
+        (call BaseState)
+        (call ConflictRepo)
+        (q main))
+      (q A)
+      (mk absent)))
+  (judgment
+    ResolvedRepo
+    []
+    (let
+      base
+      (call ConflictRepo)
+      (call
+        RecordPatch
+        (v base)
+        (q main)
+        (call
+          Members
+          (v base)
+          (q main))
+        (lst
+          (mk
+            AtKey
+            (q A)
+            (mk
+              Replace
+              (call ConflictedValue)
+              (q resolved)))))))
+  (judgment
+    ResolvedState
+    []
+    (call
+      ReplayState
+      (call DescProgram)
+      (call BaseState)
+      (call ResolvedRepo)
+      (q main)))
+  (judgment
+    UnrecordedState
+    []
+    (let
+      repo
+      (call RepoOrderOne)
+      (call
+        ReplayState
+        (call DescProgram)
+        (call BaseState)
+        (call
+          UnapplyPatch
+          (v repo)
+          (q main)
+          (prim
+            head
+            (call
+              Members
+              (v repo)
+              (q main))))
+        (q main))))
+  (judgment
+    HistoryRetainedAfterUnrecord
+    []
+    (let
+      repo
+      (call RepoOrderOne)
+      (let
+        identity
+        (prim
+          head
+          (call
+            Members
+            (v repo)
+            (q main)))
+        (prim
+          mhas
+          (call
+            Repository'patches
+            (call
+              UnapplyPatch
+              (v repo)
+              (q main)
+              (v identity)))
+          (v identity)))))
+  (judgment
+    MetaEditState
+    []
+    (call
+      ReplayState
+      (call DescProgram)
+      (call BaseState)
+      (call
+        RecordPatch
+        (call EmptyRepository)
+        (q meta)
+        (lst)
+        (lst
+          (mk
+            InsertKey
+            (q C)
+            (q three))))
+      (q meta)))
+  (judgment
+    BaseGrammarState
+    []
+    (mp
+      (q atom)
+      (lst
+        (mk
+          entry
+          (q Var)
+          (q varprod)))))
+  (judgment
+    GrammarEditState
+    []
+    (call
+      ReplayState
+      (call DescGrammar)
+      (call BaseGrammarState)
+      (call
+        RecordPatch
+        (call EmptyRepository)
+        (q grammar)
+        (lst)
+        (lst
+          (mk
+            AtKey
+            (q atom)
+            (mk
+              InsertKey
+              (q Hole)
+              (q holeprod)))))
+      (q grammar)))
+  (judgment
+    SuccessorFromBranch
+    []
+    (mk
+      name
+      (call
+        Require
+        (call
+          FoundationFromBranch
+          (call DescProgram)
+          (call BaseState)
+          (call RepoOrderOne)
+          (q main)
+          (q "F3-successor")
+          (mk none))
+        (q name))))
+  (judgment
+    SuccessorApplication
+    []
+    (call
+      Require
+      (call
+        FoundationFromBranch
+        (call DescProgram)
+        (call BaseState)
+        (call RepoOrderOne)
+        (q main)
+        (q "F3-successor")
+        (mk none))
+      (q application))))

@@ -1,0 +1,20 @@
+
+artifactevidence
+evidence
+checktwo-branches-divergeok
+check!branch-state-is-derived-by-replayok
+checkindependent-patches-commuteok
+checkreplay-is-deterministicok
+checkmerge-is-a-frontier-unionok
+check-patch-identity-is-independent-of-branch-namesok
+check0overlapping-patches-produce-an-explicit-conflictok
+check conflict-is-a-canonical-artifactok
+checkconflict-is-resolved-by-a-patchok
+check unrecord-changes-membership-onlyok
+checkunrecord-retains-historyok
+checkmeta-is-edited-on-a-branchok
+checkgrammar-is-edited-on-a-branchok
+check(successor-is-reconstructed-from-a-branchok
+check'successor-application-comes-from-replayok
+checkchange-calculus-still-appliesok
+checklambda-behaviour-unchangedok

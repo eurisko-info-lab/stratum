@@ -1,0 +1,717 @@
+; Generated from features/repository/repository.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module repository)
+  (judgment
+    Patch
+    [identity dependencies changes]
+    (mk
+      Patch
+      (v identity)
+      (v dependencies)
+      (v changes)))
+  (judgment
+    Patch'identity
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Patch'dependencies
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Patch'changes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Repository
+    [patches branches]
+    (mk
+      Repository
+      (v patches)
+      (v branches)))
+  (judgment
+    Repository'patches
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Repository'branches
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    PatchConflict
+    [patch reason]
+    (mk
+      PatchConflict
+      (v patch)
+      (v reason)))
+  (judgment
+    PatchConflict'patch
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    PatchConflict'reason
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    PatchIdentity
+    [dependencies changes]
+    (prim
+      digest
+      (mk
+        patch-content
+        (v dependencies)
+        (v changes))))
+  (judgment
+    NewPatch
+    [dependencies changes]
+    (call
+      Patch
+      (call
+        PatchIdentity
+        (v dependencies)
+        (v changes))
+      (v dependencies)
+      (v changes)))
+  (judgment
+    EmptyRepository
+    []
+    (call
+      Repository
+      (prim mnew)
+      (prim mnew)))
+  (judgment
+    Members
+    [repository branch]
+    (prim
+      mget
+      (call
+        Repository'branches
+        (v repository))
+      (v branch)
+      (lst)))
+  (judgment
+    Heads
+    [repository branch]
+    (prim
+      sort
+      (call
+        Members
+        (v repository)
+        (v branch))))
+  (judgment
+    PatchOf
+    [repository identity]
+    (prim
+      mget
+      (call
+        Repository'patches
+        (v repository))
+      (v identity)
+      (mk absent)))
+  (judgment
+    Dependencies
+    [repository identity]
+    (call
+      Patch'dependencies
+      (call
+        PatchOf
+        (v repository)
+        (v identity))))
+  (judgment
+    RecordPatch
+    [repository branch dependencies changes]
+    (let
+      patch
+      (call
+        NewPatch
+        (v dependencies)
+        (v changes))
+      (let
+        identity
+        (call
+          Patch'identity
+          (v patch))
+        (call
+          Repository
+          (prim
+            mput
+            (call
+              Repository'patches
+              (v repository))
+            (v identity)
+            (v patch))
+          (prim
+            mput
+            (call
+              Repository'branches
+              (v repository))
+            (v branch)
+            (prim
+              snoc
+              (call
+                Members
+                (v repository)
+                (v branch))
+              (v identity)))))))
+  (judgment
+    LastRecorded
+    [repository branch]
+    (let
+      members
+      (call
+        Members
+        (v repository)
+        (v branch))
+      (prim
+        nth
+        (v members)
+        (prim
+          sub
+          (prim
+            len
+            (v members))
+          (q 1)))))
+  (judgment
+    Contains
+    [items value]
+    (prim
+      contains
+      (v items)
+      (v value)))
+  (judgment
+    Without
+    [items value]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v head)
+            (v value))
+          (call
+            Without
+            (v rest)
+            (v value))
+          (prim
+            cons
+            (v head)
+            (call
+              Without
+              (v rest)
+              (v value)))))))
+  (judgment
+    UnapplyPatch
+    [repository branch identity]
+    (call
+      Repository
+      (call
+        Repository'patches
+        (v repository))
+      (prim
+        mput
+        (call
+          Repository'branches
+          (v repository))
+        (v branch)
+        (call
+          Without
+          (call
+            Members
+            (v repository)
+            (v branch))
+          (v identity)))))
+  (judgment
+    DependenciesSatisfied
+    [members dependencies]
+    (match
+      (v dependencies)
+      (case
+        (pnil)
+        (q #t))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v members)
+            (v head))
+          (call
+            DependenciesSatisfied
+            (v members)
+            (v rest))
+          (q #f)))))
+  (judgment
+    ApplyPatch
+    [repository branch identity]
+    (let
+      members
+      (call
+        Members
+        (v repository)
+        (v branch))
+      (if
+        (prim
+          contains
+          (v members)
+          (v identity))
+        (mk
+          ok
+          (v repository))
+        (if
+          (call
+            DependenciesSatisfied
+            (v members)
+            (call
+              Dependencies
+              (v repository)
+              (v identity)))
+          (mk
+            ok
+            (call
+              Repository
+              (call
+                Repository'patches
+                (v repository))
+              (prim
+                mput
+                (call
+                  Repository'branches
+                  (v repository))
+                (v branch)
+                (prim
+                  snoc
+                  (v members)
+                  (v identity)))))
+          (mk
+            missing-dependencies
+            (call
+              Dependencies
+              (v repository)
+              (v identity)))))))
+  (judgment
+    CreateBranch
+    [repository from to]
+    (call
+      Repository
+      (call
+        Repository'patches
+        (v repository))
+      (prim
+        mput
+        (call
+          Repository'branches
+          (v repository))
+        (v to)
+        (call
+          Members
+          (v repository)
+          (v from)))))
+  (judgment
+    MergeBranch
+    [repository into from]
+    (call
+      Repository
+      (call
+        Repository'patches
+        (v repository))
+      (prim
+        mput
+        (call
+          Repository'branches
+          (v repository))
+        (v into)
+        (call
+          Union
+          (call
+            Members
+            (v repository)
+            (v into))
+          (call
+            Members
+            (v repository)
+            (v from))))))
+  (judgment
+    ReadyPatches
+    [repository members emitted]
+    (match
+      (v members)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v emitted)
+            (v head))
+          (call
+            ReadyPatches
+            (v repository)
+            (v rest)
+            (v emitted))
+          (if
+            (call
+              DependenciesSatisfied
+              (v emitted)
+              (call
+                Dependencies
+                (v repository)
+                (v head)))
+            (prim
+              cons
+              (v head)
+              (call
+                ReadyPatches
+                (v repository)
+                (v rest)
+                (v emitted)))
+            (call
+              ReadyPatches
+              (v repository)
+              (v rest)
+              (v emitted)))))))
+  (judgment
+    TopoOrder
+    [repository members emitted]
+    (let
+      ready
+      (prim
+        sort
+        (call
+          ReadyPatches
+          (v repository)
+          (v members)
+          (v emitted)))
+      (match
+        (v ready)
+        (case
+          (pnil)
+          (v emitted))
+        (case
+          (pcons
+            (pv next)
+            (pv rest))
+          (call
+            TopoOrder
+            (v repository)
+            (v members)
+            (prim
+              snoc
+              (v emitted)
+              (v next)))))))
+  (judgment
+    BranchOrder
+    [repository branch]
+    (call
+      TopoOrder
+      (v repository)
+      (call
+        Members
+        (v repository)
+        (v branch))
+      (lst)))
+  (judgment
+    ApplyChanges
+    [desc state changes]
+    (match
+      (v changes)
+      (case
+        (pnil)
+        (mk
+          applied
+          (v state)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            Apply
+            (v desc)
+            (v state)
+            (v head))
+          (case
+            (pm
+              applied
+              (pv next))
+            (call
+              ApplyChanges
+              (v desc)
+              (v next)
+              (v rest)))
+          (case
+            (pm
+              conflict
+              (pv reason))
+            (mk
+              conflict
+              (v reason)))))))
+  (judgment
+    ReplaySequence
+    [desc state repository order]
+    (match
+      (v order)
+      (case
+        (pnil)
+        (mk
+          state
+          (v state)))
+      (case
+        (pcons
+          (pv identity)
+          (pv rest))
+        (match
+          (call
+            ApplyChanges
+            (v desc)
+            (v state)
+            (call
+              Patch'changes
+              (call
+                PatchOf
+                (v repository)
+                (v identity))))
+          (case
+            (pm
+              applied
+              (pv next))
+            (call
+              ReplaySequence
+              (v desc)
+              (v next)
+              (v repository)
+              (v rest)))
+          (case
+            (pm
+              conflict
+              (pv reason))
+            (mk
+              conflicted
+              (call
+                PatchConflict
+                (v identity)
+                (v reason))))))))
+  (judgment
+    Replay
+    [desc initial repository branch]
+    (call
+      ReplaySequence
+      (v desc)
+      (v initial)
+      (v repository)
+      (call
+        BranchOrder
+        (v repository)
+        (v branch))))
+  (judgment
+    ReplayTolerantSequence
+    [desc state repository order conflicts]
+    (match
+      (v order)
+      (case
+        (pnil)
+        (mk
+          replayed
+          (v state)
+          (v conflicts)))
+      (case
+        (pcons
+          (pv identity)
+          (pv rest))
+        (match
+          (call
+            ApplyChanges
+            (v desc)
+            (v state)
+            (call
+              Patch'changes
+              (call
+                PatchOf
+                (v repository)
+                (v identity))))
+          (case
+            (pm
+              applied
+              (pv next))
+            (call
+              ReplayTolerantSequence
+              (v desc)
+              (v next)
+              (v repository)
+              (v rest)
+              (v conflicts)))
+          (case
+            (pm
+              conflict
+              (pv reason))
+            (call
+              ReplayTolerantSequence
+              (v desc)
+              (v state)
+              (v repository)
+              (v rest)
+              (prim
+                snoc
+                (v conflicts)
+                (call
+                  PatchConflict
+                  (v identity)
+                  (v reason)))))))))
+  (judgment
+    ReplayTolerant
+    [desc initial repository branch]
+    (call
+      ReplayTolerantSequence
+      (v desc)
+      (v initial)
+      (v repository)
+      (call
+        BranchOrder
+        (v repository)
+        (v branch))
+      (lst)))
+  (judgment
+    ReplayState
+    [desc initial repository branch]
+    (match
+      (call
+        ReplayTolerant
+        (v desc)
+        (v initial)
+        (v repository)
+        (v branch))
+      (case
+        (pm
+          replayed
+          (pv state)
+          (pv conflicts))
+        (v state))))
+  (judgment
+    ReplayConflicts
+    [desc initial repository branch]
+    (match
+      (call
+        ReplayTolerant
+        (v desc)
+        (v initial)
+        (v repository)
+        (v branch))
+      (case
+        (pm
+          replayed
+          (pv state)
+          (pv conflicts))
+        (v conflicts))))
+  (judgment
+    Log
+    [repository branch]
+    (call
+      BranchOrder
+      (v repository)
+      (v branch)))
+  (judgment
+    Diff
+    [desc initial repository left right]
+    (mk
+      diff
+      (call
+        ReplayState
+        (v desc)
+        (v initial)
+        (v repository)
+        (v left))
+      (call
+        ReplayState
+        (v desc)
+        (v initial)
+        (v repository)
+        (v right))))
+  (judgment
+    SameState
+    [desc initial repository left right]
+    (prim
+      eq
+      (call
+        ReplayState
+        (v desc)
+        (v initial)
+        (v repository)
+        (v left))
+      (call
+        ReplayState
+        (v desc)
+        (v initial)
+        (v repository)
+        (v right))))
+  (judgment
+    FoundationFromBranch
+    [desc initial repository branch name predecessor]
+    (mk
+      foundation
+      (mk
+        name
+        (v name))
+      (mk
+        bootstrap
+        (q "StratumHost0/1"))
+      (mk
+        application
+        (call
+          ReplayState
+          (v desc)
+          (v initial)
+          (v repository)
+          (v branch)))
+      (mk
+        predecessor
+        (v predecessor))
+      (mk
+        change
+        (mk
+          some
+          (call
+            Heads
+            (v repository)
+            (v branch)))))))
