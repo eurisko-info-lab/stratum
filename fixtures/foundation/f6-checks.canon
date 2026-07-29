@@ -1,0 +1,66 @@
+; Executable acceptance checks for F6: the self-hosted application and
+; foundation protocol.
+[
+  ; --------------------------------------------------------- identity
+
+  (check application-is-loaded-from-one-root-digest
+    (prim tag (call VerifyRoot (q (foundation-of "foundations/F5"))))
+    (value valid))
+
+  (check verification-is-closure-only
+    (call VerificationIsClosureOnly (q (foundation-of "foundations/F5")))
+    (value #t))
+
+  (check host-supplied-semantic-overrides-are-rejected
+    (call VerifyClaimed (q (foundation-of "foundations/F5")) (q (foundation (name "forged"))))
+    (value (invalid host-override-rejected)))
+
+  ; ---------------------------------------------------- predecessor binding
+
+  (check predecessor-compatibility-is-witnessed
+    (call CompatibilityReason
+      (q (foundation-of "foundations/F4"))
+      (q (foundation-of "foundations/F5")))
+    (value compatible))
+
+  (check wrong-predecessor-is-rejected
+    (call CompatibilityReason
+      (q (foundation-of "foundations/F3"))
+      (q (foundation-of "foundations/F5")))
+    (value wrong-predecessor))
+
+  (check successor-requires-accepted-patches
+    (call SuccessorIsGoverned
+      (q (foundation-of "foundations/F4"))
+      (q (foundation-of "foundations/F5"))
+      (call MixedDecisions))
+    (value (blocked unaccepted-patches)))
+
+  (check successor-is-built-from-accepted-patches
+    (prim tag
+      (call SuccessorIsGoverned
+        (q (foundation-of "foundations/F4"))
+        (q (foundation-of "foundations/F5"))
+        (call AcceptedDecisions)))
+    (value SuccessorFoundation))
+
+  ; ------------------------------------------------------------- profiles
+
+  (check profiles-are-declared
+    (call ProfileNames)
+    (value [meta0-grammar0 hosts canonical]))
+
+  ; ------------------------------- earlier foundation behaviour is intact
+
+  (check governance-unchanged
+    (call AcceptedLocal)
+    (value accepted))
+
+  (check toolchain-unchanged
+    (call CompiledExecutionAgrees (q (file "languages/lambda/lambda.generated.grammar")))
+    (value #t))
+
+  (check lambda-behaviour-unchanged
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+]

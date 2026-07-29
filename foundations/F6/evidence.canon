@@ -1,0 +1,14 @@
+
+artifactevidence
+evidence
+check*application-is-loaded-from-one-root-digestok
+checkverification-is-closure-onlyok
+check-host-supplied-semantic-overrides-are-rejectedok
+check&predecessor-compatibility-is-witnessedok
+checkwrong-predecessor-is-rejectedok
+check#successor-requires-accepted-patchesok
+check(successor-is-built-from-accepted-patchesok
+checkprofiles-are-declaredok
+checkgovernance-unchangedok
+checktoolchain-unchangedok
+checklambda-behaviour-unchangedok

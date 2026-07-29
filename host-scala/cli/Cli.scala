@@ -269,10 +269,14 @@ object Cli:
       val p = root.resolve(path)
       if !Files.exists(p) then goal
       else
-        CanonText.read(Files.readString(p)) match
-          case Left(_) => goal
-          case Right(value) =>
-            Canon.node("q", Canon.R(Artifact(FoundationCommands.kindOf(value), value).digest))
+        val bytes = Files.readAllBytes(p)
+        Artifact.decode(bytes) match
+          case Right(a) => Canon.node("q", Canon.R(a.digest))
+          case Left(_) =>
+            CanonText.read(String(bytes, "UTF-8")) match
+              case Left(_) => goal
+              case Right(value) =>
+                Canon.node("q", Canon.R(Artifact(FoundationCommands.kindOf(value), value).digest))
     case Canon.Node("source", Vector(Canon.S(path))) =>
       val p = root.resolve(path)
       if !Files.exists(p) then goal

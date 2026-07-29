@@ -1,0 +1,52 @@
+name: staircase
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  staircase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Build the independent host
+        run: cargo build --release --manifest-path host-rust/Cargo.toml
+
+      - name: Rebuild every foundation in order
+        run: ./tools/staircase.sh
+
+      - name: Replay every transcript and run every suite
+        run: sbt -batch test
+
+      - name: Two host parity
+        run: |
+          for dir in foundations/F*; do
+            name=$(basename "$dir")
+            case "$name" in
+              F0|F1|F2|F3|F4|F5) continue ;;
+            esac
+            echo "parity $name"
+            ./host-rust/target/release/stratum-verify attest "$dir" > /tmp/rust.txt
+            sbt -batch --error "runMain stratum.cli.Stratum foundation attest --dir $dir" > /tmp/scala.txt
+            diff <(cat /tmp/rust.txt) <(grep -v '^\[' /tmp/scala.txt) || exit 1
+          done
+
+  model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: verifier-lean
+          build: true
+          test: false

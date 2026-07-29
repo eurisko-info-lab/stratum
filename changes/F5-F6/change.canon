@@ -1,0 +1,18 @@
+; The canonical change from F5 to F6.
+;
+; This commit closes the first full self-hosting staircase step: a foundation is
+; verified from `digest + closure` by two independent host implementations that
+; must agree on canonical verdict bytes.
+(change
+  (kind foundation)
+  (name "F5->F6")
+  (predecessor (foundation-of "foundations/F5"))
+  (delta-meta (file "changes/F5-F6/delta-meta.canon"))
+  (delta-grammar (file "changes/F5-F6/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "self-hosted application and foundation protocol")
+      (programs [(file "features/foundation/foundation.generated.meta")])
+      (sources [(text-file "features/foundation/foundation.meta")])
+      (hosts [scala rust])
+      (model lean))))

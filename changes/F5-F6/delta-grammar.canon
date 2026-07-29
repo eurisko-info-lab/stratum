@@ -1,0 +1,9 @@
+; delta-grammar for F5 -> F6: Grammar gains canonical manifest syntax.
+(change
+  (kind delta-grammar)
+  (name "F5->F6 delta-grammar")
+  (replace
+    (ReplaceChange
+      manifest-syntax
+      (absent)
+      (present [application foundation machine runtime resource-profile evidence-profile predecessor successor entry capability-route]))))

@@ -1,0 +1,702 @@
+; Generated from features/foundation/foundation.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module foundationprotocol)
+  (judgment
+    MachineProfile
+    [name machines]
+    (mk
+      MachineProfile
+      (v name)
+      (v machines)))
+  (judgment
+    MachineProfile'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    MachineProfile'machines
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    RuntimeProfile
+    [name runtimes]
+    (mk
+      RuntimeProfile
+      (v name)
+      (v runtimes)))
+  (judgment
+    RuntimeProfile'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    RuntimeProfile'runtimes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    EvidenceProfile
+    [name required]
+    (mk
+      EvidenceProfile
+      (v name)
+      (v required)))
+  (judgment
+    EvidenceProfile'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EvidenceProfile'required
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ApplicationManifest
+    [name meta grammar languages programs machine runtimes entries studios dependencies]
+    (mk
+      ApplicationManifest
+      (v name)
+      (v meta)
+      (v grammar)
+      (v languages)
+      (v programs)
+      (v machine)
+      (v runtimes)
+      (v entries)
+      (v studios)
+      (v dependencies)))
+  (judgment
+    ApplicationManifest'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ApplicationManifest'meta
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ApplicationManifest'grammar
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ApplicationManifest'languages
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    ApplicationManifest'programs
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    ApplicationManifest'machine
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    ApplicationManifest'runtimes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 6)))
+  (judgment
+    ApplicationManifest'entries
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 7)))
+  (judgment
+    ApplicationManifest'studios
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 8)))
+  (judgment
+    ApplicationManifest'dependencies
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 9)))
+  (judgment
+    FoundationManifest
+    [name bootstrap application kernel acceptance repository resources evidenceProfile predecessor change]
+    (mk
+      FoundationManifest
+      (v name)
+      (v bootstrap)
+      (v application)
+      (v kernel)
+      (v acceptance)
+      (v repository)
+      (v resources)
+      (v evidenceProfile)
+      (v predecessor)
+      (v change)))
+  (judgment
+    FoundationManifest'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FoundationManifest'bootstrap
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FoundationManifest'application
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FoundationManifest'kernel
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    FoundationManifest'acceptance
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    FoundationManifest'repository
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    FoundationManifest'resources
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 6)))
+  (judgment
+    FoundationManifest'evidenceProfile
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 7)))
+  (judgment
+    FoundationManifest'predecessor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 8)))
+  (judgment
+    FoundationManifest'change
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 9)))
+  (judgment
+    CompatibilityWitness
+    [predecessor successor compatible reason]
+    (mk
+      CompatibilityWitness
+      (v predecessor)
+      (v successor)
+      (v compatible)
+      (v reason)))
+  (judgment
+    CompatibilityWitness'predecessor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CompatibilityWitness'successor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    CompatibilityWitness'compatible
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    CompatibilityWitness'reason
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    FoundationChange
+    [predecessor successor deltaMeta deltaGrammar feature]
+    (mk
+      FoundationChange
+      (v predecessor)
+      (v successor)
+      (v deltaMeta)
+      (v deltaGrammar)
+      (v feature)))
+  (judgment
+    FoundationChange'predecessor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FoundationChange'successor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FoundationChange'deltaMeta
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FoundationChange'deltaGrammar
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    FoundationChange'feature
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    SuccessorFoundation
+    [foundation witness]
+    (mk
+      SuccessorFoundation
+      (v foundation)
+      (v witness)))
+  (judgment
+    SuccessorFoundation'foundation
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    SuccessorFoundation'witness
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ApplicationIdentity
+    [manifest]
+    (prim
+      digest
+      (v manifest)))
+  (judgment
+    FoundationIdentity
+    [manifest]
+    (prim
+      digest
+      (v manifest)))
+  (judgment
+    VerifyRoot
+    [reference]
+    (match
+      (call
+        Fetch
+        (v reference)
+        (q foundation))
+      (case
+        (pm none)
+        (mk
+          invalid
+          (q foundation-missing)))
+      (case
+        (pm
+          some
+          (pv manifest))
+        (match
+          (call
+            Field
+            (v manifest)
+            (q application))
+          (case
+            (pm none)
+            (mk
+              invalid
+              (q application-field-missing)))
+          (case
+            (pm
+              some
+              (pv applicationReference))
+            (match
+              (call
+                Fetch
+                (v applicationReference)
+                (q application))
+              (case
+                (pm none)
+                (mk
+                  invalid
+                  (q application-missing)))
+              (case
+                (pm
+                  some
+                  (pv application))
+                (match
+                  (call
+                    Field
+                    (v application)
+                    (q meta))
+                  (case
+                    (pm none)
+                    (mk
+                      invalid
+                      (q meta-field-missing)))
+                  (case
+                    (pm
+                      some
+                      (pv metaReference))
+                    (match
+                      (call
+                        Fetch
+                        (v metaReference)
+                        (q meta-program))
+                      (case
+                        (pm none)
+                        (mk
+                          invalid
+                          (q meta-program-missing)))
+                      (case
+                        (pm
+                          some
+                          (pv program))
+                        (mk
+                          valid
+                          (v reference)))))))))))))
+  (judgment
+    VerifyClaimed
+    [reference claimed]
+    (match
+      (call
+        Fetch
+        (v reference)
+        (q foundation))
+      (case
+        (pm none)
+        (mk
+          invalid
+          (q foundation-missing)))
+      (case
+        (pm
+          some
+          (pv manifest))
+        (if
+          (prim
+            eq
+            (v manifest)
+            (v claimed))
+          (call
+            VerifyRoot
+            (v reference))
+          (mk
+            invalid
+            (q host-override-rejected))))))
+  (judgment
+    VerificationIsClosureOnly
+    [reference]
+    (prim
+      eq
+      (call
+        VerifyRoot
+        (v reference))
+      (call
+        VerifyRoot
+        (v reference))))
+  (judgment
+    CompatibleWith
+    [predecessorReference successorReference]
+    (match
+      (call
+        Fetch
+        (v successorReference)
+        (q foundation))
+      (case
+        (pm none)
+        (call
+          CompatibilityWitness
+          (v predecessorReference)
+          (v successorReference)
+          (q #f)
+          (q successor-missing)))
+      (case
+        (pm
+          some
+          (pv successor))
+        (match
+          (call
+            Field
+            (v successor)
+            (q predecessor))
+          (case
+            (pm none)
+            (call
+              CompatibilityWitness
+              (v predecessorReference)
+              (v successorReference)
+              (q #f)
+              (q predecessor-field-missing)))
+          (case
+            (pm
+              some
+              (pv declared))
+            (match
+              (v declared)
+              (case
+                (pm none)
+                (call
+                  CompatibilityWitness
+                  (v predecessorReference)
+                  (v successorReference)
+                  (q #f)
+                  (q successor-without-predecessor)))
+              (case
+                (pm
+                  some
+                  (pv actual))
+                (if
+                  (prim
+                    eq
+                    (v actual)
+                    (v predecessorReference))
+                  (call
+                    CompatibilityWitness
+                    (v predecessorReference)
+                    (v successorReference)
+                    (q #t)
+                    (q compatible))
+                  (call
+                    CompatibilityWitness
+                    (v predecessorReference)
+                    (v successorReference)
+                    (q #f)
+                    (q wrong-predecessor))))))))))
+  (judgment
+    IsCompatible
+    [predecessorReference successorReference]
+    (call
+      CompatibilityWitness'compatible
+      (call
+        CompatibleWith
+        (v predecessorReference)
+        (v successorReference))))
+  (judgment
+    CompatibilityReason
+    [predecessorReference successorReference]
+    (call
+      CompatibilityWitness'reason
+      (call
+        CompatibleWith
+        (v predecessorReference)
+        (v successorReference))))
+  (judgment
+    BuildSuccessor
+    [predecessorReference successorReference]
+    (call
+      SuccessorFoundation
+      (v successorReference)
+      (call
+        CompatibleWith
+        (v predecessorReference)
+        (v successorReference))))
+  (judgment
+    SuccessorIsGoverned
+    [predecessorReference successorReference decisions]
+    (if
+      (call
+        AllAccepted
+        (v decisions))
+      (call
+        BuildSuccessor
+        (v predecessorReference)
+        (v successorReference))
+      (mk
+        blocked
+        (q unaccepted-patches))))
+  (judgment
+    DefaultMachineProfile
+    []
+    (call
+      MachineProfile
+      (q meta0-grammar0)
+      (lst
+        (q MetaMachine0)
+        (q GrammarMachine0))))
+  (judgment
+    DefaultRuntimeProfile
+    []
+    (call
+      RuntimeProfile
+      (q hosts)
+      (lst
+        (q scala)
+        (q rust))))
+  (judgment
+    DefaultEvidenceProfile
+    []
+    (call
+      EvidenceProfile
+      (q canonical)
+      (lst
+        (q steps)
+        (q calls)
+        (q capabilities))))
+  (judgment
+    ProfileNames
+    []
+    (lst
+      (call
+        MachineProfile'name
+        (call DefaultMachineProfile))
+      (call
+        RuntimeProfile'name
+        (call DefaultRuntimeProfile))
+      (call
+        EvidenceProfile'name
+        (call DefaultEvidenceProfile))))
+  (judgment
+    MixedDecisions
+    []
+    (lst
+      (call AcceptedDecision)
+      (call RejectedDecision)))
+  (judgment
+    AcceptedDecisions
+    []
+    (lst
+      (call AcceptedDecision))))

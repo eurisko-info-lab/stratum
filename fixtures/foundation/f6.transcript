@@ -1,0 +1,58 @@
+# F6 acceptance transcript: self-hosted applications and foundations.
+
+$ foundation verify --dir foundations/F6
+> foundation F6
+> digest 3deb8608e55a8fcaa1c165c5536d81775e7a3d458f2041e007e999d944e89422
+> closure 51 artifacts
+> check application-is-loaded-from-one-root-digest ok
+> check verification-is-closure-only ok
+> check host-supplied-semantic-overrides-are-rejected ok
+> check predecessor-compatibility-is-witnessed ok
+> check wrong-predecessor-is-rejected ok
+> check successor-requires-accepted-patches ok
+> check successor-is-built-from-accepted-patches ok
+> check profiles-are-declared ok
+> check governance-unchanged ok
+> check toolchain-unchanged ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F5 --successor foundations/F6
+> predecessor F5
+> successor F6
+> result (valid #d856dbce4eec753775b757f67a09b5f2f59f3dfd8fd5a730ad82fd627d08d1a2f)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/F6
+> reconstructed F6
+> digest 3deb8608e55a8fcaa1c165c5536d81775e7a3d458f2041e007e999d944e89422
+> stable yes
+> closure 51 artifacts
+> checks 11 ok
+
+# The canonical attestation that both independent hosts must reproduce.
+$ foundation attest --dir foundations/F6
+> (attestation (name "F6") (foundation #d3deb8608e55a8fcaa1c165c5536d81775e7a3d458f2041e007e999d944e89422) (application #d14eb1ce22b65c53d3373d55644461bc51cc1a3b46ba4c3e581be36c986c9c511) (meta #d2ea85ed944b4d2164f81ec7492e6be59f680645605af10affebd8994a60f2136) (closure 51) (kinds {application 7 change 8 foundation 7 grammar 3 meta-program 22 source 4}) (complete #t))
+> attestation 20a309e4de96f098ac177c9f41ec5f017f72955b8d14a848c635efca77bd2f06
+
+# A foundation is verified from a reference and the closure, nothing else.
+$ derive --foundation foundations/F6 --goal '(prim tag (call VerifyRoot (file "foundations/F5/foundation.canon")))'
+> valid
+
+# Host supplied semantic overrides are rejected.
+$ derive --foundation foundations/F6 --goal '(call VerifyClaimed (file "foundations/F5/foundation.canon") (q (foundation (name "forged"))))'
+> (invalid host-override-rejected)
+
+# Predecessor compatibility is witnessed, not assumed.
+$ derive --foundation foundations/F6 --goal '(call CompatibilityReason (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon"))'
+> compatible
+
+$ derive --foundation foundations/F6 --goal '(call CompatibilityReason (file "foundations/F3/foundation.canon") (file "foundations/F5/foundation.canon"))'
+> wrong-predecessor
+
+# Promotion requires accepted patches.
+$ derive --foundation foundations/F6 --goal '(call SuccessorIsGoverned (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon") (call MixedDecisions))'
+> (blocked unaccepted-patches)
+
+$ derive --foundation foundations/F6 --goal '(call ProfileNames)'
+> [meta0-grammar0 hosts canonical]
