@@ -1,0 +1,10 @@
+; delta-meta for F2 -> F3: Meta gains patches, causal dependencies, branches
+; and replay.
+(change
+  (kind delta-meta)
+  (name "F2->F3 delta-meta")
+  (replace
+    (ReplaceChange
+      history-model
+      (linear predecessor-roots)
+      (causal patch-graph))))

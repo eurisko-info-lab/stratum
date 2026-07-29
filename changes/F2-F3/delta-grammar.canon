@@ -1,0 +1,9 @@
+; delta-grammar for F2 -> F3: Grammar gains the repository command surface.
+(change
+  (kind delta-grammar)
+  (name "F2->F3 delta-grammar")
+  (replace
+    (ReplaceChange
+      repository-syntax
+      (absent)
+      (present [branch record apply unapply merge resolve log diff heads dependencies]))))
