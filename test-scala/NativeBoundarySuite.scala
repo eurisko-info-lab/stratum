@@ -50,6 +50,7 @@ class NativeBoundarySuite extends munit.FunSuite:
       "artifact", "program", "judgment", "module", "use", "grammar", "name", "start", "token", "category",
       "prod", "pass", "fold", "paren", "kw", "bind", "q", "v", "mk", "lst", "mp", "if", "let", "call",
       "match", "case", "prim", "cap", "fail", "pv", "pq", "pm", "pnode", "pl", "pcons", "pnil", "verdict",
+      "skip",
       "evidence", "steps", "calls", "capabilities", "budget", "depth", "kernel", "allow", "ok", "denied",
       "request", "build", "application", "foundation", "predecessor", "change", "file", "include",
       "text-file", "program-of", "foundation-of", "source", "path", "text", "none", "some", "check",

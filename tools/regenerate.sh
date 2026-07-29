@@ -17,6 +17,14 @@ META="--program languages/meta/prelude.meta --program languages/meta1/elaborate.
 echo "regenerating grammars"
 run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META \
   --judgment ElaborateGrammarSource \
+  --source languages/grammar1/grammar1.grammar \
+  --out languages/grammar1/grammar1.generated.grammar
+run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META \
+  --judgment ElaborateGrammarSource \
+  --source languages/meta1/meta1.grammar \
+  --out languages/meta1/meta1.generated.grammar
+run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META \
+  --judgment ElaborateGrammarSource \
   --source languages/lambda/lambda.grammar \
   --out languages/lambda/lambda.generated.grammar
 

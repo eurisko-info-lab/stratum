@@ -1,0 +1,10 @@
+; delta-grammar for F1 -> F2: Grammar gains syntax for semantic identities,
+; paths and the change operations.
+(change
+  (kind delta-grammar)
+  (name "F1->F2 delta-grammar")
+  (replace
+    (ReplaceChange
+      change-syntax
+      (absent)
+      (present [fieldId constructorId key path change insert delete replace move rename edit]))))

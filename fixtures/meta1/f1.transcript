@@ -3,7 +3,7 @@
 
 $ foundation verify --dir foundations/F1
 > foundation F1
-> digest e52aa3409a82da21a21232af577949c1d24e9e73e3a2fb9668c6ea96fe55b0c5
+> digest 9cae27222eac44bbddbda5972f968180f0a7d2592dc1b39056277074297c0cbe
 > closure 24 artifacts
 > check meta1-parse-print-roundtrip ok
 > check grammar1-parse-print-roundtrip ok
@@ -37,12 +37,12 @@ $ foundation closure --dir foundations/F1
 $ foundation verify-successor --predecessor foundations/F0 --successor foundations/F1
 > predecessor F0
 > successor F1
-> result (valid #df120d9113adc57dffdc5889f7af6e6dca9f64856f09e077451601430b7384489)
+> result (valid #d7b743eb4822babbe7e937f5286cecde2fef7c496d34f375e5bf8e33194f76cae)
 
 # The successor reconstructs itself from its own closure.
 $ foundation reconstruct --dir foundations/F1
 > reconstructed F1
-> digest e52aa3409a82da21a21232af577949c1d24e9e73e3a2fb9668c6ea96fe55b0c5
+> digest 9cae27222eac44bbddbda5972f968180f0a7d2592dc1b39056277074297c0cbe
 > stable yes
 > closure 24 artifacts
 > checks 17 ok

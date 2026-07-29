@@ -11,6 +11,7 @@ category declaration
   prod GrammarName "grammar" name : text
   prod Start "start" name : ident
   prod Token "token" name : ident kind : ident pattern : text
+  prod Skip "skip" pattern : text
   prod Category "category" name : ident productions : productions
 
 category productions
