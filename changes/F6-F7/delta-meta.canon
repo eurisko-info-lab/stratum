@@ -1,0 +1,10 @@
+; delta-meta for F6 -> F7: Meta gains transactions, blocks, chain state and
+; publication anchoring.
+(change
+  (kind delta-meta)
+  (name "F6->F7 delta-meta")
+  (replace
+    (ReplaceChange
+      publication-model
+      (local-only)
+      (signed-append-only-chain))))
