@@ -1,0 +1,77 @@
+; Executable acceptance checks for F10: constituted semantic retention.
+[
+  ; ------------------------------------------------------------- collection
+
+  (check collection-is-nontrivial
+    (call CollectionIsNontrivial)
+    (value 3))
+
+  (check derived-caches-are-discarded
+    (call DiscardedKinds)
+    (value [tools index projection]))
+
+  (check regeneration-inputs-are-retained
+    (call RetainedKinds)
+    (value [state transitions foundation closure patches schemas]))
+
+  ; ------------------------------------------------------------- preservation
+
+  (check foundation-reconstruction-is-preserved
+    (call PreservesFoundationReconstruction (call ReplayableConstitution) (call World))
+    (value #t))
+
+  (check settled-history-replay-is-preserved
+    (call PreservesSettledReplay (call ReplayableConstitution) (call World))
+    (value #t))
+
+  (check the-plan-satisfies-its-constitution
+    (call ReplayablePlanIsValid)
+    (value (valid)))
+
+  ; --------------------------------------------------------------- rejection
+
+  (check a-plan-that-removes-required-evidence-is-rejected
+    (call PlanRemovingRequiredEvidence)
+    (value (invalid required-evidence-removed)))
+
+  (check a-stricter-constitution-keeps-the-tool-cache
+    (call StrictPlanKeepsTools)
+    (value #t))
+
+  ; ------------------------------------------------------------ regeneration
+
+  (check tooling-regenerates-after-cache-deletion
+    (call ToolingRegeneratesAfterCollection
+      (q (file "languages/lambda/lambda.generated.grammar"))
+      (call ReplayableConstitution)
+      (call World))
+    (value #t))
+
+  ; ------------------------------------------------------------- checkpoints
+
+  (check an-application-is-reconstructed-from-a-checkpoint-plus-patches
+    (call CheckpointReconstruction)
+    (value {A ten B twenty}))
+
+  (check archive-attestation-is-stable
+    (call ArchiveAttestationStable)
+    (value #t))
+
+  (check retention-modes-are-declared
+    (call RetentionModes)
+    (value [CurrentStateOnly TransitionMetadata ReplayableFoundation FullSemanticHistory CheckpointedHistory]))
+
+  ; ------------------------------- earlier foundation behaviour is intact
+
+  (check settlement-unchanged
+    (call SettledHeight
+      (call SettleTwo
+        (q (file "foundations/F4/foundation.canon"))
+        (q (file "foundations/F5/foundation.canon"))
+        (q (file "foundations/F6/foundation.canon"))))
+    (value 2))
+
+  (check lambda-behaviour-unchanged
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+]

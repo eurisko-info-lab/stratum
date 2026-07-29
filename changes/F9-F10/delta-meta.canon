@@ -1,0 +1,10 @@
+; delta-meta for F9 -> F10: Meta gains retention constitutions, archives,
+; checkpoints and collection plans.
+(change
+  (kind delta-meta)
+  (name "F9->F10 delta-meta")
+  (replace
+    (ReplaceChange
+      retention-model
+      (implementation-accident)
+      (constituted semantic-retention))))

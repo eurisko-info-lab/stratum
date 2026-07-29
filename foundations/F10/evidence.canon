@@ -1,0 +1,17 @@
+
+artifactevidence
+evidence
+checkcollection-is-nontrivialok
+checkderived-caches-are-discardedok
+check regeneration-inputs-are-retainedok
+check&foundation-reconstruction-is-preservedok
+check#settled-history-replay-is-preservedok
+check#the-plan-satisfies-its-constitutionok
+check1a-plan-that-removes-required-evidence-is-rejectedok
+check,a-stricter-constitution-keeps-the-tool-cacheok
+check(tooling-regenerates-after-cache-deletionok
+check>an-application-is-reconstructed-from-a-checkpoint-plus-patchesok
+checkarchive-attestation-is-stableok
+checkretention-modes-are-declaredok
+checksettlement-unchangedok
+checklambda-behaviour-unchangedok

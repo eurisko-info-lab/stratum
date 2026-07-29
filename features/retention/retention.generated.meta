@@ -1,0 +1,739 @@
+; Generated from features/retention/retention.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module retention)
+  (judgment
+    RetentionConstitution
+    [name retentionMode required]
+    (mk
+      RetentionConstitution
+      (v name)
+      (v retentionMode)
+      (v required)))
+  (judgment
+    RetentionConstitution'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    RetentionConstitution'retentionMode
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    RetentionConstitution'required
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Checkpoint
+    [height state roots]
+    (mk
+      Checkpoint
+      (v height)
+      (v state)
+      (v roots)))
+  (judgment
+    Checkpoint'height
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Checkpoint'state
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Checkpoint'roots
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ArchiveManifest
+    [name roots checkpoint]
+    (mk
+      ArchiveManifest
+      (v name)
+      (v roots)
+      (v checkpoint)))
+  (judgment
+    ArchiveManifest'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ArchiveManifest'roots
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ArchiveManifest'checkpoint
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ArchiveAttestation
+    [archive digest]
+    (mk
+      ArchiveAttestation
+      (v archive)
+      (v digest)))
+  (judgment
+    ArchiveAttestation'archive
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ArchiveAttestation'digest
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    GcPlan
+    [retain discard]
+    (mk
+      GcPlan
+      (v retain)
+      (v discard)))
+  (judgment
+    GcPlan'retain
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    GcPlan'discard
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    RetainedClosure
+    [digests]
+    (mk
+      RetainedClosure
+      (v digests)))
+  (judgment
+    RetainedClosure'digests
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ReconstructionTarget
+    [kind root]
+    (mk
+      ReconstructionTarget
+      (v kind)
+      (v root)))
+  (judgment
+    ReconstructionTarget'kind
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ReconstructionTarget'root
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    RetentionModes
+    []
+    (lst
+      (q CurrentStateOnly)
+      (q TransitionMetadata)
+      (q ReplayableFoundation)
+      (q FullSemanticHistory)
+      (q CheckpointedHistory)))
+  (judgment
+    IsRetentionMode
+    [retentionMode]
+    (prim
+      contains
+      (call RetentionModes)
+      (v retentionMode)))
+  (judgment
+    RequiredFor
+    [retentionMode]
+    (match
+      (v retentionMode)
+      (case
+        (pq CurrentStateOnly)
+        (lst
+          (q state)))
+      (case
+        (pq TransitionMetadata)
+        (lst
+          (q state)
+          (q transitions)))
+      (case
+        (pq ReplayableFoundation)
+        (lst
+          (q state)
+          (q transitions)
+          (q foundation)
+          (q closure)))
+      (case
+        (pq FullSemanticHistory)
+        (lst
+          (q state)
+          (q transitions)
+          (q foundation)
+          (q closure)
+          (q patches)))
+      (case
+        (pq CheckpointedHistory)
+        (lst
+          (q state)
+          (q checkpoint)
+          (q foundation)
+          (q closure)))
+      (case _ (lst))))
+  (judgment
+    ConstitutionFor
+    [name retentionMode targets]
+    (call
+      RetentionConstitution
+      (v name)
+      (v retentionMode)
+      (call
+        Union
+        (call
+          RequiredFor
+          (v retentionMode))
+        (v targets))))
+  (judgment
+    IsDerived
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          derived
+          (pv kind)
+          (pv inputs))
+        (q #t))
+      (case
+        _
+        (q #f))))
+  (judgment
+    EntryKind
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          retained
+          (pv kind))
+        (v kind))
+      (case
+        (pm
+          derived
+          (pv kind)
+          (pv inputs))
+        (v kind))
+      (case
+        _
+        (q unknown))))
+  (judgment
+    EntryInputs
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          derived
+          (pv kind)
+          (pv inputs))
+        (v inputs))
+      (case _ (lst))))
+  (judgment
+    KindsOf
+    [entries]
+    (match
+      (v entries)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            EntryKind
+            (v head))
+          (call
+            KindsOf
+            (v rest))))))
+  (judgment
+    PlanCollection
+    [constitution world]
+    (call
+      Split
+      (v constitution)
+      (v world)
+      (v world)
+      (lst)
+      (lst)))
+  (judgment
+    Split
+    [constitution world remaining retain discard]
+    (match
+      (v remaining)
+      (case
+        (pnil)
+        (call
+          GcPlan
+          (v retain)
+          (v discard)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (call
+            Discardable
+            (v constitution)
+            (v world)
+            (v head))
+          (call
+            Split
+            (v constitution)
+            (v world)
+            (v rest)
+            (v retain)
+            (prim
+              snoc
+              (v discard)
+              (call
+                EntryKind
+                (v head))))
+          (call
+            Split
+            (v constitution)
+            (v world)
+            (v rest)
+            (prim
+              snoc
+              (v retain)
+              (call
+                EntryKind
+                (v head)))
+            (v discard))))))
+  (judgment
+    Discardable
+    [constitution world entry]
+    (if
+      (prim
+        contains
+        (call
+          RetentionConstitution'required
+          (v constitution))
+        (call
+          EntryKind
+          (v entry)))
+      (q #f)
+      (if
+        (call
+          IsDerived
+          (v entry))
+        (call
+          AllRetained
+          (v constitution)
+          (v world)
+          (call
+            EntryInputs
+            (v entry)))
+        (q #f))))
+  (judgment
+    AllRetained
+    [constitution world inputs]
+    (match
+      (v inputs)
+      (case
+        (pnil)
+        (q #t))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (call
+              KindsOf
+              (v world))
+            (v head))
+          (call
+            AllRetained
+            (v constitution)
+            (v world)
+            (v rest))
+          (q #f)))))
+  (judgment
+    ValidatePlan
+    [constitution plan]
+    (call
+      MissingRequired
+      (call
+        RetentionConstitution'required
+        (v constitution))
+      (call
+        GcPlan'retain
+        (v plan))))
+  (judgment
+    MissingRequired
+    [required retained]
+    (match
+      (v required)
+      (case
+        (pnil)
+        (mk valid))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v retained)
+            (v head))
+          (call
+            MissingRequired
+            (v rest)
+            (v retained))
+          (mk
+            invalid
+            (q required-evidence-removed))))))
+  (judgment
+    ProposePlan
+    [constitution retain discard]
+    (call
+      ValidatePlan
+      (v constitution)
+      (call
+        GcPlan
+        (v retain)
+        (v discard))))
+  (judgment
+    Reconstructs
+    [plan target]
+    (prim
+      contains
+      (call
+        GcPlan'retain
+        (v plan))
+      (call
+        ReconstructionTarget'kind
+        (v target))))
+  (judgment
+    PreservesFoundationReconstruction
+    [constitution world]
+    (call
+      Reconstructs
+      (call
+        PlanCollection
+        (v constitution)
+        (v world))
+      (call
+        ReconstructionTarget
+        (q foundation)
+        (q root))))
+  (judgment
+    PreservesSettledReplay
+    [constitution world]
+    (call
+      Reconstructs
+      (call
+        PlanCollection
+        (v constitution)
+        (v world))
+      (call
+        ReconstructionTarget
+        (q transitions)
+        (q history))))
+  (judgment
+    RegenerateTooling
+    [grammar]
+    (call
+      DerivedRoles
+      (v grammar)))
+  (judgment
+    ToolingRegeneratesAfterCollection
+    [grammar constitution world]
+    (if
+      (prim
+        contains
+        (call
+          GcPlan'discard
+          (call
+            PlanCollection
+            (v constitution)
+            (v world)))
+        (q tools))
+      (prim
+        eq
+        (call
+          RegenerateTooling
+          (v grammar))
+        (call
+          DerivedRoles
+          (v grammar)))
+      (q #f)))
+  (judgment
+    MakeCheckpoint
+    [height state roots]
+    (call
+      Checkpoint
+      (v height)
+      (v state)
+      (v roots)))
+  (judgment
+    ReconstructFromCheckpoint
+    [desc checkpoint repository branch]
+    (call
+      ReplayState
+      (v desc)
+      (call
+        Checkpoint'state
+        (v checkpoint))
+      (v repository)
+      (v branch)))
+  (judgment
+    ArchiveOf
+    [name checkpoint roots]
+    (call
+      ArchiveManifest
+      (v name)
+      (v roots)
+      (v checkpoint)))
+  (judgment
+    AttestArchive
+    [archive]
+    (call
+      ArchiveAttestation
+      (call
+        ArchiveManifest'name
+        (v archive))
+      (prim
+        digest
+        (v archive))))
+  (judgment
+    ArchiveDigestIsStable
+    [archive]
+    (prim
+      eq
+      (call
+        AttestArchive
+        (v archive))
+      (call
+        AttestArchive
+        (v archive))))
+  (judgment
+    World
+    []
+    (lst
+      (mk
+        retained
+        (q state))
+      (mk
+        retained
+        (q transitions))
+      (mk
+        retained
+        (q foundation))
+      (mk
+        retained
+        (q closure))
+      (mk
+        retained
+        (q patches))
+      (mk
+        retained
+        (q schemas))
+      (mk
+        derived
+        (q tools)
+        (lst
+          (q schemas)))
+      (mk
+        derived
+        (q index)
+        (lst
+          (q schemas)))
+      (mk
+        derived
+        (q projection)
+        (lst
+          (q schemas)))))
+  (judgment
+    ReplayableConstitution
+    []
+    (call
+      ConstitutionFor
+      (q replayable)
+      (q ReplayableFoundation)
+      (lst)))
+  (judgment
+    HistoryConstitution
+    []
+    (call
+      ConstitutionFor
+      (q history)
+      (q FullSemanticHistory)
+      (lst)))
+  (judgment
+    StrictConstitution
+    []
+    (call
+      ConstitutionFor
+      (q strict)
+      (q ReplayableFoundation)
+      (lst
+        (q tools))))
+  (judgment
+    ReplayablePlan
+    []
+    (call
+      PlanCollection
+      (call ReplayableConstitution)
+      (call World)))
+  (judgment
+    DiscardedKinds
+    []
+    (call
+      GcPlan'discard
+      (call ReplayablePlan)))
+  (judgment
+    RetainedKinds
+    []
+    (call
+      GcPlan'retain
+      (call ReplayablePlan)))
+  (judgment
+    CollectionIsNontrivial
+    []
+    (prim
+      len
+      (call DiscardedKinds)))
+  (judgment
+    ReplayablePlanIsValid
+    []
+    (call
+      ValidatePlan
+      (call ReplayableConstitution)
+      (call ReplayablePlan)))
+  (judgment
+    PlanRemovingRequiredEvidence
+    []
+    (call
+      ProposePlan
+      (call ReplayableConstitution)
+      (lst
+        (q state)
+        (q transitions))
+      (lst
+        (q foundation)
+        (q closure))))
+  (judgment
+    StrictPlanKeepsTools
+    []
+    (prim
+      contains
+      (call
+        GcPlan'retain
+        (call
+          PlanCollection
+          (call StrictConstitution)
+          (call World)))
+      (q tools)))
+  (judgment
+    CheckpointReconstruction
+    []
+    (call
+      ReconstructFromCheckpoint
+      (call DescProgram)
+      (call
+        MakeCheckpoint
+        (q 1)
+        (call BaseState)
+        (lst
+          (q application)))
+      (call RepoOrderOne)
+      (q main)))
+  (judgment
+    ArchiveAttestationStable
+    []
+    (call
+      ArchiveDigestIsStable
+      (call
+        ArchiveOf
+        (q f10)
+        (call
+          MakeCheckpoint
+          (q 1)
+          (call BaseState)
+          (lst
+            (q application)))
+        (lst
+          (q foundation))))))
