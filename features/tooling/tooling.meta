@@ -1,0 +1,361 @@
+module tooling
+
+; Language tooling is derived from declarations, not hand written.
+;
+; A LanguageSchema says what a language is. A ToolchainSchema says which
+; judgment plays which tool role. Every derived tool is a canonical artifact.
+
+record LanguageSchema [name grammar sorts constructors judgments]
+record ToolchainSchema [language roles]
+record Tool [role program grammar identity]
+record Toolchain [language tools]
+record Finding [kind subject]
+
+; ------------------------------------------------------------------ schemas
+
+judgment LambdaSorts [] = list [#Term]
+
+judgment LambdaConstructors [] =
+  list [
+    mk #constructor [#Var list [#name]]
+    mk #constructor [#Lam list [#name #body]]
+    mk #constructor [#App list [#fn #argument]]
+  ]
+
+judgment LambdaJudgments [] =
+  map [
+    #parse #Parse
+    #print #Print
+    #evaluate #NormalizeTerm
+    #normalize #NormalizeTerm
+    #compile #CompileTerm
+    #executeTarget #ExecuteCode
+    #format #FormatSource
+    #index #IndexTerm
+    #rename #RenameTerm
+    #diagnostics #DiagnoseTerm
+    #validateChange #ValidateChange
+  ]
+
+judgment LambdaSchema [grammar] =
+  call LanguageSchema [#lambda grammar call LambdaSorts [] call LambdaConstructors [] call LambdaJudgments []]
+
+; The compilation target is an ordinary language artifact with no concrete
+; syntax of its own.
+judgment StackSchema [] =
+  call LanguageSchema [
+    #stack
+    mk #none []
+    list [#Code #Instruction]
+    list [
+      mk #constructor [#ACCESS list [#index]]
+      mk #constructor [#FREE list [#name]]
+      mk #constructor [#GRAB list [#body]]
+      mk #constructor [#PUSH list [#body]]
+    ]
+    map [#executeTarget #ExecuteCode]
+  ]
+
+judgment LambdaToolchain [grammar] =
+  call ToolchainSchema [
+    call LambdaSchema [grammar]
+    list [#parse #print #format #evaluate #compile #executeTarget #index #rename #diagnostics #validateChange]
+  ]
+
+; --------------------------------------------------------------- derivation
+
+judgment JudgmentForRole [schema role] =
+  prim #mget [call LanguageSchema'judgments [schema] role #unknown]
+
+; A tool identity depends only on the schema selection and the selected program.
+judgment ToolIdentity [language role program grammar] =
+  prim #digest [mk #tool-identity [language role program grammar]]
+
+judgment DeriveTool [schema role] =
+  let judgment' = call JudgmentForRole [schema role] in
+  call Tool [
+    role
+    judgment'
+    call LanguageSchema'grammar [schema]
+    call ToolIdentity [
+      call LanguageSchema'name [schema]
+      role
+      judgment'
+      call LanguageSchema'grammar [schema]
+    ]
+  ]
+
+judgment DeriveTools [schema roles] =
+  match roles {
+    case [] -> list []
+    case head :: rest -> prim #cons [call DeriveTool [schema head] call DeriveTools [schema rest]]
+  }
+
+judgment DeriveToolchain [toolchain] =
+  call Toolchain [
+    call LanguageSchema'name [call ToolchainSchema'language [toolchain]]
+    call DeriveTools [
+      call ToolchainSchema'language [toolchain]
+      call ToolchainSchema'roles [toolchain]
+    ]
+  ]
+
+judgment ToolFor [derived role] = call FindTool [call Toolchain'tools [derived] role]
+
+judgment FindTool [tools role] =
+  match tools {
+    case [] -> mk #none []
+    case head :: rest ->
+      if prim #eq [call Tool'role [head] role]
+      then mk #some [head]
+      else call FindTool [rest role]
+  }
+
+judgment ToolIdentities [derived] = call CollectIdentities [call Toolchain'tools [derived]]
+
+judgment CollectIdentities [tools] =
+  match tools {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [mk #entry [call Tool'role [head] call Tool'identity [head]] call CollectIdentities [rest]]
+  }
+
+; ------------------------------------------------------------- tool running
+
+; A generic runner over the declared roles of a schema. Adding a language is a
+; Meta change, never a host change.
+judgment RunRole [schema role input] =
+  let judgment' = call JudgmentForRole [schema role] in
+  match judgment' {
+    case #Parse -> call Parse [call LanguageSchema'grammar [schema] input]
+    case #Print -> call Print [call LanguageSchema'grammar [schema] input]
+    case #NormalizeTerm -> call NormalizeTerm [input]
+    case #CompileTerm -> call CompileTerm [input]
+    case #ExecuteCode -> call ExecuteCode [input]
+    case #FormatSource -> call FormatSource [call LanguageSchema'grammar [schema] input]
+    case #IndexTerm -> call IndexTerm [input list []]
+    case #DiagnoseTerm -> call DiagnoseTerm [input list []]
+    case _ -> fail #unknown-role "no program is selected for this role"
+  }
+
+; ---------------------------------------------------------------- formatter
+
+judgment FormatSource [grammar source] =
+  call Print [grammar call Parse [grammar source]]
+
+; -------------------------------------------------------------- symbol index
+
+judgment IndexTerm [term path] =
+  match term {
+    case (#Var name) -> list [mk #symbol [#reference name path]]
+    case (#Lam name body) ->
+      prim #cons [
+        mk #symbol [#binder name path]
+        call IndexTerm [body prim #snoc [path mk #field [#body]]]
+      ]
+    case (#App fn argument) ->
+      prim #append [
+        call IndexTerm [fn prim #snoc [path mk #field [#fn]]]
+        call IndexTerm [argument prim #snoc [path mk #field [#argument]]]
+      ]
+  }
+
+; ------------------------------------------------------------------ rename
+
+judgment RenameTerm [term from to] =
+  match term {
+    case (#Var name) -> if prim #eq [name from] then mk #Var [to] else mk #Var [name]
+    case (#Lam name body) ->
+      if prim #eq [name from]
+      then mk #Lam [name body]
+      else mk #Lam [name call RenameTerm [body from to]]
+    case (#App fn argument) ->
+      mk #App [call RenameTerm [fn from to] call RenameTerm [argument from to]]
+  }
+
+judgment RenameSource [grammar source from to] =
+  call Print [grammar call RenameTerm [call Parse [grammar source] from to]]
+
+; ------------------------------------------------------------- diagnostics
+
+judgment DiagnoseTerm [term scope] =
+  match term {
+    case (#Var name) -> list []
+    case (#Lam name body) ->
+      if prim #contains [scope name]
+      then prim #cons [call Finding [#shadowed-binder name] call DiagnoseTerm [body prim #cons [name scope]]]
+      else call DiagnoseTerm [body prim #cons [name scope]]
+    case (#App fn argument) ->
+      prim #append [call DiagnoseTerm [fn scope] call DiagnoseTerm [argument scope]]
+  }
+
+judgment DiagnoseSource [grammar source] =
+  call DiagnoseTerm [call Parse [grammar source] list []]
+
+; -------------------------------------------------------- change validation
+
+judgment ValidateChange [desc value change] =
+  match call Apply [desc value change] {
+    case (#applied result) -> mk #valid []
+    case (#conflict reason) -> mk #invalid [reason]
+  }
+
+; ---------------------------------------------------------------- compiler
+
+; Compile : lambda -> stack
+judgment CompileDeBruijn [term] =
+  match term {
+    case (#var index) -> list [mk #ACCESS [index]]
+    case (#free name) -> list [mk #FREE [name]]
+    case (#lam body) -> list [mk #GRAB [call CompileDeBruijn [body]]]
+    case (#app fn argument) ->
+      prim #cons [mk #PUSH [call CompileDeBruijn [argument]] call CompileDeBruijn [fn]]
+  }
+
+judgment CompileTerm [term] = call CompileDeBruijn [call ToDeBruijn [term list []]]
+
+judgment CompileSource [grammar source] = call CompileTerm [call Parse [grammar source]]
+
+; ------------------------------------------------------- target execution
+
+judgment Run [code environment stack fuel] =
+  if prim #eq [fuel 0]
+  then fail #resource-exhausted "target execution fuel exhausted"
+  else
+    match code {
+      case [] ->
+        match stack {
+          case [] -> mk #stuck []
+          case head :: rest -> mk #stuck []
+        }
+      case instruction :: rest ->
+        match instruction {
+          case (#FREE name) -> mk #free [name stack]
+          case (#ACCESS index) ->
+            let closure = prim #nth [environment index] in
+            call Run [
+              prim #nth [prim #args [closure] 0]
+              prim #nth [prim #args [closure] 1]
+              stack
+              prim #sub [fuel 1]
+            ]
+          case (#PUSH body) ->
+            call Run [
+              rest
+              environment
+              prim #cons [mk #closure [body environment] stack]
+              prim #sub [fuel 1]
+            ]
+          case (#GRAB body) ->
+            match stack {
+              case [] -> mk #function [body environment]
+              case top :: more ->
+                call Run [body prim #cons [top environment] more prim #sub [fuel 1]]
+            }
+          case _ -> mk #stuck []
+        }
+    }
+
+judgment ExecuteCode [code] = call Run [code list [] list [] 100000]
+
+; Readback turns a weak head normal form plus its pending argument closures
+; back into a term, so compiled execution agrees with normalization.
+judgment Readback [result fuel] =
+  match result {
+    case (#free name stack) -> call ApplyArguments [mk #Var [name] stack fuel]
+    case (#function body environment) -> mk #function []
+    case (#stuck) -> mk #stuck []
+  }
+
+judgment ApplyArguments [term stack fuel] =
+  match stack {
+    case [] -> term
+    case closure :: rest ->
+      call ApplyArguments [
+        mk #App [
+          term
+          call Readback [
+            call Run [
+              prim #nth [prim #args [closure] 0]
+              prim #nth [prim #args [closure] 1]
+              list []
+              fuel
+            ]
+            fuel
+          ]
+        ]
+        rest
+        fuel
+      ]
+  }
+
+judgment ExecuteToTerm [code] = call Readback [call ExecuteCode [code] 100000]
+
+judgment ExecuteSourceToText [grammar source] =
+  call Print [grammar call ExecuteToTerm [call CompileSource [grammar source]]]
+
+; Optional evidence that translation preserves meaning on a corpus.
+judgment TranslationPreservesMeaning [grammar source] =
+  prim #eq [
+    call ExecuteSourceToText [grammar source]
+    call NormalizeToText [grammar source]
+  ]
+
+; Meta1 string literals are raw: a backslash stands for itself.
+judgment RegressionCorpus [] =
+  list [
+    "(\x. x) a"
+    "(\x. \y. x) a b"
+    "(\x. \y. y) a b"
+    "(\f. \x. f x) g y"
+  ]
+
+judgment CorpusAgrees [grammar corpus] =
+  match corpus {
+    case [] -> true
+    case head :: rest ->
+      if call TranslationPreservesMeaning [grammar head]
+      then call CorpusAgrees [grammar rest]
+      else false
+  }
+
+judgment CompiledExecutionAgrees [grammar] =
+  call CorpusAgrees [grammar call RegressionCorpus []]
+
+; ------------------------------------------------------- toolchain queries
+
+judgment ToolchainFor [grammar] = call DeriveToolchain [call LambdaToolchain [grammar]]
+
+judgment ToolJudgment [derived role] =
+  match call ToolFor [derived role] {
+    case (#some tool) -> call Tool'program [tool]
+    case (#none) -> mk #none []
+  }
+
+judgment ToolIdentityFor [derived role] =
+  match call ToolFor [derived role] {
+    case (#some tool) -> call Tool'identity [tool]
+    case (#none) -> mk #none []
+  }
+
+; Changing the grammar regenerates the tools that depend on it.
+judgment GrammarChangeAffectsTools [first second role] =
+  prim #eq [
+    call ToolIdentityFor [call ToolchainFor [first] role]
+    call ToolIdentityFor [call ToolchainFor [second] role]
+  ]
+
+; Tool identity depends only on the schema selection and the selected program.
+judgment ToolIdentityIsStable [grammar role] =
+  prim #eq [
+    call ToolIdentityFor [call ToolchainFor [grammar] role]
+    call ToolIdentityFor [call ToolchainFor [grammar] role]
+  ]
+
+judgment DerivedRoles [grammar] = call CollectRoles [call Toolchain'tools [call ToolchainFor [grammar]]]
+
+judgment CollectRoles [tools] =
+  match tools {
+    case [] -> list []
+    case head :: rest -> prim #cons [call Tool'role [head] call CollectRoles [rest]]
+  }

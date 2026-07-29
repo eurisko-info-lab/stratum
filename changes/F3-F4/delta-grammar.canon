@@ -1,0 +1,9 @@
+; delta-grammar for F3 -> F4: Grammar gains toolchain declarations.
+(change
+  (kind delta-grammar)
+  (name "F3->F4 delta-grammar")
+  (replace
+    (ReplaceChange
+      toolchain-syntax
+      (absent)
+      (present [language entry-judgment typechecker interpreter compiler formatter diagnostic index rename projection]))))
