@@ -1,0 +1,521 @@
+; Generated from languages/lambda/lambda.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module lambda)
+  (judgment
+    var
+    [index]
+    (mk
+      var
+      (v index)))
+  (judgment
+    free
+    [name]
+    (mk
+      free
+      (v name)))
+  (judgment
+    lam
+    [body]
+    (mk
+      lam
+      (v body)))
+  (judgment
+    app
+    [fn argument]
+    (mk
+      app
+      (v fn)
+      (v argument)))
+  (judgment
+    IsTerm
+    [value]
+    (prim
+      contains
+      (q
+        [var free lam app])
+      (prim
+        tag
+        (v value))))
+  (judgment
+    Shift
+    [d cutoff term]
+    (match
+      (v term)
+      (case
+        (pm
+          var
+          (pv index))
+        (if
+          (prim
+            lt
+            (v index)
+            (v cutoff))
+          (mk
+            var
+            (v index))
+          (mk
+            var
+            (prim
+              add
+              (v index)
+              (v d)))))
+      (case
+        (pm
+          free
+          (pv name))
+        (mk
+          free
+          (v name)))
+      (case
+        (pm
+          lam
+          (pv body))
+        (mk
+          lam
+          (call
+            Shift
+            (v d)
+            (prim
+              add
+              (v cutoff)
+              (q 1))
+            (v body))))
+      (case
+        (pm
+          app
+          (pv fn)
+          (pv argument))
+        (mk
+          app
+          (call
+            Shift
+            (v d)
+            (v cutoff)
+            (v fn))
+          (call
+            Shift
+            (v d)
+            (v cutoff)
+            (v argument))))))
+  (judgment
+    Substitute
+    [target replacement term]
+    (match
+      (v term)
+      (case
+        (pm
+          var
+          (pv index))
+        (if
+          (prim
+            eq
+            (v index)
+            (v target))
+          (v replacement)
+          (mk
+            var
+            (v index))))
+      (case
+        (pm
+          free
+          (pv name))
+        (mk
+          free
+          (v name)))
+      (case
+        (pm
+          lam
+          (pv body))
+        (mk
+          lam
+          (call
+            Substitute
+            (prim
+              add
+              (v target)
+              (q 1))
+            (call
+              Shift
+              (q 1)
+              (q 0)
+              (v replacement))
+            (v body))))
+      (case
+        (pm
+          app
+          (pv fn)
+          (pv argument))
+        (mk
+          app
+          (call
+            Substitute
+            (v target)
+            (v replacement)
+            (v fn))
+          (call
+            Substitute
+            (v target)
+            (v replacement)
+            (v argument))))))
+  (judgment
+    Beta
+    [body argument]
+    (call
+      Shift
+      (q -1)
+      (q 0)
+      (call
+        Substitute
+        (q 0)
+        (call
+          Shift
+          (q 1)
+          (q 0)
+          (v argument))
+        (v body))))
+  (judgment
+    StepNormalOrder
+    [term]
+    (match
+      (v term)
+      (case
+        (pm
+          app
+          (pm
+            lam
+            (pv body))
+          (pv argument))
+        (mk
+          some
+          (call
+            Beta
+            (v body)
+            (v argument))))
+      (case
+        (pm
+          app
+          (pv fn)
+          (pv argument))
+        (match
+          (call
+            StepNormalOrder
+            (v fn))
+          (case
+            (pm
+              some
+              (pv reduced))
+            (mk
+              some
+              (mk
+                app
+                (v reduced)
+                (v argument))))
+          (case
+            (pm none)
+            (match
+              (call
+                StepNormalOrder
+                (v argument))
+              (case
+                (pm
+                  some
+                  (pv reduced))
+                (mk
+                  some
+                  (mk
+                    app
+                    (v fn)
+                    (v reduced))))
+              (case
+                (pm none)
+                (mk none))))))
+      (case
+        (pm
+          lam
+          (pv body))
+        (match
+          (call
+            StepNormalOrder
+            (v body))
+          (case
+            (pm
+              some
+              (pv reduced))
+            (mk
+              some
+              (mk
+                lam
+                (v reduced))))
+          (case
+            (pm none)
+            (mk none))))
+      (case
+        _
+        (mk none))))
+  (judgment
+    Normalize
+    [term fuel]
+    (if
+      (prim
+        eq
+        (v fuel)
+        (q 0))
+      (fail
+        resource-exhausted
+        (q "normalization fuel exhausted"))
+      (match
+        (call
+          StepNormalOrder
+          (v term))
+        (case
+          (pm
+            some
+            (pv next))
+          (call
+            Normalize
+            (v next)
+            (prim
+              sub
+              (v fuel)
+              (q 1))))
+        (case
+          (pm none)
+          (v term)))))
+  (judgment
+    ToDeBruijn
+    [term scope]
+    (match
+      (v term)
+      (case
+        (pm
+          Var
+          (pv name))
+        (match
+          (prim
+            index-of
+            (v scope)
+            (v name))
+          (case
+            (pm
+              some
+              (pv index))
+            (mk
+              var
+              (v index)))
+          (case
+            (pm none)
+            (mk
+              free
+              (v name)))))
+      (case
+        (pm
+          Lam
+          (pv name)
+          (pv body))
+        (mk
+          lam
+          (call
+            ToDeBruijn
+            (v body)
+            (prim
+              cons
+              (v name)
+              (v scope)))))
+      (case
+        (pm
+          App
+          (pv fn)
+          (pv argument))
+        (mk
+          app
+          (call
+            ToDeBruijn
+            (v fn)
+            (v scope))
+          (call
+            ToDeBruijn
+            (v argument)
+            (v scope))))))
+  (judgment
+    FreshName
+    [depth]
+    (prim
+      str->sym
+      (prim
+        scat
+        (q "v")
+        (prim
+          nat->str
+          (v depth)))))
+  (judgment
+    FromDeBruijn
+    [term scope]
+    (match
+      (v term)
+      (case
+        (pm
+          var
+          (pv index))
+        (if
+          (prim
+            lt
+            (v index)
+            (prim
+              len
+              (v scope)))
+          (mk
+            Var
+            (prim
+              nth
+              (v scope)
+              (v index)))
+          (mk
+            Var
+            (prim
+              str->sym
+              (prim
+                scat
+                (q "free")
+                (prim
+                  nat->str
+                  (v index)))))))
+      (case
+        (pm
+          free
+          (pv name))
+        (mk
+          Var
+          (v name)))
+      (case
+        (pm
+          lam
+          (pv body))
+        (let
+          name
+          (call
+            FreshName
+            (prim
+              len
+              (v scope)))
+          (mk
+            Lam
+            (v name)
+            (call
+              FromDeBruijn
+              (v body)
+              (prim
+                cons
+                (v name)
+                (v scope))))))
+      (case
+        (pm
+          app
+          (pv fn)
+          (pv argument))
+        (mk
+          App
+          (call
+            FromDeBruijn
+            (v fn)
+            (v scope))
+          (call
+            FromDeBruijn
+            (v argument)
+            (v scope))))))
+  (judgment
+    NormalizeTerm
+    [term]
+    (call
+      FromDeBruijn
+      (call
+        Normalize
+        (call
+          ToDeBruijn
+          (v term)
+          (lst))
+        (q 100000))
+      (lst)))
+  (judgment
+    NormalizeSource
+    [grammar source]
+    (call
+      NormalizeTerm
+      (call
+        Parse
+        (v grammar)
+        (v source))))
+  (judgment
+    NormalizeToText
+    [grammar source]
+    (call
+      Print
+      (v grammar)
+      (call
+        NormalizeSource
+        (v grammar)
+        (v source))))
+  (judgment
+    AlphaEquivalent
+    [grammar left right]
+    (prim
+      eq
+      (call
+        ToDeBruijn
+        (call
+          Parse
+          (v grammar)
+          (v left))
+        (lst))
+      (call
+        ToDeBruijn
+        (call
+          Parse
+          (v grammar)
+          (v right))
+        (lst))))
+  (judgment
+    FreeVariables
+    [term scope]
+    (match
+      (v term)
+      (case
+        (pm
+          Var
+          (pv name))
+        (if
+          (prim
+            contains
+            (v scope)
+            (v name))
+          (lst)
+          (prim
+            cons
+            (v name)
+            (lst))))
+      (case
+        (pm
+          Lam
+          (pv name)
+          (pv body))
+        (call
+          FreeVariables
+          (v body)
+          (prim
+            cons
+            (v name)
+            (v scope))))
+      (case
+        (pm
+          App
+          (pv fn)
+          (pv argument))
+        (call
+          Union
+          (call
+            FreeVariables
+            (v fn)
+            (v scope))
+          (call
+            FreeVariables
+            (v argument)
+            (v scope)))))))

@@ -126,6 +126,7 @@ object Cli:
       case Some("canon")       => canonCommand(root, argv.drop(1))
       case Some("grammar")     => grammarCommand(root, argv.drop(1))
       case Some("derive")      => deriveCommand(root, argv.drop(1))
+      case Some("meta")        => metaCommand(root, argv.drop(1))
       case Some("foundation")  => FoundationCommands.run(root, argv.drop(1))
       case Some("transcript")  => Transcript.command(root, argv.drop(1))
       case Some(other)         => CommandResult.fail(s"unknown command $other")
@@ -255,14 +256,35 @@ object Cli:
 
   def deriveIn(f: LoadedFoundation, root: Path, goal: Canon, budget: Budget): Canon =
     val caps = capabilitiesFor(f.cas, root, f.foundationDigest.hex)
-    MetaMachine0.derive(f.program, f.cas, f.kernel, budget, resolveNames(f, goal), caps)
+    MetaMachine0.derive(f.program, f.cas, f.kernel, budget, resolveNames(f, root, goal), caps)
 
-  /** Replaces `(grammar <name>)` with a quoted grammar artifact reference. */
-  def resolveNames(f: LoadedFoundation, goal: Canon): Canon = goal match
+  /**
+   * Resolves closure references by name inside a goal:
+   * `(grammar <name>)`, `(file <path>)` and `(source <path>)` become quoted digests.
+   */
+  def resolveNames(f: LoadedFoundation, root: Path, goal: Canon): Canon = goal match
     case Canon.Node("grammar", Vector(Canon.Sym(name))) =>
       f.grammarRefs.get(name).map(d => Canon.node("q", Canon.R(d))).getOrElse(goal)
-    case Canon.Node(tag, args) => Canon.Node(tag, args.map(resolveNames(f, _)))
-    case Canon.L(items)        => Canon.L(items.map(resolveNames(f, _)))
+    case Canon.Node("file", Vector(Canon.S(path))) =>
+      val p = root.resolve(path)
+      if !Files.exists(p) then goal
+      else
+        CanonText.read(Files.readString(p)) match
+          case Left(_) => goal
+          case Right(value) =>
+            Canon.node("q", Canon.R(Artifact(FoundationCommands.kindOf(value), value).digest))
+    case Canon.Node("source", Vector(Canon.S(path))) =>
+      val p = root.resolve(path)
+      if !Files.exists(p) then goal
+      else
+        val body = Canon.node(
+          "source",
+          Canon.node("path", Canon.S(path)),
+          Canon.node("text", Canon.S(Files.readString(p)))
+        )
+        Canon.node("q", Canon.R(Artifact("source", body).digest))
+    case Canon.Node(tag, args) => Canon.Node(tag, args.map(resolveNames(f, root, _)))
+    case Canon.L(items)        => Canon.L(items.map(resolveNames(f, root, _)))
     case other                 => other
 
   private def deriveCommand(root: Path, args: Vector[String]): CommandResult =
@@ -288,3 +310,68 @@ object Cli:
                 else
                   val line = summarize(verdict)
                   CommandResult(if MetaMachine0.isOk(verdict) then 0 else 1, Vector(line))
+
+  /**
+   * Elaborates a surface source through a judgment of an ad-hoc program.
+   *
+   * This is the generic "apply the change using the predecessor" step: it needs
+   * only a grammar artifact, some program artifacts and a source file, so a
+   * foundation can be constructed from surface sources without circularity.
+   */
+  private def metaCommand(root: Path, args: Vector[String]): CommandResult =
+    val opts = options(args)
+    val sub = positional(args).headOption.getOrElse("")
+    if sub != "elaborate" then CommandResult.fail(s"unknown meta command $sub")
+    else
+      val cas = MemoryCas()
+      val programFiles = args.zipWithIndex.collect { case ("--program", i) if i + 1 < args.length => args(i + 1) }
+      val grammarFile = opts.getOrElse("grammar", "")
+      val sourceFile = opts.getOrElse("source", "")
+      val judgment = opts.getOrElse("judgment", "ElaborateSource")
+
+      def readText(p: String): Either[String, String] =
+        val f = root.resolve(p)
+        if Files.exists(f) then Right(Files.readString(f)) else Left(s"no such file: $p")
+
+      val loaded = for
+        grammarText <- readText(grammarFile)
+        grammarCanon <- CanonText.read(grammarText)
+        sourceText <- readText(sourceFile)
+        programs <- programFiles.foldLeft[Either[String, Vector[Canon]]](Right(Vector.empty)) { (acc, p) =>
+          acc.flatMap(vs => readText(p).flatMap(CanonText.read).map(vs :+ _))
+        }
+      yield (grammarCanon, sourceText, programs)
+
+      loaded match
+        case Left(m) => CommandResult.fail(m)
+        case Right((grammarCanon, sourceText, programs)) =>
+          val grammarRef = cas.put(Artifact("grammar", grammarCanon))
+          val refs = programs.map(p => cas.put(Artifact("meta-program", p)))
+          val rootProgram = Canon.Node("program", refs.map(r => Canon.node("use", Canon.R(r))))
+          Program.load(rootProgram, cas) match
+            case Left(m) => CommandResult.fail(m)
+            case Right(program) =>
+              val goal = Canon.node(
+                "call",
+                Canon.Sym(judgment),
+                Canon.node("q", Canon.R(grammarRef)),
+                Canon.node("q", Canon.S(sourceText))
+              )
+              val caps = capabilitiesFor(cas, root, "elaborate")
+              val verdict = MetaMachine0.derive(program, cas, Kernel.full, Budget(20000000L, 20000), goal, caps)
+              MetaMachine0.result(verdict) match
+                case None => CommandResult(1, Vector(summarize(verdict)))
+                case Some(value) =>
+                  opts.get("out") match
+                    case None => CommandResult.ok(CanonText.pretty(value))
+                    case Some(outPath) =>
+                      val out = root.resolve(outPath)
+                      Option(out.getParent).foreach(Files.createDirectories(_))
+                      val header = s"; Generated from $sourceFile by $judgment. Do not edit by hand.\n"
+                      Files.writeString(out, header + CanonText.pretty(value) + "\n")
+                      CommandResult.ok(
+                        s"elaborated $sourceFile",
+                        s"judgment $judgment",
+                        s"digest ${Canon.digest(value).hex}",
+                        s"wrote $outPath"
+                      )

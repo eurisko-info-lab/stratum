@@ -1,0 +1,22 @@
+; The canonical change from F0 to F1.
+;
+; Meta and Grammar become ordinary languages interpreted by the bootstrap
+; machines. The lambda language is reconstructed from Meta1 and Grammar1
+; sources and must behave exactly as it did under F0.
+(change
+  (kind foundation)
+  (name "F0->F1")
+  (predecessor (foundation-of "foundations/F0"))
+  (delta-meta (file "changes/F0-F1/delta-meta.canon"))
+  (delta-grammar (file "changes/F0-F1/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "self-described meta and grammar")
+      (grammars [(file "languages/meta1/meta1.generated.grammar") (file "languages/grammar1/grammar1.generated.grammar")])
+      (elaborators [(file "languages/meta1/elaborate.meta") (file "languages/grammar1/elaborate.meta")])
+      (sources [
+        (text-file "languages/meta1/meta1.grammar")
+        (text-file "languages/grammar1/grammar1.grammar")
+        (text-file "languages/lambda/lambda.grammar")
+        (text-file "languages/lambda/lambda.meta")
+      ]))))

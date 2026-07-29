@@ -1,0 +1,264 @@
+; Meta1 elaboration.
+;
+; Meta1 is an ordinary language: its surface is a grammar artifact and its
+; meaning is this Meta0 program. Elaboration produces canonical Meta0.
+(program
+  (module meta1)
+
+  ; --------------------------------------------------------------- helpers
+
+  ; Left-nested `fold` results become ordinary lists.
+  (judgment FlattenSeq [node tag]
+    (match (v node)
+      (case (pnode (pv actual) (pl (pv left) (pv right)))
+        (if (prim eq (v actual) (v tag))
+            (prim snoc (call FlattenSeq (v left) (v tag)) (v right))
+            (prim cons (v node) (q []))))
+      (case _ (prim cons (v node) (q [])))))
+
+  (judgment StripHash [symbol]
+    (let text (prim sym->str (v symbol))
+      (prim str->sym (prim ssub (v text) (q 1) (prim slen (v text))))))
+
+  (judgment Unquote [text]
+    (prim ssub (v text) (q 1) (prim sub (prim slen (v text)) (q 1))))
+
+  (judgment Prefixed [prefix name]
+    (prim str->sym (prim scat (v prefix) (prim sym->str (v name)))))
+
+  (judgment MakeJudgment [name params body]
+    (prim node (q judgment) (prim cons (v name) (prim cons (v params) (prim cons (v body) (q []))))))
+
+  (judgment Apply1 [tag argument]
+    (prim node (v tag) (prim cons (v argument) (q []))))
+
+  (judgment Apply2 [tag first second]
+    (prim node (v tag) (prim cons (v first) (prim cons (v second) (q [])))))
+
+  (judgment VarRefs [names]
+    (match (v names)
+      (case (pnil) (q []))
+      (case (pcons (pv name) (pv rest)) (prim cons (mk v (v name)) (call VarRefs (v rest))))))
+
+  ; --------------------------------------------------------------- program
+
+  (judgment ElabProgram [ast]
+    (prim node (q program) (call ElabDecls (call FlattenSeq (v ast) (q Seq)))))
+
+  (judgment ElabDecls [decls]
+    (match (v decls)
+      (case (pnil) (q []))
+      (case (pcons (pv decl) (pv rest))
+        (prim append (call ElabDecl (v decl)) (call ElabDecls (v rest))))))
+
+  (judgment Single [entry] (prim cons (v entry) (q [])))
+
+  (judgment ElabDecl [decl]
+    (match (v decl)
+      (case (pm Module (pv name))
+        (call Single (mk module (v name))))
+
+      (case (pm Import (pv name))
+        (call Single
+          (call MakeJudgment (call Prefixed (q "Import'") (v name)) (q []) (mk q (mk import (v name))))))
+
+      (case (pm Capability (pv name))
+        (let plain (call StripHash (v name))
+          (call Single
+            (call MakeJudgment (call Prefixed (q "Capability'") (v plain)) (q [])
+              (mk q (mk capability (v plain)))))))
+
+      (case (pm Evidence (pv name))
+        (let plain (call StripHash (v name))
+          (call Single
+            (call MakeJudgment (call Prefixed (q "Evidence'") (v plain)) (q [])
+              (mk q (mk evidence (v plain)))))))
+
+      (case (pm Mode (pv name) (pv modes))
+        (call Single
+          (call MakeJudgment (call Prefixed (q "Mode'") (v name)) (q [])
+            (mk q (mk mode (call ElabParams (v modes)))))))
+
+      (case (pm Measure (pv name) (pv body))
+        (call Single
+          (call MakeJudgment (call Prefixed (q "Measure'") (v name)) (q []) (call ElabExpr (v body)))))
+
+      (case (pm Data (pv name) (pv variants))
+        (let items (call FlattenSeq (v variants) (q Variants))
+          (prim snoc (call ElabVariants (v items)) (call PredicateFor (v name) (v items)))))
+
+      (case (pm Record (pv name) (pv fields))
+        (let names (call ElabParams (v fields))
+          (prim cons
+            (call MakeJudgment (v name) (v names) (call ConstructorBody (v name) (v names)))
+            (call Accessors (v name) (v names) (q 0)))))
+
+      (case (pm JudgmentBody (pv name) (pv params) (pv body))
+        (call Single (call MakeJudgment (v name) (call ElabParams (v params)) (call ElabExpr (v body)))))
+
+      (case (pm JudgmentRules (pv name) (pv params) (pv rules))
+        (let names (call ElabParams (v params))
+          (call Single
+            (call MakeJudgment (v name) (v names)
+              (prim node (q match)
+                (prim cons (mk v (prim head (v names)))
+                  (call ElabRules (call FlattenSeq (v rules) (q Rules)))))))))))
+
+  (judgment ElabParams [params]
+    (match (v params)
+      (case (pm NoParams) (q []))
+      (case (pm Params (pv names)) (call FlattenSeq (v names) (q Idents)))))
+
+  (judgment ConstructorBody [tag fields]
+    (prim node (q mk) (prim cons (v tag) (call VarRefs (v fields)))))
+
+  (judgment ElabVariants [variants]
+    (match (v variants)
+      (case (pnil) (q []))
+      (case (pcons (pm Variant (pv name) (pv fields)) (pv rest))
+        (let tag (call StripHash (v name))
+          (let names (call ElabParams (v fields))
+            (prim cons
+              (call MakeJudgment (v tag) (v names) (call ConstructorBody (v tag) (v names)))
+              (call ElabVariants (v rest))))))))
+
+  ; `Is<Name>` recognises any declared variant tag.
+  (judgment PredicateFor [name variants]
+    (call MakeJudgment (call Prefixed (q "Is") (v name)) (prim cons (q value) (q []))
+      (prim node (q prim)
+        (prim cons (q contains)
+          (prim cons (mk q (call VariantTags (v variants)))
+            (prim cons (mk prim (q tag) (mk v (q value))) (q [])))))))
+
+  (judgment VariantTags [variants]
+    (match (v variants)
+      (case (pnil) (q []))
+      (case (pcons (pm Variant (pv name) (pv fields)) (pv rest))
+        (prim cons (call StripHash (v name)) (call VariantTags (v rest))))))
+
+  (judgment Accessors [name fields index]
+    (match (v fields)
+      (case (pnil) (q []))
+      (case (pcons (pv field) (pv rest))
+        (prim cons
+          (call MakeJudgment
+            (call Prefixed (prim scat (prim sym->str (v name)) (q "'")) (v field))
+            (prim cons (q record) (q []))
+            (prim node (q prim)
+              (prim cons (q nth)
+                (prim cons (mk prim (q args) (mk v (q record)))
+                  (prim cons (mk q (v index)) (q []))))))
+          (call Accessors (v name) (v rest) (prim add (v index) (q 1)))))))
+
+  (judgment ElabRules [rules]
+    (match (v rules)
+      (case (pnil) (q []))
+      (case (pcons (pm Rule (pv pattern) (pv body)) (pv rest))
+        (prim cons
+          (call Apply2 (q case) (call ElabPattern (v pattern)) (call ElabExpr (v body)))
+          (call ElabRules (v rest))))))
+
+  ; ----------------------------------------------------------- expressions
+
+  (judgment ElabExprs [exprs]
+    (match (v exprs)
+      (case (pm NoExprs) (q []))
+      (case (pm Exprs (pv items)) (call ElabExprList (call FlattenSeq (v items) (q ExprSeq))))))
+
+  (judgment ElabExprList [items]
+    (match (v items)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (prim cons (call ElabExpr (v head)) (call ElabExprList (v rest))))))
+
+  (judgment ElabExpr [expr]
+    (match (v expr)
+      (case (pm Var (pv name)) (mk v (v name)))
+      (case (pm Symbol (pv value)) (mk q (call StripHash (v value))))
+      (case (pm Natural (pv value)) (mk q (v value)))
+      (case (pm Negative (pv value)) (mk q (prim sub (q 0) (v value))))
+      (case (pm Text (pv value)) (mk q (call Unquote (v value))))
+      (case (pm True) (mk q (q #t)))
+      (case (pm False) (mk q (q #f)))
+      (case (pm Unit) (mk q (q #unit)))
+      (case (pm Mk (pv tag) (pv arguments))
+        (prim node (q mk) (prim cons (call StripHash (v tag)) (call ElabExprs (v arguments)))))
+      (case (pm Call (pv name) (pv arguments))
+        (prim node (q call) (prim cons (v name) (call ElabExprs (v arguments)))))
+      (case (pm Prim (pv name) (pv arguments))
+        (prim node (q prim) (prim cons (call StripHash (v name)) (call ElabExprs (v arguments)))))
+      (case (pm Cap (pv name) (pv arguments))
+        (prim node (q cap) (prim cons (call StripHash (v name)) (call ElabExprs (v arguments)))))
+      (case (pm ListOf (pv items)) (prim node (q lst) (call ElabExprs (v items))))
+      (case (pm MapOf (pv items)) (prim node (q mp) (call ElabExprs (v items))))
+      (case (pm If (pv condition) (pv consequent) (pv alternative))
+        (prim node (q if)
+          (prim cons (call ElabExpr (v condition))
+            (prim cons (call ElabExpr (v consequent))
+              (prim cons (call ElabExpr (v alternative)) (q []))))))
+      (case (pm Let (pv name) (pv value) (pv body))
+        (prim node (q let)
+          (prim cons (v name)
+            (prim cons (call ElabExpr (v value)) (prim cons (call ElabExpr (v body)) (q []))))))
+      (case (pm Fail (pv kind) (pv message))
+        (call Apply2 (q fail) (call StripHash (v kind)) (call ElabExpr (v message))))
+      (case (pm Match (pv scrutinee) (pv cases))
+        (prim node (q match)
+          (prim cons (call ElabExpr (v scrutinee))
+            (call ElabCases (call FlattenSeq (v cases) (q Cases))))))))
+
+  (judgment ElabCases [cases]
+    (match (v cases)
+      (case (pnil) (q []))
+      (case (pcons (pm Case (pv pattern) (pv body)) (pv rest))
+        (prim cons
+          (call Apply2 (q case) (call ElabPattern (v pattern)) (call ElabExpr (v body)))
+          (call ElabCases (v rest))))))
+
+  ; -------------------------------------------------------------- patterns
+
+  (judgment ElabPatterns [patterns]
+    (match (v patterns)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (prim cons (call ElabPattern (v head)) (call ElabPatterns (v rest))))))
+
+  (judgment ElabPattern [pattern]
+    (match (v pattern)
+      (case (pm PatWild) (q _))
+      (case (pm PatVar (pv name)) (mk pv (v name)))
+      (case (pm PatSymbol (pv value)) (mk pq (call StripHash (v value))))
+      (case (pm PatNatural (pv value)) (mk pq (v value)))
+      (case (pm PatText (pv value)) (mk pq (call Unquote (v value))))
+      (case (pm PatNil) (mk pnil))
+      (case (pm PatNodeEmpty (pv tag))
+        (prim node (q pm) (prim cons (call StripHash (v tag)) (q []))))
+      (case (pm PatNode (pv tag) (pv arguments))
+        (prim node (q pm)
+          (prim cons (call StripHash (v tag))
+            (call ElabPatterns (call FlattenSeq (v arguments) (q PatSeq))))))
+      (case (pm PatList (pv items))
+        (prim node (q pl) (call ElabPatterns (call FlattenSeq (v items) (q PatSeq)))))
+      (case (pm PatCons (pv head) (pv tail))
+        (call Apply2 (q pcons) (call ElabPattern (v head)) (call ElabPattern (v tail))))))
+
+  ; ----------------------------------------------------------- entry points
+
+  (judgment ElaborateSource [grammar source]
+    (call ElabProgram (call Parse (v grammar) (v source))))
+
+  ; Elaboration is stable under printing: Elab(parse(s)) = Elab(parse(print(parse(s))))
+  (judgment ElaborationStable [grammar source]
+    (let ast (call Parse (v grammar) (v source))
+      (prim eq
+        (call ElabProgram (v ast))
+        (call ElabProgram (call Parse (v grammar) (call Print (v grammar) (v ast)))))))
+
+  ; Meta0(Meta1) = Meta1 at the canonical artifact level.
+  (judgment SelfDescriptionFixpoint [grammar source artifactReference]
+    (match (call Fetch (v artifactReference) (q meta-program))
+      (case (pm none) (mk fixpoint (q artifact-missing)))
+      (case (pm some (pv program))
+        (if (prim eq (v program) (call ElaborateSource (v grammar) (v source)))
+            (mk fixpoint (q ok))
+            (mk fixpoint (q mismatch)))))))
