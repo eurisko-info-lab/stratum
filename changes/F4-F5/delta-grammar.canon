@@ -1,0 +1,9 @@
+; delta-grammar for F4 -> F5: Grammar gains the governance vocabulary.
+(change
+  (kind delta-grammar)
+  (name "F4->F5 delta-grammar")
+  (replace
+    (ReplaceChange
+      governance-syntax
+      (absent)
+      (present [claim proof test authority scope constitution accept-when reject-when budget requires]))))
