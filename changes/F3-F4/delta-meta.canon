@@ -1,0 +1,10 @@
+; delta-meta for F3 -> F4: Meta gains language, interpreter, compiler,
+; formatter, diagnostic, index and toolchain schemas.
+(change
+  (kind delta-meta)
+  (name "F3->F4 delta-meta")
+  (replace
+    (ReplaceChange
+      tooling-model
+      (handwritten per-language)
+      (derived from-schemas))))

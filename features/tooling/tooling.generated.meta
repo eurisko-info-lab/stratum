@@ -1,0 +1,1173 @@
+; Generated from features/tooling/tooling.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module tooling)
+  (judgment
+    LanguageSchema
+    [name grammar sorts constructors judgments]
+    (mk
+      LanguageSchema
+      (v name)
+      (v grammar)
+      (v sorts)
+      (v constructors)
+      (v judgments)))
+  (judgment
+    LanguageSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    LanguageSchema'grammar
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    LanguageSchema'sorts
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    LanguageSchema'constructors
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    LanguageSchema'judgments
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    ToolchainSchema
+    [language roles]
+    (mk
+      ToolchainSchema
+      (v language)
+      (v roles)))
+  (judgment
+    ToolchainSchema'language
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ToolchainSchema'roles
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Tool
+    [role program grammar identity]
+    (mk
+      Tool
+      (v role)
+      (v program)
+      (v grammar)
+      (v identity)))
+  (judgment
+    Tool'role
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Tool'program
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Tool'grammar
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Tool'identity
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    Toolchain
+    [language tools]
+    (mk
+      Toolchain
+      (v language)
+      (v tools)))
+  (judgment
+    Toolchain'language
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Toolchain'tools
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Finding
+    [kind subject]
+    (mk
+      Finding
+      (v kind)
+      (v subject)))
+  (judgment
+    Finding'kind
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Finding'subject
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    LambdaSorts
+    []
+    (lst
+      (q Term)))
+  (judgment
+    LambdaConstructors
+    []
+    (lst
+      (mk
+        constructor
+        (q Var)
+        (lst
+          (q name)))
+      (mk
+        constructor
+        (q Lam)
+        (lst
+          (q name)
+          (q body)))
+      (mk
+        constructor
+        (q App)
+        (lst
+          (q fn)
+          (q argument)))))
+  (judgment
+    LambdaJudgments
+    []
+    (mp
+      (q parse)
+      (q Parse)
+      (q print)
+      (q Print)
+      (q evaluate)
+      (q NormalizeTerm)
+      (q normalize)
+      (q NormalizeTerm)
+      (q compile)
+      (q CompileTerm)
+      (q executeTarget)
+      (q ExecuteCode)
+      (q format)
+      (q FormatSource)
+      (q index)
+      (q IndexTerm)
+      (q rename)
+      (q RenameTerm)
+      (q diagnostics)
+      (q DiagnoseTerm)
+      (q validateChange)
+      (q ValidateChange)))
+  (judgment
+    LambdaSchema
+    [grammar]
+    (call
+      LanguageSchema
+      (q lambda)
+      (v grammar)
+      (call LambdaSorts)
+      (call LambdaConstructors)
+      (call LambdaJudgments)))
+  (judgment
+    StackSchema
+    []
+    (call
+      LanguageSchema
+      (q stack)
+      (mk none)
+      (lst
+        (q Code)
+        (q Instruction))
+      (lst
+        (mk
+          constructor
+          (q ACCESS)
+          (lst
+            (q index)))
+        (mk
+          constructor
+          (q FREE)
+          (lst
+            (q name)))
+        (mk
+          constructor
+          (q GRAB)
+          (lst
+            (q body)))
+        (mk
+          constructor
+          (q PUSH)
+          (lst
+            (q body))))
+      (mp
+        (q executeTarget)
+        (q ExecuteCode))))
+  (judgment
+    LambdaToolchain
+    [grammar]
+    (call
+      ToolchainSchema
+      (call
+        LambdaSchema
+        (v grammar))
+      (lst
+        (q parse)
+        (q print)
+        (q format)
+        (q evaluate)
+        (q compile)
+        (q executeTarget)
+        (q index)
+        (q rename)
+        (q diagnostics)
+        (q validateChange))))
+  (judgment
+    JudgmentForRole
+    [schema role]
+    (prim
+      mget
+      (call
+        LanguageSchema'judgments
+        (v schema))
+      (v role)
+      (q unknown)))
+  (judgment
+    ToolIdentity
+    [language role program grammar]
+    (prim
+      digest
+      (mk
+        tool-identity
+        (v language)
+        (v role)
+        (v program)
+        (v grammar))))
+  (judgment
+    DeriveTool
+    [schema role]
+    (let
+      judgment'
+      (call
+        JudgmentForRole
+        (v schema)
+        (v role))
+      (call
+        Tool
+        (v role)
+        (v judgment')
+        (call
+          LanguageSchema'grammar
+          (v schema))
+        (call
+          ToolIdentity
+          (call
+            LanguageSchema'name
+            (v schema))
+          (v role)
+          (v judgment')
+          (call
+            LanguageSchema'grammar
+            (v schema))))))
+  (judgment
+    DeriveTools
+    [schema roles]
+    (match
+      (v roles)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            DeriveTool
+            (v schema)
+            (v head))
+          (call
+            DeriveTools
+            (v schema)
+            (v rest))))))
+  (judgment
+    DeriveToolchain
+    [toolchain]
+    (call
+      Toolchain
+      (call
+        LanguageSchema'name
+        (call
+          ToolchainSchema'language
+          (v toolchain)))
+      (call
+        DeriveTools
+        (call
+          ToolchainSchema'language
+          (v toolchain))
+        (call
+          ToolchainSchema'roles
+          (v toolchain)))))
+  (judgment
+    ToolFor
+    [derived role]
+    (call
+      FindTool
+      (call
+        Toolchain'tools
+        (v derived))
+      (v role)))
+  (judgment
+    FindTool
+    [tools role]
+    (match
+      (v tools)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (call
+              Tool'role
+              (v head))
+            (v role))
+          (mk
+            some
+            (v head))
+          (call
+            FindTool
+            (v rest)
+            (v role))))))
+  (judgment
+    ToolIdentities
+    [derived]
+    (call
+      CollectIdentities
+      (call
+        Toolchain'tools
+        (v derived))))
+  (judgment
+    CollectIdentities
+    [tools]
+    (match
+      (v tools)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (mk
+            entry
+            (call
+              Tool'role
+              (v head))
+            (call
+              Tool'identity
+              (v head)))
+          (call
+            CollectIdentities
+            (v rest))))))
+  (judgment
+    RunRole
+    [schema role input]
+    (let
+      judgment'
+      (call
+        JudgmentForRole
+        (v schema)
+        (v role))
+      (match
+        (v judgment')
+        (case
+          (pq Parse)
+          (call
+            Parse
+            (call
+              LanguageSchema'grammar
+              (v schema))
+            (v input)))
+        (case
+          (pq Print)
+          (call
+            Print
+            (call
+              LanguageSchema'grammar
+              (v schema))
+            (v input)))
+        (case
+          (pq NormalizeTerm)
+          (call
+            NormalizeTerm
+            (v input)))
+        (case
+          (pq CompileTerm)
+          (call
+            CompileTerm
+            (v input)))
+        (case
+          (pq ExecuteCode)
+          (call
+            ExecuteCode
+            (v input)))
+        (case
+          (pq FormatSource)
+          (call
+            FormatSource
+            (call
+              LanguageSchema'grammar
+              (v schema))
+            (v input)))
+        (case
+          (pq IndexTerm)
+          (call
+            IndexTerm
+            (v input)
+            (lst)))
+        (case
+          (pq DiagnoseTerm)
+          (call
+            DiagnoseTerm
+            (v input)
+            (lst)))
+        (case
+          _
+          (fail
+            unknown-role
+            (q "no program is selected for this role"))))))
+  (judgment
+    FormatSource
+    [grammar source]
+    (call
+      Print
+      (v grammar)
+      (call
+        Parse
+        (v grammar)
+        (v source))))
+  (judgment
+    IndexTerm
+    [term path]
+    (match
+      (v term)
+      (case
+        (pm
+          Var
+          (pv name))
+        (lst
+          (mk
+            symbol
+            (q reference)
+            (v name)
+            (v path))))
+      (case
+        (pm
+          Lam
+          (pv name)
+          (pv body))
+        (prim
+          cons
+          (mk
+            symbol
+            (q binder)
+            (v name)
+            (v path))
+          (call
+            IndexTerm
+            (v body)
+            (prim
+              snoc
+              (v path)
+              (mk
+                field
+                (q body))))))
+      (case
+        (pm
+          App
+          (pv fn)
+          (pv argument))
+        (prim
+          append
+          (call
+            IndexTerm
+            (v fn)
+            (prim
+              snoc
+              (v path)
+              (mk
+                field
+                (q fn))))
+          (call
+            IndexTerm
+            (v argument)
+            (prim
+              snoc
+              (v path)
+              (mk
+                field
+                (q argument))))))))
+  (judgment
+    RenameTerm
+    [term from to]
+    (match
+      (v term)
+      (case
+        (pm
+          Var
+          (pv name))
+        (if
+          (prim
+            eq
+            (v name)
+            (v from))
+          (mk
+            Var
+            (v to))
+          (mk
+            Var
+            (v name))))
+      (case
+        (pm
+          Lam
+          (pv name)
+          (pv body))
+        (if
+          (prim
+            eq
+            (v name)
+            (v from))
+          (mk
+            Lam
+            (v name)
+            (v body))
+          (mk
+            Lam
+            (v name)
+            (call
+              RenameTerm
+              (v body)
+              (v from)
+              (v to)))))
+      (case
+        (pm
+          App
+          (pv fn)
+          (pv argument))
+        (mk
+          App
+          (call
+            RenameTerm
+            (v fn)
+            (v from)
+            (v to))
+          (call
+            RenameTerm
+            (v argument)
+            (v from)
+            (v to))))))
+  (judgment
+    RenameSource
+    [grammar source from to]
+    (call
+      Print
+      (v grammar)
+      (call
+        RenameTerm
+        (call
+          Parse
+          (v grammar)
+          (v source))
+        (v from)
+        (v to))))
+  (judgment
+    DiagnoseTerm
+    [term scope]
+    (match
+      (v term)
+      (case
+        (pm
+          Var
+          (pv name))
+        (lst))
+      (case
+        (pm
+          Lam
+          (pv name)
+          (pv body))
+        (if
+          (prim
+            contains
+            (v scope)
+            (v name))
+          (prim
+            cons
+            (call
+              Finding
+              (q shadowed-binder)
+              (v name))
+            (call
+              DiagnoseTerm
+              (v body)
+              (prim
+                cons
+                (v name)
+                (v scope))))
+          (call
+            DiagnoseTerm
+            (v body)
+            (prim
+              cons
+              (v name)
+              (v scope)))))
+      (case
+        (pm
+          App
+          (pv fn)
+          (pv argument))
+        (prim
+          append
+          (call
+            DiagnoseTerm
+            (v fn)
+            (v scope))
+          (call
+            DiagnoseTerm
+            (v argument)
+            (v scope))))))
+  (judgment
+    DiagnoseSource
+    [grammar source]
+    (call
+      DiagnoseTerm
+      (call
+        Parse
+        (v grammar)
+        (v source))
+      (lst)))
+  (judgment
+    ValidateChange
+    [desc value change]
+    (match
+      (call
+        Apply
+        (v desc)
+        (v value)
+        (v change))
+      (case
+        (pm
+          applied
+          (pv result))
+        (mk valid))
+      (case
+        (pm
+          conflict
+          (pv reason))
+        (mk
+          invalid
+          (v reason)))))
+  (judgment
+    CompileDeBruijn
+    [term]
+    (match
+      (v term)
+      (case
+        (pm
+          var
+          (pv index))
+        (lst
+          (mk
+            ACCESS
+            (v index))))
+      (case
+        (pm
+          free
+          (pv name))
+        (lst
+          (mk
+            FREE
+            (v name))))
+      (case
+        (pm
+          lam
+          (pv body))
+        (lst
+          (mk
+            GRAB
+            (call
+              CompileDeBruijn
+              (v body)))))
+      (case
+        (pm
+          app
+          (pv fn)
+          (pv argument))
+        (prim
+          cons
+          (mk
+            PUSH
+            (call
+              CompileDeBruijn
+              (v argument)))
+          (call
+            CompileDeBruijn
+            (v fn))))))
+  (judgment
+    CompileTerm
+    [term]
+    (call
+      CompileDeBruijn
+      (call
+        ToDeBruijn
+        (v term)
+        (lst))))
+  (judgment
+    CompileSource
+    [grammar source]
+    (call
+      CompileTerm
+      (call
+        Parse
+        (v grammar)
+        (v source))))
+  (judgment
+    Run
+    [code environment stack fuel]
+    (if
+      (prim
+        eq
+        (v fuel)
+        (q 0))
+      (fail
+        resource-exhausted
+        (q "target execution fuel exhausted"))
+      (match
+        (v code)
+        (case
+          (pnil)
+          (match
+            (v stack)
+            (case
+              (pnil)
+              (mk stuck))
+            (case
+              (pcons
+                (pv head)
+                (pv rest))
+              (mk stuck))))
+        (case
+          (pcons
+            (pv instruction)
+            (pv rest))
+          (match
+            (v instruction)
+            (case
+              (pm
+                FREE
+                (pv name))
+              (mk
+                free
+                (v name)
+                (v stack)))
+            (case
+              (pm
+                ACCESS
+                (pv index))
+              (let
+                closure
+                (prim
+                  nth
+                  (v environment)
+                  (v index))
+                (call
+                  Run
+                  (prim
+                    nth
+                    (prim
+                      args
+                      (v closure))
+                    (q 0))
+                  (prim
+                    nth
+                    (prim
+                      args
+                      (v closure))
+                    (q 1))
+                  (v stack)
+                  (prim
+                    sub
+                    (v fuel)
+                    (q 1)))))
+            (case
+              (pm
+                PUSH
+                (pv body))
+              (call
+                Run
+                (v rest)
+                (v environment)
+                (prim
+                  cons
+                  (mk
+                    closure
+                    (v body)
+                    (v environment))
+                  (v stack))
+                (prim
+                  sub
+                  (v fuel)
+                  (q 1))))
+            (case
+              (pm
+                GRAB
+                (pv body))
+              (match
+                (v stack)
+                (case
+                  (pnil)
+                  (mk
+                    function
+                    (v body)
+                    (v environment)))
+                (case
+                  (pcons
+                    (pv top)
+                    (pv more))
+                  (call
+                    Run
+                    (v body)
+                    (prim
+                      cons
+                      (v top)
+                      (v environment))
+                    (v more)
+                    (prim
+                      sub
+                      (v fuel)
+                      (q 1))))))
+            (case
+              _
+              (mk stuck)))))))
+  (judgment
+    ExecuteCode
+    [code]
+    (call
+      Run
+      (v code)
+      (lst)
+      (lst)
+      (q 100000)))
+  (judgment
+    Readback
+    [result fuel]
+    (match
+      (v result)
+      (case
+        (pm
+          free
+          (pv name)
+          (pv stack))
+        (call
+          ApplyArguments
+          (mk
+            Var
+            (v name))
+          (v stack)
+          (v fuel)))
+      (case
+        (pm
+          function
+          (pv body)
+          (pv environment))
+        (mk function))
+      (case
+        (pm stuck)
+        (mk stuck))))
+  (judgment
+    ApplyArguments
+    [term stack fuel]
+    (match
+      (v stack)
+      (case
+        (pnil)
+        (v term))
+      (case
+        (pcons
+          (pv closure)
+          (pv rest))
+        (call
+          ApplyArguments
+          (mk
+            App
+            (v term)
+            (call
+              Readback
+              (call
+                Run
+                (prim
+                  nth
+                  (prim
+                    args
+                    (v closure))
+                  (q 0))
+                (prim
+                  nth
+                  (prim
+                    args
+                    (v closure))
+                  (q 1))
+                (lst)
+                (v fuel))
+              (v fuel)))
+          (v rest)
+          (v fuel)))))
+  (judgment
+    ExecuteToTerm
+    [code]
+    (call
+      Readback
+      (call
+        ExecuteCode
+        (v code))
+      (q 100000)))
+  (judgment
+    ExecuteSourceToText
+    [grammar source]
+    (call
+      Print
+      (v grammar)
+      (call
+        ExecuteToTerm
+        (call
+          CompileSource
+          (v grammar)
+          (v source)))))
+  (judgment
+    TranslationPreservesMeaning
+    [grammar source]
+    (prim
+      eq
+      (call
+        ExecuteSourceToText
+        (v grammar)
+        (v source))
+      (call
+        NormalizeToText
+        (v grammar)
+        (v source))))
+  (judgment
+    RegressionCorpus
+    []
+    (lst
+      (q "(\\x. x) a")
+      (q "(\\x. \\y. x) a b")
+      (q "(\\x. \\y. y) a b")
+      (q "(\\f. \\x. f x) g y")))
+  (judgment
+    CorpusAgrees
+    [grammar corpus]
+    (match
+      (v corpus)
+      (case
+        (pnil)
+        (q #t))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (call
+            TranslationPreservesMeaning
+            (v grammar)
+            (v head))
+          (call
+            CorpusAgrees
+            (v grammar)
+            (v rest))
+          (q #f)))))
+  (judgment
+    CompiledExecutionAgrees
+    [grammar]
+    (call
+      CorpusAgrees
+      (v grammar)
+      (call RegressionCorpus)))
+  (judgment
+    ToolchainFor
+    [grammar]
+    (call
+      DeriveToolchain
+      (call
+        LambdaToolchain
+        (v grammar))))
+  (judgment
+    ToolJudgment
+    [derived role]
+    (match
+      (call
+        ToolFor
+        (v derived)
+        (v role))
+      (case
+        (pm
+          some
+          (pv tool))
+        (call
+          Tool'program
+          (v tool)))
+      (case
+        (pm none)
+        (mk none))))
+  (judgment
+    ToolIdentityFor
+    [derived role]
+    (match
+      (call
+        ToolFor
+        (v derived)
+        (v role))
+      (case
+        (pm
+          some
+          (pv tool))
+        (call
+          Tool'identity
+          (v tool)))
+      (case
+        (pm none)
+        (mk none))))
+  (judgment
+    GrammarChangeAffectsTools
+    [first second role]
+    (prim
+      eq
+      (call
+        ToolIdentityFor
+        (call
+          ToolchainFor
+          (v first))
+        (v role))
+      (call
+        ToolIdentityFor
+        (call
+          ToolchainFor
+          (v second))
+        (v role))))
+  (judgment
+    ToolIdentityIsStable
+    [grammar role]
+    (prim
+      eq
+      (call
+        ToolIdentityFor
+        (call
+          ToolchainFor
+          (v grammar))
+        (v role))
+      (call
+        ToolIdentityFor
+        (call
+          ToolchainFor
+          (v grammar))
+        (v role))))
+  (judgment
+    DerivedRoles
+    [grammar]
+    (call
+      CollectRoles
+      (call
+        Toolchain'tools
+        (call
+          ToolchainFor
+          (v grammar)))))
+  (judgment
+    CollectRoles
+    [tools]
+    (match
+      (v tools)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            Tool'role
+            (v head))
+          (call
+            CollectRoles
+            (v rest)))))))

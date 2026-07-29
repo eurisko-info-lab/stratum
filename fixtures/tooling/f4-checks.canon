@@ -1,0 +1,96 @@
+; Executable acceptance checks for F4: schema-derived language toolchains.
+[
+  ; ----------------------------------------------------------- derivation
+
+  (check tools-are-derived-from-the-schema
+    (call DerivedRoles (q (file "languages/lambda/lambda.generated.grammar")))
+    (value [parse print format evaluate compile executeTarget index rename diagnostics validateChange]))
+
+  (check parser-is-selected-by-role
+    (call ToolJudgment
+      (call ToolchainFor (q (file "languages/lambda/lambda.generated.grammar")))
+      (q parse))
+    (value Parse))
+
+  (check compiler-is-selected-by-role
+    (call ToolJudgment
+      (call ToolchainFor (q (file "languages/lambda/lambda.generated.grammar")))
+      (q compile))
+    (value CompileTerm))
+
+  (check tool-identity-is-stable
+    (call ToolIdentityIsStable (q (file "languages/lambda/lambda.generated.grammar")) (q parse))
+    (value #t))
+
+  (check changing-the-grammar-regenerates-affected-tools
+    (call GrammarChangeAffectsTools
+      (q (file "languages/lambda/lambda.generated.grammar"))
+      (q (file "languages/meta1/meta1.generated.grammar"))
+      (q parse))
+    (value #f))
+
+  ; ------------------------------------------------------ generated tools
+
+  (check evaluator-is-derived-from-the-selected-judgment
+    (call RunRole
+      (call LambdaSchema (q (file "languages/lambda/lambda.generated.grammar")))
+      (q evaluate)
+      (call Parse (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b")))
+    (value (Var a)))
+
+  (check formatter-is-canonical
+    (call FormatSource (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x.     x)   y"))
+    (value "(\\ x. x) y"))
+
+  (check symbol-index-is-generated
+    (call IndexTerm
+      (call Parse (q (file "languages/lambda/lambda.generated.grammar")) (q "\\x. f x"))
+      (q []))
+    (value
+      [(symbol binder x [])
+       (symbol reference f [(field body) (field fn)])
+       (symbol reference x [(field body) (field argument)])]))
+
+  (check rename-is-generated
+    (call RenameSource (q (file "languages/lambda/lambda.generated.grammar")) (q "\\y. f y") (q f) (q h))
+    (value "\\ y. h y"))
+
+  (check diagnostics-are-generated
+    (call DiagnoseSource (q (file "languages/lambda/lambda.generated.grammar")) (q "\\x. \\x. x"))
+    (value [(Finding shadowed-binder x)]))
+
+  (check change-validation-is-a-declared-role
+    (call ValidateChange
+      (call DescLambda)
+      (q (Lam x (Var x)))
+      (q (AtConstructor Lam (AtField missing (Replace (Var x) (Var z))))))
+    (value (invalid unknown-field)))
+
+  ; --------------------------------------------------------- compilation
+
+  (check lambda-compiles-to-the-stack-target
+    (call CompileSource (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. x) a"))
+    (value [(PUSH [(FREE a)]) (GRAB [(ACCESS 0)])]))
+
+  (check compiled-execution-agrees-with-direct-evaluation
+    (call CompiledExecutionAgrees (q (file "languages/lambda/lambda.generated.grammar")))
+    (value #t))
+
+  (check target-language-is-an-ordinary-artifact
+    (call LanguageSchema'sorts (call StackSchema))
+    (value [Code Instruction]))
+
+  (check target-execution-is-a-declared-role
+    (call ExecuteSourceToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+
+  ; ------------------------------- earlier foundation behaviour is intact
+
+  (check repository-replay-unchanged
+    (call OrderOneState)
+    (value {A ten B twenty}))
+
+  (check lambda-behaviour-unchanged
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\f. \\x. f (f x)) g y"))
+    (value "g (g y)"))
+]

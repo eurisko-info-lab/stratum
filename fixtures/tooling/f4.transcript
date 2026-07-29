@@ -1,0 +1,76 @@
+# F4 acceptance transcript: schema-derived language toolchains.
+
+$ foundation verify --dir foundations/F4
+> foundation F4
+> digest 62be55ae9c1aec46b3e5dd5f4bf9d84c5f90ff4d1dbddefb1645cc74edd3c68e
+> closure 40 artifacts
+> check tools-are-derived-from-the-schema ok
+> check parser-is-selected-by-role ok
+> check compiler-is-selected-by-role ok
+> check tool-identity-is-stable ok
+> check changing-the-grammar-regenerates-affected-tools ok
+> check evaluator-is-derived-from-the-selected-judgment ok
+> check formatter-is-canonical ok
+> check symbol-index-is-generated ok
+> check rename-is-generated ok
+> check diagnostics-are-generated ok
+> check change-validation-is-a-declared-role ok
+> check lambda-compiles-to-the-stack-target ok
+> check compiled-execution-agrees-with-direct-evaluation ok
+> check target-language-is-an-ordinary-artifact ok
+> check target-execution-is-a-declared-role ok
+> check repository-replay-unchanged ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F3 --successor foundations/F4
+> predecessor F3
+> successor F4
+> result (valid #d3ac8bea2832bbdb5577d93ec3691962a8c772aa2f4213ece0286af29e9848f2e)
+
+$ foundation reconstruct --dir foundations/F4
+> reconstructed F4
+> digest 62be55ae9c1aec46b3e5dd5f4bf9d84c5f90ff4d1dbddefb1645cc74edd3c68e
+> stable yes
+> closure 40 artifacts
+> checks 17 ok
+
+# Tools are selected by role from the schema, not hand written.
+$ derive --foundation foundations/F4 --goal '(call DerivedRoles (grammar lambda))'
+> [parse print format evaluate compile executeTarget index rename diagnostics validateChange]
+
+$ derive --foundation foundations/F4 --goal '(call ToolJudgment (call ToolchainFor (grammar lambda)) (q compile))'
+> CompileTerm
+
+# Changing the grammar regenerates the tools that depend on it.
+$ derive --foundation foundations/F4 --goal '(call GrammarChangeAffectsTools (grammar lambda) (grammar meta1) (q parse))'
+> #f
+
+# The evaluator is the judgment the schema selected.
+$ derive --foundation foundations/F4 --goal '(call RunRole (call LambdaSchema (grammar lambda)) (q evaluate) (call Parse (grammar lambda) (q "(\\x. \\y. x) a b")))'
+> (Var a)
+
+# The formatter is canonical printing.
+$ derive --foundation foundations/F4 --goal '(call FormatSource (grammar lambda) (q "(\\x.     x)   y"))'
+> "(\\ x. x) y"
+
+# Symbol index and rename are generated.
+$ derive --foundation foundations/F4 --goal '(call IndexTerm (call Parse (grammar lambda) (q "\\x. f x")) (q []))'
+> [(symbol binder x []) (symbol reference f [(field body) (field fn)]) (symbol reference x [(field body) (field argument)])]
+
+$ derive --foundation foundations/F4 --goal '(call RenameSource (grammar lambda) (q "\\y. f y") (q f) (q h))'
+> "\\ y. h y"
+
+$ derive --foundation foundations/F4 --goal '(call DiagnoseSource (grammar lambda) (q "\\x. \\x. x"))'
+> [(Finding shadowed-binder x)]
+
+# Lambda compiles to the stack target, which is another language artifact.
+$ derive --foundation foundations/F4 --goal '(call CompileSource (grammar lambda) (q "(\\x. x) a"))'
+> [(PUSH [(FREE a)]) (GRAB [(ACCESS 0)])]
+
+# Compiled execution agrees with direct evaluation on the regression corpus.
+$ derive --foundation foundations/F4 --goal '(call CompiledExecutionAgrees (grammar lambda))'
+> #t
+
+$ derive --foundation foundations/F4 --goal '(call ExecuteSourceToText (grammar lambda) (q "(\\f. \\x. f x) g y"))'
+> "g y"
