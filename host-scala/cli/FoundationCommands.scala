@@ -23,6 +23,7 @@ object FoundationCommands:
       case Some("verify")            => verify(root, Cli.options(args))
       case Some("verify-successor")  => verifySuccessor(root, Cli.options(args))
       case Some("reconstruct")       => reconstruct(root, Cli.options(args))
+      case Some("attest")            => attest(root, Cli.options(args))
       case Some("closure")           => closure(root, Cli.options(args))
       case other                     => CommandResult.fail(s"unknown foundation command ${other.getOrElse("")}")
 
@@ -273,6 +274,59 @@ object FoundationCommands:
                             s"checks ${results.length} ${if failed.isEmpty then "ok" else "failed"}"
                           ) ++ failed.map((n, r) => s"check $n $r")
                           CommandResult(if failed.isEmpty && stable then 0 else 1, lines)
+
+  /**
+   * A canonical attestation computed from `digest + closure` alone.
+   *
+   * Every independent implementation of the bootstrap interface must produce
+   * these exact bytes for the same foundation.
+   */
+  private def attest(root: Path, opts: Map[String, String]): CommandResult =
+    opts.get("dir") match
+      case None => CommandResult.fail("usage: foundation attest --dir <dir>")
+      case Some(dir) =>
+        val d = root.resolve(dir)
+        val digestFile = d.resolve("digest.txt")
+        if !Files.exists(digestFile) then CommandResult.fail(s"no digest.txt in $dir")
+        else
+          Digest.fromHex(Files.readString(digestFile).trim) match
+            case Left(m) => CommandResult.fail(m)
+            case Right(rootDigest) =>
+              val cas = DirectoryCas(d.resolve("closure"))
+              Closure.traverse(cas, rootDigest) match
+                case Left(missing) => CommandResult.fail(s"missing artifact ${missing.hex}")
+                case Right(digests) =>
+                  val kinds = digests.flatMap(cas.get).map(_.kind).groupBy(identity).view.mapValues(_.length).toVector.sortBy(_._1)
+                  val result = for
+                    foundationArtifact <- cas.get(rootDigest).toRight("root artifact missing")
+                    _ <- Either.cond(foundationArtifact.kind == "foundation", (), "root artifact is not a foundation")
+                    name <- field(foundationArtifact.body, "name").collect { case Canon.S(s) => s }
+                      .toRight("foundation has no name")
+                    applicationRef <- field(foundationArtifact.body, "application").collect { case Canon.R(r) => r }
+                      .toRight("foundation has no application reference")
+                    applicationArtifact <- cas.get(applicationRef).toRight("application artifact missing")
+                    _ <- Either.cond(applicationArtifact.kind == "application", (), "application artifact has the wrong kind")
+                    metaRef <- field(applicationArtifact.body, "meta").collect { case Canon.R(r) => r }
+                      .toRight("application has no meta program reference")
+                    metaArtifact <- cas.get(metaRef).toRight("meta program artifact missing")
+                    _ <- Either.cond(metaArtifact.kind == "meta-program", (), "meta program artifact has the wrong kind")
+                  yield Canon.node(
+                    "attestation",
+                    Canon.node("name", Canon.S(name)),
+                    Canon.node("foundation", Canon.R(rootDigest)),
+                    Canon.node("application", Canon.R(applicationRef)),
+                    Canon.node("meta", Canon.R(metaRef)),
+                    Canon.node("closure", Canon.N(BigInt(digests.length))),
+                    Canon.node("kinds", Canon.M(kinds.map((k, n) => Canon.Sym(k) -> Canon.N(BigInt(n))))),
+                    Canon.node("complete", Canon.B(true))
+                  )
+                  result match
+                    case Left(m) => CommandResult.fail(m)
+                    case Right(attestation) =>
+                      CommandResult.ok(
+                        CanonText.write(attestation),
+                        s"attestation ${Canon.digest(attestation).hex}"
+                      )
 
   private def closure(root: Path, opts: Map[String, String]): CommandResult =
     opts.get("dir") match

@@ -1,0 +1,14 @@
+[package]
+name = "stratum-verify"
+version = "0.1.0"
+edition = "2021"
+
+# The independent host has no dependencies by design.
+[dependencies]
+
+[[bin]]
+name = "stratum-verify"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 2
