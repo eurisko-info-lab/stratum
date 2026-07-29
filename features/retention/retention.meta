@@ -1,0 +1,211 @@
+module retention
+
+; Retention is a constituted semantic choice, not an implementation accident.
+;
+; A retention constitution names which judgments must remain derivable after
+; collection. Derived artifacts may be discarded when their regeneration inputs
+; are retained.
+
+record RetentionConstitution [name retentionMode required]
+record Checkpoint [height state roots]
+record ArchiveManifest [name roots checkpoint]
+record ArchiveAttestation [archive digest]
+record GcPlan [retain discard]
+record RetainedClosure [digests]
+record ReconstructionTarget [kind root]
+
+judgment RetentionModes [] =
+  list [#CurrentStateOnly #TransitionMetadata #ReplayableFoundation #FullSemanticHistory #CheckpointedHistory]
+
+judgment IsRetentionMode [retentionMode] = prim #contains [call RetentionModes [] retentionMode]
+
+; ------------------------------------------------------------ requirements
+
+; What a retentionMode requires to remain derivable.
+judgment RequiredFor [retentionMode] =
+  match retentionMode {
+    case #CurrentStateOnly -> list [#state]
+    case #TransitionMetadata -> list [#state #transitions]
+    case #ReplayableFoundation -> list [#state #transitions #foundation #closure]
+    case #FullSemanticHistory -> list [#state #transitions #foundation #closure #patches]
+    case #CheckpointedHistory -> list [#state #checkpoint #foundation #closure]
+    case _ -> list []
+  }
+
+judgment ConstitutionFor [name retentionMode targets] =
+  call RetentionConstitution [name retentionMode call Union [call RequiredFor [retentionMode] targets]]
+
+; --------------------------------------------------------------- planning
+
+; Derived artifacts are discardable exactly when their inputs remain retained.
+judgment IsDerived [entry] =
+  match entry {
+    case (#derived kind inputs) -> true
+    case _ -> false
+  }
+
+judgment EntryKind [entry] =
+  match entry {
+    case (#retained kind) -> kind
+    case (#derived kind inputs) -> kind
+    case _ -> #unknown
+  }
+
+judgment EntryInputs [entry] =
+  match entry {
+    case (#derived kind inputs) -> inputs
+    case _ -> list []
+  }
+
+judgment KindsOf [entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest -> prim #cons [call EntryKind [head] call KindsOf [rest]]
+  }
+
+judgment PlanCollection [constitution world] =
+  call Split [constitution world world list [] list []]
+
+judgment Split [constitution world remaining retain discard] =
+  match remaining {
+    case [] -> call GcPlan [retain discard]
+    case head :: rest ->
+      if call Discardable [constitution world head]
+      then call Split [constitution world rest retain prim #snoc [discard call EntryKind [head]]]
+      else call Split [constitution world rest prim #snoc [retain call EntryKind [head]] discard]
+  }
+
+; A derived entry is discardable when it is not itself required and all of its
+; regeneration inputs survive.
+judgment Discardable [constitution world entry] =
+  if prim #contains [call RetentionConstitution'required [constitution] call EntryKind [entry]]
+  then false
+  else
+    if call IsDerived [entry]
+    then call AllRetained [constitution world call EntryInputs [entry]]
+    else false
+
+judgment AllRetained [constitution world inputs] =
+  match inputs {
+    case [] -> true
+    case head :: rest ->
+      if prim #contains [call KindsOf [world] head]
+      then call AllRetained [constitution world rest]
+      else false
+  }
+
+; ------------------------------------------------------------- validation
+
+judgment ValidatePlan [constitution plan] =
+  call MissingRequired [call RetentionConstitution'required [constitution] call GcPlan'retain [plan]]
+
+judgment MissingRequired [required retained] =
+  match required {
+    case [] -> mk #valid []
+    case head :: rest ->
+      if prim #contains [retained head]
+      then call MissingRequired [rest retained]
+      else mk #invalid [#required-evidence-removed]
+  }
+
+; A plan that a caller proposes directly is checked the same way.
+judgment ProposePlan [constitution retain discard] =
+  call ValidatePlan [constitution call GcPlan [retain discard]]
+
+; ------------------------------------------------------------ reconstruction
+
+judgment Reconstructs [plan target] =
+  prim #contains [call GcPlan'retain [plan] call ReconstructionTarget'kind [target]]
+
+judgment PreservesFoundationReconstruction [constitution world] =
+  call Reconstructs [
+    call PlanCollection [constitution world]
+    call ReconstructionTarget [#foundation #root]
+  ]
+
+judgment PreservesSettledReplay [constitution world] =
+  call Reconstructs [
+    call PlanCollection [constitution world]
+    call ReconstructionTarget [#transitions #history]
+  ]
+
+; Derived tooling is regenerated from the schemas that survived collection.
+judgment RegenerateTooling [grammar] = call DerivedRoles [grammar]
+
+judgment ToolingRegeneratesAfterCollection [grammar constitution world] =
+  if prim #contains [call GcPlan'discard [call PlanCollection [constitution world]] #tools]
+  then prim #eq [call RegenerateTooling [grammar] call DerivedRoles [grammar]]
+  else false
+
+; ------------------------------------------------------------- checkpoints
+
+judgment MakeCheckpoint [height state roots] = call Checkpoint [height state roots]
+
+; An application is reconstructed from a checkpoint plus the patches recorded
+; after it.
+judgment ReconstructFromCheckpoint [desc checkpoint repository branch] =
+  call ReplayState [desc call Checkpoint'state [checkpoint] repository branch]
+
+judgment ArchiveOf [name checkpoint roots] = call ArchiveManifest [name roots checkpoint]
+
+judgment AttestArchive [archive] =
+  call ArchiveAttestation [call ArchiveManifest'name [archive] prim #digest [archive]]
+
+judgment ArchiveDigestIsStable [archive] =
+  prim #eq [call AttestArchive [archive] call AttestArchive [archive]]
+
+; ----------------------------------------------------------------- scenarios
+
+; A world of retained inputs and derived caches.
+judgment World [] =
+  list [
+    mk #retained [#state]
+    mk #retained [#transitions]
+    mk #retained [#foundation]
+    mk #retained [#closure]
+    mk #retained [#patches]
+    mk #retained [#schemas]
+    mk #derived [#tools list [#schemas]]
+    mk #derived [#index list [#schemas]]
+    mk #derived [#projection list [#schemas]]
+  ]
+
+judgment ReplayableConstitution [] =
+  call ConstitutionFor [#replayable #ReplayableFoundation list []]
+
+judgment HistoryConstitution [] =
+  call ConstitutionFor [#history #FullSemanticHistory list []]
+
+judgment StrictConstitution [] =
+  call ConstitutionFor [#strict #ReplayableFoundation list [#tools]]
+
+judgment ReplayablePlan [] = call PlanCollection [call ReplayableConstitution [] call World []]
+
+judgment DiscardedKinds [] = call GcPlan'discard [call ReplayablePlan []]
+
+judgment RetainedKinds [] = call GcPlan'retain [call ReplayablePlan []]
+
+judgment CollectionIsNontrivial [] = prim #len [call DiscardedKinds []]
+
+judgment ReplayablePlanIsValid [] =
+  call ValidatePlan [call ReplayableConstitution [] call ReplayablePlan []]
+
+judgment PlanRemovingRequiredEvidence [] =
+  call ProposePlan [call ReplayableConstitution [] list [#state #transitions] list [#foundation #closure]]
+
+; A constitution that also requires the tool cache keeps it.
+judgment StrictPlanKeepsTools [] =
+  prim #contains [call GcPlan'retain [call PlanCollection [call StrictConstitution [] call World []]] #tools]
+
+judgment CheckpointReconstruction [] =
+  call ReconstructFromCheckpoint [
+    call DescProgram []
+    call MakeCheckpoint [1 call BaseState [] list [#application]]
+    call RepoOrderOne []
+    #main
+  ]
+
+judgment ArchiveAttestationStable [] =
+  call ArchiveDigestIsStable [
+    call ArchiveOf [#f10 call MakeCheckpoint [1 call BaseState [] list [#application]] list [#foundation]]
+  ]

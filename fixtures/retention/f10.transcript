@@ -1,0 +1,70 @@
+# F10 acceptance transcript: constituted semantic retention and archives.
+
+$ foundation verify --dir foundations/F10
+> foundation F10
+> digest 2c8bb7b830d0786eab1175b7ca0012b285414b1de69410df12e6477ae4db25ec
+> closure 71 artifacts
+> check collection-is-nontrivial ok
+> check derived-caches-are-discarded ok
+> check regeneration-inputs-are-retained ok
+> check foundation-reconstruction-is-preserved ok
+> check settled-history-replay-is-preserved ok
+> check the-plan-satisfies-its-constitution ok
+> check a-plan-that-removes-required-evidence-is-rejected ok
+> check a-stricter-constitution-keeps-the-tool-cache ok
+> check tooling-regenerates-after-cache-deletion ok
+> check an-application-is-reconstructed-from-a-checkpoint-plus-patches ok
+> check archive-attestation-is-stable ok
+> check retention-modes-are-declared ok
+> check settlement-unchanged ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F9 --successor foundations/F10
+> predecessor F9
+> successor F10
+> result (valid #d2964513bf72f8cdb5bc08cb9dd81a632189d9f21860da12736f481fe86ad9264)
+
+$ foundation reconstruct --dir foundations/F10
+> reconstructed F10
+> digest 2c8bb7b830d0786eab1175b7ca0012b285414b1de69410df12e6477ae4db25ec
+> stable yes
+> closure 71 artifacts
+> checks 14 ok
+
+$ foundation attest --dir foundations/F10
+> (attestation (name "F10") (foundation #d2c8bb7b830d0786eab1175b7ca0012b285414b1de69410df12e6477ae4db25ec) (application #d6240bf4d05c9c22e269b053174f8f572354f6ddaf85870ae748e10faf5ee1344) (meta #dacd4c5e0cc3e55abb6751f810f1f12f5c852e5d127680f921cc79c6662eebb93) (closure 71) (kinds {application 11 change 12 foundation 11 grammar 3 meta-program 30 source 4}) (complete #t))
+> attestation c1adc813c26120bfa89eb37dfd4886e383e47f4e95bbedb3c648885995ee30de
+
+# A nontrivial closure is collected.
+$ derive --foundation foundations/F10 --goal '(call DiscardedKinds)'
+> [tools index projection]
+
+$ derive --foundation foundations/F10 --goal '(call RetainedKinds)'
+> [state transitions foundation closure patches schemas]
+
+# Foundation reconstruction and settled replay survive collection.
+$ derive --foundation foundations/F10 --goal '(call PreservesFoundationReconstruction (call ReplayableConstitution) (call World))'
+> #t
+
+$ derive --foundation foundations/F10 --goal '(call PreservesSettledReplay (call ReplayableConstitution) (call World))'
+> #t
+
+# A plan that removes required evidence is rejected.
+$ derive --foundation foundations/F10 --goal '(call PlanRemovingRequiredEvidence)'
+> (invalid required-evidence-removed)
+
+# A stricter constitution keeps the derived tool cache.
+$ derive --foundation foundations/F10 --goal '(call StrictPlanKeepsTools)'
+> #t
+
+# Tooling regenerates after cache deletion.
+$ derive --foundation foundations/F10 --goal '(call ToolingRegeneratesAfterCollection (grammar lambda) (call ReplayableConstitution) (call World))'
+> #t
+
+# An application is reconstructed from a checkpoint plus later patches.
+$ derive --foundation foundations/F10 --goal '(call CheckpointReconstruction)'
+> {A ten B twenty}
+
+$ derive --foundation foundations/F10 --goal '(call RetentionModes)'
+> [CurrentStateOnly TransitionMetadata ReplayableFoundation FullSemanticHistory CheckpointedHistory]
