@@ -1,0 +1,10 @@
+; delta-meta for F7 -> F8: Meta gains peers, offers, needs, fetch plans and
+; sync transcripts.
+(change
+  (kind delta-meta)
+  (name "F7->F8 delta-meta")
+  (replace
+    (ReplaceChange
+      distribution-model
+      (single-node)
+      (peer-to-peer-closure-exchange))))

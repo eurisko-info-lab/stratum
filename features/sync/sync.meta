@@ -1,0 +1,200 @@
+module sync
+
+; Peer to peer synchronization without an agreement protocol.
+;
+; The host provides only generic transport. Message schemas, negotiation,
+; closure selection and validation are all decided here. Nothing received from
+; a peer is trusted implicitly.
+
+record PeerIdentity [name]
+record ClosureOffer [peer digests]
+record ClosureNeed [peer digests]
+record BranchAdvertisement [peer branch frontier]
+record ChainAdvertisement [peer head height]
+record FetchPlan [order]
+record SyncTranscript [steps]
+
+; ------------------------------------------------------------------- stores
+
+; A store is a map from digest to value, so every transfer is digest addressed.
+judgment EmptyStore [] = prim #mnew []
+
+judgment StoreAdd [store value] = prim #mput [store prim #digest [value] value]
+
+judgment StoreOf [values] =
+  match values {
+    case [] -> call EmptyStore []
+    case head :: rest -> call StoreAdd [call StoreOf [rest] head]
+  }
+
+judgment StoreDigests [store] = prim #sort [prim #mkeys [store]]
+
+judgment StoreHas [store digest] = prim #mhas [store digest]
+
+; ----------------------------------------------------------- advertisement
+
+judgment AdvertiseClosure [peer store] = call ClosureOffer [peer call StoreDigests [store]]
+
+judgment AdvertiseBranch [peer repository branch] =
+  call BranchAdvertisement [peer branch call Heads [repository branch]]
+
+judgment AdvertiseChain [peer result] =
+  match result {
+    case (#chain state) ->
+      call ChainAdvertisement [peer call ChainState'head [state] call ChainState'height [state]]
+    case (#rejected reason) -> call ChainAdvertisement [peer #none 0]
+  }
+
+; ------------------------------------------------------- missing discovery
+
+judgment NeededDigests [local offer] =
+  call Subtract [call ClosureOffer'digests [offer] call StoreDigests [local]]
+
+judgment PlanFetch [local offer] = call FetchPlan [prim #sort [call NeededDigests [local offer]]]
+
+; ------------------------------------------------------------- transfer
+
+; Every artifact is verified on receipt against the digest it was requested by.
+judgment AcceptArtifact [target digest value] =
+  if prim #eq [prim #digest [value] digest]
+  then mk #accepted [prim #mput [target digest value]]
+  else mk #rejected [#corrupted-artifact]
+
+judgment TransferSteps [source target order transferred] =
+  match order {
+    case [] -> mk #synchronized [target transferred]
+    case digest :: rest ->
+      match call AcceptArtifact [target digest prim #mget [source digest mk #absent []]] {
+        case (#accepted next) ->
+          call TransferSteps [source next rest prim #snoc [transferred digest]]
+        case (#rejected reason) -> mk #interrupted [target transferred reason]
+      }
+  }
+
+judgment Transfer [source target plan] =
+  call TransferSteps [source target call FetchPlan'order [plan] list []]
+
+; A transfer is resumable: the plan is filtered by what the target already has.
+judgment RemainingPlan [target plan] =
+  call FetchPlan [
+    call Subtract [call FetchPlan'order [plan] call StoreDigests [target]]
+  ]
+
+judgment ResumeTransfer [source target plan] =
+  call Transfer [source target call RemainingPlan [target plan]]
+
+judgment SyncStore [source target] =
+  call Transfer [
+    source target
+    call PlanFetch [target call AdvertiseClosure [call PeerIdentity [#remote] source]]
+  ]
+
+judgment SynchronizedDigests [result] =
+  match result {
+    case (#synchronized store transferred) -> call StoreDigests [store]
+    case (#interrupted store transferred reason) -> call StoreDigests [store]
+  }
+
+judgment SyncOutcome [result] =
+  match result {
+    case (#synchronized store transferred) -> mk #synchronized [prim #len [transferred]]
+    case (#interrupted store transferred reason) -> mk #interrupted [reason]
+  }
+
+; ------------------------------------------------------------- transport
+
+; The generic transport capability carries canonical messages only.
+judgment Send [peer message] =
+  match cap #send [peer message] {
+    case (#ok result) -> mk #sent []
+    case (#denied reason) -> mk #undelivered [reason]
+  }
+
+judgment Receive [peer] =
+  match cap #receive [peer] {
+    case (#ok message) -> message
+    case (#denied reason) -> mk #empty []
+  }
+
+judgment RoundTripMessage [peer message] =
+  let sent = call Send [peer message] in
+  call Receive [peer]
+
+; ------------------------------------------------------ branch exchange
+
+; Remote patches are never accepted automatically. They arrive as proposals.
+judgment IntegrateRemote [local advertisement] =
+  mk #proposals [
+    call BranchAdvertisement'branch [advertisement]
+    call Subtract [call BranchAdvertisement'frontier [advertisement] local]
+  ]
+
+judgment ProposalCount [proposals] =
+  match proposals {
+    case (#proposals branch identities) -> prim #len [identities]
+  }
+
+; Diverged branches keep both frontiers; conflicts stay explicit.
+judgment ExchangeBranches [repository left right] =
+  call MergeBranch [repository left right]
+
+judgment DivergedConflicts [desc initial repository branch] =
+  prim #len [call ReplayConflicts [desc initial repository branch]]
+
+; --------------------------------------------------------- offline usage
+
+; Synchronization updates available closures and frontiers. It never replaces
+; local semantic replay.
+judgment OfflineStateUnchanged [desc initial repository branch] =
+  prim #eq [
+    call ReplayState [desc initial repository branch]
+    call ReplayState [desc initial repository branch]
+  ]
+
+; ----------------------------------------------------------------- scenarios
+
+judgment LeftValues [] = list [mk #artifact [#a] mk #artifact [#b]]
+judgment RightValues [] = list [mk #artifact [#c] mk #artifact [#d]]
+
+judgment LeftStore [] = call StoreOf [call LeftValues []]
+judgment RightStore [] = call StoreOf [call RightValues []]
+
+judgment DisjointSync [] = call SyncOutcome [call SyncStore [call RightStore [] call LeftStore []]]
+
+judgment SyncedSize [] =
+  prim #len [call SynchronizedDigests [call SyncStore [call RightStore [] call LeftStore []]]]
+
+judgment CorruptedTransfer [] =
+  call SyncOutcome [
+    call TransferSteps [
+      prim #mput [
+        call RightStore []
+        prim #digest [mk #artifact [#c]]
+        mk #artifact [#tampered]
+      ]
+      call LeftStore []
+      list [prim #digest [mk #artifact [#c]]]
+      list []
+    ]
+  ]
+
+judgment PartialTarget [] =
+  prim #mput [call LeftStore [] prim #digest [mk #artifact [#c]] mk #artifact [#c]]
+
+judgment ResumedTransfer [] =
+  call SyncOutcome [
+    call ResumeTransfer [
+      call RightStore []
+      call PartialTarget []
+      call PlanFetch [call LeftStore [] call AdvertiseClosure [call PeerIdentity [#remote] call RightStore []]]
+    ]
+  ]
+
+judgment RemoteAdvertisement [] =
+  call BranchAdvertisement [call PeerIdentity [#remote] #main list [#p1 #p2]]
+
+judgment RemoteProposals [] =
+  call ProposalCount [call IntegrateRemote [list [#p1] call RemoteAdvertisement []]]
+
+judgment TransportRoundTrip [] =
+  call RoundTripMessage ["peer-a" mk #advertise [#main list [#p1]]]
