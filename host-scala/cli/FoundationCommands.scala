@@ -26,7 +26,7 @@ object FoundationCommands:
       case Some("closure")           => closure(root, Cli.options(args))
       case other                     => CommandResult.fail(s"unknown foundation command ${other.getOrElse("")}")
 
-  private def kindOf(c: Canon): String = c match
+  def kindOf(c: Canon): String = c match
     case Canon.Node("program", _)     => "meta-program"
     case Canon.Node("grammar", _)     => "grammar"
     case Canon.Node("application", _) => "application"

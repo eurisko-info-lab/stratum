@@ -1,123 +1,121 @@
-; The untyped lambda calculus as a Meta0 program.
-;
-; The named surface AST produced by GrammarMachine0 is `(Var n)`, `(Lam n b)`
-; and `(App f a)`. Evaluation happens on a de Bruijn representation so that
-; substitution and alpha equivalence are deterministic.
-(program
-  (module lambda)
+module lambda
 
-  ; --------------------------------------------------------------- indices
+data Term =
+  | #var [index]
+  | #free [name]
+  | #lam [body]
+  | #app [fn argument]
 
-  (judgment Shift [d cutoff term]
-    (match (v term)
-      (case (pm var (pv index))
-        (if (prim lt (v index) (v cutoff))
-            (mk var (v index))
-            (mk var (prim add (v index) (v d)))))
-      (case (pm free (pv name)) (mk free (v name)))
-      (case (pm lam (pv body))
-        (mk lam (call Shift (v d) (prim add (v cutoff) (q 1)) (v body))))
-      (case (pm app (pv fn) (pv arg))
-        (mk app (call Shift (v d) (v cutoff) (v fn)) (call Shift (v d) (v cutoff) (v arg))))))
+judgment Shift [d cutoff term] =
+  match term {
+    case (#var index) ->
+      if prim #lt [index cutoff]
+      then mk #var [index]
+      else mk #var [prim #add [index d]]
+    case (#free name) -> mk #free [name]
+    case (#lam body) -> mk #lam [call Shift [d prim #add [cutoff 1] body]]
+    case (#app fn argument) ->
+      mk #app [call Shift [d cutoff fn] call Shift [d cutoff argument]]
+  }
 
-  (judgment Substitute [target replacement term]
-    (match (v term)
-      (case (pm var (pv index))
-        (if (prim eq (v index) (v target)) (v replacement) (mk var (v index))))
-      (case (pm free (pv name)) (mk free (v name)))
-      (case (pm lam (pv body))
-        (mk lam
-          (call Substitute
-            (prim add (v target) (q 1))
-            (call Shift (q 1) (q 0) (v replacement))
-            (v body))))
-      (case (pm app (pv fn) (pv arg))
-        (mk app
-          (call Substitute (v target) (v replacement) (v fn))
-          (call Substitute (v target) (v replacement) (v arg))))))
+judgment Substitute [target replacement term] =
+  match term {
+    case (#var index) ->
+      if prim #eq [index target] then replacement else mk #var [index]
+    case (#free name) -> mk #free [name]
+    case (#lam body) ->
+      mk #lam [call Substitute [prim #add [target 1] call Shift [1 0 replacement] body]]
+    case (#app fn argument) ->
+      mk #app [
+        call Substitute [target replacement fn]
+        call Substitute [target replacement argument]
+      ]
+  }
 
-  (judgment Beta [body argument]
-    (call Shift (q -1) (q 0)
-      (call Substitute (q 0) (call Shift (q 1) (q 0) (v argument)) (v body))))
+judgment Beta [body argument] =
+  call Shift [-1 0 call Substitute [0 call Shift [1 0 argument] body]]
 
-  ; ------------------------------------------------------------ reduction
+judgment StepNormalOrder [term] =
+  match term {
+    case (#app (#lam body) argument) -> mk #some [call Beta [body argument]]
+    case (#app fn argument) ->
+      match call StepNormalOrder [fn] {
+        case (#some reduced) -> mk #some [mk #app [reduced argument]]
+        case (#none) ->
+          match call StepNormalOrder [argument] {
+            case (#some reduced) -> mk #some [mk #app [fn reduced]]
+            case (#none) -> mk #none []
+          }
+      }
+    case (#lam body) ->
+      match call StepNormalOrder [body] {
+        case (#some reduced) -> mk #some [mk #lam [reduced]]
+        case (#none) -> mk #none []
+      }
+    case _ -> mk #none []
+  }
 
-  (judgment StepNormalOrder [term]
-    (match (v term)
-      (case (pm app (pm lam (pv body)) (pv argument))
-        (mk some (call Beta (v body) (v argument))))
-      (case (pm app (pv fn) (pv argument))
-        (match (call StepNormalOrder (v fn))
-          (case (pm some (pv reduced)) (mk some (mk app (v reduced) (v argument))))
-          (case (pm none)
-            (match (call StepNormalOrder (v argument))
-              (case (pm some (pv reduced)) (mk some (mk app (v fn) (v reduced))))
-              (case (pm none) (mk none))))))
-      (case (pm lam (pv body))
-        (match (call StepNormalOrder (v body))
-          (case (pm some (pv reduced)) (mk some (mk lam (v reduced))))
-          (case (pm none) (mk none))))
-      (case _ (mk none))))
+judgment Normalize [term fuel] =
+  if prim #eq [fuel 0]
+  then fail #resource-exhausted "normalization fuel exhausted"
+  else
+    match call StepNormalOrder [term] {
+      case (#some next) -> call Normalize [next prim #sub [fuel 1]]
+      case (#none) -> term
+    }
 
-  (judgment Normalize [term fuel]
-    (if (prim eq (v fuel) (q 0))
-        (fail resource-exhausted (q "normalization fuel exhausted"))
-        (match (call StepNormalOrder (v term))
-          (case (pm some (pv next)) (call Normalize (v next) (prim sub (v fuel) (q 1))))
-          (case (pm none) (v term)))))
+judgment ToDeBruijn [term scope] =
+  match term {
+    case (#Var name) ->
+      match prim #index-of [scope name] {
+        case (#some index) -> mk #var [index]
+        case (#none) -> mk #free [name]
+      }
+    case (#Lam name body) -> mk #lam [call ToDeBruijn [body prim #cons [name scope]]]
+    case (#App fn argument) ->
+      mk #app [call ToDeBruijn [fn scope] call ToDeBruijn [argument scope]]
+  }
 
-  ; ------------------------------------------------------- representations
+judgment FreshName [depth] =
+  prim #str->sym [prim #scat ["v" prim #nat->str [depth]]]
 
-  (judgment ToDeBruijn [term scope]
-    (match (v term)
-      (case (pm Var (pv name))
-        (match (prim index-of (v scope) (v name))
-          (case (pm some (pv index)) (mk var (v index)))
-          (case (pm none) (mk free (v name)))))
-      (case (pm Lam (pv name) (pv body))
-        (mk lam (call ToDeBruijn (v body) (prim cons (v name) (v scope)))))
-      (case (pm App (pv fn) (pv argument))
-        (mk app (call ToDeBruijn (v fn) (v scope)) (call ToDeBruijn (v argument) (v scope))))))
+judgment FromDeBruijn [term scope] =
+  match term {
+    case (#var index) ->
+      if prim #lt [index prim #len [scope]]
+      then mk #Var [prim #nth [scope index]]
+      else mk #Var [prim #str->sym [prim #scat ["free" prim #nat->str [index]]]]
+    case (#free name) -> mk #Var [name]
+    case (#lam body) ->
+      let name = call FreshName [prim #len [scope]] in
+      mk #Lam [name call FromDeBruijn [body prim #cons [name scope]]]
+    case (#app fn argument) ->
+      mk #App [call FromDeBruijn [fn scope] call FromDeBruijn [argument scope]]
+  }
 
-  (judgment FreshName [depth]
-    (prim str->sym (prim scat (q "v") (prim nat->str (v depth)))))
+judgment NormalizeTerm [term] =
+  call FromDeBruijn [
+    call Normalize [call ToDeBruijn [term list []] 100000]
+    list []
+  ]
 
-  (judgment FromDeBruijn [term scope]
-    (match (v term)
-      (case (pm var (pv index))
-        (if (prim lt (v index) (prim len (v scope)))
-            (mk Var (prim nth (v scope) (v index)))
-            (mk Var (prim str->sym (prim scat (q "free") (prim nat->str (v index)))))))
-      (case (pm free (pv name)) (mk Var (v name)))
-      (case (pm lam (pv body))
-        (let name (call FreshName (prim len (v scope)))
-          (mk Lam (v name) (call FromDeBruijn (v body) (prim cons (v name) (v scope))))))
-      (case (pm app (pv fn) (pv argument))
-        (mk App (call FromDeBruijn (v fn) (v scope)) (call FromDeBruijn (v argument) (v scope))))))
+judgment NormalizeSource [grammar source] =
+  call NormalizeTerm [call Parse [grammar source]]
 
-  ; ----------------------------------------------------------- entry points
+judgment NormalizeToText [grammar source] =
+  call Print [grammar call NormalizeSource [grammar source]]
 
-  (judgment NormalizeTerm [term]
-    (call FromDeBruijn (call Normalize (call ToDeBruijn (v term) (q [])) (q 100000)) (q [])))
+judgment AlphaEquivalent [grammar left right] =
+  prim #eq [
+    call ToDeBruijn [call Parse [grammar left] list []]
+    call ToDeBruijn [call Parse [grammar right] list []]
+  ]
 
-  (judgment NormalizeSource [grammar source]
-    (call NormalizeTerm (call Parse (v grammar) (v source))))
-
-  (judgment NormalizeToText [grammar source]
-    (call Print (v grammar) (call NormalizeSource (v grammar) (v source))))
-
-  (judgment AlphaEquivalent [grammar left right]
-    (prim eq
-      (call ToDeBruijn (call Parse (v grammar) (v left)) (q []))
-      (call ToDeBruijn (call Parse (v grammar) (v right)) (q []))))
-
-  (judgment FreeVariables [term scope]
-    (match (v term)
-      (case (pm Var (pv name))
-        (if (prim contains (v scope) (v name)) (q []) (prim cons (v name) (q []))))
-      (case (pm Lam (pv name) (pv body))
-        (call FreeVariables (v body) (prim cons (v name) (v scope))))
-      (case (pm App (pv fn) (pv argument))
-        (call Union
-          (call FreeVariables (v fn) (v scope))
-          (call FreeVariables (v argument) (v scope)))))))
+judgment FreeVariables [term scope] =
+  match term {
+    case (#Var name) ->
+      if prim #contains [scope name] then list [] else prim #cons [name list []]
+    case (#Lam name body) -> call FreeVariables [body prim #cons [name scope]]
+    case (#App fn argument) ->
+      call Union [call FreeVariables [fn scope] call FreeVariables [argument scope]]
+  }
