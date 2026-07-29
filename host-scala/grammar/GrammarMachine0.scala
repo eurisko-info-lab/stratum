@@ -30,6 +30,7 @@ object GrammarMachine0:
       name: String,
       start: String,
       tokens: Vector[TokenDef],
+      skips: Vector[Pattern],
       categories: Vector[(String, Vector[Prod])]
   ):
     val categoryIndex: Map[String, Int] = categories.map(_._1).zipWithIndex.toMap
@@ -110,12 +111,14 @@ object GrammarMachine0:
         var name = ""
         var start = ""
         val tokens = mutable.ArrayBuffer.empty[TokenDef]
+        val skips = mutable.ArrayBuffer.empty[Pattern]
         val categories = mutable.ArrayBuffer.empty[(String, Vector[Prod])]
         var error: Option[String] = None
 
         entries.foreach {
           case Canon.Node("name", Vector(Canon.S(n)))    => name = n
           case Canon.Node("start", Vector(Canon.Sym(s))) => start = s
+          case Canon.Node("skip", Vector(Canon.S(regex))) => skips += Pattern.compile(regex)
           case Canon.Node("token", Vector(Canon.Sym(tn), Canon.Sym(kind), Canon.S(regex))) =>
             if !Set("sym", "str", "nat").contains(kind) then error = Some(s"unknown token kind $kind")
             else tokens += TokenDef(tn, kind, Pattern.compile(regex))
@@ -131,7 +134,7 @@ object GrammarMachine0:
           case Some(m) => Left(m)
           case None =>
             if start.isEmpty then Left("grammar has no start category")
-            else Right(Grammar(name, start, tokens.toVector, categories.toVector))
+            else Right(Grammar(name, start, tokens.toVector, skips.toVector, categories.toVector))
       case other => Left(s"not a grammar: ${CanonText.write(other)}")
 
   private def loadProd(cat: String, c: Canon): Either[String, Prod] = c match
@@ -161,31 +164,39 @@ object GrammarMachine0:
     while i < input.length do
       if input(i).isWhitespace then i += 1
       else
-        var bestLen = 0
-        var best: Option[Token] = None
-        g.tokens.foreach { td =>
-          val m = td.pattern.matcher(input)
+        var skipped = 0
+        g.skips.foreach { s =>
+          val m = s.matcher(input)
           m.region(i, input.length)
-          if m.lookingAt() then
-            val text = m.group()
-            if text.length > bestLen then
-              bestLen = text.length
-              val value = td.kind match
-                case "sym" => Canon.Sym(text)
-                case "str" => Canon.S(text)
-                case "nat" => Canon.N(BigInt(text))
-              best = Some(Token(td.name, text, value, i))
+          if m.lookingAt() && m.end() - i > skipped then skipped = m.end() - i
         }
-        g.keywords.foreach { kw =>
-          if kw.length >= bestLen && input.startsWith(kw, i) then
-            bestLen = kw.length
-            best = Some(Token("kw", kw, Canon.S(kw), i))
-        }
-        best match
-          case Some(t) =>
-            out += t
-            i += bestLen
-          case None => return Left(s"unexpected character '${input(i)}' at offset $i")
+        if skipped > 0 then i += skipped
+        else
+          var bestLen = 0
+          var best: Option[Token] = None
+          g.tokens.foreach { td =>
+            val m = td.pattern.matcher(input)
+            m.region(i, input.length)
+            if m.lookingAt() then
+              val text = m.group()
+              if text.length > bestLen then
+                bestLen = text.length
+                val value = td.kind match
+                  case "sym" => Canon.Sym(text)
+                  case "str" => Canon.S(text)
+                  case "nat" => Canon.N(BigInt(text))
+                best = Some(Token(td.name, text, value, i))
+          }
+          g.keywords.foreach { kw =>
+            if kw.length >= bestLen && input.startsWith(kw, i) then
+              bestLen = kw.length
+              best = Some(Token("kw", kw, Canon.S(kw), i))
+          }
+          best match
+            case Some(t) =>
+              out += t
+              i += bestLen
+            case None => return Left(s"unexpected character '${input(i)}' at offset $i")
     Right(out.toVector)
 
   // --------------------------------------------------------------- parse

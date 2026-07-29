@@ -1,0 +1,10 @@
+; delta-meta for F1 -> F2: Meta gains the universe of structural descriptions
+; and the derived free-change calculus.
+(change
+  (kind delta-meta)
+  (name "F1->F2 delta-meta")
+  (replace
+    (ReplaceChange
+      change-language
+      (bootstrap replace-change)
+      (derived free-change))))

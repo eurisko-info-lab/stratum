@@ -5,6 +5,7 @@ token ident sym "[A-Za-z_][A-Za-z0-9_']*"
 token symlit sym "#[A-Za-z_][A-Za-z0-9_'>-]*"
 token number nat "[0-9]+"
 token text str "\"[^\"]*\""
+skip ";[^\n]*"
 
 category program
   fold Seq decl

@@ -14,6 +14,7 @@
     (prod GrammarName [(kw "grammar") (bind name text)])
     (prod Start [(kw "start") (bind name ident)])
     (prod Token [(kw "token") (bind name ident) (bind kind ident) (bind pattern text)])
+    (prod Skip [(kw "skip") (bind pattern text)])
     (prod Category [(kw "category") (bind name ident) (bind productions productions)]))
 
   (category productions

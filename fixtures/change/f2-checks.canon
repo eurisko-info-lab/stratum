@@ -1,0 +1,150 @@
+; Executable acceptance checks for F2: the generic semantic change calculus.
+[
+  ; ------------------------------------------------------------------ laws
+
+  (check identity-law
+    (call IdentityLaw (call DescLambda) (q (Lam x (Var x))))
+    (value #t))
+
+  (check composition-law
+    (call CompositionLaw
+      (call DescProgram)
+      (q {Double (judgment Double [n] (prim add (v n) (v n)))})
+      (q (InsertKey Triple (judgment Triple [n] (prim mul (v n) (q 3)))))
+      (q (InsertKey Quadruple (judgment Quadruple [n] (prim mul (v n) (q 4))))))
+    (value #t))
+
+  ; --------------------------------------------------- deterministic derivation
+
+  (check derived-change-language-is-deterministic
+    (prim eq (call FreeChange (call DescLambda)) (call DeltaLambda))
+    (value #t))
+
+  (check derived-change-languages-differ-by-shape
+    (prim eq (call DeltaLambda) (call DeltaMeta1))
+    (value #f))
+
+  ; ------------------------------------------------------- semantic paths
+
+  (check field-edit-survives-reformatting
+    (call EditSurvivesReformatting
+      (q (file "languages/lambda/lambda.generated.grammar"))
+      (q "\\x. x")
+      (q "\\x.       x")
+      (q (AtConstructor Lam (AtField body (Replace (Var x) (Var z))))))
+    (value #t))
+
+  (check lambda-change-edits-a-term
+    (call EditLambdaSource
+      (q (file "languages/lambda/lambda.generated.grammar"))
+      (q "\\x. x")
+      (q (AtConstructor Lam (AtField body (Replace (Var x) (Var z))))))
+    (value "\\ x. z"))
+
+  (check keyed-edit-survives-reordering
+    (call KeyedEditAgrees
+      (q (DAny))
+      (q [(entry a (Var p)) (entry b (Var q))])
+      (q [(entry b (Var q)) (entry a (Var p))])
+      (q a)
+      (q (Replace (Var p) (Var r))))
+    (value #t))
+
+  (check invalid-typed-path-is-rejected
+    (call Apply
+      (call DescLambda)
+      (q (Lam x (Var x)))
+      (q (AtConstructor Lam (AtField missing (Replace (Var x) (Var z))))))
+    (value (conflict unknown-field)))
+
+  (check wrong-constructor-is-rejected
+    (call Apply
+      (call DescLambda)
+      (q (Lam x (Var x)))
+      (q (AtConstructor App (AtField fn (Replace (Var x) (Var z))))))
+    (value (conflict wrong-constructor)))
+
+  ; ---------------------------------------------- meta and grammar changes
+
+  (check meta-change-adds-a-declaration
+    (call Apply
+      (call DescProgram)
+      (q {Double (judgment Double [n] (prim add (v n) (v n)))})
+      (q (InsertKey Triple (judgment Triple [n] (prim mul (v n) (q 3))))))
+    (value
+      (applied
+        {Double (judgment Double [n] (prim add (v n) (v n)))
+         Triple (judgment Triple [n] (prim mul (v n) (q 3)))})))
+
+  (check grammar-change-adds-syntax
+    (call Apply
+      (call DescGrammar)
+      (q {atom [(entry Var (prod Var [(bind name ident)]))]})
+      (q (AtKey atom (InsertKey Hole (prod Hole [(kw "?")])))))
+    (value
+      (applied
+        {atom [(entry Var (prod Var [(bind name ident)]))
+               (entry Hole (prod Hole [(kw "?")]))]})))
+
+  ; ------------------------------------------------ independence and conflict
+
+  (check independent-changes-commute
+    (call Commutes
+      (call DescProgram)
+      (q {A (judgment A [] (q 1)) B (judgment B [] (q 2))})
+      (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 10)))))
+      (q (AtKey B (Replace (judgment B [] (q 2)) (judgment B [] (q 20))))))
+    (value #t))
+
+  (check independence-is-path-disjointness
+    (call Independent
+      (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 10)))))
+      (q (AtKey B (Replace (judgment B [] (q 2)) (judgment B [] (q 20))))))
+    (value #t))
+
+  (check overlapping-changes-are-not-independent
+    (call Independent
+      (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 10)))))
+      (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 11))))))
+    (value #f))
+
+  (check overlapping-incompatible-changes-conflict
+    (call ConflictOf
+      (call DescProgram)
+      (q {A (judgment A [] (q 1))})
+      (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 10)))))
+      (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 11))))))
+    (value (conflict predecessor-mismatch)))
+
+  (check disjoint-changes-report-independence
+    (call ConflictOf
+      (call DescProgram)
+      (q {A (judgment A [] (q 1)) B (judgment B [] (q 2))})
+      (q (AtKey A (Replace (judgment A [] (q 1)) (judgment A [] (q 10)))))
+      (q (AtKey B (Replace (judgment B [] (q 2)) (judgment B [] (q 20))))))
+    (value (independent)))
+
+  ; ------------------------------------------------------------- witness
+
+  (check change-witness-names-its-programs
+    (call FreeChangeWitness'applyProgram (call WitnessFor (call DescLambda)))
+    (value Apply))
+
+  (check change-witness-carries-its-descriptions
+    (prim eq
+      (call FreeChangeWitness'sourceDescription (call WitnessFor (call DescLambda)))
+      (call DescLambda))
+    (value #t))
+
+  (check change-witness-derives-the-change-description
+    (prim eq
+      (call FreeChangeWitness'changeDescription (call WitnessFor (call DescLambda)))
+      (call DeltaLambda))
+    (value #t))
+
+  ; ---------------------------------- earlier foundation behaviour is intact
+
+  (check lambda-behaviour-unchanged
+    (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
+    (value "a"))
+]

@@ -1,0 +1,1562 @@
+; Generated from features/change/change.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module change)
+  (judgment
+    DAny
+    []
+    (mk DAny))
+  (judgment
+    DRecord
+    [fields]
+    (mk
+      DRecord
+      (v fields)))
+  (judgment
+    DSum
+    [variants]
+    (mk
+      DSum
+      (v variants)))
+  (judgment
+    DMap
+    [element]
+    (mk
+      DMap
+      (v element)))
+  (judgment
+    DKeyedList
+    [element]
+    (mk
+      DKeyedList
+      (v element)))
+  (judgment
+    DList
+    [element]
+    (mk
+      DList
+      (v element)))
+  (judgment
+    IsDesc
+    [value]
+    (prim
+      contains
+      (q
+        [DAny DRecord DSum DMap DKeyedList DList])
+      (prim
+        tag
+        (v value))))
+  (judgment
+    field
+    [name desc]
+    (mk
+      field
+      (v name)
+      (v desc)))
+  (judgment
+    IsField
+    [value]
+    (prim
+      contains
+      (q
+        [field])
+      (prim
+        tag
+        (v value))))
+  (judgment
+    variant
+    [tag desc]
+    (mk
+      variant
+      (v tag)
+      (v desc)))
+  (judgment
+    IsVariant
+    [value]
+    (prim
+      contains
+      (q
+        [variant])
+      (prim
+        tag
+        (v value))))
+  (judgment
+    Identity
+    []
+    (mk Identity))
+  (judgment
+    Replace
+    [expected replacement]
+    (mk
+      Replace
+      (v expected)
+      (v replacement)))
+  (judgment
+    AtField
+    [name inner]
+    (mk
+      AtField
+      (v name)
+      (v inner)))
+  (judgment
+    AtConstructor
+    [tag inner]
+    (mk
+      AtConstructor
+      (v tag)
+      (v inner)))
+  (judgment
+    AtKey
+    [key inner]
+    (mk
+      AtKey
+      (v key)
+      (v inner)))
+  (judgment
+    InsertKey
+    [key value]
+    (mk
+      InsertKey
+      (v key)
+      (v value)))
+  (judgment
+    DeleteKey
+    [key expected]
+    (mk
+      DeleteKey
+      (v key)
+      (v expected)))
+  (judgment
+    Rename
+    [from to]
+    (mk
+      Rename
+      (v from)
+      (v to)))
+  (judgment
+    Compose
+    [first second]
+    (mk
+      Compose
+      (v first)
+      (v second)))
+  (judgment
+    IsChange
+    [value]
+    (prim
+      contains
+      (q
+        [Identity Replace AtField AtConstructor AtKey InsertKey DeleteKey Rename Compose])
+      (prim
+        tag
+        (v value))))
+  (judgment
+    FieldIndexIn
+    [fields name index]
+    (match
+      (v fields)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              nth
+              (prim
+                args
+                (v head))
+              (q 0))
+            (v name))
+          (mk
+            some
+            (v index))
+          (call
+            FieldIndexIn
+            (v rest)
+            (v name)
+            (prim
+              add
+              (v index)
+              (q 1)))))))
+  (judgment
+    FieldDescIn
+    [fields name]
+    (match
+      (v fields)
+      (case
+        (pnil)
+        (mk DAny))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              nth
+              (prim
+                args
+                (v head))
+              (q 0))
+            (v name))
+          (prim
+            nth
+            (prim
+              args
+              (v head))
+            (q 1))
+          (call
+            FieldDescIn
+            (v rest)
+            (v name))))))
+  (judgment
+    VariantDescIn
+    [variants tag]
+    (match
+      (v variants)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              nth
+              (prim
+                args
+                (v head))
+              (q 0))
+            (v tag))
+          (mk
+            some
+            (prim
+              nth
+              (prim
+                args
+                (v head))
+              (q 1)))
+          (call
+            VariantDescIn
+            (v rest)
+            (v tag))))))
+  (judgment
+    Apply
+    [desc value change]
+    (match
+      (v change)
+      (case
+        (pm Identity)
+        (mk
+          applied
+          (v value)))
+      (case
+        (pm
+          Replace
+          (pv expected)
+          (pv replacement))
+        (if
+          (prim
+            eq
+            (v value)
+            (v expected))
+          (mk
+            applied
+            (v replacement))
+          (mk
+            conflict
+            (q predecessor-mismatch))))
+      (case
+        (pm
+          Compose
+          (pv first)
+          (pv second))
+        (match
+          (call
+            Apply
+            (v desc)
+            (v value)
+            (v first))
+          (case
+            (pm
+              applied
+              (pv intermediate))
+            (call
+              Apply
+              (v desc)
+              (v intermediate)
+              (v second)))
+          (case
+            (pm
+              conflict
+              (pv reason))
+            (mk
+              conflict
+              (v reason)))))
+      (case
+        (pm
+          AtField
+          (pv name)
+          (pv inner))
+        (call
+          ApplyAtField
+          (v desc)
+          (v value)
+          (v name)
+          (v inner)))
+      (case
+        (pm
+          AtConstructor
+          (pv tag)
+          (pv inner))
+        (call
+          ApplyAtConstructor
+          (v desc)
+          (v value)
+          (v tag)
+          (v inner)))
+      (case
+        (pm
+          AtKey
+          (pv key)
+          (pv inner))
+        (call
+          ApplyAtKey
+          (v desc)
+          (v value)
+          (v key)
+          (v inner)))
+      (case
+        (pm
+          InsertKey
+          (pv key)
+          (pv item))
+        (call
+          ApplyInsert
+          (v desc)
+          (v value)
+          (v key)
+          (v item)))
+      (case
+        (pm
+          DeleteKey
+          (pv key)
+          (pv expected))
+        (call
+          ApplyDelete
+          (v desc)
+          (v value)
+          (v key)
+          (v expected)))
+      (case
+        (pm
+          Rename
+          (pv from)
+          (pv to))
+        (call
+          ApplyRename
+          (v desc)
+          (v value)
+          (v from)
+          (v to)))
+      (case
+        _
+        (mk
+          conflict
+          (q not-a-change)))))
+  (judgment
+    ApplyAtField
+    [desc value name inner]
+    (match
+      (v desc)
+      (case
+        (pm
+          DRecord
+          (pv fields))
+        (match
+          (call
+            FieldIndexIn
+            (v fields)
+            (v name)
+            (q 0))
+          (case
+            (pm none)
+            (mk
+              conflict
+              (q unknown-field)))
+          (case
+            (pm
+              some
+              (pv index))
+            (if
+              (prim
+                ge
+                (v index)
+                (prim
+                  len
+                  (prim
+                    args
+                    (v value))))
+              (mk
+                conflict
+                (q unknown-field))
+              (match
+                (call
+                  Apply
+                  (call
+                    FieldDescIn
+                    (v fields)
+                    (v name))
+                  (prim
+                    nth
+                    (prim
+                      args
+                      (v value))
+                    (v index))
+                  (v inner))
+                (case
+                  (pm
+                    applied
+                    (pv updated))
+                  (mk
+                    applied
+                    (prim
+                      node
+                      (prim
+                        tag
+                        (v value))
+                      (prim
+                        set-nth
+                        (prim
+                          args
+                          (v value))
+                        (v index)
+                        (v updated)))))
+                (case
+                  (pm
+                    conflict
+                    (pv reason))
+                  (mk
+                    conflict
+                    (v reason))))))))
+      (case
+        _
+        (mk
+          conflict
+          (q not-a-record)))))
+  (judgment
+    ApplyAtConstructor
+    [desc value tag inner]
+    (match
+      (v desc)
+      (case
+        (pm
+          DSum
+          (pv variants))
+        (if
+          (prim
+            eq
+            (prim
+              tag
+              (v value))
+            (v tag))
+          (match
+            (call
+              VariantDescIn
+              (v variants)
+              (v tag))
+            (case
+              (pm none)
+              (mk
+                conflict
+                (q unknown-constructor)))
+            (case
+              (pm
+                some
+                (pv inner'))
+              (call
+                Apply
+                (v inner')
+                (v value)
+                (v inner))))
+          (mk
+            conflict
+            (q wrong-constructor))))
+      (case
+        _
+        (mk
+          conflict
+          (q not-a-sum)))))
+  (judgment
+    ApplyAtKey
+    [desc value key inner]
+    (match
+      (v desc)
+      (case
+        (pm
+          DMap
+          (pv element))
+        (if
+          (prim
+            mhas
+            (v value)
+            (v key))
+          (match
+            (call
+              Apply
+              (v element)
+              (prim
+                mget
+                (v value)
+                (v key)
+                (mk absent))
+              (v inner))
+            (case
+              (pm
+                applied
+                (pv updated))
+              (mk
+                applied
+                (prim
+                  mput
+                  (v value)
+                  (v key)
+                  (v updated))))
+            (case
+              (pm
+                conflict
+                (pv reason))
+              (mk
+                conflict
+                (v reason))))
+          (mk
+            conflict
+            (q unknown-key))))
+      (case
+        (pm
+          DKeyedList
+          (pv element))
+        (call
+          ApplyInKeyedList
+          (v element)
+          (v value)
+          (v key)
+          (v inner)
+          (lst)))
+      (case
+        _
+        (mk
+          conflict
+          (q not-keyed)))))
+  (judgment
+    ApplyInKeyedList
+    [element entries key inner seen]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (mk
+          conflict
+          (q unknown-key)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              nth
+              (prim
+                args
+                (v head))
+              (q 0))
+            (v key))
+          (match
+            (call
+              Apply
+              (v element)
+              (prim
+                nth
+                (prim
+                  args
+                  (v head))
+                (q 1))
+              (v inner))
+            (case
+              (pm
+                applied
+                (pv updated))
+              (mk
+                applied
+                (prim
+                  append
+                  (prim
+                    snoc
+                    (v seen)
+                    (mk
+                      entry
+                      (v key)
+                      (v updated)))
+                  (v rest))))
+            (case
+              (pm
+                conflict
+                (pv reason))
+              (mk
+                conflict
+                (v reason))))
+          (call
+            ApplyInKeyedList
+            (v element)
+            (v rest)
+            (v key)
+            (v inner)
+            (prim
+              snoc
+              (v seen)
+              (v head)))))))
+  (judgment
+    ApplyInsert
+    [desc value key item]
+    (match
+      (v desc)
+      (case
+        (pm
+          DMap
+          (pv element))
+        (if
+          (prim
+            mhas
+            (v value)
+            (v key))
+          (mk
+            conflict
+            (q key-already-present))
+          (mk
+            applied
+            (prim
+              mput
+              (v value)
+              (v key)
+              (v item)))))
+      (case
+        (pm
+          DKeyedList
+          (pv element))
+        (if
+          (call
+            KeyedListHas
+            (v value)
+            (v key))
+          (mk
+            conflict
+            (q key-already-present))
+          (mk
+            applied
+            (prim
+              snoc
+              (v value)
+              (mk
+                entry
+                (v key)
+                (v item))))))
+      (case
+        _
+        (mk
+          conflict
+          (q not-keyed)))))
+  (judgment
+    KeyedListHas
+    [entries key]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (q #f))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              nth
+              (prim
+                args
+                (v head))
+              (q 0))
+            (v key))
+          (q #t)
+          (call
+            KeyedListHas
+            (v rest)
+            (v key))))))
+  (judgment
+    ApplyDelete
+    [desc value key expected]
+    (match
+      (v desc)
+      (case
+        (pm
+          DMap
+          (pv element))
+        (if
+          (prim
+            eq
+            (prim
+              mget
+              (v value)
+              (v key)
+              (mk absent))
+            (v expected))
+          (mk
+            applied
+            (prim
+              mdel
+              (v value)
+              (v key)))
+          (mk
+            conflict
+            (q predecessor-mismatch))))
+      (case
+        (pm
+          DKeyedList
+          (pv element))
+        (call
+          DeleteFromKeyedList
+          (v value)
+          (v key)
+          (v expected)
+          (lst)))
+      (case
+        _
+        (mk
+          conflict
+          (q not-keyed)))))
+  (judgment
+    DeleteFromKeyedList
+    [entries key expected seen]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (mk
+          conflict
+          (q unknown-key)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              nth
+              (prim
+                args
+                (v head))
+              (q 0))
+            (v key))
+          (if
+            (prim
+              eq
+              (prim
+                nth
+                (prim
+                  args
+                  (v head))
+                (q 1))
+              (v expected))
+            (mk
+              applied
+              (prim
+                append
+                (v seen)
+                (v rest)))
+            (mk
+              conflict
+              (q predecessor-mismatch)))
+          (call
+            DeleteFromKeyedList
+            (v rest)
+            (v key)
+            (v expected)
+            (prim
+              snoc
+              (v seen)
+              (v head)))))))
+  (judgment
+    ApplyRename
+    [desc value from to]
+    (match
+      (v desc)
+      (case
+        (pm
+          DMap
+          (pv element))
+        (if
+          (prim
+            mhas
+            (v value)
+            (v from))
+          (if
+            (prim
+              mhas
+              (v value)
+              (v to))
+            (mk
+              conflict
+              (q key-already-present))
+            (mk
+              applied
+              (prim
+                mdel
+                (prim
+                  mput
+                  (v value)
+                  (v to)
+                  (prim
+                    mget
+                    (v value)
+                    (v from)
+                    (mk absent)))
+                (v from))))
+          (mk
+            conflict
+            (q unknown-key))))
+      (case
+        _
+        (mk
+          conflict
+          (q not-keyed)))))
+  (judgment
+    Paths
+    [change prefix]
+    (match
+      (v change)
+      (case
+        (pm Identity)
+        (lst))
+      (case
+        (pm
+          Replace
+          (pv expected)
+          (pv replacement))
+        (lst
+          (v prefix)))
+      (case
+        (pm
+          Compose
+          (pv first)
+          (pv second))
+        (prim
+          append
+          (call
+            Paths
+            (v first)
+            (v prefix))
+          (call
+            Paths
+            (v second)
+            (v prefix))))
+      (case
+        (pm
+          AtField
+          (pv name)
+          (pv inner))
+        (call
+          Paths
+          (v inner)
+          (prim
+            snoc
+            (v prefix)
+            (mk
+              field
+              (v name)))))
+      (case
+        (pm
+          AtConstructor
+          (pv tag)
+          (pv inner))
+        (call
+          Paths
+          (v inner)
+          (prim
+            snoc
+            (v prefix)
+            (mk
+              constructor
+              (v tag)))))
+      (case
+        (pm
+          AtKey
+          (pv key)
+          (pv inner))
+        (call
+          Paths
+          (v inner)
+          (prim
+            snoc
+            (v prefix)
+            (mk
+              key
+              (v key)))))
+      (case
+        (pm
+          InsertKey
+          (pv key)
+          (pv item))
+        (lst
+          (prim
+            snoc
+            (v prefix)
+            (mk
+              key
+              (v key)))))
+      (case
+        (pm
+          DeleteKey
+          (pv key)
+          (pv expected))
+        (lst
+          (prim
+            snoc
+            (v prefix)
+            (mk
+              key
+              (v key)))))
+      (case
+        (pm
+          Rename
+          (pv from)
+          (pv to))
+        (lst
+          (prim
+            snoc
+            (v prefix)
+            (mk
+              key
+              (v from)))
+          (prim
+            snoc
+            (v prefix)
+            (mk
+              key
+              (v to)))))
+      (case _ (lst))))
+  (judgment
+    ChangePaths
+    [change]
+    (call
+      Paths
+      (v change)
+      (lst)))
+  (judgment
+    Independent
+    [first second]
+    (call
+      Disjoint
+      (call
+        ChangePaths
+        (v first))
+      (call
+        ChangePaths
+        (v second))))
+  (judgment
+    IdentityLaw
+    [desc value]
+    (prim
+      eq
+      (call
+        Apply
+        (v desc)
+        (v value)
+        (mk Identity))
+      (mk
+        applied
+        (v value))))
+  (judgment
+    CompositionLaw
+    [desc value first second]
+    (prim
+      eq
+      (match
+        (call
+          Apply
+          (v desc)
+          (v value)
+          (v first))
+        (case
+          (pm
+            applied
+            (pv intermediate))
+          (call
+            Apply
+            (v desc)
+            (v intermediate)
+            (v second)))
+        (case
+          (pm
+            conflict
+            (pv reason))
+          (mk
+            conflict
+            (v reason))))
+      (call
+        Apply
+        (v desc)
+        (v value)
+        (mk
+          Compose
+          (v first)
+          (v second)))))
+  (judgment
+    Commutes
+    [desc value first second]
+    (prim
+      eq
+      (call
+        Apply
+        (v desc)
+        (v value)
+        (mk
+          Compose
+          (v first)
+          (v second)))
+      (call
+        Apply
+        (v desc)
+        (v value)
+        (mk
+          Compose
+          (v second)
+          (v first)))))
+  (judgment
+    ConflictOf
+    [desc value first second]
+    (if
+      (call
+        Independent
+        (v first)
+        (v second))
+      (mk independent)
+      (match
+        (call
+          Apply
+          (v desc)
+          (v value)
+          (mk
+            Compose
+            (v first)
+            (v second)))
+        (case
+          (pm
+            applied
+            (pv result))
+          (mk compatible))
+        (case
+          (pm
+            conflict
+            (pv reason))
+          (mk
+            conflict
+            (v reason))))))
+  (judgment
+    BaseVariants
+    []
+    (lst
+      (mk
+        variant
+        (q Identity)
+        (mk DAny))
+      (mk
+        variant
+        (q Replace)
+        (mk DAny))
+      (mk
+        variant
+        (q Compose)
+        (mk DAny))))
+  (judgment
+    FieldVariants
+    [fields]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (mk
+            variant
+            (q AtField)
+            (call
+              FreeChange
+              (prim
+                nth
+                (prim
+                  args
+                  (v head))
+                (q 1))))
+          (call
+            FieldVariants
+            (v rest))))))
+  (judgment
+    ConstructorVariants
+    [variants]
+    (match
+      (v variants)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (mk
+            variant
+            (q AtConstructor)
+            (call
+              FreeChange
+              (prim
+                nth
+                (prim
+                  args
+                  (v head))
+                (q 1))))
+          (call
+            ConstructorVariants
+            (v rest))))))
+  (judgment
+    FreeChange
+    [desc]
+    (match
+      (v desc)
+      (case
+        (pm DAny)
+        (mk
+          DSum
+          (call BaseVariants)))
+      (case
+        (pm
+          DRecord
+          (pv fields))
+        (mk
+          DSum
+          (prim
+            append
+            (call BaseVariants)
+            (call
+              FieldVariants
+              (v fields)))))
+      (case
+        (pm
+          DSum
+          (pv variants))
+        (mk
+          DSum
+          (prim
+            append
+            (call BaseVariants)
+            (call
+              ConstructorVariants
+              (v variants)))))
+      (case
+        (pm
+          DMap
+          (pv element))
+        (mk
+          DSum
+          (prim
+            append
+            (call BaseVariants)
+            (lst
+              (mk
+                variant
+                (q AtKey)
+                (call
+                  FreeChange
+                  (v element)))
+              (mk
+                variant
+                (q InsertKey)
+                (v element))
+              (mk
+                variant
+                (q DeleteKey)
+                (v element))
+              (mk
+                variant
+                (q Rename)
+                (mk DAny))))))
+      (case
+        (pm
+          DKeyedList
+          (pv element))
+        (mk
+          DSum
+          (prim
+            append
+            (call BaseVariants)
+            (lst
+              (mk
+                variant
+                (q AtKey)
+                (call
+                  FreeChange
+                  (v element)))
+              (mk
+                variant
+                (q InsertKey)
+                (v element))
+              (mk
+                variant
+                (q DeleteKey)
+                (v element))))))
+      (case
+        (pm
+          DList
+          (pv element))
+        (mk
+          DSum
+          (call BaseVariants)))
+      (case
+        _
+        (mk
+          DSum
+          (call BaseVariants)))))
+  (judgment
+    FreeChangeWitness
+    [sourceDescription changeDescription applyProgram identityProgram compositionProgram independenceProgram conflictProgram]
+    (mk
+      FreeChangeWitness
+      (v sourceDescription)
+      (v changeDescription)
+      (v applyProgram)
+      (v identityProgram)
+      (v compositionProgram)
+      (v independenceProgram)
+      (v conflictProgram)))
+  (judgment
+    FreeChangeWitness'sourceDescription
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FreeChangeWitness'changeDescription
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FreeChangeWitness'applyProgram
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FreeChangeWitness'identityProgram
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    FreeChangeWitness'compositionProgram
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    FreeChangeWitness'independenceProgram
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    FreeChangeWitness'conflictProgram
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 6)))
+  (judgment
+    WitnessFor
+    [desc]
+    (call
+      FreeChangeWitness
+      (v desc)
+      (call
+        FreeChange
+        (v desc))
+      (q Apply)
+      (q IdentityLaw)
+      (q CompositionLaw)
+      (q Independent)
+      (q ConflictOf)))
+  (judgment
+    DescLambda
+    []
+    (mk
+      DSum
+      (lst
+        (mk
+          variant
+          (q Var)
+          (mk
+            DRecord
+            (lst
+              (mk
+                field
+                (q name)
+                (mk DAny)))))
+        (mk
+          variant
+          (q Lam)
+          (mk
+            DRecord
+            (lst
+              (mk
+                field
+                (q name)
+                (mk DAny))
+              (mk
+                field
+                (q body)
+                (mk DAny)))))
+        (mk
+          variant
+          (q App)
+          (mk
+            DRecord
+            (lst
+              (mk
+                field
+                (q fn)
+                (mk DAny))
+              (mk
+                field
+                (q argument)
+                (mk DAny))))))))
+  (judgment
+    DescProgram
+    []
+    (mk
+      DMap
+      (mk DAny)))
+  (judgment
+    DescGrammar
+    []
+    (mk
+      DMap
+      (mk
+        DKeyedList
+        (mk DAny))))
+  (judgment
+    DescFoundation
+    []
+    (mk
+      DRecord
+      (lst
+        (mk
+          field
+          (q name)
+          (mk DAny))
+        (mk
+          field
+          (q bootstrap)
+          (mk DAny))
+        (mk
+          field
+          (q application)
+          (mk DAny))
+        (mk
+          field
+          (q predecessor)
+          (mk DAny))
+        (mk
+          field
+          (q change)
+          (mk DAny)))))
+  (judgment
+    DeltaLambda
+    []
+    (call
+      FreeChange
+      (call DescLambda)))
+  (judgment
+    DeltaMeta1
+    []
+    (call
+      FreeChange
+      (call DescProgram)))
+  (judgment
+    DeltaGrammar1
+    []
+    (call
+      FreeChange
+      (call DescGrammar)))
+  (judgment
+    DeltaFoundation
+    []
+    (call
+      FreeChange
+      (call DescFoundation)))
+  (judgment
+    KeyedGet
+    [entries key]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (mk absent))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              nth
+              (prim
+                args
+                (v head))
+              (q 0))
+            (v key))
+          (prim
+            nth
+            (prim
+              args
+              (v head))
+            (q 1))
+          (call
+            KeyedGet
+            (v rest)
+            (v key))))))
+  (judgment
+    AppliedValue
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          applied
+          (pv value))
+        (v value))
+      (case
+        (pm
+          conflict
+          (pv reason))
+        (mk
+          conflict
+          (v reason)))))
+  (judgment
+    KeyedEditAgrees
+    [element first second key change]
+    (prim
+      eq
+      (call
+        KeyedGet
+        (call
+          AppliedValue
+          (call
+            Apply
+            (mk
+              DKeyedList
+              (v element))
+            (v first)
+            (mk
+              AtKey
+              (v key)
+              (v change))))
+        (v key))
+      (call
+        KeyedGet
+        (call
+          AppliedValue
+          (call
+            Apply
+            (mk
+              DKeyedList
+              (v element))
+            (v second)
+            (mk
+              AtKey
+              (v key)
+              (v change))))
+        (v key))))
+  (judgment
+    EditLambdaSource
+    [grammar source change]
+    (match
+      (call
+        Apply
+        (call DescLambda)
+        (call
+          Parse
+          (v grammar)
+          (v source))
+        (v change))
+      (case
+        (pm
+          applied
+          (pv updated))
+        (call
+          Print
+          (v grammar)
+          (v updated)))
+      (case
+        (pm
+          conflict
+          (pv reason))
+        (mk
+          conflict
+          (v reason)))))
+  (judgment
+    EditSurvivesReformatting
+    [grammar first second change]
+    (prim
+      eq
+      (call
+        EditLambdaSource
+        (v grammar)
+        (v first)
+        (v change))
+      (call
+        EditLambdaSource
+        (v grammar)
+        (v second)
+        (v change)))))

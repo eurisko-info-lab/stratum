@@ -1,0 +1,421 @@
+module change
+
+; Structural descriptions. `El(D)` is the set of canonical values described by
+; `D`; `FreeChange(D)` is the derived change description for that shape.
+data Desc =
+  | #DAny []
+  | #DRecord [fields]
+  | #DSum [variants]
+  | #DMap [element]
+  | #DKeyedList [element]
+  | #DList [element]
+
+data Field = | #field [name desc]
+data Variant = | #variant [tag desc]
+
+; The generic change calculus. Every path is a semantic identity: a field name,
+; a constructor identity or a collection key. No path is a source offset and no
+; path is a bare list position.
+data Change =
+  | #Identity []
+  | #Replace [expected replacement]
+  | #AtField [name inner]
+  | #AtConstructor [tag inner]
+  | #AtKey [key inner]
+  | #InsertKey [key value]
+  | #DeleteKey [key expected]
+  | #Rename [from to]
+  | #Compose [first second]
+
+; ------------------------------------------------------------- descriptions
+
+judgment FieldIndexIn [fields name index] =
+  match fields {
+    case [] -> mk #none []
+    case head :: rest ->
+      if prim #eq [prim #nth [prim #args [head] 0] name]
+      then mk #some [index]
+      else call FieldIndexIn [rest name prim #add [index 1]]
+  }
+
+judgment FieldDescIn [fields name] =
+  match fields {
+    case [] -> mk #DAny []
+    case head :: rest ->
+      if prim #eq [prim #nth [prim #args [head] 0] name]
+      then prim #nth [prim #args [head] 1]
+      else call FieldDescIn [rest name]
+  }
+
+judgment VariantDescIn [variants tag] =
+  match variants {
+    case [] -> mk #none []
+    case head :: rest ->
+      if prim #eq [prim #nth [prim #args [head] 0] tag]
+      then mk #some [prim #nth [prim #args [head] 1]]
+      else call VariantDescIn [rest tag]
+  }
+
+; ------------------------------------------------------------------- apply
+
+judgment Apply [desc value change] =
+  match change {
+    case (#Identity) -> mk #applied [value]
+    case (#Replace expected replacement) ->
+      if prim #eq [value expected]
+      then mk #applied [replacement]
+      else mk #conflict [#predecessor-mismatch]
+    case (#Compose first second) ->
+      match call Apply [desc value first] {
+        case (#applied intermediate) -> call Apply [desc intermediate second]
+        case (#conflict reason) -> mk #conflict [reason]
+      }
+    case (#AtField name inner) -> call ApplyAtField [desc value name inner]
+    case (#AtConstructor tag inner) -> call ApplyAtConstructor [desc value tag inner]
+    case (#AtKey key inner) -> call ApplyAtKey [desc value key inner]
+    case (#InsertKey key item) -> call ApplyInsert [desc value key item]
+    case (#DeleteKey key expected) -> call ApplyDelete [desc value key expected]
+    case (#Rename from to) -> call ApplyRename [desc value from to]
+    case _ -> mk #conflict [#not-a-change]
+  }
+
+judgment ApplyAtField [desc value name inner] =
+  match desc {
+    case (#DRecord fields) ->
+      match call FieldIndexIn [fields name 0] {
+        case (#none) -> mk #conflict [#unknown-field]
+        case (#some index) ->
+          if prim #ge [index prim #len [prim #args [value]]]
+          then mk #conflict [#unknown-field]
+          else
+            match call Apply [
+              call FieldDescIn [fields name]
+              prim #nth [prim #args [value] index]
+              inner
+            ] {
+              case (#applied updated) ->
+                mk #applied [
+                  prim #node [
+                    prim #tag [value]
+                    prim #set-nth [prim #args [value] index updated]
+                  ]
+                ]
+              case (#conflict reason) -> mk #conflict [reason]
+            }
+      }
+    case _ -> mk #conflict [#not-a-record]
+  }
+
+judgment ApplyAtConstructor [desc value tag inner] =
+  match desc {
+    case (#DSum variants) ->
+      if prim #eq [prim #tag [value] tag]
+      then
+        match call VariantDescIn [variants tag] {
+          case (#none) -> mk #conflict [#unknown-constructor]
+          case (#some inner') -> call Apply [inner' value inner]
+        }
+      else mk #conflict [#wrong-constructor]
+    case _ -> mk #conflict [#not-a-sum]
+  }
+
+judgment ApplyAtKey [desc value key inner] =
+  match desc {
+    case (#DMap element) ->
+      if prim #mhas [value key]
+      then
+        match call Apply [element prim #mget [value key mk #absent []] inner] {
+          case (#applied updated) -> mk #applied [prim #mput [value key updated]]
+          case (#conflict reason) -> mk #conflict [reason]
+        }
+      else mk #conflict [#unknown-key]
+    case (#DKeyedList element) -> call ApplyInKeyedList [element value key inner list []]
+    case _ -> mk #conflict [#not-keyed]
+  }
+
+judgment ApplyInKeyedList [element entries key inner seen] =
+  match entries {
+    case [] -> mk #conflict [#unknown-key]
+    case head :: rest ->
+      if prim #eq [prim #nth [prim #args [head] 0] key]
+      then
+        match call Apply [element prim #nth [prim #args [head] 1] inner] {
+          case (#applied updated) ->
+            mk #applied [prim #append [prim #snoc [seen mk #entry [key updated]] rest]]
+          case (#conflict reason) -> mk #conflict [reason]
+        }
+      else call ApplyInKeyedList [element rest key inner prim #snoc [seen head]]
+  }
+
+judgment ApplyInsert [desc value key item] =
+  match desc {
+    case (#DMap element) ->
+      if prim #mhas [value key]
+      then mk #conflict [#key-already-present]
+      else mk #applied [prim #mput [value key item]]
+    case (#DKeyedList element) ->
+      if call KeyedListHas [value key]
+      then mk #conflict [#key-already-present]
+      else mk #applied [prim #snoc [value mk #entry [key item]]]
+    case _ -> mk #conflict [#not-keyed]
+  }
+
+judgment KeyedListHas [entries key] =
+  match entries {
+    case [] -> false
+    case head :: rest ->
+      if prim #eq [prim #nth [prim #args [head] 0] key]
+      then true
+      else call KeyedListHas [rest key]
+  }
+
+judgment ApplyDelete [desc value key expected] =
+  match desc {
+    case (#DMap element) ->
+      if prim #eq [prim #mget [value key mk #absent []] expected]
+      then mk #applied [prim #mdel [value key]]
+      else mk #conflict [#predecessor-mismatch]
+    case (#DKeyedList element) -> call DeleteFromKeyedList [value key expected list []]
+    case _ -> mk #conflict [#not-keyed]
+  }
+
+judgment DeleteFromKeyedList [entries key expected seen] =
+  match entries {
+    case [] -> mk #conflict [#unknown-key]
+    case head :: rest ->
+      if prim #eq [prim #nth [prim #args [head] 0] key]
+      then
+        if prim #eq [prim #nth [prim #args [head] 1] expected]
+        then mk #applied [prim #append [seen rest]]
+        else mk #conflict [#predecessor-mismatch]
+      else call DeleteFromKeyedList [rest key expected prim #snoc [seen head]]
+  }
+
+judgment ApplyRename [desc value from to] =
+  match desc {
+    case (#DMap element) ->
+      if prim #mhas [value from]
+      then
+        if prim #mhas [value to]
+        then mk #conflict [#key-already-present]
+        else
+          mk #applied [
+            prim #mdel [prim #mput [value to prim #mget [value from mk #absent []]] from]
+          ]
+      else mk #conflict [#unknown-key]
+    case _ -> mk #conflict [#not-keyed]
+  }
+
+; ------------------------------------------------------------------- paths
+
+judgment Paths [change prefix] =
+  match change {
+    case (#Identity) -> list []
+    case (#Replace expected replacement) -> list [prefix]
+    case (#Compose first second) ->
+      prim #append [call Paths [first prefix] call Paths [second prefix]]
+    case (#AtField name inner) -> call Paths [inner prim #snoc [prefix mk #field [name]]]
+    case (#AtConstructor tag inner) ->
+      call Paths [inner prim #snoc [prefix mk #constructor [tag]]]
+    case (#AtKey key inner) -> call Paths [inner prim #snoc [prefix mk #key [key]]]
+    case (#InsertKey key item) -> list [prim #snoc [prefix mk #key [key]]]
+    case (#DeleteKey key expected) -> list [prim #snoc [prefix mk #key [key]]]
+    case (#Rename from to) ->
+      list [prim #snoc [prefix mk #key [from]] prim #snoc [prefix mk #key [to]]]
+    case _ -> list []
+  }
+
+judgment ChangePaths [change] = call Paths [change list []]
+
+judgment Independent [first second] =
+  call Disjoint [call ChangePaths [first] call ChangePaths [second]]
+
+; ------------------------------------------------------------------- laws
+
+judgment IdentityLaw [desc value] =
+  prim #eq [call Apply [desc value mk #Identity []] mk #applied [value]]
+
+judgment CompositionLaw [desc value first second] =
+  prim #eq [
+    match call Apply [desc value first] {
+      case (#applied intermediate) -> call Apply [desc intermediate second]
+      case (#conflict reason) -> mk #conflict [reason]
+    }
+    call Apply [desc value mk #Compose [first second]]
+  ]
+
+judgment Commutes [desc value first second] =
+  prim #eq [
+    call Apply [desc value mk #Compose [first second]]
+    call Apply [desc value mk #Compose [second first]]
+  ]
+
+judgment ConflictOf [desc value first second] =
+  if call Independent [first second]
+  then mk #independent []
+  else
+    match call Apply [desc value mk #Compose [first second]] {
+      case (#applied result) -> mk #compatible []
+      case (#conflict reason) -> mk #conflict [reason]
+    }
+
+; ------------------------------------------------- derived change languages
+
+judgment BaseVariants [] =
+  list [
+    mk #variant [#Identity mk #DAny []]
+    mk #variant [#Replace mk #DAny []]
+    mk #variant [#Compose mk #DAny []]
+  ]
+
+judgment FieldVariants [fields] =
+  match fields {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        mk #variant [#AtField call FreeChange [prim #nth [prim #args [head] 1]]]
+        call FieldVariants [rest]
+      ]
+  }
+
+judgment ConstructorVariants [variants] =
+  match variants {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        mk #variant [#AtConstructor call FreeChange [prim #nth [prim #args [head] 1]]]
+        call ConstructorVariants [rest]
+      ]
+  }
+
+judgment FreeChange [desc] =
+  match desc {
+    case (#DAny) -> mk #DSum [call BaseVariants []]
+    case (#DRecord fields) ->
+      mk #DSum [prim #append [call BaseVariants [] call FieldVariants [fields]]]
+    case (#DSum variants) ->
+      mk #DSum [prim #append [call BaseVariants [] call ConstructorVariants [variants]]]
+    case (#DMap element) ->
+      mk #DSum [
+        prim #append [
+          call BaseVariants []
+          list [
+            mk #variant [#AtKey call FreeChange [element]]
+            mk #variant [#InsertKey element]
+            mk #variant [#DeleteKey element]
+            mk #variant [#Rename mk #DAny []]
+          ]
+        ]
+      ]
+    case (#DKeyedList element) ->
+      mk #DSum [
+        prim #append [
+          call BaseVariants []
+          list [
+            mk #variant [#AtKey call FreeChange [element]]
+            mk #variant [#InsertKey element]
+            mk #variant [#DeleteKey element]
+          ]
+        ]
+      ]
+    case (#DList element) -> mk #DSum [call BaseVariants []]
+    case _ -> mk #DSum [call BaseVariants []]
+  }
+
+record FreeChangeWitness [
+  sourceDescription
+  changeDescription
+  applyProgram
+  identityProgram
+  compositionProgram
+  independenceProgram
+  conflictProgram
+]
+
+judgment WitnessFor [desc] =
+  call FreeChangeWitness [
+    desc
+    call FreeChange [desc]
+    #Apply
+    #IdentityLaw
+    #CompositionLaw
+    #Independent
+    #ConflictOf
+  ]
+
+; ---------------------------------------------------- described languages
+
+; The lambda surface AST described structurally.
+judgment DescLambda [] =
+  mk #DSum [
+    list [
+      mk #variant [#Var mk #DRecord [list [mk #field [#name mk #DAny []]]]]
+      mk #variant [#Lam mk #DRecord [
+        list [mk #field [#name mk #DAny []] mk #field [#body mk #DAny []]]
+      ]]
+      mk #variant [#App mk #DRecord [
+        list [mk #field [#fn mk #DAny []] mk #field [#argument mk #DAny []]]
+      ]]
+    ]
+  ]
+
+; A Meta program keyed by judgment name.
+judgment DescProgram [] = mk #DMap [mk #DAny []]
+
+; A grammar keyed by category name.
+judgment DescGrammar [] = mk #DMap [mk #DKeyedList [mk #DAny []]]
+
+; A foundation manifest described by its fields.
+judgment DescFoundation [] =
+  mk #DRecord [
+    list [
+      mk #field [#name mk #DAny []]
+      mk #field [#bootstrap mk #DAny []]
+      mk #field [#application mk #DAny []]
+      mk #field [#predecessor mk #DAny []]
+      mk #field [#change mk #DAny []]
+    ]
+  ]
+
+judgment DeltaLambda [] = call FreeChange [call DescLambda []]
+judgment DeltaMeta1 [] = call FreeChange [call DescProgram []]
+judgment DeltaGrammar1 [] = call FreeChange [call DescGrammar []]
+judgment DeltaFoundation [] = call FreeChange [call DescFoundation []]
+
+; --------------------------------------------------------- lambda editing
+
+judgment KeyedGet [entries key] =
+  match entries {
+    case [] -> mk #absent []
+    case head :: rest ->
+      if prim #eq [prim #nth [prim #args [head] 0] key]
+      then prim #nth [prim #args [head] 1]
+      else call KeyedGet [rest key]
+  }
+
+judgment AppliedValue [result] =
+  match result {
+    case (#applied value) -> value
+    case (#conflict reason) -> mk #conflict [reason]
+  }
+
+; Applies the same keyed change to two orderings of the same keyed list and
+; compares the value stored at that key.
+judgment KeyedEditAgrees [element first second key change] =
+  prim #eq [
+    call KeyedGet [call AppliedValue [call Apply [mk #DKeyedList [element] first mk #AtKey [key change]]] key]
+    call KeyedGet [call AppliedValue [call Apply [mk #DKeyedList [element] second mk #AtKey [key change]]] key]
+  ]
+
+judgment EditLambdaSource [grammar source change] =
+  match call Apply [call DescLambda [] call Parse [grammar source] change] {
+    case (#applied updated) -> call Print [grammar updated]
+    case (#conflict reason) -> mk #conflict [reason]
+  }
+
+; Editing the same term written with different spacing gives the same result.
+judgment EditSurvivesReformatting [grammar first second change] =
+  prim #eq [
+    call EditLambdaSource [grammar first change]
+    call EditLambdaSource [grammar second change]
+  ]
