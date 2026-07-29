@@ -1,0 +1,66 @@
+# F9 acceptance transcript: constituted agreement and settlement.
+
+$ foundation verify --dir foundations/F9
+> foundation F9
+> digest db841e0f9f3b97f8ac32d4040e1ab06e6473f82ae37d50c12a3b5755a64fb17e
+> closure 66 artifacts
+> check two-consecutive-transitions-settle ok
+> check settled-head-is-the-last-successor ok
+> check a-certificate-for-another-proposal-is-rejected ok
+> check insufficient-agreement-is-rejected ok
+> check the-wrong-federation-identity-is-rejected ok
+> check a-replica-abstains-from-a-semantically-invalid-transition ok
+> check double-voting-is-detected ok
+> check honest-voting-produces-no-evidence ok
+> check membership-changes-through-a-settled-transition ok
+> check agreement-threshold-is-three-f-plus-one ok
+> check synchronization-unchanged ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F8 --successor foundations/F9
+> predecessor F8
+> successor F9
+> result (valid #d34706092e2e9f0a7bdd3ca81e9e31995ab37bee13d0d078da157de606e961e1e)
+
+$ foundation reconstruct --dir foundations/F9
+> reconstructed F9
+> digest db841e0f9f3b97f8ac32d4040e1ab06e6473f82ae37d50c12a3b5755a64fb17e
+> stable yes
+> closure 66 artifacts
+> checks 12 ok
+
+$ foundation attest --dir foundations/F9
+> (attestation (name "F9") (foundation #ddb841e0f9f3b97f8ac32d4040e1ab06e6473f82ae37d50c12a3b5755a64fb17e) (application #d7ac2c20e739b77f0371ccf77118f2e95d0f5d6aaa81d4c6421c511cc8f11884a) (meta #dab7068e41479f974df6bd48e18893bd18d245f021339bdb1223906aaa4e5f712) (closure 66) (kinds {application 10 change 11 foundation 10 grammar 3 meta-program 28 source 4}) (complete #t))
+> attestation 4343afc90f2aefa0eda5f6b6d53b05b42713acf76be205623a40ae3c3ea42e32
+
+# Two consecutive publication transitions settle.
+$ derive --foundation foundations/F9 --goal '(call SettledHeight (call SettleTwo (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon") (file "foundations/F6/foundation.canon")))'
+> 2
+
+# A certificate for another proposal is rejected.
+$ derive --foundation foundations/F9 --goal '(call SettlementRejection (call SettleWrongCertificate (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon") (file "foundations/F6/foundation.canon")))'
+> certificate-for-another-proposal
+
+# Insufficient agreement is rejected.
+$ derive --foundation foundations/F9 --goal '(call SettlementRejection (call SettleInsufficient (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon")))'
+> insufficient-quorum
+
+# The wrong federation identity is rejected.
+$ derive --foundation foundations/F9 --goal '(call SettlementRejection (call SettleWrongFederation (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon")))'
+> wrong-federation
+
+# Semantic validity comes before agreement.
+$ derive --foundation foundations/F9 --goal '(call SemanticallyInvalidVote (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon"))'
+> (abstained semantically-invalid)
+
+# Double voting produces evidence.
+$ derive --foundation foundations/F9 --goal '(prim tag (call DoubleVote (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon") (file "foundations/F6/foundation.canon")))'
+> equivocation
+
+# Membership changes only through a settled transition.
+$ derive --foundation foundations/F9 --goal '(call MembershipAfterSettlement (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon") (file "foundations/F6/foundation.canon"))'
+> 5
+
+$ derive --foundation foundations/F9 --goal '(call QuorumSize (call Federation))'
+> 3

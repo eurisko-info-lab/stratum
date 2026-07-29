@@ -1,0 +1,1451 @@
+; Generated from features/federation/federation.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module agreement)
+  (judgment
+    Replica
+    [key]
+    (mk
+      Replica
+      (v key)))
+  (judgment
+    Replica'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ReplicaSet
+    [federation members]
+    (mk
+      ReplicaSet
+      (v federation)
+      (v members)))
+  (judgment
+    ReplicaSet'federation
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ReplicaSet'members
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    AgreementProposal
+    [federation view slot predecessor successor proposer signature]
+    (mk
+      AgreementProposal
+      (v federation)
+      (v view)
+      (v slot)
+      (v predecessor)
+      (v successor)
+      (v proposer)
+      (v signature)))
+  (judgment
+    AgreementProposal'federation
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    AgreementProposal'view
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    AgreementProposal'slot
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    AgreementProposal'predecessor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    AgreementProposal'successor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    AgreementProposal'proposer
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    AgreementProposal'signature
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 6)))
+  (judgment
+    Vote
+    [federation view slot subject voter signature]
+    (mk
+      Vote
+      (v federation)
+      (v view)
+      (v slot)
+      (v subject)
+      (v voter)
+      (v signature)))
+  (judgment
+    Vote'federation
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Vote'view
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Vote'slot
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Vote'subject
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    Vote'voter
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    Vote'signature
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    FinalityCertificate
+    [federation view slot subject votes]
+    (mk
+      FinalityCertificate
+      (v federation)
+      (v view)
+      (v slot)
+      (v subject)
+      (v votes)))
+  (judgment
+    FinalityCertificate'federation
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FinalityCertificate'view
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FinalityCertificate'slot
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FinalityCertificate'subject
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    FinalityCertificate'votes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    ViewChange
+    [federation view next voter signature]
+    (mk
+      ViewChange
+      (v federation)
+      (v view)
+      (v next)
+      (v voter)
+      (v signature)))
+  (judgment
+    ViewChange'federation
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ViewChange'view
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ViewChange'next
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ViewChange'voter
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    ViewChange'signature
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    FederationState
+    [view slot head finalized]
+    (mk
+      FederationState
+      (v view)
+      (v slot)
+      (v head)
+      (v finalized)))
+  (judgment
+    FederationState'view
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FederationState'slot
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FederationState'head
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FederationState'finalized
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    EquivocationEvidence
+    [voter view first second]
+    (mk
+      EquivocationEvidence
+      (v voter)
+      (v view)
+      (v first)
+      (v second)))
+  (judgment
+    EquivocationEvidence'voter
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EquivocationEvidence'view
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    EquivocationEvidence'first
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    EquivocationEvidence'second
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    FederationTransition
+    [from to certificate]
+    (mk
+      FederationTransition
+      (v from)
+      (v to)
+      (v certificate)))
+  (judgment
+    FederationTransition'from
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FederationTransition'to
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FederationTransition'certificate
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    MemberCount
+    [replicaSet]
+    (prim
+      len
+      (call
+        ReplicaSet'members
+        (v replicaSet))))
+  (judgment
+    Tolerance
+    [replicaSet]
+    (prim
+      div
+      (prim
+        sub
+        (call
+          MemberCount
+          (v replicaSet))
+        (q 1))
+      (q 3)))
+  (judgment
+    QuorumSize
+    [replicaSet]
+    (prim
+      sub
+      (call
+        MemberCount
+        (v replicaSet))
+      (call
+        Tolerance
+        (v replicaSet))))
+  (judgment
+    IsMember
+    [replicaSet key]
+    (prim
+      contains
+      (call
+        ReplicaSet'members
+        (v replicaSet))
+      (v key)))
+  (judgment
+    ProposalSubject
+    [federation view slot predecessor successor]
+    (mk
+      proposal-subject
+      (v federation)
+      (v view)
+      (v slot)
+      (v predecessor)
+      (v successor)))
+  (judgment
+    ProposalDigest
+    [proposal]
+    (prim
+      digest
+      (call
+        ProposalSubject
+        (call
+          AgreementProposal'federation
+          (v proposal))
+        (call
+          AgreementProposal'view
+          (v proposal))
+        (call
+          AgreementProposal'slot
+          (v proposal))
+        (call
+          AgreementProposal'predecessor
+          (v proposal))
+        (call
+          AgreementProposal'successor
+          (v proposal)))))
+  (judgment
+    VoteSubject
+    [federation view slot subject]
+    (mk
+      vote-subject
+      (v federation)
+      (v view)
+      (v slot)
+      (v subject)))
+  (judgment
+    MakeProposal
+    [secret federation view slot predecessor successor]
+    (call
+      AgreementProposal
+      (v federation)
+      (v view)
+      (v slot)
+      (v predecessor)
+      (v successor)
+      (call
+        PublicKey
+        (v secret))
+      (call
+        SignSubject
+        (v secret)
+        (call
+          ProposalSubject
+          (v federation)
+          (v view)
+          (v slot)
+          (v predecessor)
+          (v successor)))))
+  (judgment
+    ValidateProposal
+    [replicaSet proposal]
+    (if
+      (prim
+        eq
+        (call
+          AgreementProposal'federation
+          (v proposal))
+        (call
+          ReplicaSet'federation
+          (v replicaSet)))
+      (if
+        (call
+          IsMember
+          (v replicaSet)
+          (call
+            AgreementProposal'proposer
+            (v proposal)))
+        (if
+          (call
+            VerifySubject
+            (call
+              AgreementProposal'proposer
+              (v proposal))
+            (call
+              ProposalSubject
+              (call
+                AgreementProposal'federation
+                (v proposal))
+              (call
+                AgreementProposal'view
+                (v proposal))
+              (call
+                AgreementProposal'slot
+                (v proposal))
+              (call
+                AgreementProposal'predecessor
+                (v proposal))
+              (call
+                AgreementProposal'successor
+                (v proposal)))
+            (call
+              AgreementProposal'signature
+              (v proposal)))
+          (mk valid)
+          (mk
+            invalid
+            (q bad-proposal-signature)))
+        (mk
+          invalid
+          (q unknown-proposer)))
+      (mk
+        invalid
+        (q wrong-federation))))
+  (judgment
+    SemanticallyValid
+    [proposal]
+    (call
+      IsCompatible
+      (call
+        AgreementProposal'predecessor
+        (v proposal))
+      (call
+        AgreementProposal'successor
+        (v proposal))))
+  (judgment
+    CastVote
+    [secret replicaSet proposal]
+    (match
+      (call
+        ValidateProposal
+        (v replicaSet)
+        (v proposal))
+      (case
+        (pm
+          invalid
+          (pv reason))
+        (mk
+          abstained
+          (v reason)))
+      (case
+        (pm valid)
+        (if
+          (call
+            SemanticallyValid
+            (v proposal))
+          (mk
+            vote
+            (call
+              Vote
+              (call
+                AgreementProposal'federation
+                (v proposal))
+              (call
+                AgreementProposal'view
+                (v proposal))
+              (call
+                AgreementProposal'slot
+                (v proposal))
+              (call
+                ProposalDigest
+                (v proposal))
+              (call
+                PublicKey
+                (v secret))
+              (call
+                SignSubject
+                (v secret)
+                (call
+                  VoteSubject
+                  (call
+                    AgreementProposal'federation
+                    (v proposal))
+                  (call
+                    AgreementProposal'view
+                    (v proposal))
+                  (call
+                    AgreementProposal'slot
+                    (v proposal))
+                  (call
+                    ProposalDigest
+                    (v proposal))))))
+          (mk
+            abstained
+            (q semantically-invalid))))))
+  (judgment
+    ValidateVote
+    [replicaSet subject vote]
+    (if
+      (prim
+        eq
+        (call
+          Vote'federation
+          (v vote))
+        (call
+          ReplicaSet'federation
+          (v replicaSet)))
+      (if
+        (call
+          IsMember
+          (v replicaSet)
+          (call
+            Vote'voter
+            (v vote)))
+        (if
+          (prim
+            eq
+            (call
+              Vote'subject
+              (v vote))
+            (v subject))
+          (if
+            (call
+              VerifySubject
+              (call
+                Vote'voter
+                (v vote))
+              (call
+                VoteSubject
+                (call
+                  Vote'federation
+                  (v vote))
+                (call
+                  Vote'view
+                  (v vote))
+                (call
+                  Vote'slot
+                  (v vote))
+                (call
+                  Vote'subject
+                  (v vote)))
+              (call
+                Vote'signature
+                (v vote)))
+            (mk valid)
+            (mk
+              invalid
+              (q bad-vote-signature)))
+          (mk
+            invalid
+            (q certificate-for-another-proposal)))
+        (mk
+          invalid
+          (q unknown-voter)))
+      (mk
+        invalid
+        (q wrong-federation))))
+  (judgment
+    ValidateVotes
+    [replicaSet subject votes voters]
+    (match
+      (v votes)
+      (case
+        (pnil)
+        (mk
+          voters
+          (v voters)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            ValidateVote
+            (v replicaSet)
+            (v subject)
+            (v head))
+          (case
+            (pm valid)
+            (call
+              ValidateVotes
+              (v replicaSet)
+              (v subject)
+              (v rest)
+              (call
+                Union
+                (v voters)
+                (lst
+                  (call
+                    Vote'voter
+                    (v head))))))
+          (case
+            (pm
+              invalid
+              (pv reason))
+            (mk
+              invalid
+              (v reason)))))))
+  (judgment
+    ValidateCertificate
+    [replicaSet certificate]
+    (if
+      (prim
+        eq
+        (call
+          FinalityCertificate'federation
+          (v certificate))
+        (call
+          ReplicaSet'federation
+          (v replicaSet)))
+      (match
+        (call
+          ValidateVotes
+          (v replicaSet)
+          (call
+            FinalityCertificate'subject
+            (v certificate))
+          (call
+            FinalityCertificate'votes
+            (v certificate))
+          (lst))
+        (case
+          (pm
+            invalid
+            (pv reason))
+          (mk
+            invalid
+            (v reason)))
+        (case
+          (pm
+            voters
+            (pv voters))
+          (if
+            (prim
+              ge
+              (prim
+                len
+                (v voters))
+              (call
+                QuorumSize
+                (v replicaSet)))
+            (mk valid)
+            (mk
+              invalid
+              (q insufficient-quorum)))))
+      (mk
+        invalid
+        (q wrong-federation))))
+  (judgment
+    ValidateTransition
+    [replicaSet proposal certificate]
+    (match
+      (call
+        ValidateProposal
+        (v replicaSet)
+        (v proposal))
+      (case
+        (pm
+          invalid
+          (pv reason))
+        (mk
+          invalid
+          (v reason)))
+      (case
+        (pm valid)
+        (if
+          (prim
+            eq
+            (call
+              FinalityCertificate'subject
+              (v certificate))
+            (call
+              ProposalDigest
+              (v proposal)))
+          (call
+            ValidateCertificate
+            (v replicaSet)
+            (v certificate))
+          (mk
+            invalid
+            (q certificate-for-another-proposal))))))
+  (judgment
+    InitialFederationState
+    []
+    (call
+      FederationState
+      (q 0)
+      (q 0)
+      (q genesis)
+      (lst)))
+  (judgment
+    ApplyTransition
+    [state proposal]
+    (call
+      FederationState
+      (call
+        AgreementProposal'view
+        (v proposal))
+      (prim
+        add
+        (call
+          FederationState'slot
+          (v state))
+        (q 1))
+      (call
+        AgreementProposal'successor
+        (v proposal))
+      (prim
+        snoc
+        (call
+          FederationState'finalized
+          (v state))
+        (call
+          ProposalDigest
+          (v proposal)))))
+  (judgment
+    ReplayFinalizedHistory
+    [replicaSet transitions state]
+    (match
+      (v transitions)
+      (case
+        (pnil)
+        (mk
+          settled
+          (v state)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (v head)
+          (case
+            (pm
+              step
+              (pv proposal)
+              (pv certificate))
+            (match
+              (call
+                ValidateTransition
+                (v replicaSet)
+                (v proposal)
+                (v certificate))
+              (case
+                (pm valid)
+                (call
+                  ReplayFinalizedHistory
+                  (v replicaSet)
+                  (v rest)
+                  (call
+                    ApplyTransition
+                    (v state)
+                    (v proposal))))
+              (case
+                (pm
+                  invalid
+                  (pv reason))
+                (mk
+                  rejected
+                  (v reason)))))
+          (case
+            _
+            (mk
+              rejected
+              (q malformed-history)))))))
+  (judgment
+    SettledHeight
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          settled
+          (pv state))
+        (call
+          FederationState'slot
+          (v state)))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (mk
+          rejected
+          (v reason)))))
+  (judgment
+    SettlementRejection
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          settled
+          (pv state))
+        (mk settled))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (v reason))))
+  (judgment
+    SettledHead
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          settled
+          (pv state))
+        (call
+          FederationState'head
+          (v state)))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (mk none))))
+  (judgment
+    DetectEquivocation
+    [votes]
+    (match
+      (v votes)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScanEquivocation
+          (v head)
+          (v rest)))))
+  (judgment
+    ScanEquivocation
+    [candidate rest]
+    (match
+      (v rest)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv more))
+        (if
+          (prim
+            eq
+            (call
+              Vote'voter
+              (v candidate))
+            (call
+              Vote'voter
+              (v head)))
+          (if
+            (prim
+              eq
+              (call
+                Vote'view
+                (v candidate))
+              (call
+                Vote'view
+                (v head)))
+            (if
+              (prim
+                eq
+                (call
+                  Vote'slot
+                  (v candidate))
+                (call
+                  Vote'slot
+                  (v head)))
+              (if
+                (prim
+                  eq
+                  (call
+                    Vote'subject
+                    (v candidate))
+                  (call
+                    Vote'subject
+                    (v head)))
+                (call
+                  ScanEquivocation
+                  (v candidate)
+                  (v more))
+                (mk
+                  equivocation
+                  (call
+                    EquivocationEvidence
+                    (call
+                      Vote'voter
+                      (v candidate))
+                    (call
+                      Vote'view
+                      (v candidate))
+                    (call
+                      Vote'subject
+                      (v candidate))
+                    (call
+                      Vote'subject
+                      (v head)))))
+              (call
+                ScanEquivocation
+                (v candidate)
+                (v more)))
+            (call
+              ScanEquivocation
+              (v candidate)
+              (v more)))
+          (call
+            ScanEquivocation
+            (v candidate)
+            (v more))))))
+  (judgment
+    ChangeMembership
+    [replicaSet added result]
+    (match
+      (v result)
+      (case
+        (pm
+          settled
+          (pv state))
+        (mk
+          members
+          (call
+            ReplicaSet
+            (call
+              ReplicaSet'federation
+              (v replicaSet))
+            (call
+              Union
+              (call
+                ReplicaSet'members
+                (v replicaSet))
+              (v added)))))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (mk
+          blocked
+          (v reason)))))
+  (judgment
+    ReplicaSecret
+    [name]
+    (prim
+      scat
+      (q "replica-")
+      (v name)))
+  (judgment
+    ReplicaKey
+    [name]
+    (call
+      PublicKey
+      (call
+        ReplicaSecret
+        (v name))))
+  (judgment
+    FederationMembers
+    []
+    (lst
+      (call
+        ReplicaKey
+        (q "a"))
+      (call
+        ReplicaKey
+        (q "b"))
+      (call
+        ReplicaKey
+        (q "c"))
+      (call
+        ReplicaKey
+        (q "d"))))
+  (judgment
+    Federation
+    []
+    (call
+      ReplicaSet
+      (q stratum)
+      (call FederationMembers)))
+  (judgment
+    OtherFederation
+    []
+    (call
+      ReplicaSet
+      (q other)
+      (call FederationMembers)))
+  (judgment
+    ProposalAt
+    [slot predecessor successor]
+    (call
+      MakeProposal
+      (call
+        ReplicaSecret
+        (q "a"))
+      (q stratum)
+      (q 1)
+      (v slot)
+      (v predecessor)
+      (v successor)))
+  (judgment
+    VoteOn
+    [name proposal]
+    (match
+      (call
+        CastVote
+        (call
+          ReplicaSecret
+          (v name))
+        (call Federation)
+        (v proposal))
+      (case
+        (pm
+          vote
+          (pv vote))
+        (v vote))
+      (case
+        (pm
+          abstained
+          (pv reason))
+        (mk
+          abstained
+          (v reason)))))
+  (judgment
+    CertificateFor
+    [proposal names]
+    (call
+      FinalityCertificate
+      (q stratum)
+      (call
+        AgreementProposal'view
+        (v proposal))
+      (call
+        AgreementProposal'slot
+        (v proposal))
+      (call
+        ProposalDigest
+        (v proposal))
+      (call
+        VotesFrom
+        (v names)
+        (v proposal))))
+  (judgment
+    VotesFrom
+    [names proposal]
+    (match
+      (v names)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            VoteOn
+            (v head)
+            (v proposal))
+          (call
+            VotesFrom
+            (v rest)
+            (v proposal))))))
+  (judgment
+    Quorum
+    []
+    (lst
+      (q "a")
+      (q "b")
+      (q "c")))
+  (judgment
+    TooFew
+    []
+    (lst
+      (q "a")
+      (q "b")))
+  (judgment
+    FirstProposal
+    [predecessor successor]
+    (call
+      ProposalAt
+      (q 1)
+      (v predecessor)
+      (v successor)))
+  (judgment
+    SecondProposal
+    [predecessor successor]
+    (call
+      ProposalAt
+      (q 2)
+      (v predecessor)
+      (v successor)))
+  (judgment
+    TwoTransitions
+    [first second third]
+    (lst
+      (mk
+        step
+        (call
+          FirstProposal
+          (v first)
+          (v second))
+        (call
+          CertificateFor
+          (call
+            FirstProposal
+            (v first)
+            (v second))
+          (call Quorum)))
+      (mk
+        step
+        (call
+          SecondProposal
+          (v second)
+          (v third))
+        (call
+          CertificateFor
+          (call
+            SecondProposal
+            (v second)
+            (v third))
+          (call Quorum)))))
+  (judgment
+    SettleTwo
+    [first second third]
+    (call
+      ReplayFinalizedHistory
+      (call Federation)
+      (call
+        TwoTransitions
+        (v first)
+        (v second)
+        (v third))
+      (call InitialFederationState)))
+  (judgment
+    InsufficientQuorumHistory
+    [first second]
+    (lst
+      (mk
+        step
+        (call
+          FirstProposal
+          (v first)
+          (v second))
+        (call
+          CertificateFor
+          (call
+            FirstProposal
+            (v first)
+            (v second))
+          (call TooFew)))))
+  (judgment
+    SettleInsufficient
+    [first second]
+    (call
+      ReplayFinalizedHistory
+      (call Federation)
+      (call
+        InsufficientQuorumHistory
+        (v first)
+        (v second))
+      (call InitialFederationState)))
+  (judgment
+    WrongCertificateHistory
+    [first second third]
+    (lst
+      (mk
+        step
+        (call
+          FirstProposal
+          (v first)
+          (v second))
+        (call
+          CertificateFor
+          (call
+            SecondProposal
+            (v second)
+            (v third))
+          (call Quorum)))))
+  (judgment
+    SettleWrongCertificate
+    [first second third]
+    (call
+      ReplayFinalizedHistory
+      (call Federation)
+      (call
+        WrongCertificateHistory
+        (v first)
+        (v second)
+        (v third))
+      (call InitialFederationState)))
+  (judgment
+    WrongFederationHistory
+    [first second]
+    (lst
+      (mk
+        step
+        (call
+          FirstProposal
+          (v first)
+          (v second))
+        (call
+          CertificateFor
+          (call
+            FirstProposal
+            (v first)
+            (v second))
+          (call Quorum)))))
+  (judgment
+    SettleWrongFederation
+    [first second]
+    (call
+      ReplayFinalizedHistory
+      (call OtherFederation)
+      (call
+        WrongFederationHistory
+        (v first)
+        (v second))
+      (call InitialFederationState)))
+  (judgment
+    SemanticallyInvalidVote
+    [first second]
+    (call
+      CastVote
+      (call
+        ReplicaSecret
+        (q "a"))
+      (call Federation)
+      (call
+        MakeProposal
+        (call
+          ReplicaSecret
+          (q "a"))
+        (q stratum)
+        (q 1)
+        (q 1)
+        (v second)
+        (v first))))
+  (judgment
+    DoubleVote
+    [first second third]
+    (call
+      DetectEquivocation
+      (lst
+        (call
+          VoteOn
+          (q "a")
+          (call
+            FirstProposal
+            (v first)
+            (v second)))
+        (call
+          VoteOn
+          (q "a")
+          (call
+            ProposalAt
+            (q 1)
+            (v second)
+            (v third))))))
+  (judgment
+    HonestVotes
+    [first second]
+    (call
+      DetectEquivocation
+      (call
+        VotesFrom
+        (call Quorum)
+        (call
+          FirstProposal
+          (v first)
+          (v second)))))
+  (judgment
+    MembershipAfterSettlement
+    [first second third]
+    (prim
+      len
+      (call
+        ReplicaSet'members
+        (match
+          (call
+            ChangeMembership
+            (call Federation)
+            (lst
+              (call
+                ReplicaKey
+                (q "e")))
+            (call
+              SettleTwo
+              (v first)
+              (v second)
+              (v third)))
+          (case
+            (pm
+              members
+              (pv updated))
+            (v updated))
+          (case
+            (pm
+              blocked
+              (pv reason))
+            (call Federation)))))))
