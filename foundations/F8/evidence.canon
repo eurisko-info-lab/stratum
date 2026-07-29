@@ -1,0 +1,15 @@
+
+artifactevidence
+evidence
+check,two-peers-synchronize-from-disjoint-closuresok
+check&synchronized-store-holds-both-closuresok
+check%corrupted-artifact-bytes-are-rejectedok
+checkan-interrupted-transfer-resumesok
+check#closure-offers-are-digest-addressedok
+checkmissing-objects-are-discoveredok
+check"remote-patches-arrive-as-proposalsok
+check-diverged-branches-preserve-explicit-conflictsok
+check(the-transport-carries-canonical-messagesok
+check$local-replay-works-without-a-networkok
+checkchain-replay-unchangedok
+checklambda-behaviour-unchangedok

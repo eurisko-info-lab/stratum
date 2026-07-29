@@ -1,0 +1,62 @@
+# F8 acceptance transcript: distributed closure and branch synchronization.
+
+$ foundation verify --dir foundations/F8
+> foundation F8
+> digest dc1a07cbb466bb2a3ee36fa3e768f9fe937a9aed559559f33164f4a3264ed16b
+> closure 61 artifacts
+> check two-peers-synchronize-from-disjoint-closures ok
+> check synchronized-store-holds-both-closures ok
+> check corrupted-artifact-bytes-are-rejected ok
+> check an-interrupted-transfer-resumes ok
+> check closure-offers-are-digest-addressed ok
+> check missing-objects-are-discovered ok
+> check remote-patches-arrive-as-proposals ok
+> check diverged-branches-preserve-explicit-conflicts ok
+> check the-transport-carries-canonical-messages ok
+> check local-replay-works-without-a-network ok
+> check chain-replay-unchanged ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F7 --successor foundations/F8
+> predecessor F7
+> successor F8
+> result (valid #d250e0ea90e959c77d8db1732ae484e3b24fc948975a9f022315efdf20b7504d9)
+
+$ foundation reconstruct --dir foundations/F8
+> reconstructed F8
+> digest dc1a07cbb466bb2a3ee36fa3e768f9fe937a9aed559559f33164f4a3264ed16b
+> stable yes
+> closure 61 artifacts
+> checks 12 ok
+
+# Two peers with disjoint partial closures synchronize.
+$ derive --foundation foundations/F8 --goal '(call DisjointSync)'
+> (synchronized 2)
+
+$ derive --foundation foundations/F8 --goal '(call SyncedSize)'
+> 4
+
+# Corrupted artifact bytes are rejected on receipt.
+$ derive --foundation foundations/F8 --goal '(call CorruptedTransfer)'
+> (interrupted corrupted-artifact)
+
+# An interrupted transfer resumes from what is already held.
+$ derive --foundation foundations/F8 --goal '(call ResumedTransfer)'
+> (synchronized 1)
+
+# Remote patches arrive as proposals, never as accepted members.
+$ derive --foundation foundations/F8 --goal '(call RemoteProposals)'
+> 1
+
+# Diverged branches preserve explicit conflicts.
+$ derive --foundation foundations/F8 --goal '(call DivergedConflicts (call DescProgram) (call BaseState) (call ConflictRepo) (q main))'
+> 1
+
+# The generic transport carries canonical messages.
+$ derive --foundation foundations/F8 --goal '(call TransportRoundTrip)'
+> (message (advertise main [p1]))
+
+# A local repository stays usable without a network.
+$ derive --foundation foundations/F8 --goal '(call OfflineStateUnchanged (call DescProgram) (call BaseState) (call RepoOrderOne) (q main))'
+> #t

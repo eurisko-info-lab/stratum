@@ -1,0 +1,35 @@
+
+artifactsource
+source
+path#languages/grammar1/grammar1.grammar
+text±grammar "grammar1"
+start unit
+
+token ident sym "[A-Za-z_][A-Za-z0-9_']*"
+token text str "\"([^\"\\\\]|\\\\.)*\""
+
+category unit
+  fold Seq declaration
+
+category declaration
+  prod GrammarName "grammar" name : text
+  prod Start "start" name : ident
+  prod Token "token" name : ident kind : ident pattern : text
+  prod Skip "skip" pattern : text
+  prod Category "category" name : ident productions : productions
+
+category productions
+  fold Productions production
+
+category production
+  prod Production "prod" tag : ident elements : elements
+  prod Pass "pass" target : ident
+  prod Fold "fold" tag : ident target : ident
+  prod Paren "paren" open : text target : ident close : text
+
+category elements
+  fold Elements element
+
+category element
+  prod Keyword text : text
+  prod Binding field : ident ":" target : ident

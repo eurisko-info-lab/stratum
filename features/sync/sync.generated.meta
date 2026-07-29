@@ -1,0 +1,703 @@
+; Generated from features/sync/sync.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module sync)
+  (judgment
+    PeerIdentity
+    [name]
+    (mk
+      PeerIdentity
+      (v name)))
+  (judgment
+    PeerIdentity'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ClosureOffer
+    [peer digests]
+    (mk
+      ClosureOffer
+      (v peer)
+      (v digests)))
+  (judgment
+    ClosureOffer'peer
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ClosureOffer'digests
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ClosureNeed
+    [peer digests]
+    (mk
+      ClosureNeed
+      (v peer)
+      (v digests)))
+  (judgment
+    ClosureNeed'peer
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ClosureNeed'digests
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BranchAdvertisement
+    [peer branch frontier]
+    (mk
+      BranchAdvertisement
+      (v peer)
+      (v branch)
+      (v frontier)))
+  (judgment
+    BranchAdvertisement'peer
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BranchAdvertisement'branch
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BranchAdvertisement'frontier
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ChainAdvertisement
+    [peer head height]
+    (mk
+      ChainAdvertisement
+      (v peer)
+      (v head)
+      (v height)))
+  (judgment
+    ChainAdvertisement'peer
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ChainAdvertisement'head
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ChainAdvertisement'height
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FetchPlan
+    [order]
+    (mk
+      FetchPlan
+      (v order)))
+  (judgment
+    FetchPlan'order
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    SyncTranscript
+    [steps]
+    (mk
+      SyncTranscript
+      (v steps)))
+  (judgment
+    SyncTranscript'steps
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyStore
+    []
+    (prim mnew))
+  (judgment
+    StoreAdd
+    [store value]
+    (prim
+      mput
+      (v store)
+      (prim
+        digest
+        (v value))
+      (v value)))
+  (judgment
+    StoreOf
+    [values]
+    (match
+      (v values)
+      (case
+        (pnil)
+        (call EmptyStore))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          StoreAdd
+          (call
+            StoreOf
+            (v rest))
+          (v head)))))
+  (judgment
+    StoreDigests
+    [store]
+    (prim
+      sort
+      (prim
+        mkeys
+        (v store))))
+  (judgment
+    StoreHas
+    [store digest]
+    (prim
+      mhas
+      (v store)
+      (v digest)))
+  (judgment
+    AdvertiseClosure
+    [peer store]
+    (call
+      ClosureOffer
+      (v peer)
+      (call
+        StoreDigests
+        (v store))))
+  (judgment
+    AdvertiseBranch
+    [peer repository branch]
+    (call
+      BranchAdvertisement
+      (v peer)
+      (v branch)
+      (call
+        Heads
+        (v repository)
+        (v branch))))
+  (judgment
+    AdvertiseChain
+    [peer result]
+    (match
+      (v result)
+      (case
+        (pm
+          chain
+          (pv state))
+        (call
+          ChainAdvertisement
+          (v peer)
+          (call
+            ChainState'head
+            (v state))
+          (call
+            ChainState'height
+            (v state))))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (call
+          ChainAdvertisement
+          (v peer)
+          (q none)
+          (q 0)))))
+  (judgment
+    NeededDigests
+    [local offer]
+    (call
+      Subtract
+      (call
+        ClosureOffer'digests
+        (v offer))
+      (call
+        StoreDigests
+        (v local))))
+  (judgment
+    PlanFetch
+    [local offer]
+    (call
+      FetchPlan
+      (prim
+        sort
+        (call
+          NeededDigests
+          (v local)
+          (v offer)))))
+  (judgment
+    AcceptArtifact
+    [target digest value]
+    (if
+      (prim
+        eq
+        (prim
+          digest
+          (v value))
+        (v digest))
+      (mk
+        accepted
+        (prim
+          mput
+          (v target)
+          (v digest)
+          (v value)))
+      (mk
+        rejected
+        (q corrupted-artifact))))
+  (judgment
+    TransferSteps
+    [source target order transferred]
+    (match
+      (v order)
+      (case
+        (pnil)
+        (mk
+          synchronized
+          (v target)
+          (v transferred)))
+      (case
+        (pcons
+          (pv digest)
+          (pv rest))
+        (match
+          (call
+            AcceptArtifact
+            (v target)
+            (v digest)
+            (prim
+              mget
+              (v source)
+              (v digest)
+              (mk absent)))
+          (case
+            (pm
+              accepted
+              (pv next))
+            (call
+              TransferSteps
+              (v source)
+              (v next)
+              (v rest)
+              (prim
+                snoc
+                (v transferred)
+                (v digest))))
+          (case
+            (pm
+              rejected
+              (pv reason))
+            (mk
+              interrupted
+              (v target)
+              (v transferred)
+              (v reason)))))))
+  (judgment
+    Transfer
+    [source target plan]
+    (call
+      TransferSteps
+      (v source)
+      (v target)
+      (call
+        FetchPlan'order
+        (v plan))
+      (lst)))
+  (judgment
+    RemainingPlan
+    [target plan]
+    (call
+      FetchPlan
+      (call
+        Subtract
+        (call
+          FetchPlan'order
+          (v plan))
+        (call
+          StoreDigests
+          (v target)))))
+  (judgment
+    ResumeTransfer
+    [source target plan]
+    (call
+      Transfer
+      (v source)
+      (v target)
+      (call
+        RemainingPlan
+        (v target)
+        (v plan))))
+  (judgment
+    SyncStore
+    [source target]
+    (call
+      Transfer
+      (v source)
+      (v target)
+      (call
+        PlanFetch
+        (v target)
+        (call
+          AdvertiseClosure
+          (call
+            PeerIdentity
+            (q remote))
+          (v source)))))
+  (judgment
+    SynchronizedDigests
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          synchronized
+          (pv store)
+          (pv transferred))
+        (call
+          StoreDigests
+          (v store)))
+      (case
+        (pm
+          interrupted
+          (pv store)
+          (pv transferred)
+          (pv reason))
+        (call
+          StoreDigests
+          (v store)))))
+  (judgment
+    SyncOutcome
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          synchronized
+          (pv store)
+          (pv transferred))
+        (mk
+          synchronized
+          (prim
+            len
+            (v transferred))))
+      (case
+        (pm
+          interrupted
+          (pv store)
+          (pv transferred)
+          (pv reason))
+        (mk
+          interrupted
+          (v reason)))))
+  (judgment
+    Send
+    [peer message]
+    (match
+      (cap
+        send
+        (v peer)
+        (v message))
+      (case
+        (pm
+          ok
+          (pv result))
+        (mk sent))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (mk
+          undelivered
+          (v reason)))))
+  (judgment
+    Receive
+    [peer]
+    (match
+      (cap
+        receive
+        (v peer))
+      (case
+        (pm
+          ok
+          (pv message))
+        (v message))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (mk empty))))
+  (judgment
+    RoundTripMessage
+    [peer message]
+    (let
+      sent
+      (call
+        Send
+        (v peer)
+        (v message))
+      (call
+        Receive
+        (v peer))))
+  (judgment
+    IntegrateRemote
+    [local advertisement]
+    (mk
+      proposals
+      (call
+        BranchAdvertisement'branch
+        (v advertisement))
+      (call
+        Subtract
+        (call
+          BranchAdvertisement'frontier
+          (v advertisement))
+        (v local))))
+  (judgment
+    ProposalCount
+    [proposals]
+    (match
+      (v proposals)
+      (case
+        (pm
+          proposals
+          (pv branch)
+          (pv identities))
+        (prim
+          len
+          (v identities)))))
+  (judgment
+    ExchangeBranches
+    [repository left right]
+    (call
+      MergeBranch
+      (v repository)
+      (v left)
+      (v right)))
+  (judgment
+    DivergedConflicts
+    [desc initial repository branch]
+    (prim
+      len
+      (call
+        ReplayConflicts
+        (v desc)
+        (v initial)
+        (v repository)
+        (v branch))))
+  (judgment
+    OfflineStateUnchanged
+    [desc initial repository branch]
+    (prim
+      eq
+      (call
+        ReplayState
+        (v desc)
+        (v initial)
+        (v repository)
+        (v branch))
+      (call
+        ReplayState
+        (v desc)
+        (v initial)
+        (v repository)
+        (v branch))))
+  (judgment
+    LeftValues
+    []
+    (lst
+      (mk
+        artifact
+        (q a))
+      (mk
+        artifact
+        (q b))))
+  (judgment
+    RightValues
+    []
+    (lst
+      (mk
+        artifact
+        (q c))
+      (mk
+        artifact
+        (q d))))
+  (judgment
+    LeftStore
+    []
+    (call
+      StoreOf
+      (call LeftValues)))
+  (judgment
+    RightStore
+    []
+    (call
+      StoreOf
+      (call RightValues)))
+  (judgment
+    DisjointSync
+    []
+    (call
+      SyncOutcome
+      (call
+        SyncStore
+        (call RightStore)
+        (call LeftStore))))
+  (judgment
+    SyncedSize
+    []
+    (prim
+      len
+      (call
+        SynchronizedDigests
+        (call
+          SyncStore
+          (call RightStore)
+          (call LeftStore)))))
+  (judgment
+    CorruptedTransfer
+    []
+    (call
+      SyncOutcome
+      (call
+        TransferSteps
+        (prim
+          mput
+          (call RightStore)
+          (prim
+            digest
+            (mk
+              artifact
+              (q c)))
+          (mk
+            artifact
+            (q tampered)))
+        (call LeftStore)
+        (lst
+          (prim
+            digest
+            (mk
+              artifact
+              (q c))))
+        (lst))))
+  (judgment
+    PartialTarget
+    []
+    (prim
+      mput
+      (call LeftStore)
+      (prim
+        digest
+        (mk
+          artifact
+          (q c)))
+      (mk
+        artifact
+        (q c))))
+  (judgment
+    ResumedTransfer
+    []
+    (call
+      SyncOutcome
+      (call
+        ResumeTransfer
+        (call RightStore)
+        (call PartialTarget)
+        (call
+          PlanFetch
+          (call LeftStore)
+          (call
+            AdvertiseClosure
+            (call
+              PeerIdentity
+              (q remote))
+            (call RightStore))))))
+  (judgment
+    RemoteAdvertisement
+    []
+    (call
+      BranchAdvertisement
+      (call
+        PeerIdentity
+        (q remote))
+      (q main)
+      (lst
+        (q p1)
+        (q p2))))
+  (judgment
+    RemoteProposals
+    []
+    (call
+      ProposalCount
+      (call
+        IntegrateRemote
+        (lst
+          (q p1))
+        (call RemoteAdvertisement))))
+  (judgment
+    TransportRoundTrip
+    []
+    (call
+      RoundTripMessage
+      (q "peer-a")
+      (mk
+        advertise
+        (q main)
+        (lst
+          (q p1))))))
