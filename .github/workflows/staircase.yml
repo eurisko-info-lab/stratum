@@ -1,0 +1,181 @@
+name: staircase
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  LOCAL_IMAGE: stratum-materialization:${{ github.sha }}
+  RUN_IMAGE_ARCHIVE: tmp/materialization-image.tar
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Log in to the materialization registry
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - id: image
+        name: Find the commit image
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}/materialization"
+          remote_image="$repository:git-$GITHUB_SHA"
+          if docker pull "$remote_image" >/dev/null 2>&1; then
+            docker tag "$remote_image" "$LOCAL_IMAGE"
+            echo 'hit=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'hit=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.image.outputs.hit != 'true'
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: '17.0.20+8'
+          cache: sbt
+
+      - if: steps.image.outputs.hit != 'true'
+        uses: sbt/setup-sbt@bfea3c5f48abd221b04a6df4798aa5eb8b6a2baf # v1
+
+      - if: steps.image.outputs.hit != 'true'
+        name: Advance unpublished commits
+        env:
+          PUBLISH_IMAGES: ${{ github.event_name == 'push' }}
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}/materialization"
+          ancestor=''
+          parent_image=''
+
+          while IFS= read -r revision; do
+            candidate="$repository:git-$revision"
+            if docker pull "$candidate" >/dev/null 2>&1; then
+              ancestor=$revision
+              parent_image=$candidate
+              break
+            fi
+          done < <(git rev-list HEAD^ 2>/dev/null || true)
+
+          if [ -n "$ancestor" ]; then
+            mapfile -t revisions < <(git rev-list --reverse "$ancestor..$GITHUB_SHA")
+          else
+            mapfile -t revisions < <(git rev-list --reverse "$GITHUB_SHA")
+          fi
+
+          for revision in "${revisions[@]}"; do
+            git checkout --detach "$revision"
+            child_image="$repository:git-$revision"
+            if [ -n "$parent_image" ]; then
+              ./tools/advance-image.sh "$child_image" "$parent_image"
+            else
+              ./tools/advance-image.sh "$child_image"
+            fi
+            if [ "$PUBLISH_IMAGES" = true ]; then
+              docker push "$child_image"
+            fi
+            parent_image=$child_image
+          done
+
+          git checkout --detach "$GITHUB_SHA"
+          docker tag "$parent_image" "$LOCAL_IMAGE"
+
+      - name: Restore and validate the commit image
+        run: |
+          ./tools/image.sh restore "$LOCAL_IMAGE" "$GITHUB_SHA"
+          STRATUM_USE_GENERATED_CACHE=true ./tools/check-generated.sh
+          ./tools/check-materialized.sh
+          git diff --exit-code
+
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.RUN_IMAGE_ARCHIVE }}
+          key: materialization-run-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Export the commit image for this run
+        run: |
+          mkdir -p "$(dirname "$RUN_IMAGE_ARCHIVE")"
+          docker save "$LOCAL_IMAGE" -o "$RUN_IMAGE_ARCHIVE"
+
+  tests:
+    needs: image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.RUN_IMAGE_ARCHIVE }}
+          key: materialization-run-${{ github.run_id }}-${{ github.run_attempt }}
+      - run: docker load -i "$RUN_IMAGE_ARCHIVE" && ./tools/image.sh restore "$LOCAL_IMAGE" "$GITHUB_SHA"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: '17.0.20+8'
+          cache: sbt
+      - uses: sbt/setup-sbt@bfea3c5f48abd221b04a6df4798aa5eb8b6a2baf # v1
+      - run: cargo build --release --manifest-path host-rust/Cargo.toml
+      - name: Replay functional transcripts and run Scala suites
+        env:
+          STRATUM_SKIP_FOUNDATION_TRANSCRIPTS: 1
+        run: >-
+          sbt -batch
+          'testOnly stratum.CanonSuite stratum.HostCoreSuite stratum.NativeBoundarySuite stratum.RunbookSuite stratum.TranscriptSuite'
+          repoTool/test
+
+  parity:
+    needs: image
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['0/4', '1/4', '2/4', '3/4']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.RUN_IMAGE_ARCHIVE }}
+          key: materialization-run-${{ github.run_id }}-${{ github.run_attempt }}
+      - run: docker load -i "$RUN_IMAGE_ARCHIVE" && ./tools/image.sh restore "$LOCAL_IMAGE" "$GITHUB_SHA"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.0.0
+        with:
+          distribution: temurin
+          java-version: '17.0.20+8'
+          cache: sbt
+      - uses: sbt/setup-sbt@bfea3c5f48abd221b04a6df4798aa5eb8b6a2baf # v1
+      - run: cargo build --release --manifest-path host-rust/Cargo.toml
+      - name: Two host parity
+        env:
+          STRATUM_PARITY_SHARD: ${{ matrix.shard }}
+        run: ./tools/parity.sh
+
+  cleanroom:
+    needs: image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ env.RUN_IMAGE_ARCHIVE }}
+          key: materialization-run-${{ github.run_id }}-${{ github.run_attempt }}
+      - run: docker load -i "$RUN_IMAGE_ARCHIVE" && ./tools/image.sh restore "$LOCAL_IMAGE" "$GITHUB_SHA"
+      - run: cargo build --release --manifest-path host-rust/Cargo.toml
+      - run: ./tools/cleanroom.sh
+
+  model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
+      - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1
+        with:
+          lake-package-directory: verifier-lean
+          build: true
+          test: false
+          lint: false

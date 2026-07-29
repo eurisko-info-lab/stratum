@@ -1,0 +1,77 @@
+# F0 acceptance transcript: canonical local lambda world.
+# Every claim about F0 is replayed through the Stratum command surface.
+
+$ host info
+> host StratumHost0
+> canon sha-256
+> machines meta0 grammar0
+> capabilities cas-get cas-has cas-put close-connection digest-of-bytes fs-exists fs-list fs-read fs-write grammar-parse grammar-print hash now open-connection pending public-key random-bytes receive send sign verify
+
+# The foundation is verified from its own closure.
+$ foundation verify --dir foundations/F0
+> foundation F0
+> digest 220ecf6dd87e2c8e821acbc9eb126436b677111ff0cb264a14a029c7097040f7
+> closure 7 artifacts
+> check parse-print-roundtrip ok
+> check parse-print-roundtrip-nested ok
+> check beta-deterministic ok
+> check beta-church-two ok
+> check alpha-equivalent ok
+> check alpha-distinct ok
+> check free-variables ok
+> check replacement-applied ok
+> check replacement-rejected ok
+> check resource-exhaustion-is-a-verdict ok
+> verdict ok
+
+$ foundation closure --dir foundations/F0
+> closure 7 artifacts
+> application 1
+> foundation 1
+> grammar 1
+> meta-program 4
+
+# Reconstruction from digest + closure alone.
+$ foundation reconstruct --dir foundations/F0
+> reconstructed F0
+> digest 220ecf6dd87e2c8e821acbc9eb126436b677111ff0cb264a14a029c7097040f7
+> stable yes
+> closure 7 artifacts
+> checks 10 ok
+
+# parse(print(a)) = a
+$ grammar roundtrip --foundation foundations/F0 --grammar lambda --text '(\x. x) y'
+> (\ x. x) y
+> roundtrip ok
+
+$ grammar parse --foundation foundations/F0 --grammar lambda --text '\f. \x. f (f x)'
+> (Lam f (Lam x (App (Var f) (App (Var f) (Var x)))))
+
+$ grammar print --foundation foundations/F0 --grammar lambda --value '(Lam f (Lam x (App (Var f) (App (Var f) (Var x)))))'
+> \ f. \ x. f (f x)
+
+# Deterministic beta reduction.
+$ derive --foundation foundations/F0 --goal '(call NormalizeToText (grammar lambda) (q "(\\x. \\y. x) a b"))'
+> "a"
+
+$ derive --foundation foundations/F0 --goal '(call NormalizeToText (grammar lambda) (q "(\\f. \\x. f (f x)) g y"))'
+> "g (g y)"
+
+# Alpha equivalence is stable under renaming.
+$ derive --foundation foundations/F0 --goal '(call AlphaEquivalent (grammar lambda) (q "\\x. x") (q "\\y. y"))'
+> #t
+
+$ derive --foundation foundations/F0 --goal '(call AlphaEquivalent (grammar lambda) (q "\\x. \\y. x") (q "\\x. \\y. y"))'
+> #f
+
+# A bootstrap replacement is predecessor bound.
+$ derive --foundation foundations/F0 --goal '(call ApplyReplace (q (ReplaceChange main (Var a) (Var b))) (q (Var a)))'
+> (applied (Var b))
+
+$ derive --foundation foundations/F0 --goal '(call ApplyReplace (q (ReplaceChange main (Var a) (Var b))) (q (Var c)))'
+> (rejected predecessor-mismatch)
+
+# Resource exhaustion is a canonical verdict, not a crash.
+$ derive --foundation foundations/F0 --goal '(call NormalizeToText (grammar lambda) (q "(\\x. x x) (\\x. x x)"))' --budget 20000
+> error resource-exhausted "budget of 20000 steps exhausted"
+> exit 1

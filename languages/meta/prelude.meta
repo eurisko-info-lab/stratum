@@ -1,0 +1,111 @@
+; Meta0 prelude.
+; Generic structural helpers shared by every later foundation.
+(program
+  (module prelude)
+
+  ; Looks up a `(name value)` field inside a list of field nodes.
+  (judgment FieldOf [fields name]
+    (match (v fields)
+      (case (pnil) (mk none))
+      (case (pcons (pv head) (pv rest))
+        (if (prim eq (prim tag (v head)) (v name))
+            (mk some (prim nth (prim args (v head)) (q 0)))
+            (call FieldOf (v rest) (v name))))))
+
+  ; Looks up a field directly on a node.
+  (judgment Field [node name]
+    (call FieldOf (prim args (v node)) (v name)))
+
+  (judgment FieldOr [node name fallback]
+    (match (call Field (v node) (v name))
+      (case (pm some (pv value)) (v value))
+      (case (pm none) (v fallback))))
+
+  (judgment Require [node name]
+    (match (call Field (v node) (v name))
+      (case (pm some (pv value)) (v value))
+      (case (pm none) (fail missing-field (prim scat (q "missing field ") (prim sym->str (v name)))))))
+
+  ; Fetches an artifact body of an expected kind from the closure.
+  (judgment Fetch [reference kind]
+    (match (cap cas-get (v reference))
+      (case (pm ok (pv artifact))
+        (match (v artifact)
+          (case (pm artifact (pv actual) (pv body))
+            (if (prim eq (v actual) (v kind))
+                (mk some (v body))
+                (mk none)))
+          (case _ (mk none))))
+      (case _ (mk none))))
+
+  (judgment Map2 [judgment' xs]
+    (match (v xs)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest)) (prim cons (v head) (call Map2 (v judgment') (v rest))))))
+
+  (judgment All [xs]
+    (match (v xs)
+      (case (pnil) (q #t))
+      (case (pcons (pv head) (pv rest))
+        (if (prim eq (v head) (q #t)) (call All (v rest)) (q #f)))))
+
+  (judgment Any [xs]
+    (match (v xs)
+      (case (pnil) (q #f))
+      (case (pcons (pv head) (pv rest))
+        (if (prim eq (v head) (q #t)) (q #t) (call Any (v rest))))))
+
+  (judgment Concat [xss]
+    (match (v xss)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest)) (prim append (v head) (call Concat (v rest))))))
+
+  (judgment Count [xs]
+    (prim len (v xs)))
+
+  ; Ordered set union used by closure and dependency reasoning.
+  (judgment Union [a b]
+    (match (v b)
+      (case (pnil) (v a))
+      (case (pcons (pv head) (pv rest))
+        (if (prim contains (v a) (v head))
+            (call Union (v a) (v rest))
+            (call Union (prim snoc (v a) (v head)) (v rest))))))
+
+  (judgment Subtract [a b]
+    (match (v a)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (if (prim contains (v b) (v head))
+            (call Subtract (v rest) (v b))
+            (prim cons (v head) (call Subtract (v rest) (v b)))))))
+
+  (judgment Intersect [a b]
+    (match (v a)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (if (prim contains (v b) (v head))
+            (prim cons (v head) (call Intersect (v rest) (v b)))
+            (call Intersect (v rest) (v b))))))
+
+  (judgment Disjoint [a b]
+    (prim eq (call Intersect (v a) (v b)) (q [])))
+
+  ; Parses source text with a grammar artifact through GrammarMachine0.
+  (judgment Parse [grammar source]
+    (match (cap grammar-parse (v grammar) (v source))
+      (case (pm ok (pv ast)) (v ast))
+      (case (pm denied (pv reason)) (fail parse-error (v reason)))))
+
+  (judgment Print [grammar value]
+    (match (cap grammar-print (v grammar) (v value))
+      (case (pm ok (pv text)) (v text))
+      (case (pm denied (pv reason)) (fail print-error (v reason)))))
+
+  ; parse(print(a)) = a
+  (judgment RoundTrip [grammar source]
+    (let ast (call Parse (v grammar) (v source))
+      (let printed (call Print (v grammar) (v ast))
+        (if (prim eq (v ast) (call Parse (v grammar) (v printed)))
+            (mk roundtrip (q ok))
+            (mk roundtrip (q mismatch)))))))
