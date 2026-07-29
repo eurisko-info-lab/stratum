@@ -1,0 +1,23 @@
+
+artifactevidence
+evidence
+check+accepted-under-a-single-author-constitutionok
+check,accepted-under-a-test-requiring-constitutionok
+check-accepted-under-a-proof-requiring-constitutionok
+check2meta-change-accepted-under-the-strict-constitutionok
+check&reject-signature-by-the-wrong-identityok
+check-reject-correct-signature-over-the-wrong-patchok
+check!reject-evidence-for-another-claimok
+checkreject-expired-authorityok
+check#reject-insufficient-resource-budgetok
+check$reject-kind-only-acceptance-shortcutok
+checkreject-failing-test-evidenceok
+check6reject-meta-change-under-an-ordinary-code-constitutionok
+check proof-requires-a-justified-axiomok
+checkmodus-ponens-is-checkedok
+check,modus-ponens-rejects-a-mismatched-antecedentok
+check acceptance-binds-the-predecessorok
+check4a-branch-with-an-unaccepted-patch-is-not-publishableok
+check&a-fully-accepted-branch-is-publishableok
+checktoolchain-derivation-unchangedok
+checklambda-behaviour-unchangedok

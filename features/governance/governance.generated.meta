@@ -1,0 +1,1112 @@
+; Generated from features/governance/governance.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module governance)
+  (judgment
+    Signer
+    [key]
+    (mk
+      Signer
+      (v key)))
+  (judgment
+    Signer'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Claim
+    [subject predicate object]
+    (mk
+      Claim
+      (v subject)
+      (v predicate)
+      (v object)))
+  (judgment
+    Claim'subject
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Claim'predicate
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Claim'object
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ProofGoal
+    [statement]
+    (mk
+      ProofGoal
+      (v statement)))
+  (judgment
+    ProofGoal'statement
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ProofTerm
+    [goal steps]
+    (mk
+      ProofTerm
+      (v goal)
+      (v steps)))
+  (judgment
+    ProofTerm'goal
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ProofTerm'steps
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    TestEvidence
+    [name outcome]
+    (mk
+      TestEvidence
+      (v name)
+      (v outcome)))
+  (judgment
+    TestEvidence'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TestEvidence'outcome
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    AuthorityScope
+    [kinds languages]
+    (mk
+      AuthorityScope
+      (v kinds)
+      (v languages)))
+  (judgment
+    AuthorityScope'kinds
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    AuthorityScope'languages
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Authority
+    [identity scope expiry]
+    (mk
+      Authority
+      (v identity)
+      (v scope)
+      (v expiry)))
+  (judgment
+    Authority'identity
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Authority'scope
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Authority'expiry
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    AcceptanceConstitution
+    [name requirements scope tests budget]
+    (mk
+      AcceptanceConstitution
+      (v name)
+      (v requirements)
+      (v scope)
+      (v tests)
+      (v budget)))
+  (judgment
+    AcceptanceConstitution'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    AcceptanceConstitution'requirements
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    AcceptanceConstitution'scope
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    AcceptanceConstitution'tests
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    AcceptanceConstitution'budget
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    ResourceProfile
+    [steps depth]
+    (mk
+      ResourceProfile
+      (v steps)
+      (v depth)))
+  (judgment
+    ResourceProfile'steps
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ResourceProfile'depth
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Proposal
+    [patch predecessor kind authority signature claims proofs tests profile]
+    (mk
+      Proposal
+      (v patch)
+      (v predecessor)
+      (v kind)
+      (v authority)
+      (v signature)
+      (v claims)
+      (v proofs)
+      (v tests)
+      (v profile)))
+  (judgment
+    Proposal'patch
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Proposal'predecessor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Proposal'kind
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Proposal'authority
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    Proposal'signature
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    Proposal'claims
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    Proposal'proofs
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 6)))
+  (judgment
+    Proposal'tests
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 7)))
+  (judgment
+    Proposal'profile
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 8)))
+  (judgment
+    AcceptanceDecision
+    [accepted reason constitution authority patch predecessor support]
+    (mk
+      AcceptanceDecision
+      (v accepted)
+      (v reason)
+      (v constitution)
+      (v authority)
+      (v patch)
+      (v predecessor)
+      (v support)))
+  (judgment
+    AcceptanceDecision'accepted
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    AcceptanceDecision'reason
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    AcceptanceDecision'constitution
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    AcceptanceDecision'authority
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    AcceptanceDecision'patch
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    AcceptanceDecision'predecessor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    AcceptanceDecision'support
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 6)))
+  (judgment
+    SubjectOf
+    [proposal constitution]
+    (mk
+      subject
+      (call
+        Proposal'patch
+        (v proposal))
+      (call
+        Proposal'predecessor
+        (v proposal))
+      (call
+        AcceptanceConstitution'name
+        (v constitution))))
+  (judgment
+    SignSubject
+    [secret subject]
+    (match
+      (cap
+        sign
+        (v secret)
+        (v subject))
+      (case
+        (pm
+          ok
+          (pv signature))
+        (v signature))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (fail
+          capability-denied
+          (q "signing is not constituted")))))
+  (judgment
+    PublicKey
+    [secret]
+    (match
+      (cap
+        public-key
+        (v secret))
+      (case
+        (pm
+          ok
+          (pv key))
+        (v key))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (fail
+          capability-denied
+          (q "key derivation is not constituted")))))
+  (judgment
+    VerifySubject
+    [key subject signature]
+    (match
+      (cap
+        verify
+        (v key)
+        (v subject)
+        (v signature))
+      (case
+        (pm
+          ok
+          (pv result))
+        (v result))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (q #f))))
+  (judgment
+    CheckAuthority
+    [authority now kind]
+    (if
+      (prim
+        lt
+        (call
+          Authority'expiry
+          (v authority))
+        (v now))
+      (mk
+        invalid
+        (q expired-authority))
+      (if
+        (prim
+          contains
+          (call
+            AuthorityScope'kinds
+            (call
+              Authority'scope
+              (v authority)))
+          (v kind))
+        (mk valid)
+        (mk
+          invalid
+          (q out-of-scope)))))
+  (judgment
+    CheckSignature
+    [proposal constitution]
+    (let
+      authority
+      (call
+        Proposal'authority
+        (v proposal))
+      (if
+        (call
+          VerifySubject
+          (call
+            Signer'key
+            (call
+              Authority'identity
+              (v authority)))
+          (call
+            SubjectOf
+            (v proposal)
+            (v constitution))
+          (call
+            Proposal'signature
+            (v proposal)))
+        (mk valid)
+        (mk
+          invalid
+          (q bad-signature)))))
+  (judgment
+    TestOutcome
+    [tests name]
+    (match
+      (v tests)
+      (case
+        (pnil)
+        (mk missing))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (call
+              TestEvidence'name
+              (v head))
+            (v name))
+          (mk
+            outcome
+            (call
+              TestEvidence'outcome
+              (v head)))
+          (call
+            TestOutcome
+            (v rest)
+            (v name))))))
+  (judgment
+    CheckTests
+    [required provided]
+    (match
+      (v required)
+      (case
+        (pnil)
+        (mk valid))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            TestOutcome
+            (v provided)
+            (v head))
+          (case
+            (pm missing)
+            (mk
+              invalid
+              (q missing-test-evidence)))
+          (case
+            (pm
+              outcome
+              (pv result))
+            (if
+              (prim
+                eq
+                (v result)
+                (q pass))
+              (call
+                CheckTests
+                (v rest)
+                (v provided))
+              (mk
+                invalid
+                (q failing-test))))))))
+  (judgment
+    ApplyStep
+    [assumptions derived step]
+    (match
+      (v step)
+      (case
+        (pm
+          axiom
+          (pv claim))
+        (if
+          (prim
+            contains
+            (v assumptions)
+            (v claim))
+          (mk
+            ok
+            (prim
+              snoc
+              (v derived)
+              (v claim)))
+          (mk
+            failed
+            (q unjustified-axiom))))
+      (case
+        (pm
+          modusPonens
+          (pv implication)
+          (pv antecedent))
+        (if
+          (prim
+            contains
+            (v derived)
+            (v implication))
+          (if
+            (prim
+              contains
+              (v derived)
+              (v antecedent))
+            (match
+              (v implication)
+              (case
+                (pm
+                  implies
+                  (pv left)
+                  (pv right))
+                (if
+                  (prim
+                    eq
+                    (v left)
+                    (v antecedent))
+                  (mk
+                    ok
+                    (prim
+                      snoc
+                      (v derived)
+                      (v right)))
+                  (mk
+                    failed
+                    (q antecedent-mismatch))))
+              (case
+                _
+                (mk
+                  failed
+                  (q not-an-implication))))
+            (mk
+              failed
+              (q missing-antecedent)))
+          (mk
+            failed
+            (q missing-implication))))
+      (case
+        _
+        (mk
+          failed
+          (q unknown-step)))))
+  (judgment
+    DeriveProof
+    [assumptions steps derived]
+    (match
+      (v steps)
+      (case
+        (pnil)
+        (mk
+          derived
+          (v derived)))
+      (case
+        (pcons
+          (pv step)
+          (pv rest))
+        (match
+          (call
+            ApplyStep
+            (v assumptions)
+            (v derived)
+            (v step))
+          (case
+            (pm
+              ok
+              (pv next))
+            (call
+              DeriveProof
+              (v assumptions)
+              (v rest)
+              (v next)))
+          (case
+            (pm
+              failed
+              (pv reason))
+            (mk
+              failed
+              (v reason)))))))
+  (judgment
+    CheckProof
+    [assumptions goal proof]
+    (if
+      (prim
+        eq
+        (call
+          ProofTerm'goal
+          (v proof))
+        (v goal))
+      (match
+        (call
+          DeriveProof
+          (v assumptions)
+          (call
+            ProofTerm'steps
+            (v proof))
+          (lst))
+        (case
+          (pm
+            derived
+            (pv claims))
+          (if
+            (prim
+              contains
+              (v claims)
+              (call
+                ProofGoal'statement
+                (v goal)))
+            (mk valid)
+            (mk
+              invalid
+              (q goal-not-derived))))
+        (case
+          (pm
+            failed
+            (pv reason))
+          (mk
+            invalid
+            (v reason))))
+      (mk
+        invalid
+        (q evidence-for-another-claim))))
+  (judgment
+    CheckProofs
+    [assumptions goals proofs]
+    (match
+      (v goals)
+      (case
+        (pnil)
+        (mk valid))
+      (case
+        (pcons
+          (pv goal)
+          (pv rest))
+        (match
+          (call
+            FindProof
+            (v proofs)
+            (v goal))
+          (case
+            (pm none)
+            (mk
+              invalid
+              (q missing-proof)))
+          (case
+            (pm
+              some
+              (pv proof))
+            (match
+              (call
+                CheckProof
+                (v assumptions)
+                (v goal)
+                (v proof))
+              (case
+                (pm valid)
+                (call
+                  CheckProofs
+                  (v assumptions)
+                  (v rest)
+                  (v proofs)))
+              (case
+                (pm
+                  invalid
+                  (pv reason))
+                (mk
+                  invalid
+                  (v reason)))))))))
+  (judgment
+    FindProof
+    [proofs goal]
+    (match
+      (v proofs)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (call
+              ProofGoal'statement
+              (call
+                ProofTerm'goal
+                (v head)))
+            (call
+              ProofGoal'statement
+              (v goal)))
+          (mk
+            some
+            (v head))
+          (call
+            FindProof
+            (v rest)
+            (v goal))))))
+  (judgment
+    CheckBudget
+    [required profile]
+    (if
+      (prim
+        ge
+        (call
+          ResourceProfile'steps
+          (v profile))
+        (call
+          ResourceProfile'steps
+          (v required)))
+      (mk valid)
+      (mk
+        invalid
+        (q insufficient-resource-budget))))
+  (judgment
+    CheckKind
+    [constitution proposal]
+    (if
+      (prim
+        contains
+        (call
+          AuthorityScope'kinds
+          (call
+            AcceptanceConstitution'scope
+            (v constitution)))
+        (call
+          Proposal'kind
+          (v proposal)))
+      (mk valid)
+      (mk
+        invalid
+        (q kind-not-governed))))
+  (judgment
+    CheckRequirement
+    [constitution proposal now requirement]
+    (match
+      (v requirement)
+      (case
+        (pq kind)
+        (call
+          CheckKind
+          (v constitution)
+          (v proposal)))
+      (case
+        (pq signature)
+        (call
+          CheckSignature
+          (v proposal)
+          (v constitution)))
+      (case
+        (pq authority)
+        (call
+          CheckAuthority
+          (call
+            Proposal'authority
+            (v proposal))
+          (v now)
+          (call
+            Proposal'kind
+            (v proposal))))
+      (case
+        (pq tests)
+        (call
+          CheckTests
+          (call
+            AcceptanceConstitution'tests
+            (v constitution))
+          (call
+            Proposal'tests
+            (v proposal))))
+      (case
+        (pq proof)
+        (call
+          CheckProofs
+          (call
+            Proposal'claims
+            (v proposal))
+          (call
+            ProofGoals
+            (v constitution)
+            (v proposal))
+          (call
+            Proposal'proofs
+            (v proposal))))
+      (case
+        (pq budget)
+        (call
+          CheckBudget
+          (call
+            AcceptanceConstitution'budget
+            (v constitution))
+          (call
+            Proposal'profile
+            (v proposal))))
+      (case
+        _
+        (mk
+          invalid
+          (q unknown-requirement)))))
+  (judgment
+    ProofGoals
+    [constitution proposal]
+    (lst
+      (call
+        ProofGoal
+        (mk
+          well-founded
+          (call
+            Proposal'patch
+            (v proposal))))))
+  (judgment
+    CheckRequirements
+    [constitution proposal now requirements]
+    (match
+      (v requirements)
+      (case
+        (pnil)
+        (mk valid))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            CheckRequirement
+            (v constitution)
+            (v proposal)
+            (v now)
+            (v head))
+          (case
+            (pm valid)
+            (call
+              CheckRequirements
+              (v constitution)
+              (v proposal)
+              (v now)
+              (v rest)))
+          (case
+            (pm
+              invalid
+              (pv reason))
+            (mk
+              invalid
+              (v reason)))))))
+  (judgment
+    EvidenceOf
+    [proposal]
+    (mk
+      evidence
+      (call
+        Proposal'claims
+        (v proposal))
+      (call
+        Proposal'proofs
+        (v proposal))
+      (call
+        Proposal'tests
+        (v proposal))))
+  (judgment
+    EvaluateAcceptance
+    [constitution proposal now]
+    (match
+      (call
+        CheckRequirements
+        (v constitution)
+        (v proposal)
+        (v now)
+        (call
+          AcceptanceConstitution'requirements
+          (v constitution)))
+      (case
+        (pm valid)
+        (call
+          AcceptanceDecision
+          (q #t)
+          (q accepted)
+          (call
+            AcceptanceConstitution'name
+            (v constitution))
+          (call
+            Authority'identity
+            (call
+              Proposal'authority
+              (v proposal)))
+          (call
+            Proposal'patch
+            (v proposal))
+          (call
+            Proposal'predecessor
+            (v proposal))
+          (call
+            EvidenceOf
+            (v proposal))))
+      (case
+        (pm
+          invalid
+          (pv reason))
+        (call
+          AcceptanceDecision
+          (q #f)
+          (v reason)
+          (call
+            AcceptanceConstitution'name
+            (v constitution))
+          (call
+            Authority'identity
+            (call
+              Proposal'authority
+              (v proposal)))
+          (call
+            Proposal'patch
+            (v proposal))
+          (call
+            Proposal'predecessor
+            (v proposal))
+          (call
+            EvidenceOf
+            (v proposal))))))
+  (judgment
+    DecisionReason
+    [decision]
+    (call
+      AcceptanceDecision'reason
+      (v decision)))
+  (judgment
+    IsAccepted
+    [decision]
+    (call
+      AcceptanceDecision'accepted
+      (v decision)))
+  (judgment
+    AllAccepted
+    [decisions]
+    (match
+      (v decisions)
+      (case
+        (pnil)
+        (q #t))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (call
+            IsAccepted
+            (v head))
+          (call
+            AllAccepted
+            (v rest))
+          (q #f)))))
+  (judgment
+    PublishableBranch
+    [decisions]
+    (if
+      (call
+        AllAccepted
+        (v decisions))
+      (mk publishable)
+      (mk
+        blocked
+        (q unaccepted-patches)))))

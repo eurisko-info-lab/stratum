@@ -1,0 +1,23 @@
+; The canonical change from F4 to F5.
+;
+; Signature primitives arrive as generic capabilities. Entitlement, scope,
+; subject binding, expiry, acceptable evidence, required tests, the decision
+; procedure and resource limits are all decided by Meta programs.
+(change
+  (kind foundation)
+  (name "F4->F5")
+  (predecessor (foundation-of "foundations/F4"))
+  (delta-meta (file "changes/F4-F5/delta-meta.canon"))
+  (delta-grammar (file "changes/F4-F5/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "constitution-relative governance")
+      (programs [
+        (file "features/governance/governance.generated.meta")
+        (file "features/governance/scenarios.generated.meta")
+      ])
+      (sources [
+        (text-file "features/governance/governance.meta")
+        (text-file "features/governance/scenarios.meta")
+      ])
+      (constitutions [local tested proved meta-governance]))))

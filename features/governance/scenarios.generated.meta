@@ -1,0 +1,584 @@
+; Generated from features/governance/scenarios.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module governancescenarios)
+  (judgment
+    AuthorSecret
+    []
+    (q "author-secret"))
+  (judgment
+    OtherSecret
+    []
+    (q "other-secret"))
+  (judgment
+    AuthorIdentity
+    []
+    (call
+      Signer
+      (call
+        PublicKey
+        (call AuthorSecret))))
+  (judgment
+    OtherIdentity
+    []
+    (call
+      Signer
+      (call
+        PublicKey
+        (call OtherSecret))))
+  (judgment
+    CodeScope
+    []
+    (call
+      AuthorityScope
+      (lst
+        (q code))
+      (lst
+        (q lambda))))
+  (judgment
+    MetaScope
+    []
+    (call
+      AuthorityScope
+      (lst
+        (q code)
+        (q meta))
+      (lst
+        (q lambda)
+        (q meta1))))
+  (judgment
+    Now
+    []
+    (q 10))
+  (judgment
+    AuthorAuthority
+    []
+    (call
+      Authority
+      (call AuthorIdentity)
+      (call MetaScope)
+      (q 100)))
+  (judgment
+    ExpiredAuthority
+    []
+    (call
+      Authority
+      (call AuthorIdentity)
+      (call MetaScope)
+      (q 1)))
+  (judgment
+    SmallProfile
+    []
+    (call
+      ResourceProfile
+      (q 1000)
+      (q 100)))
+  (judgment
+    LargeProfile
+    []
+    (call
+      ResourceProfile
+      (q 1000000)
+      (q 1000)))
+  (judgment
+    PatchDigest
+    []
+    (prim
+      digest
+      (mk
+        patch
+        (q lambda-edit))))
+  (judgment
+    OtherPatchDigest
+    []
+    (prim
+      digest
+      (mk
+        patch
+        (q other-edit))))
+  (judgment
+    PredecessorDigest
+    []
+    (prim
+      digest
+      (mk
+        foundation
+        (q F4))))
+  (judgment
+    LocalConstitution
+    []
+    (call
+      AcceptanceConstitution
+      (q local)
+      (lst
+        (q kind)
+        (q authority)
+        (q signature))
+      (call CodeScope)
+      (lst)
+      (call SmallProfile)))
+  (judgment
+    TestConstitution
+    []
+    (call
+      AcceptanceConstitution
+      (q tested)
+      (lst
+        (q kind)
+        (q authority)
+        (q signature)
+        (q tests))
+      (call CodeScope)
+      (lst
+        (q roundtrip)
+        (q normalize))
+      (call SmallProfile)))
+  (judgment
+    ProofConstitution
+    []
+    (call
+      AcceptanceConstitution
+      (q proved)
+      (lst
+        (q kind)
+        (q authority)
+        (q signature)
+        (q proof))
+      (call CodeScope)
+      (lst)
+      (call SmallProfile)))
+  (judgment
+    MetaConstitution
+    []
+    (call
+      AcceptanceConstitution
+      (q meta-governance)
+      (lst
+        (q kind)
+        (q authority)
+        (q signature)
+        (q tests)
+        (q proof)
+        (q budget))
+      (call MetaScope)
+      (lst
+        (q roundtrip))
+      (call LargeProfile)))
+  (judgment
+    PassingTests
+    []
+    (lst
+      (call
+        TestEvidence
+        (q roundtrip)
+        (q pass))
+      (call
+        TestEvidence
+        (q normalize)
+        (q pass))))
+  (judgment
+    FailingTests
+    []
+    (lst
+      (call
+        TestEvidence
+        (q roundtrip)
+        (q fail))
+      (call
+        TestEvidence
+        (q normalize)
+        (q pass))))
+  (judgment
+    WellFoundedClaim
+    [patch]
+    (mk
+      well-founded
+      (v patch)))
+  (judgment
+    GoodProof
+    [patch]
+    (call
+      ProofTerm
+      (call
+        ProofGoal
+        (call
+          WellFoundedClaim
+          (v patch)))
+      (lst
+        (mk
+          axiom
+          (call
+            WellFoundedClaim
+            (v patch))))))
+  (judgment
+    ProofOfAnotherClaim
+    []
+    (call
+      ProofTerm
+      (call
+        ProofGoal
+        (mk
+          well-founded
+          (q unrelated)))
+      (lst
+        (mk
+          axiom
+          (mk
+            well-founded
+            (q unrelated))))))
+  (judgment
+    UnsignedProposal
+    [patch kind authority claims proofs tests profile]
+    (call
+      Proposal
+      (v patch)
+      (call PredecessorDigest)
+      (v kind)
+      (v authority)
+      (q #unit)
+      (v claims)
+      (v proofs)
+      (v tests)
+      (v profile)))
+  (judgment
+    SignedProposal
+    [secret constitution subjectPatch patch kind authority claims proofs tests profile]
+    (call
+      Proposal
+      (v patch)
+      (call PredecessorDigest)
+      (v kind)
+      (v authority)
+      (call
+        SignSubject
+        (v secret)
+        (call
+          SubjectOf
+          (call
+            UnsignedProposal
+            (v subjectPatch)
+            (v kind)
+            (v authority)
+            (v claims)
+            (v proofs)
+            (v tests)
+            (v profile))
+          (v constitution)))
+      (v claims)
+      (v proofs)
+      (v tests)
+      (v profile)))
+  (judgment
+    Decide
+    [constitution proposal]
+    (call
+      DecisionReason
+      (call
+        EvaluateAcceptance
+        (v constitution)
+        (v proposal)
+        (call Now))))
+  (judgment
+    AcceptedLocal
+    []
+    (call
+      Decide
+      (call LocalConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call LocalConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (lst)
+        (call SmallProfile))))
+  (judgment
+    AcceptedWithTests
+    []
+    (call
+      Decide
+      (call TestConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call TestConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (call PassingTests)
+        (call SmallProfile))))
+  (judgment
+    AcceptedWithProof
+    []
+    (call
+      Decide
+      (call ProofConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call ProofConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst
+          (call
+            WellFoundedClaim
+            (call PatchDigest)))
+        (lst
+          (call
+            GoodProof
+            (call PatchDigest)))
+        (lst)
+        (call SmallProfile))))
+  (judgment
+    AcceptedMetaChange
+    []
+    (call
+      Decide
+      (call MetaConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call MetaConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q meta)
+        (call AuthorAuthority)
+        (lst
+          (call
+            WellFoundedClaim
+            (call PatchDigest)))
+        (lst
+          (call
+            GoodProof
+            (call PatchDigest)))
+        (lst
+          (call
+            TestEvidence
+            (q roundtrip)
+            (q pass)))
+        (call LargeProfile))))
+  (judgment
+    RejectWrongIdentity
+    []
+    (call
+      Decide
+      (call LocalConstitution)
+      (call
+        SignedProposal
+        (call OtherSecret)
+        (call LocalConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (lst)
+        (call SmallProfile))))
+  (judgment
+    RejectWrongPatch
+    []
+    (call
+      Decide
+      (call LocalConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call LocalConstitution)
+        (call OtherPatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (lst)
+        (call SmallProfile))))
+  (judgment
+    RejectEvidenceForAnotherClaim
+    []
+    (call
+      Decide
+      (call ProofConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call ProofConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst
+          (mk
+            well-founded
+            (q unrelated)))
+        (lst
+          (call ProofOfAnotherClaim))
+        (lst)
+        (call SmallProfile))))
+  (judgment
+    RejectExpiredAuthority
+    []
+    (call
+      Decide
+      (call LocalConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call LocalConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call ExpiredAuthority)
+        (lst)
+        (lst)
+        (lst)
+        (call SmallProfile))))
+  (judgment
+    RejectInsufficientBudget
+    []
+    (call
+      Decide
+      (call MetaConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call MetaConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q meta)
+        (call AuthorAuthority)
+        (lst
+          (call
+            WellFoundedClaim
+            (call PatchDigest)))
+        (lst
+          (call
+            GoodProof
+            (call PatchDigest)))
+        (lst
+          (call
+            TestEvidence
+            (q roundtrip)
+            (q pass)))
+        (call SmallProfile))))
+  (judgment
+    RejectKindOnlyShortcut
+    []
+    (call
+      Decide
+      (call TestConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call TestConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (lst)
+        (call SmallProfile))))
+  (judgment
+    RejectFailingTest
+    []
+    (call
+      Decide
+      (call TestConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call TestConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (call FailingTests)
+        (call SmallProfile))))
+  (judgment
+    RejectMetaUnderCodeConstitution
+    []
+    (call
+      Decide
+      (call LocalConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call LocalConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q meta)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (lst)
+        (call SmallProfile))))
+  (judgment
+    AcceptedDecision
+    []
+    (call
+      EvaluateAcceptance
+      (call LocalConstitution)
+      (call
+        SignedProposal
+        (call AuthorSecret)
+        (call LocalConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (lst)
+        (call SmallProfile))
+      (call Now)))
+  (judgment
+    RejectedDecision
+    []
+    (call
+      EvaluateAcceptance
+      (call LocalConstitution)
+      (call
+        SignedProposal
+        (call OtherSecret)
+        (call LocalConstitution)
+        (call PatchDigest)
+        (call PatchDigest)
+        (q code)
+        (call AuthorAuthority)
+        (lst)
+        (lst)
+        (lst)
+        (call SmallProfile))
+      (call Now)))
+  (judgment
+    BranchWithUnacceptedPatch
+    []
+    (call
+      PublishableBranch
+      (lst
+        (call AcceptedDecision)
+        (call RejectedDecision))))
+  (judgment
+    BranchFullyAccepted
+    []
+    (call
+      PublishableBranch
+      (lst
+        (call AcceptedDecision))))
+  (judgment
+    AcceptanceBindsPredecessor
+    []
+    (call
+      AcceptanceDecision'predecessor
+      (call AcceptedDecision))))

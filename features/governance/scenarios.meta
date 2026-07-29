@@ -1,0 +1,297 @@
+module governancescenarios
+
+; Executable governance scenarios. Every rejection below is a distinct,
+; explicitly constituted reason.
+
+judgment AuthorSecret [] = "author-secret"
+judgment OtherSecret [] = "other-secret"
+
+judgment AuthorIdentity [] = call Signer [call PublicKey [call AuthorSecret []]]
+judgment OtherIdentity [] = call Signer [call PublicKey [call OtherSecret []]]
+
+judgment CodeScope [] = call AuthorityScope [list [#code] list [#lambda]]
+judgment MetaScope [] = call AuthorityScope [list [#code #meta] list [#lambda #meta1]]
+
+judgment Now [] = 10
+
+judgment AuthorAuthority [] = call Authority [call AuthorIdentity [] call MetaScope [] 100]
+judgment ExpiredAuthority [] = call Authority [call AuthorIdentity [] call MetaScope [] 1]
+
+judgment SmallProfile [] = call ResourceProfile [1000 100]
+judgment LargeProfile [] = call ResourceProfile [1000000 1000]
+
+judgment PatchDigest [] = prim #digest [mk #patch [#lambda-edit]]
+judgment OtherPatchDigest [] = prim #digest [mk #patch [#other-edit]]
+judgment PredecessorDigest [] = prim #digest [mk #foundation [#F4]]
+
+; ------------------------------------------------------------ constitutions
+
+judgment LocalConstitution [] =
+  call AcceptanceConstitution [
+    #local
+    list [#kind #authority #signature]
+    call CodeScope []
+    list []
+    call SmallProfile []
+  ]
+
+judgment TestConstitution [] =
+  call AcceptanceConstitution [
+    #tested
+    list [#kind #authority #signature #tests]
+    call CodeScope []
+    list [#roundtrip #normalize]
+    call SmallProfile []
+  ]
+
+judgment ProofConstitution [] =
+  call AcceptanceConstitution [
+    #proved
+    list [#kind #authority #signature #proof]
+    call CodeScope []
+    list []
+    call SmallProfile []
+  ]
+
+; Meta and Grammar changes are governed more strictly than ordinary code.
+judgment MetaConstitution [] =
+  call AcceptanceConstitution [
+    #meta-governance
+    list [#kind #authority #signature #tests #proof #budget]
+    call MetaScope []
+    list [#roundtrip]
+    call LargeProfile []
+  ]
+
+; ---------------------------------------------------------------- evidence
+
+judgment PassingTests [] =
+  list [
+    call TestEvidence [#roundtrip #pass]
+    call TestEvidence [#normalize #pass]
+  ]
+
+judgment FailingTests [] =
+  list [
+    call TestEvidence [#roundtrip #fail]
+    call TestEvidence [#normalize #pass]
+  ]
+
+judgment WellFoundedClaim [patch] = mk #well-founded [patch]
+
+judgment GoodProof [patch] =
+  call ProofTerm [
+    call ProofGoal [call WellFoundedClaim [patch]]
+    list [mk #axiom [call WellFoundedClaim [patch]]]
+  ]
+
+judgment ProofOfAnotherClaim [] =
+  call ProofTerm [
+    call ProofGoal [mk #well-founded [#unrelated]]
+    list [mk #axiom [mk #well-founded [#unrelated]]]
+  ]
+
+; --------------------------------------------------------------- proposals
+
+judgment UnsignedProposal [patch kind authority claims proofs tests profile] =
+  call Proposal [patch call PredecessorDigest [] kind authority unit claims proofs tests profile]
+
+judgment SignedProposal [secret constitution subjectPatch patch kind authority claims proofs tests profile] =
+  call Proposal [
+    patch
+    call PredecessorDigest []
+    kind
+    authority
+    call SignSubject [
+      secret
+      call SubjectOf [
+        call UnsignedProposal [subjectPatch kind authority claims proofs tests profile]
+        constitution
+      ]
+    ]
+    claims proofs tests profile
+  ]
+
+judgment Decide [constitution proposal] =
+  call DecisionReason [call EvaluateAcceptance [constitution proposal call Now []]]
+
+; ------------------------------------------------------------- acceptances
+
+judgment AcceptedLocal [] =
+  call Decide [
+    call LocalConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call LocalConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [] list [] list [] call SmallProfile []
+    ]
+  ]
+
+judgment AcceptedWithTests [] =
+  call Decide [
+    call TestConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call TestConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [] list [] call PassingTests [] call SmallProfile []
+    ]
+  ]
+
+judgment AcceptedWithProof [] =
+  call Decide [
+    call ProofConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call ProofConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [call WellFoundedClaim [call PatchDigest []]]
+      list [call GoodProof [call PatchDigest []]]
+      list [] call SmallProfile []
+    ]
+  ]
+
+judgment AcceptedMetaChange [] =
+  call Decide [
+    call MetaConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call MetaConstitution []
+      call PatchDigest [] call PatchDigest []
+      #meta call AuthorAuthority []
+      list [call WellFoundedClaim [call PatchDigest []]]
+      list [call GoodProof [call PatchDigest []]]
+      list [call TestEvidence [#roundtrip #pass]] call LargeProfile []
+    ]
+  ]
+
+; -------------------------------------------------------------- rejections
+
+judgment RejectWrongIdentity [] =
+  call Decide [
+    call LocalConstitution []
+    call SignedProposal [
+      call OtherSecret [] call LocalConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [] list [] list [] call SmallProfile []
+    ]
+  ]
+
+judgment RejectWrongPatch [] =
+  call Decide [
+    call LocalConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call LocalConstitution []
+      call OtherPatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [] list [] list [] call SmallProfile []
+    ]
+  ]
+
+judgment RejectEvidenceForAnotherClaim [] =
+  call Decide [
+    call ProofConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call ProofConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [mk #well-founded [#unrelated]]
+      list [call ProofOfAnotherClaim []]
+      list [] call SmallProfile []
+    ]
+  ]
+
+judgment RejectExpiredAuthority [] =
+  call Decide [
+    call LocalConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call LocalConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call ExpiredAuthority []
+      list [] list [] list [] call SmallProfile []
+    ]
+  ]
+
+judgment RejectInsufficientBudget [] =
+  call Decide [
+    call MetaConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call MetaConstitution []
+      call PatchDigest [] call PatchDigest []
+      #meta call AuthorAuthority []
+      list [call WellFoundedClaim [call PatchDigest []]]
+      list [call GoodProof [call PatchDigest []]]
+      list [call TestEvidence [#roundtrip #pass]] call SmallProfile []
+    ]
+  ]
+
+; A matching kind is never enough on its own.
+judgment RejectKindOnlyShortcut [] =
+  call Decide [
+    call TestConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call TestConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [] list [] list [] call SmallProfile []
+    ]
+  ]
+
+judgment RejectFailingTest [] =
+  call Decide [
+    call TestConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call TestConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [] list [] call FailingTests [] call SmallProfile []
+    ]
+  ]
+
+; A Meta change is not accepted under an ordinary code constitution.
+judgment RejectMetaUnderCodeConstitution [] =
+  call Decide [
+    call LocalConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call LocalConstitution []
+      call PatchDigest [] call PatchDigest []
+      #meta call AuthorAuthority []
+      list [] list [] list [] call SmallProfile []
+    ]
+  ]
+
+; ------------------------------------------------------ repository integration
+
+judgment AcceptedDecision [] =
+  call EvaluateAcceptance [
+    call LocalConstitution []
+    call SignedProposal [
+      call AuthorSecret [] call LocalConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [] list [] list [] call SmallProfile []
+    ]
+    call Now []
+  ]
+
+judgment RejectedDecision [] =
+  call EvaluateAcceptance [
+    call LocalConstitution []
+    call SignedProposal [
+      call OtherSecret [] call LocalConstitution []
+      call PatchDigest [] call PatchDigest []
+      #code call AuthorAuthority []
+      list [] list [] list [] call SmallProfile []
+    ]
+    call Now []
+  ]
+
+judgment BranchWithUnacceptedPatch [] =
+  call PublishableBranch [list [call AcceptedDecision [] call RejectedDecision []]]
+
+judgment BranchFullyAccepted [] =
+  call PublishableBranch [list [call AcceptedDecision []]]
+
+judgment AcceptanceBindsPredecessor [] =
+  call AcceptanceDecision'predecessor [call AcceptedDecision []]

@@ -1,0 +1,81 @@
+# F5 acceptance transcript: constitution-relative governance.
+
+$ foundation verify --dir foundations/F5
+> foundation F5
+> digest 063ecac9e0f84564dfc029235e3b20e3b0f37de2447ebcff0fb9528638c8c7c1
+> closure 46 artifacts
+> check accepted-under-a-single-author-constitution ok
+> check accepted-under-a-test-requiring-constitution ok
+> check accepted-under-a-proof-requiring-constitution ok
+> check meta-change-accepted-under-the-strict-constitution ok
+> check reject-signature-by-the-wrong-identity ok
+> check reject-correct-signature-over-the-wrong-patch ok
+> check reject-evidence-for-another-claim ok
+> check reject-expired-authority ok
+> check reject-insufficient-resource-budget ok
+> check reject-kind-only-acceptance-shortcut ok
+> check reject-failing-test-evidence ok
+> check reject-meta-change-under-an-ordinary-code-constitution ok
+> check proof-requires-a-justified-axiom ok
+> check modus-ponens-is-checked ok
+> check modus-ponens-rejects-a-mismatched-antecedent ok
+> check acceptance-binds-the-predecessor ok
+> check a-branch-with-an-unaccepted-patch-is-not-publishable ok
+> check a-fully-accepted-branch-is-publishable ok
+> check toolchain-derivation-unchanged ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F4 --successor foundations/F5
+> predecessor F4
+> successor F5
+> result (valid #d01bd63992329790684acea1d29647f4929002fbbaca57a2dfc147a951c457b0b)
+
+$ foundation reconstruct --dir foundations/F5
+> reconstructed F5
+> digest 063ecac9e0f84564dfc029235e3b20e3b0f37de2447ebcff0fb9528638c8c7c1
+> stable yes
+> closure 46 artifacts
+> checks 20 ok
+
+# A change is accepted only relative to a constitution.
+$ derive --foundation foundations/F5 --goal '(call AcceptedLocal)'
+> accepted
+
+$ derive --foundation foundations/F5 --goal '(call AcceptedWithTests)'
+> accepted
+
+$ derive --foundation foundations/F5 --goal '(call AcceptedWithProof)'
+> accepted
+
+$ derive --foundation foundations/F5 --goal '(call AcceptedMetaChange)'
+> accepted
+
+# Every rejection is a distinct constituted reason.
+$ derive --foundation foundations/F5 --goal '(call RejectWrongIdentity)'
+> bad-signature
+
+$ derive --foundation foundations/F5 --goal '(call RejectWrongPatch)'
+> bad-signature
+
+$ derive --foundation foundations/F5 --goal '(call RejectEvidenceForAnotherClaim)'
+> missing-proof
+
+$ derive --foundation foundations/F5 --goal '(call RejectExpiredAuthority)'
+> expired-authority
+
+$ derive --foundation foundations/F5 --goal '(call RejectInsufficientBudget)'
+> insufficient-resource-budget
+
+$ derive --foundation foundations/F5 --goal '(call RejectKindOnlyShortcut)'
+> missing-test-evidence
+
+$ derive --foundation foundations/F5 --goal '(call RejectMetaUnderCodeConstitution)'
+> kind-not-governed
+
+# Publication requires accepted patches.
+$ derive --foundation foundations/F5 --goal '(call BranchWithUnacceptedPatch)'
+> (blocked unaccepted-patches)
+
+$ derive --foundation foundations/F5 --goal '(call BranchFullyAccepted)'
+> (publishable)
