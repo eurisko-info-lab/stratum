@@ -1,0 +1,37 @@
+; F6: the self-hosted application and foundation protocol.
+(build
+  (name "F6")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/F5"))
+  (change (file "changes/F5-F6/change.canon"))
+  (application
+    (application
+      (name "stratum-f6")
+      (meta (program-of [
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta1/elaborate.meta")
+        (file "languages/grammar1/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/delta.meta")
+        (file "languages/lambda/lambda.generated.meta")
+        (file "features/change/change.generated.meta")
+        (file "features/repository/repository.generated.meta")
+        (file "features/repository/scenarios.generated.meta")
+        (file "features/tooling/tooling.generated.meta")
+        (file "features/governance/governance.generated.meta")
+        (file "features/governance/scenarios.generated.meta")
+        (file "features/foundation/foundation.generated.meta")
+      ]))
+      (grammars {
+        lambda (file "languages/lambda/lambda.generated.grammar")
+        meta1 (file "languages/meta1/meta1.generated.grammar")
+        grammar1 (file "languages/grammar1/grammar1.generated.grammar")
+      })
+      (entries {})
+      (machine (machine (name "meta0-grammar0") (machines [MetaMachine0 GrammarMachine0])))
+      (runtime (runtime (name "hosts") (runtimes [scala rust])))
+      (evidence-profile (evidence-profile (name "canonical") (required [steps calls capabilities])))
+      (checks (include "fixtures/foundation/f6-checks.canon"))
+      (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print sign verify public-key)))
+      (resources (budget (steps 20000000) (depth 20000))))))

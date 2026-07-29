@@ -7,3 +7,5 @@ __pycache__/
 project/target/
 project/project/
 target/
+host-rust/target/
+verifier-lean/.lake/

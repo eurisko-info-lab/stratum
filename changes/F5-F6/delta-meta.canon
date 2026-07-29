@@ -1,0 +1,11 @@
+; delta-meta for F5 -> F6: Meta gains application and foundation manifests,
+; machine, runtime, resource and evidence profiles, compatibility witnesses and
+; governed foundation changes.
+(change
+  (kind delta-meta)
+  (name "F5->F6 delta-meta")
+  (replace
+    (ReplaceChange
+      system-packaging
+      (implicit host-assembled)
+      (explicit application-and-foundation-manifests))))
