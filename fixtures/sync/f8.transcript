@@ -2,8 +2,8 @@
 
 $ foundation verify --dir foundations/F8
 > foundation F8
-> digest dc1a07cbb466bb2a3ee36fa3e768f9fe937a9aed559559f33164f4a3264ed16b
-> closure 61 artifacts
+> digest 6a17074f182604ed2ff7bb7cf690a944f9f18513440ab32790cf7e293fd60711
+> closure 63 artifacts
 > check two-peers-synchronize-from-disjoint-closures ok
 > check synchronized-store-holds-both-closures ok
 > check corrupted-artifact-bytes-are-rejected ok
@@ -21,13 +21,13 @@ $ foundation verify --dir foundations/F8
 $ foundation verify-successor --predecessor foundations/F7 --successor foundations/F8
 > predecessor F7
 > successor F8
-> result (valid #d250e0ea90e959c77d8db1732ae484e3b24fc948975a9f022315efdf20b7504d9)
+> result (valid #d60de22bfb20d3edbe5a383ad388ed77eef3adab702da0cdd1e4c7759ed9fb80f)
 
 $ foundation reconstruct --dir foundations/F8
 > reconstructed F8
-> digest dc1a07cbb466bb2a3ee36fa3e768f9fe937a9aed559559f33164f4a3264ed16b
+> digest 6a17074f182604ed2ff7bb7cf690a944f9f18513440ab32790cf7e293fd60711
 > stable yes
-> closure 61 artifacts
+> closure 63 artifacts
 > checks 12 ok
 
 # Two peers with disjoint partial closures synchronize.

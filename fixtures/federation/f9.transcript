@@ -2,8 +2,8 @@
 
 $ foundation verify --dir foundations/F9
 > foundation F9
-> digest db841e0f9f3b97f8ac32d4040e1ab06e6473f82ae37d50c12a3b5755a64fb17e
-> closure 66 artifacts
+> digest 7b8e9d662d7a6b6e6ca87b059fab5cd800e049e3d10a1016d0de8c1143b769c3
+> closure 68 artifacts
 > check two-consecutive-transitions-settle ok
 > check settled-head-is-the-last-successor ok
 > check a-certificate-for-another-proposal-is-rejected ok
@@ -21,18 +21,18 @@ $ foundation verify --dir foundations/F9
 $ foundation verify-successor --predecessor foundations/F8 --successor foundations/F9
 > predecessor F8
 > successor F9
-> result (valid #d34706092e2e9f0a7bdd3ca81e9e31995ab37bee13d0d078da157de606e961e1e)
+> result (valid #d577c668c385fa85dc86e302c0938882d961ca4aaa33d828adaeea289d28d1da9)
 
 $ foundation reconstruct --dir foundations/F9
 > reconstructed F9
-> digest db841e0f9f3b97f8ac32d4040e1ab06e6473f82ae37d50c12a3b5755a64fb17e
+> digest 7b8e9d662d7a6b6e6ca87b059fab5cd800e049e3d10a1016d0de8c1143b769c3
 > stable yes
-> closure 66 artifacts
+> closure 68 artifacts
 > checks 12 ok
 
 $ foundation attest --dir foundations/F9
-> (attestation (name "F9") (foundation #ddb841e0f9f3b97f8ac32d4040e1ab06e6473f82ae37d50c12a3b5755a64fb17e) (application #d7ac2c20e739b77f0371ccf77118f2e95d0f5d6aaa81d4c6421c511cc8f11884a) (meta #dab7068e41479f974df6bd48e18893bd18d245f021339bdb1223906aaa4e5f712) (closure 66) (kinds {application 10 change 11 foundation 10 grammar 3 meta-program 28 source 4}) (complete #t))
-> attestation 4343afc90f2aefa0eda5f6b6d53b05b42713acf76be205623a40ae3c3ea42e32
+> (attestation (name "F9") (foundation #d7b8e9d662d7a6b6e6ca87b059fab5cd800e049e3d10a1016d0de8c1143b769c3) (application #d63c2e2d489233006a6e0b7504a7a2452ed36ad66e333ddf508634665a6540f65) (meta #d7498ab8afc0f1929408af8712ba84eb55259b86e9c40d9ffdf0b360cc2ff1399) (closure 68) (kinds {application 10 change 11 data 1 foundation 10 grammar 3 meta-program 29 source 4}) (complete #t))
+> attestation 5a08a8716fde5658c85edbcbcad6cd7d0b73305f6e995609dce309f868bd9fc1
 
 # Two consecutive publication transitions settle.
 $ derive --foundation foundations/F9 --goal '(call SettledHeight (call SettleTwo (file "foundations/F4/foundation.canon") (file "foundations/F5/foundation.canon") (file "foundations/F6/foundation.canon")))'

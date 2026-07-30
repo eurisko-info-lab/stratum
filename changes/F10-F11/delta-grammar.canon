@@ -1,0 +1,9 @@
+; delta-grammar for F10 -> F11: Grammar gains the studio profile vocabulary.
+(change
+  (kind delta-grammar)
+  (name "F10->F11 delta-grammar")
+  (replace
+    (ReplaceChange
+      studio-syntax
+      (absent)
+      (present [studio view panel tree browser editor inspector preview workflow role action show-when group-by navigate-through]))))

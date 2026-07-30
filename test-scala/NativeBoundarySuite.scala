@@ -55,7 +55,8 @@ class NativeBoundarySuite extends munit.FunSuite:
       "request", "build", "application", "foundation", "predecessor", "change", "file", "include",
       "text-file", "program-of", "foundation-of", "source", "path", "text", "none", "some", "check",
       "value", "error", "entry", "bootstrap", "meta", "grammars", "entries", "checks", "resources",
-      "schema", "profile", "data", "verdict-error", "empty", "message", "dir"
+      "schema", "profile", "data", "verdict-error", "empty", "message", "dir", "derived",
+      "host-core", "derivation-report", "attestation", "canon"
     )
     val pattern = """Canon\.Node\("([a-zA-Z0-9\-]+)"""".r
     val violations = hostSources.flatMap { p =>

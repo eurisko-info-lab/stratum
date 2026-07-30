@@ -2,8 +2,8 @@
 
 $ foundation verify --dir foundations/F4
 > foundation F4
-> digest 62be55ae9c1aec46b3e5dd5f4bf9d84c5f90ff4d1dbddefb1645cc74edd3c68e
-> closure 40 artifacts
+> digest 02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0
+> closure 42 artifacts
 > check tools-are-derived-from-the-schema ok
 > check parser-is-selected-by-role ok
 > check compiler-is-selected-by-role ok
@@ -26,13 +26,13 @@ $ foundation verify --dir foundations/F4
 $ foundation verify-successor --predecessor foundations/F3 --successor foundations/F4
 > predecessor F3
 > successor F4
-> result (valid #d3ac8bea2832bbdb5577d93ec3691962a8c772aa2f4213ece0286af29e9848f2e)
+> result (valid #d66560a27e48c9fd25198cd1a154e89034b5ca1c5209c43290d435bc5b663ca0b)
 
 $ foundation reconstruct --dir foundations/F4
 > reconstructed F4
-> digest 62be55ae9c1aec46b3e5dd5f4bf9d84c5f90ff4d1dbddefb1645cc74edd3c68e
+> digest 02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0
 > stable yes
-> closure 40 artifacts
+> closure 42 artifacts
 > checks 17 ok
 
 # Tools are selected by role from the schema, not hand written.

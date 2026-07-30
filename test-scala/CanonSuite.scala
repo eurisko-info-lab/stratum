@@ -49,9 +49,13 @@ class CanonSuite extends munit.FunSuite:
 
   test("unsorted map encodings are rejected") {
     val unsorted = Canon.M(Vector(Canon.sym("b") -> Canon.nat(2), Canon.sym("a") -> Canon.nat(1)))
-    val bytes = Canon.encode(unsorted)
-    assert(Canon.decode(bytes).isRight, "the encoder writes what it is given")
     assert(!Canon.isCanonical(unsorted), "an unsorted map is not canonical")
+    assert(Canon.decode(Canon.encode(unsorted)).isLeft, "an unsorted map encoding must be rejected")
+  }
+
+  test("duplicate map keys are rejected") {
+    val duplicated = Canon.M(Vector(Canon.sym("a") -> Canon.nat(1), Canon.sym("a") -> Canon.nat(2)))
+    assert(Canon.decode(Canon.encode(duplicated)).isLeft, "a duplicated key must be rejected")
   }
 
   test("trailing bytes are rejected") {

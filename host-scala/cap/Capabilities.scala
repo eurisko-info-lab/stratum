@@ -160,7 +160,7 @@ final class DeterministicEnvironmentCapability(seed: String) extends CapabilityH
  * The host interprets grammar artifacts. It has no syntax of its own.
  */
 final class GrammarCapability(cas: Cas) extends CapabilityHandler:
-  def names: Set[String] = Set("grammar-parse", "grammar-print")
+  def names: Set[String] = Set("grammar-parse", "grammar-print", "grammar-lex")
 
   private def grammarOf(d: Digest): Either[String, stratum.grammar.GrammarMachine0.Grammar] =
     cas.get(d) match
@@ -176,6 +176,29 @@ final class GrammarCapability(cas: Cas) extends CapabilityHandler:
       grammarOf(d).flatMap(g => stratum.grammar.GrammarMachine0.print(g, value)) match
         case Right(s) => CapabilityResponse(true, Canon.S(s))
         case Left(m)  => CapabilityResponse(false, Canon.S(m))
+    case ("grammar-lex", Vector(Canon.R(d), Canon.S(text))) =>
+      // The token classes the grammar declares, located in the text. Keyed, so
+      // the reader dispatches on nothing, and reported with the declared kind
+      // rather than the token's name.
+      grammarOf(d) match
+        case Left(m) => CapabilityResponse(false, Canon.S(m))
+        case Right(g) =>
+          stratum.grammar.GrammarMachine0.lex(g, text) match
+            case Left(m) => CapabilityResponse(false, Canon.S(m))
+            case Right(tokens) =>
+              val declared = g.tokens.map(t => t.name -> t.kind).toMap
+              CapabilityResponse(
+                true,
+                Canon.L(tokens.map { t =>
+                  Canon.M(
+                    Vector(
+                      Canon.Sym("kind") -> Canon.Sym(declared.getOrElse(t.kind, t.kind)),
+                      Canon.Sym("length") -> Canon.nat(t.text.length),
+                      Canon.Sym("offset") -> Canon.nat(t.offset)
+                    )
+                  )
+                })
+              )
     case _ => CapabilityResponse(false, Canon.Sym("bad-request"))
 
 /** In-process transport used for closure and branch exchange. */

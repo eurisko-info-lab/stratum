@@ -256,7 +256,15 @@ object Canon:
         L(Vector.fill(n)(read(cur)))
       case TagM =>
         val n = readVarInt(cur).toInt
-        M(Vector.fill(n)((read(cur), read(cur))))
+        val entries = Vector.fill(n)((read(cur), read(cur)))
+        // Map keys must be strictly ascending in the canonical order.
+        entries.iterator.sliding(2).withPartial(false).foreach { pair =>
+          compare(pair(0)._1, pair(1)._1) match
+            case c if c < 0 => ()
+            case 0          => throw DecodeError("duplicate map key rejected")
+            case _          => throw DecodeError("unordered map key rejected")
+        }
+        M(entries)
       case TagNode =>
         val tag = new String(readBytes(cur), StandardCharsets.UTF_8)
         val n = readVarInt(cur).toInt

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Rebuilds every foundation in order and verifies each successor with its
-# predecessor.
+# Rebuilds every foundation in order, verifies each successor with its
+# predecessor, and requires the predecessor to *derive* the successor.
 #
 # The workflow fails if any foundation drifts from its committed golden digest,
-# if a closure is incomplete, or if a predecessor refuses its successor.
+# if a closure is incomplete, if a predecessor refuses its successor, or if a
+# predecessor cannot construct the successor from the canonical change alone.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -13,6 +14,7 @@ run() {
 }
 
 previous=""
+previous_name=""
 for dir in $(ls -d foundations/F* | sort -V); do
   name=$(basename "$dir")
   golden=$(cat "$dir/digest.txt")
@@ -31,8 +33,21 @@ for dir in $(ls -d foundations/F* | sort -V); do
 
   if [ -n "$previous" ]; then
     run foundation verify-successor --predecessor "$previous" --successor "$dir"
+
+    derivation="changes/$previous_name-$name/derivation.canon"
+    if [ ! -f "$derivation" ]; then
+      echo "no canonical derivation for $previous_name -> $name" >&2
+      exit 1
+    fi
+    # The predecessor constructs the successor. No successor manifest is given.
+    run foundation derive-successor \
+      --predecessor "$previous" \
+      --derivation "$derivation" \
+      --expect "$dir"
+    echo "   $previous_name |- $name"
   fi
   previous="$dir"
+  previous_name="$name"
 done
 
 echo "staircase ok"
