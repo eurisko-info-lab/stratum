@@ -1,0 +1,14 @@
+; A studio profile with no domain, recorded as a canonical artifact.
+; The authoritative definition is `AlphaProfile` in
+; features/studio/studio.meta; this artifact records the selection.
+(profile
+  (name "alpha-editor")
+  (language alpha)
+  (layout single-pane)
+  (navigation flat)
+  (panels [outline detail])
+  (commands [open-item])
+  (workflow [open closed])
+  (roles [author])
+  (projections [text])
+  (foreign [text]))

@@ -3,6 +3,7 @@ package stratum
 import stratum.cli.{Cli, CommandResult}
 
 import java.nio.file.{Files, Path, Paths}
+import scala.jdk.CollectionConverters.*
 
 /**
  * The two-host parity gate.
@@ -15,34 +16,86 @@ class HostParitySuite extends munit.FunSuite:
   private val root: Path = Paths.get(System.getProperty("user.dir")).toAbsolutePath.normalize()
   private val rustBinary: Path = root.resolve("host-rust/target/release/stratum-verify")
 
-  private def foundations: Vector[String] =
-    Vector("F6", "F7", "F8", "F9", "F10", "F11").filter(n => Files.exists(root.resolve(s"foundations/$n/digest.txt")))
+  /** Foundations first, then any application deployment built on the platform. */
+  private def worlds: Vector[String] =
+    val foundations = Vector("F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11")
+      .map(name => s"foundations/$name")
+    val applications =
+      val directory = root.resolve("applications")
+      if !Files.isDirectory(directory) then Vector.empty
+      else
+        Files.list(directory).toList.asScala.toVector
+          .filter(Files.isDirectory(_))
+          .map(path => s"applications/${path.getFileName}")
+          .sorted
+    (foundations ++ applications).filter(dir => Files.exists(root.resolve(s"$dir/digest.txt")))
+
+  private def runRust(args: String*): (Int, Vector[String]) =
+    val process = ProcessBuilder((rustBinary.toString +: args).toList*)
+      .directory(root.toFile)
+      .redirectErrorStream(true)
+      .start()
+    val output = String(process.getInputStream.readAllBytes(), "UTF-8")
+    (process.waitFor(), output.linesIterator.toVector)
+
+  private def requireRust(): Boolean =
+    if Files.isExecutable(rustBinary) then true
+    else if sys.env.get("STRATUM_ALLOW_MISSING_RUST").contains("1") then
+      println("skipping two-host parity: STRATUM_ALLOW_MISSING_RUST=1")
+      false
+    else
+      fail(
+        s"the independent host is missing at $rustBinary. " +
+          "Build it with `cargo build --release --manifest-path host-rust/Cargo.toml`, " +
+          "or set STRATUM_ALLOW_MISSING_RUST=1 to skip."
+      )
 
   test("scala attestation is canonical and stable") {
-    foundations.foreach { name =>
-      val first = Cli.run(root, Vector("foundation", "attest", "--dir", s"foundations/$name"))
-      val second = Cli.run(root, Vector("foundation", "attest", "--dir", s"foundations/$name"))
+    worlds.foreach { name =>
+      val first = Cli.run(root, Vector("foundation", "attest", "--dir", name))
+      val second = Cli.run(root, Vector("foundation", "attest", "--dir", name))
       assertEquals(first.code, 0, s"$name: ${first.output}")
       assertEquals(first.lines, second.lines, s"$name attestation is not stable")
     }
   }
 
-  test("rust host agrees with the scala host") {
-    if !Files.isExecutable(rustBinary) then
-      println(
-        s"skipping two-host parity: build the independent host with `cd host-rust && cargo build --release`"
-      )
-    else
-      foundations.foreach { name =>
-        val scala = Cli.run(root, Vector("foundation", "attest", "--dir", s"foundations/$name"))
+  test("rust host agrees with the scala host on attestations") {
+    if requireRust() then
+      worlds.foreach { name =>
+        val scala = Cli.run(root, Vector("foundation", "attest", "--dir", name))
         assertEquals(scala.code, 0, s"$name: ${scala.output}")
-        val process = ProcessBuilder(rustBinary.toString, "attest", s"foundations/$name")
-          .directory(root.toFile)
-          .redirectErrorStream(true)
-          .start()
-        val output = String(process.getInputStream.readAllBytes(), "UTF-8").trim
-        val code = process.waitFor()
-        assertEquals(code, 0, s"$name: rust host failed: $output")
-        assertEquals(output.linesIterator.toVector, scala.lines, s"$name: hosts disagree")
+        val (code, output) = runRust("attest", name)
+        assertEquals(code, 0, s"$name: rust host failed: ${output.mkString("\n")}")
+        assertEquals(output, scala.lines, s"$name: hosts disagree on the attestation")
+      }
+  }
+
+  test("rust host agrees with the scala host on every derivation") {
+    if requireRust() then
+      worlds.foreach { name =>
+        val scala = Cli.run(root, Vector("foundation", "report", "--dir", name))
+        assertEquals(scala.code, 0, s"$name: ${scala.output}")
+        val (code, output) = runRust("report", name)
+        assertEquals(code, 0, s"$name: rust host failed: ${output.mkString("\n")}")
+        assertEquals(
+          output,
+          scala.lines,
+          s"$name: the two engines disagree on a verdict, its evidence or its resource accounting"
+        )
+      }
+  }
+
+  test("both hosts accept and reject exactly the same bytes") {
+    if requireRust() then
+      val corpus = root.resolve("fixtures/canon/adversarial")
+      val cases = Files.list(corpus).toList.asScala.toVector.map(_.toString).sorted
+      assert(cases.nonEmpty, "the adversarial corpus is empty")
+      cases.foreach { path =>
+        val relative = root.relativize(Paths.get(path)).toString
+        val scala = Cli.run(root, Vector("canon", "check", relative))
+        assertEquals(scala.code, 0, s"$relative: ${scala.output}")
+        val (code, output) = runRust("canon", relative)
+        assertEquals(code, 0, s"$relative: rust host failed: ${output.mkString("\n")}")
+        assertEquals(output, scala.lines, s"$relative: hosts disagree on canonicity")
       }
   }

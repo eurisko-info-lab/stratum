@@ -2,8 +2,8 @@
 
 $ foundation verify --dir foundations/F7
 > foundation F7
-> digest 2a2f33611d7ed200e13cd83c29cb960c3524dbdf8eb7b9b035b0f83a87f318f7
-> closure 56 artifacts
+> digest c1c7ca090dcc04724c5c9d29ba840887ccaec4107a88e9a45aa6cd1ff43b47b5
+> closure 58 artifacts
 > check chain-replays-from-genesis ok
 > check broken-predecessor-links-are-rejected ok
 > check unentitled-publishers-are-rejected ok
@@ -21,18 +21,18 @@ $ foundation verify --dir foundations/F7
 $ foundation verify-successor --predecessor foundations/F6 --successor foundations/F7
 > predecessor F6
 > successor F7
-> result (valid #ddc6b2c869e3d19c4041d42072583975062922e7f6188206df7258940d49452e0)
+> result (valid #d31983b8c6d45841cd45214f1ea76342596493afd3bd144f96970c1fbbcd944b8)
 
 $ foundation reconstruct --dir foundations/F7
 > reconstructed F7
-> digest 2a2f33611d7ed200e13cd83c29cb960c3524dbdf8eb7b9b035b0f83a87f318f7
+> digest c1c7ca090dcc04724c5c9d29ba840887ccaec4107a88e9a45aa6cd1ff43b47b5
 > stable yes
-> closure 56 artifacts
+> closure 58 artifacts
 > checks 12 ok
 
 $ foundation attest --dir foundations/F7
-> (attestation (name "F7") (foundation #d2a2f33611d7ed200e13cd83c29cb960c3524dbdf8eb7b9b035b0f83a87f318f7) (application #d49001343bc7ebeb0bb2e2f5399192c0069d245756c71ecb7a3ae04f1e3b3001c) (meta #db8bfcc19e24c231683499e42104596c85071a90cd577e7b9751da6120b6d1c49) (closure 56) (kinds {application 8 change 9 foundation 8 grammar 3 meta-program 24 source 4}) (complete #t))
-> attestation b109ea6ec7c94a68b42317170babe6d04b8da17d690c25cd8df49dfc60e609b5
+> (attestation (name "F7") (foundation #dc1c7ca090dcc04724c5c9d29ba840887ccaec4107a88e9a45aa6cd1ff43b47b5) (application #d346bb99bca0493574077ba1ab403a65b7c7ace071899ed25cfdcc058fdf8fa8d) (meta #dc0fc8d9397d934438c6e11073c5c2916e30b678df15ca6e88a63872ecac0930e) (closure 58) (kinds {application 8 change 9 data 1 foundation 8 grammar 3 meta-program 25 source 4}) (complete #t))
+> attestation ec52c4d6d7de5228dc30a4b158d5ffe8ad8da941f4aa68706712bf9337a3719a
 
 # The chain replays from genesis.
 $ derive --foundation foundations/F7 --goal '(call ChainHeight (call ReplayFromGenesis (call ChainAuthority) (call GoodChain (grammar lambda) (file "languages/lambda/lambda.generated.meta"))))'

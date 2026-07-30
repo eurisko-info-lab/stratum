@@ -9,9 +9,9 @@ jobs:
   staircase:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -25,28 +25,48 @@ jobs:
       - name: Rebuild every foundation in order
         run: ./tools/staircase.sh
 
+      - name: Rebuild every application deployment
+        run: ./tools/deployment.sh
+
+      - name: Elaborate the shared language libraries
+        run: |
+          # No world on this branch builds these, so nothing else would notice
+          # if a shared library stopped elaborating. The drift gate below then
+          # catches any change to what they elaborate to.
+          for source in languages/service/service.meta languages/pdf/pdf.meta; do
+            sbt -batch "runMain stratum.cli.Stratum meta elaborate \
+              --grammar languages/meta1/meta1.generated.grammar \
+              --program languages/meta/prelude.meta \
+              --program languages/meta1/elaborate.meta \
+              --program languages/grammar1/elaborate.meta \
+              --source $source --out ${source%.meta}.generated.meta"
+          done
+
+      - name: Fail on any drift from the committed artifacts
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "rebuilding the staircase changed committed artifacts:" >&2
+            git status --porcelain >&2
+            exit 1
+          fi
+
       - name: Replay every transcript and run every suite
         run: sbt -batch test
 
       - name: Two host parity
-        run: |
-          for dir in foundations/F*; do
-            name=$(basename "$dir")
-            case "$name" in
-              F0|F1|F2|F3|F4|F5) continue ;;
-            esac
-            echo "parity $name"
-            ./host-rust/target/release/stratum-verify attest "$dir" > /tmp/rust.txt
-            sbt -batch --error "runMain stratum.cli.Stratum foundation attest --dir $dir" > /tmp/scala.txt
-            diff <(cat /tmp/rust.txt) <(grep -v '^\[' /tmp/scala.txt) || exit 1
-          done
+        run: ./tools/parity.sh
+
+      - name: Clean room reconstruction
+        run: ./tools/cleanroom.sh
 
   model:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: verifier-lean
           build: true
           test: false
+          lint: false

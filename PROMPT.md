@@ -61,7 +61,7 @@ Then add one feature per commit until the final foundation provides:
 * semantic retention and archives;
 * local repositories branched from the chain;
 * publication of language, code and data changes back to the chain;
-* schema-guided Smalltalk and SDS development environments with distinct interfaces.
+* schema-guided development environments with distinct interfaces, driven by profiles alone.
 
 The complexity added at each step must live primarily in canonical feature artifacts, Meta rules, Grammar declarations and schemas.
 
@@ -105,8 +105,6 @@ The host must not know about:
 * blockchains;
 * synchronization;
 * BFT;
-* SDS;
-* Smalltalk;
 * editor panels.
 
 Those concepts must be feature artifacts interpreted by the bootstrap host.
@@ -1868,9 +1866,9 @@ The runtime may provide generic primitives such as:
 
 Profiles compose these primitives differently.
 
-## Smalltalk-style profile
+## A first profile
 
-Create a Smalltalk-like language and profile with:
+Create a language and profile with:
 
 * package or category browser;
 * class list;
@@ -1884,9 +1882,9 @@ Create a Smalltalk-like language and profile with:
 
 The primary navigation model is code-centric.
 
-## SDS profile
+## A second profile
 
-Create an SDS language and profile with:
+Create a second language and profile with:
 
 * section tree;
 * paragraph and regulated-sentence editor;
@@ -1905,7 +1903,7 @@ Create an SDS language and profile with:
 
 The primary navigation model is document and workflow-centric.
 
-The Smalltalk and SDS profiles must visibly differ in:
+The two profiles must visibly differ in:
 
 * panel arrangement;
 * navigation;
@@ -1936,7 +1934,7 @@ Demonstrate:
 14. federation validates and finalizes it;
 15. the chain advances;
 16. a fresh node reconstructs the new foundation, application, repository and data;
-17. generated Smalltalk and SDS Studios reopen the reconstructed state.
+17. generated Studios reopen the reconstructed state.
 
 ## Final parity gate
 
@@ -2000,8 +1998,7 @@ Stratum foundation
   └── schema-guided Studio profiles
 
 Applications
-  ├── Smalltalk-style development environment
-  ├── SDS editor and publication workflow
+  ├── profile-guided editors and the publication workflow
   └── future domain systems
 ```
 
@@ -2041,8 +2038,8 @@ stratum/
     grammar/
     lambda/
     stack/
-    smalltalk/
-    sds/
+    alpha/
+    beta/
 
   features/
     changes/
@@ -2057,8 +2054,8 @@ stratum/
     studio/
 
   profiles/
-    smalltalk/
-    sds/
+    alpha/
+    beta/
 
   foundations/
     F0/
@@ -2093,8 +2090,8 @@ stratum/
     chain/
     federation/
     archive/
-    smalltalk/
-    sds/
+    alpha/
+    beta/
 
   docs/
     foundations/
@@ -2202,7 +2199,7 @@ Parsers, printers, interpreters, compilers, diagnostics, indexes and editors are
 
 ## Distinct Studios
 
-The Smalltalk IDE and SDS editor are generated from distinct Studio profiles and do not collapse into one generic fixed-panel interface.
+Distinct Studio profiles generate distinct editors, and do not collapse into one generic fixed-panel interface.
 
 The final statement is:
 

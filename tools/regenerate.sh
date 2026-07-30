@@ -20,12 +20,22 @@ run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META
   --source languages/lambda/lambda.grammar \
   --out languages/lambda/lambda.generated.grammar
 
+if [ -d applications ]; then
+  for source in $(find applications -name '*.grammar' ! -name '*.generated.grammar' | sort); do
+    echo "  $source"
+    run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META \
+      --judgment ElaborateGrammarSource \
+      --source "$source" \
+      --out "${source%.grammar}.generated.grammar"
+  done
+fi
+
 echo "regenerating meta programs"
 run meta elaborate --grammar languages/meta1/meta1.generated.grammar $META \
   --source languages/lambda/lambda.meta \
   --out languages/lambda/lambda.generated.meta
 
-for source in $(find features -name '*.meta' ! -name '*.generated.meta' | sort); do
+for source in $(find features applications languages/service languages/pdf -name '*.meta' ! -name '*.generated.meta' 2>/dev/null | sort); do
   echo "  $source"
   run meta elaborate --grammar languages/meta1/meta1.generated.grammar $META \
     --source "$source" \

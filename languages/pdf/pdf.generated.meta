@@ -1,0 +1,434 @@
+; Generated from languages/pdf/pdf.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module pdf)
+  (judgment
+    PdfEol
+    []
+    (q "\n"))
+  (judgment
+    PdfBackslash
+    []
+    (q "\\"))
+  (judgment
+    PdfJoin
+    [parts]
+    (match
+      (v parts)
+      (case
+        (pnil)
+        (q ""))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          scat
+          (v head)
+          (call
+            PdfJoin
+            (v rest))))))
+  (judgment
+    PdfPad
+    [text width]
+    (if
+      (prim
+        ge
+        (prim
+          slen
+          (v text))
+        (v width))
+      (v text)
+      (call
+        PdfPad
+        (prim
+          scat
+          (q "0")
+          (v text))
+        (v width))))
+  (judgment
+    PdfSpecials
+    []
+    (lst
+      (q "(")
+      (q ")")
+      (call PdfBackslash)))
+  (judgment
+    PdfEscapeChar
+    [ch]
+    (if
+      (prim
+        contains
+        (call PdfSpecials)
+        (v ch))
+      (prim
+        scat
+        (call PdfBackslash)
+        (v ch))
+      (v ch)))
+  (judgment
+    PdfEscapeFrom
+    [text at acc]
+    (if
+      (prim
+        ge
+        (v at)
+        (prim
+          slen
+          (v text)))
+      (v acc)
+      (call
+        PdfEscapeFrom
+        (v text)
+        (prim
+          add
+          (v at)
+          (q 1))
+        (prim
+          scat
+          (v acc)
+          (call
+            PdfEscapeChar
+            (prim
+              ssub
+              (v text)
+              (v at)
+              (prim
+                add
+                (v at)
+                (q 1))))))))
+  (judgment
+    PdfEscape
+    [text]
+    (call
+      PdfEscapeFrom
+      (v text)
+      (q 0)
+      (q "")))
+  (judgment
+    PdfTop
+    []
+    (q 780))
+  (judgment
+    PdfBottom
+    []
+    (q 56))
+  (judgment
+    PdfLeft
+    []
+    (q 56))
+  (judgment
+    PdfShow
+    [block y]
+    (let
+      size
+      (prim
+        mget
+        (v block)
+        (q size)
+        (q 11))
+      (call
+        PdfJoin
+        (lst
+          (q "BT /F1 ")
+          (prim
+            nat->str
+            (v size))
+          (q " Tf ")
+          (prim
+            nat->str
+            (call PdfLeft))
+          (q " ")
+          (prim
+            nat->str
+            (v y))
+          (q " Td (")
+          (call
+            PdfEscape
+            (prim
+              mget
+              (v block)
+              (q text)
+              (q "")))
+          (q ") Tj ET")
+          (call PdfEol)))))
+  (judgment
+    PdfBody
+    [blocks y acc]
+    (match
+      (v blocks)
+      (case
+        (pnil)
+        (v acc))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            lt
+            (v y)
+            (call PdfBottom))
+          (v acc)
+          (call
+            PdfBody
+            (v rest)
+            (prim
+              sub
+              (v y)
+              (prim
+                add
+                (prim
+                  mget
+                  (v head)
+                  (q size)
+                  (q 11))
+                (q 6)))
+            (prim
+              scat
+              (v acc)
+              (call
+                PdfShow
+                (v head)
+                (v y))))))))
+  (judgment
+    PdfContent
+    [blocks]
+    (call
+      PdfBody
+      (v blocks)
+      (call PdfTop)
+      (q "")))
+  (judgment
+    PdfObject
+    [number body]
+    (call
+      PdfJoin
+      (lst
+        (prim
+          nat->str
+          (v number))
+        (q " 0 obj")
+        (call PdfEol)
+        (v body)
+        (call PdfEol)
+        (q "endobj")
+        (call PdfEol))))
+  (judgment
+    PdfCatalogue
+    []
+    (call
+      PdfObject
+      (q 1)
+      (q "<< /Type /Catalog /Pages 2 0 R >>")))
+  (judgment
+    PdfPages
+    []
+    (call
+      PdfObject
+      (q 2)
+      (q "<< /Type /Pages /Kids [3 0 R] /Count 1 >>")))
+  (judgment
+    PdfPage
+    []
+    (call
+      PdfObject
+      (q 3)
+      (q "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>")))
+  (judgment
+    PdfStream
+    [content]
+    (call
+      PdfObject
+      (q 4)
+      (call
+        PdfJoin
+        (lst
+          (q "<< /Length ")
+          (prim
+            nat->str
+            (prim
+              slen
+              (v content)))
+          (q " >>")
+          (call PdfEol)
+          (q "stream")
+          (call PdfEol)
+          (v content)
+          (q "endstream")))))
+  (judgment
+    PdfFont
+    []
+    (call
+      PdfObject
+      (q 5)
+      (q "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")))
+  (judgment
+    PdfHeader
+    []
+    (call
+      PdfJoin
+      (lst
+        (q "%PDF-1.4")
+        (call PdfEol))))
+  (judgment
+    PdfEntry
+    [offset]
+    (call
+      PdfJoin
+      (lst
+        (call
+          PdfPad
+          (prim
+            nat->str
+            (v offset))
+          (q 10))
+        (q " 00000 n ")
+        (call PdfEol))))
+  (judgment
+    PdfFreeEntry
+    []
+    (call
+      PdfJoin
+      (lst
+        (q "0000000000 65535 f ")
+        (call PdfEol))))
+  (judgment
+    PdfOffsets
+    [parts at acc]
+    (match
+      (v parts)
+      (case
+        (pnil)
+        (v acc))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          PdfOffsets
+          (v rest)
+          (prim
+            add
+            (v at)
+            (prim
+              slen
+              (v head)))
+          (prim
+            append
+            (v acc)
+            (lst
+              (v at)))))))
+  (judgment
+    PdfEntries
+    [offsets]
+    (match
+      (v offsets)
+      (case
+        (pnil)
+        (q ""))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          scat
+          (call
+            PdfEntry
+            (v head))
+          (call
+            PdfEntries
+            (v rest))))))
+  (judgment
+    PdfTrailer
+    [count start]
+    (call
+      PdfJoin
+      (lst
+        (q "trailer")
+        (call PdfEol)
+        (q "<< /Size ")
+        (prim
+          nat->str
+          (v count))
+        (q " /Root 1 0 R >>")
+        (call PdfEol)
+        (q "startxref")
+        (call PdfEol)
+        (prim
+          nat->str
+          (v start))
+        (call PdfEol)
+        (q "%%EOF")
+        (call PdfEol))))
+  (judgment
+    PdfFile
+    [blocks]
+    (let
+      objects
+      (lst
+        (call PdfCatalogue)
+        (call PdfPages)
+        (call PdfPage)
+        (call
+          PdfStream
+          (call
+            PdfContent
+            (v blocks)))
+        (call PdfFont))
+      (let
+        prologue
+        (prim
+          cons
+          (call PdfHeader)
+          (v objects))
+        (let
+          offsets
+          (call
+            PdfOffsets
+            (v prologue)
+            (q 0)
+            (lst))
+          (let
+            start
+            (prim
+              add
+              (prim
+                nth
+                (v offsets)
+                (prim
+                  sub
+                  (prim
+                    len
+                    (v offsets))
+                  (q 1)))
+              (prim
+                slen
+                (prim
+                  nth
+                  (v prologue)
+                  (prim
+                    sub
+                    (prim
+                      len
+                      (v prologue))
+                    (q 1)))))
+            (call
+              PdfJoin
+              (lst
+                (call
+                  PdfJoin
+                  (v prologue))
+                (q "xref")
+                (call PdfEol)
+                (q "0 6")
+                (call PdfEol)
+                (call PdfFreeEntry)
+                (call
+                  PdfEntries
+                  (prim
+                    tail
+                    (v offsets)))
+                (call
+                  PdfTrailer
+                  (q 6)
+                  (v start))))))))))

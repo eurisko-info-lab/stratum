@@ -1,0 +1,30 @@
+
+artifactevidence
+evidence
+check*the-runtime-offers-only-generic-primitivesok
+check&both-profiles-compose-the-same-runtimeok
+check*studios-do-not-collapse-into-one-interfaceok
+checkJpanel-arrangement-navigation-commands-workflow-editors-and-previews-differok
+check!one-profile-navigates-its-own-wayok
+checkthe-other-navigates-differentlyok
+check#one-profile-arranges-its-own-panelsok
+check#the-other-arranges-different-panelsok
+check#one-profile-offers-its-own-commandsok
+check#the-other-offers-different-commandsok
+check'a-workflow-is-whatever-the-profile-saysok
+check)foreign-surfaces-are-declared-not-assumedok
+check&field-editors-are-declared-not-assumedok
+check,relayout-does-not-change-the-semantic-digestok
+checka-conflict-editor-is-derivedok
+checka-repository-browser-is-derivedok
+check#the-round-trip-has-seventeen-stagesok
+check!the-round-trip-changes-a-languageok
+checkthe-round-trip-changes-codeok
+checkthe-round-trip-changes-dataok
+check-independent-patches-commute-in-the-round-tripok
+check)conflicts-stay-explicit-in-the-round-tripok
+check)acceptance-runs-locally-in-the-round-tripok
+check#a-fresh-node-reconstructs-the-stateok
+check*the-studios-reopen-the-reconstructed-stateok
+checkretention-unchangedok
+checklambda-behaviour-unchangedok

@@ -1,0 +1,209 @@
+; Deriving a successor foundation from a predecessor and a foundation change.
+;
+; This is the constructive form of succession. `DeriveSuccessor` receives only
+; the predecessor reference and the change; it never receives the successor
+; manifest. It applies the change to the predecessor's application manifest,
+; recomputes the application identity, assembles the successor foundation
+; manifest and returns its digest.
+;
+; A manifest is a node whose arguments are single argument field nodes, so the
+; change language addresses fields by identity and preserves field order.
+(program
+  (module derive)
+
+  ; ------------------------------------------------------------ field access
+
+  (judgment FieldKeys [fields]
+    (match (v fields)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (prim cons (prim tag (v head)) (call FieldKeys (v rest))))))
+
+  (judgment FieldAt [fields key]
+    (match (v fields)
+      (case (pnil) (mk none))
+      (case (pcons (pv head) (pv rest))
+        (if (prim eq (prim tag (v head)) (v key))
+            (mk some (prim nth (prim args (v head)) (q 0)))
+            (call FieldAt (v rest) (v key))))))
+
+  (judgment MakeField [key value]
+    (prim node (v key) (prim cons (v value) (q []))))
+
+  ; ------------------------------------------------------- value level change
+
+  (judgment ApplyValue [value change]
+    (match (v change)
+      (case (pm Identity) (mk applied (v value)))
+      (case (pm Replace (pv expected) (pv replacement))
+        (if (prim eq (v value) (v expected))
+            (mk applied (v replacement))
+            (mk conflict (q predecessor-mismatch))))
+      (case _ (mk conflict (q not-a-value-change)))))
+
+  ; ------------------------------------------------------ field level change
+
+  (judgment EditField [fields key inner]
+    (match (v fields)
+      (case (pnil) (mk conflict (q unknown-field)))
+      (case (pcons (pv head) (pv rest))
+        (if (prim eq (prim tag (v head)) (v key))
+            (match (call ApplyValue (prim nth (prim args (v head)) (q 0)) (v inner))
+              (case (pm conflict (pv reason)) (mk conflict (v reason)))
+              (case (pm applied (pv updated))
+                (mk applied (prim cons (call MakeField (v key) (v updated)) (v rest)))))
+            (match (call EditField (v rest) (v key) (v inner))
+              (case (pm conflict (pv reason)) (mk conflict (v reason)))
+              (case (pm applied (pv updated))
+                (mk applied (prim cons (v head) (v updated)))))))))
+
+  (judgment DeleteField [fields key expected]
+    (match (v fields)
+      (case (pnil) (mk conflict (q unknown-field)))
+      (case (pcons (pv head) (pv rest))
+        (if (prim eq (prim tag (v head)) (v key))
+            (if (prim eq (prim nth (prim args (v head)) (q 0)) (v expected))
+                (mk applied (v rest))
+                (mk conflict (q predecessor-mismatch)))
+            (match (call DeleteField (v rest) (v key) (v expected))
+              (case (pm conflict (pv reason)) (mk conflict (v reason)))
+              (case (pm applied (pv updated))
+                (mk applied (prim cons (v head) (v updated)))))))))
+
+  ; Field order is part of canonical identity, so an insertion names its anchor.
+  (judgment InsertField [fields anchor key value]
+    (if (prim eq (v anchor) (q start))
+        (if (prim contains (call FieldKeys (v fields)) (v key))
+            (mk conflict (q field-already-present))
+            (mk applied (prim cons (call MakeField (v key) (v value)) (v fields))))
+        (call InsertAfterKey (v fields) (v anchor) (v key) (v value))))
+
+  (judgment InsertAfterKey [fields anchor key value]
+    (match (v fields)
+      (case (pnil) (mk conflict (q unknown-anchor)))
+      (case (pcons (pv head) (pv rest))
+        (if (prim eq (prim tag (v head)) (v anchor))
+            (mk applied (prim cons (v head) (prim cons (call MakeField (v key) (v value)) (v rest))))
+            (match (call InsertAfterKey (v rest) (v anchor) (v key) (v value))
+              (case (pm conflict (pv reason)) (mk conflict (v reason)))
+              (case (pm applied (pv updated))
+                (mk applied (prim cons (v head) (v updated)))))))))
+
+  (judgment ApplyFieldChange [fields change]
+    (match (v change)
+      (case (pm Identity) (mk applied (v fields)))
+      (case (pm Compose (pv first) (pv second))
+        (match (call ApplyFieldChange (v fields) (v first))
+          (case (pm conflict (pv reason)) (mk conflict (v reason)))
+          (case (pm applied (pv intermediate)) (call ApplyFieldChange (v intermediate) (v second)))))
+      (case (pm AtKey (pv key) (pv inner)) (call EditField (v fields) (v key) (v inner)))
+      (case (pm InsertAfter (pv anchor) (pv key) (pv value))
+        (call InsertField (v fields) (v anchor) (v key) (v value)))
+      (case (pm DeleteKey (pv key) (pv expected)) (call DeleteField (v fields) (v key) (v expected)))
+      (case _ (mk conflict (q not-a-field-change)))))
+
+  (judgment ApplyToNode [node change]
+    (match (call ApplyFieldChange (prim args (v node)) (v change))
+      (case (pm conflict (pv reason)) (mk conflict (v reason)))
+      (case (pm applied (pv fields)) (mk applied (prim node (prim tag (v node)) (v fields))))))
+
+  ; ---------------------------------------------------------------- diffing
+
+  (judgment ComposeAll [changes]
+    (match (v changes)
+      (case (pnil) (mk Identity))
+      (case (pl (pv only)) (v only))
+      (case (pcons (pv head) (pv rest)) (mk Compose (v head) (call ComposeAll (v rest))))))
+
+  (judgment DeletedFields [beforeFields afterKeys]
+    (match (v beforeFields)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (if (prim contains (v afterKeys) (prim tag (v head)))
+            (call DeletedFields (v rest) (v afterKeys))
+            (prim cons
+              (mk DeleteKey (prim tag (v head)) (prim nth (prim args (v head)) (q 0)))
+              (call DeletedFields (v rest) (v afterKeys)))))))
+
+  (judgment EditedFields [beforeFields afterFields]
+    (match (v beforeFields)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (let key (prim tag (v head))
+          (let before (prim nth (prim args (v head)) (q 0))
+            (match (call FieldAt (v afterFields) (v key))
+              (case (pm none) (call EditedFields (v rest) (v afterFields)))
+              (case (pm some (pv after))
+                (if (prim eq (v before) (v after))
+                    (call EditedFields (v rest) (v afterFields))
+                    (prim cons
+                      (mk AtKey (v key) (mk Replace (v before) (v after)))
+                      (call EditedFields (v rest) (v afterFields)))))))))))
+
+  (judgment InsertedFields [afterFields beforeKeys anchor]
+    (match (v afterFields)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (let key (prim tag (v head))
+          (if (prim contains (v beforeKeys) (v key))
+              (call InsertedFields (v rest) (v beforeKeys) (v key))
+              (prim cons
+                (mk InsertAfter (v anchor) (v key) (prim nth (prim args (v head)) (q 0)))
+                (call InsertedFields (v rest) (v beforeKeys) (v key))))))))
+
+  ; Deletions first, then edits, then insertions in successor order so that each
+  ; anchor already exists when its insertion is applied.
+  (judgment DiffFields [before after]
+    (let beforeFields (prim args (v before))
+      (let afterFields (prim args (v after))
+        (call ComposeAll
+          (prim append
+            (call DeletedFields (v beforeFields) (call FieldKeys (v afterFields)))
+            (prim append
+              (call EditedFields (v beforeFields) (v afterFields))
+              (call InsertedFields (v afterFields) (call FieldKeys (v beforeFields)) (q start))))))))
+
+  (judgment BuildDerivation [name bootstrap change before after]
+    (mk derivation
+      (mk name (v name))
+      (mk bootstrap (v bootstrap))
+      (mk change (v change))
+      (mk application-change (call DiffFields (v before) (v after)))))
+
+  ; ------------------------------------------------------------- succession
+
+  (judgment ApplicationReference [manifest]
+    (prim digest (mk artifact (q application) (v manifest))))
+
+  (judgment FoundationReference [manifest]
+    (prim digest (mk artifact (q foundation) (v manifest))))
+
+  ; F_n + delta_n |- F_{n+1}
+  ;
+  ; The successor manifest is constructed here. Nothing about it is supplied.
+  (judgment DeriveSuccessor [predecessorReference derivation]
+    (match (call Fetch (v predecessorReference) (q foundation))
+      (case (pm none) (mk invalid (q predecessor-missing)))
+      (case (pm some (pv predecessor))
+        (match (call Field (v predecessor) (q application))
+          (case (pm none) (mk invalid (q predecessor-without-application)))
+          (case (pm some (pv applicationReference))
+            (match (call Fetch (v applicationReference) (q application))
+              (case (pm none) (mk invalid (q application-missing)))
+              (case (pm some (pv application))
+                (match (call ApplyToNode (v application) (call Require (v derivation) (q application-change)))
+                  (case (pm conflict (pv reason)) (mk invalid (v reason)))
+                  (case (pm applied (pv successorApplication))
+                    (mk derived
+                      (call FoundationReference
+                        (mk foundation
+                          (mk name (call Require (v derivation) (q name)))
+                          (mk bootstrap (call Require (v derivation) (q bootstrap)))
+                          (mk application (call ApplicationReference (v successorApplication)))
+                          (mk predecessor (mk some (v predecessorReference)))
+                          (mk change (call Require (v derivation) (q change)))))))))))))))
+
+  (judgment DerivedReference [result]
+    (match (v result)
+      (case (pm derived (pv reference)) (v reference))
+      (case (pm invalid (pv reason)) (mk invalid (v reason))))))

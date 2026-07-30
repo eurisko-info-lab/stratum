@@ -1,0 +1,23 @@
+
+artifactdata
+	host-core
+	bootstrapStratumHost0/1
+canon
+tagsunitboolnatintbytesstringsymbol	referencelistmapnode
+identitysha-256
+artifact
+envelopekindbody
+meta0
+expressionsqvmklstmpifletcallmatchprimcapfail
+patterns_pvpqpmpnodeplpconspnil
+
+primitivesHaddandappendargsbcatblencmpconscontainsdecodedigestdistinctdivdropencodeeqgegtheadindex-of	insert-atis-boolis-bytesis-intis-listis-mapis-natis-nodeis-refis-stris-symis-unitlelenltmaxmdelmentriesmfrommgetmhasminmkeysmnewmodmputmsizemulmvalsnat->strnenil?nodenotnthorref->str	remove-atrevscatset-nthslensnocsortssubstr->natstr->symsubsym->strtagtailtake
+grammar0
+declarationsnamestarttokenskipcategory
+productionsprodpassfoldparen
+elementskwbind
+token-kindssymstrnat
+evidence
+fieldsstepscallscapabilities
+verdict
+formsokerror

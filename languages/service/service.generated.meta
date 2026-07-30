@@ -1,0 +1,630 @@
+; Generated from languages/service/service.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module service)
+  (judgment
+    TextMatchesAt
+    [text needle at]
+    (let
+      stop
+      (prim
+        add
+        (v at)
+        (prim
+          slen
+          (v needle)))
+      (if
+        (prim
+          gt
+          (v stop)
+          (prim
+            slen
+            (v text)))
+        (q #f)
+        (prim
+          eq
+          (prim
+            ssub
+            (v text)
+            (v at)
+            (v stop))
+          (v needle)))))
+  (judgment
+    TextFindFrom
+    [text needle at]
+    (if
+      (prim
+        gt
+        (prim
+          add
+          (v at)
+          (prim
+            slen
+            (v needle)))
+        (prim
+          slen
+          (v text)))
+      (mk none)
+      (if
+        (call
+          TextMatchesAt
+          (v text)
+          (v needle)
+          (v at))
+        (mk
+          some
+          (v at))
+        (call
+          TextFindFrom
+          (v text)
+          (v needle)
+          (prim
+            add
+            (v at)
+            (q 1))))))
+  (judgment
+    TextFind
+    [text needle]
+    (call
+      TextFindFrom
+      (v text)
+      (v needle)
+      (q 0)))
+  (judgment
+    TextAfter
+    [text needle]
+    (match
+      (call
+        TextFind
+        (v text)
+        (v needle))
+      (case
+        (pm
+          some
+          (pv at))
+        (mk
+          some
+          (prim
+            ssub
+            (v text)
+            (prim
+              add
+              (v at)
+              (prim
+                slen
+                (v needle)))
+            (prim
+              slen
+              (v text)))))
+      (case
+        (pm none)
+        (mk none))))
+  (judgment
+    TextDigits
+    []
+    (lst
+      (q "0")
+      (q "1")
+      (q "2")
+      (q "3")
+      (q "4")
+      (q "5")
+      (q "6")
+      (q "7")
+      (q "8")
+      (q "9")))
+  (judgment
+    TextLeadingDigits
+    [text at]
+    (if
+      (prim
+        ge
+        (v at)
+        (prim
+          slen
+          (v text)))
+      (prim
+        ssub
+        (v text)
+        (q 0)
+        (v at))
+      (if
+        (prim
+          contains
+          (call TextDigits)
+          (prim
+            ssub
+            (v text)
+            (v at)
+            (prim
+              add
+              (v at)
+              (q 1))))
+        (call
+          TextLeadingDigits
+          (v text)
+          (prim
+            add
+            (v at)
+            (q 1)))
+        (prim
+          ssub
+          (v text)
+          (q 0)
+          (v at)))))
+  (judgment
+    ParseErrorOffset
+    [reason]
+    (match
+      (call
+        TextAfter
+        (v reason)
+        (q "offset "))
+      (case
+        (pm
+          some
+          (pv rest))
+        (let
+          digits
+          (call
+            TextLeadingDigits
+            (v rest)
+            (q 0))
+          (if
+            (prim
+              eq
+              (v digits)
+              (q ""))
+            (mk none)
+            (mk
+              some
+              (prim
+                str->nat
+                (v digits))))))
+      (case
+        (pm none)
+        (mk none))))
+  (judgment
+    ParseDiagnostics
+    [reason]
+    (match
+      (call
+        ParseErrorOffset
+        (v reason))
+      (case
+        (pm
+          some
+          (pv at))
+        (lst
+          (call
+            Diagnostic
+            (q error)
+            (v reason)
+            (v at)
+            (q 1))))
+      (case
+        (pm none)
+        (lst
+          (call
+            Diagnostic
+            (q error)
+            (v reason)
+            (q 0)
+            (q 1))))))
+  (judgment
+    Diagnostic
+    [severity message at length]
+    (prim
+      mfrom
+      (lst
+        (mk
+          entry
+          (q severity)
+          (v severity))
+        (mk
+          entry
+          (q message)
+          (v message))
+        (mk
+          entry
+          (q offset)
+          (v at))
+        (mk
+          entry
+          (q length)
+          (v length)))))
+  (judgment
+    SymbolRecord
+    [label kind at length detail]
+    (prim
+      mfrom
+      (lst
+        (mk
+          entry
+          (q label)
+          (v label))
+        (mk
+          entry
+          (q kind)
+          (v kind))
+        (mk
+          entry
+          (q offset)
+          (v at))
+        (mk
+          entry
+          (q length)
+          (v length))
+        (mk
+          entry
+          (q detail)
+          (v detail)))))
+  (judgment
+    CompletionRecord
+    [label kind detail]
+    (prim
+      mfrom
+      (lst
+        (mk
+          entry
+          (q label)
+          (v label))
+        (mk
+          entry
+          (q kind)
+          (v kind))
+        (mk
+          entry
+          (q detail)
+          (v detail)))))
+  (judgment
+    KeyDiagnostic
+    [text severity message key]
+    (let
+      label
+      (prim
+        sym->str
+        (v key))
+      (match
+        (call
+          TextFind
+          (v text)
+          (v label))
+        (case
+          (pm
+            some
+            (pv at))
+          (call
+            Diagnostic
+            (v severity)
+            (v message)
+            (v at)
+            (prim
+              slen
+              (v label))))
+        (case
+          (pm none)
+          (call
+            Diagnostic
+            (v severity)
+            (v message)
+            (q 0)
+            (q 1))))))
+  (judgment
+    FindingMessage
+    [kind key]
+    (prim
+      scat
+      (prim
+        scat
+        (prim
+          sym->str
+          (v kind))
+        (q ": "))
+      (prim
+        sym->str
+        (v key))))
+  (judgment
+    KeySymbol
+    [text key kind detail]
+    (call
+      TextSymbol
+      (v text)
+      (prim
+        sym->str
+        (v key))
+      (v kind)
+      (v detail)))
+  (judgment
+    TextSymbol
+    [text label kind detail]
+    (match
+      (call
+        TextFind
+        (v text)
+        (v label))
+      (case
+        (pm
+          some
+          (pv at))
+        (call
+          SymbolRecord
+          (v label)
+          (v kind)
+          (v at)
+          (prim
+            slen
+            (v label))
+          (v detail)))
+      (case
+        (pm none)
+        (call
+          SymbolRecord
+          (v label)
+          (v kind)
+          (q 0)
+          (q 0)
+          (v detail)))))
+  (judgment
+    GrammarKeywords
+    [grammar]
+    (match
+      (call
+        Fetch
+        (v grammar)
+        (q grammar))
+      (case
+        (pm
+          some
+          (pv body))
+        (prim
+          sort
+          (prim
+            distinct
+            (call
+              CollectKeywords
+              (v body)))))
+      (case
+        (pm none)
+        (lst))))
+  (judgment
+    CollectKeywords
+    [value]
+    (if
+      (prim
+        is-node
+        (v value))
+      (match
+        (v value)
+        (case
+          (pm
+            kw
+            (pv word))
+          (lst
+            (v word)))
+        (case
+          _
+          (call
+            CollectKeywordsIn
+            (prim
+              args
+              (v value)))))
+      (if
+        (prim
+          is-list
+          (v value))
+        (call
+          CollectKeywordsIn
+          (v value))
+        (lst))))
+  (judgment
+    CollectKeywordsIn
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          append
+          (call
+            CollectKeywords
+            (v head))
+          (call
+            CollectKeywordsIn
+            (v rest))))))
+  (judgment
+    KeywordCompletions
+    [words]
+    (match
+      (v words)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            CompletionRecord
+            (v head)
+            (q keyword)
+            (q "keyword"))
+          (call
+            KeywordCompletions
+            (v rest))))))
+  (judgment
+    GrammarCompletions
+    [grammar]
+    (call
+      KeywordCompletions
+      (call
+        GrammarKeywords
+        (v grammar))))
+  (judgment
+    SymbolCompletions
+    [symbols]
+    (match
+      (v symbols)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            CompletionRecord
+            (prim
+              mget
+              (v head)
+              (q label)
+              (q ""))
+            (prim
+              mget
+              (v head)
+              (q kind)
+              (q object))
+            (prim
+              mget
+              (v head)
+              (q detail)
+              (q "")))
+          (call
+            SymbolCompletions
+            (v rest))))))
+  (judgment
+    PrintBuffer
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv document))
+        (match
+          (cap
+            grammar-print
+            (v grammar)
+            (v document))
+          (case
+            (pm
+              ok
+              (pv printed))
+            (mk
+              some
+              (v printed)))
+          (case
+            (pm
+              denied
+              (pv reason))
+            (mk none))))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (mk none))))
+  (judgment
+    CountMessage
+    [items one many]
+    (if
+      (prim
+        eq
+        (prim
+          len
+          (v items))
+        (q 1))
+      (prim
+        scat
+        (q "1 ")
+        (v one))
+      (prim
+        scat
+        (prim
+          scat
+          (prim
+            nat->str
+            (prim
+              len
+              (v items)))
+          (q " "))
+        (v many))))
+  (judgment
+    LexicalTokens
+    [grammar text]
+    (match
+      (cap
+        grammar-lex
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv tokens))
+        (v tokens))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (lst))))
+  (judgment
+    SemanticTokens
+    [grammar text]
+    (call
+      ClassifyTokens
+      (call
+        LexicalTokens
+        (v grammar)
+        (v text))))
+  (judgment
+    ClassifyTokens
+    [tokens]
+    (match
+      (v tokens)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (prim
+            mput
+            (v head)
+            (q kind)
+            (call
+              TokenType
+              (prim
+                mget
+                (v head)
+                (q kind)
+                (q sym))))
+          (call
+            ClassifyTokens
+            (v rest))))))
+  (judgment
+    TokenType
+    [kind]
+    (if
+      (prim
+        eq
+        (v kind)
+        (q kw))
+      (q keyword)
+      (if
+        (prim
+          eq
+          (v kind)
+          (q str))
+        (q string)
+        (if
+          (prim
+            eq
+            (v kind)
+            (q nat))
+          (q number)
+          (q variable))))))

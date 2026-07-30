@@ -2,8 +2,8 @@
 
 $ foundation verify --dir foundations/F5
 > foundation F5
-> digest 063ecac9e0f84564dfc029235e3b20e3b0f37de2447ebcff0fb9528638c8c7c1
-> closure 46 artifacts
+> digest e90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca
+> closure 48 artifacts
 > check accepted-under-a-single-author-constitution ok
 > check accepted-under-a-test-requiring-constitution ok
 > check accepted-under-a-proof-requiring-constitution ok
@@ -29,13 +29,13 @@ $ foundation verify --dir foundations/F5
 $ foundation verify-successor --predecessor foundations/F4 --successor foundations/F5
 > predecessor F4
 > successor F5
-> result (valid #d01bd63992329790684acea1d29647f4929002fbbaca57a2dfc147a951c457b0b)
+> result (valid #d301019771ef5845c58c06d01e16797e99b865ab410bf2447f3e9e9d036e9e788)
 
 $ foundation reconstruct --dir foundations/F5
 > reconstructed F5
-> digest 063ecac9e0f84564dfc029235e3b20e3b0f37de2447ebcff0fb9528638c8c7c1
+> digest e90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca
 > stable yes
-> closure 46 artifacts
+> closure 48 artifacts
 > checks 20 ok
 
 # A change is accepted only relative to a constitution.

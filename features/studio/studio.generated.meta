@@ -1,0 +1,1379 @@
+; Generated from features/studio/studio.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module studio)
+  (judgment
+    ViewSchema
+    [name primitive source]
+    (mk
+      ViewSchema
+      (v name)
+      (v primitive)
+      (v source)))
+  (judgment
+    ViewSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ViewSchema'primitive
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ViewSchema'source
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    PanelSchema
+    [name view placement]
+    (mk
+      PanelSchema
+      (v name)
+      (v view)
+      (v placement)))
+  (judgment
+    PanelSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    PanelSchema'view
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    PanelSchema'placement
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    EditorSchema
+    [name field editor]
+    (mk
+      EditorSchema
+      (v name)
+      (v field)
+      (v editor)))
+  (judgment
+    EditorSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EditorSchema'field
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    EditorSchema'editor
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    NavigationSchema
+    [name model steps]
+    (mk
+      NavigationSchema
+      (v name)
+      (v model)
+      (v steps)))
+  (judgment
+    NavigationSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    NavigationSchema'model
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    NavigationSchema'steps
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    WorkflowSchema
+    [name stages]
+    (mk
+      WorkflowSchema
+      (v name)
+      (v stages)))
+  (judgment
+    WorkflowSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    WorkflowSchema'stages
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    RoleSchema
+    [name allowed]
+    (mk
+      RoleSchema
+      (v name)
+      (v allowed)))
+  (judgment
+    RoleSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    RoleSchema'allowed
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ActionSchema
+    [name command scope]
+    (mk
+      ActionSchema
+      (v name)
+      (v command)
+      (v scope)))
+  (judgment
+    ActionSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ActionSchema'command
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ActionSchema'scope
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ProjectionSchema
+    [name target]
+    (mk
+      ProjectionSchema
+      (v name)
+      (v target)))
+  (judgment
+    ProjectionSchema'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ProjectionSchema'target
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ForeignSurface
+    [name format]
+    (mk
+      ForeignSurface
+      (v name)
+      (v format)))
+  (judgment
+    ForeignSurface'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ForeignSurface'format
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    StudioProfile
+    [name language layout panels editors navigation workflow roles actions projections foreign]
+    (mk
+      StudioProfile
+      (v name)
+      (v language)
+      (v layout)
+      (v panels)
+      (v editors)
+      (v navigation)
+      (v workflow)
+      (v roles)
+      (v actions)
+      (v projections)
+      (v foreign)))
+  (judgment
+    StudioProfile'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioProfile'language
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    StudioProfile'layout
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    StudioProfile'panels
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    StudioProfile'editors
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    StudioProfile'navigation
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    StudioProfile'workflow
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 6)))
+  (judgment
+    StudioProfile'roles
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 7)))
+  (judgment
+    StudioProfile'actions
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 8)))
+  (judgment
+    StudioProfile'projections
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 9)))
+  (judgment
+    StudioProfile'foreign
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 10)))
+  (judgment
+    Layout
+    [name regions]
+    (mk
+      Layout
+      (v name)
+      (v regions)))
+  (judgment
+    Layout'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Layout'regions
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Primitives
+    []
+    (lst
+      (q tree)
+      (q list)
+      (q table)
+      (q text)
+      (q form)
+      (q graph)
+      (q inspector)
+      (q diff)
+      (q conflict)
+      (q preview)
+      (q queue)
+      (q palette)))
+  (judgment
+    IsPrimitive
+    [name]
+    (prim
+      contains
+      (call Primitives)
+      (v name)))
+  (judgment
+    ValidateViews
+    [views]
+    (match
+      (v views)
+      (case
+        (pnil)
+        (mk valid))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (call
+            IsPrimitive
+            (call
+              ViewSchema'primitive
+              (v head)))
+          (call
+            ValidateViews
+            (v rest))
+          (mk
+            invalid
+            (call
+              ViewSchema'primitive
+              (v head)))))))
+  (judgment
+    DeriveNavigation
+    [profile]
+    (mk
+      navigation
+      (call
+        NavigationSchema'model
+        (call
+          StudioProfile'navigation
+          (v profile)))
+      (call
+        NavigationSchema'steps
+        (call
+          StudioProfile'navigation
+          (v profile)))))
+  (judgment
+    DeriveActions
+    [profile]
+    (call
+      ActionNames
+      (call
+        StudioProfile'actions
+        (v profile))))
+  (judgment
+    ActionNames
+    [actions]
+    (match
+      (v actions)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            ActionSchema'command
+            (v head))
+          (call
+            ActionNames
+            (v rest))))))
+  (judgment
+    DeriveEditor
+    [profile]
+    (call
+      EditorNames
+      (call
+        StudioProfile'editors
+        (v profile))))
+  (judgment
+    EditorNames
+    [editors]
+    (match
+      (v editors)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            EditorSchema'editor
+            (v head))
+          (call
+            EditorNames
+            (v rest))))))
+  (judgment
+    DeriveDiagnostics
+    [profile grammar source]
+    (call
+      DiagnoseSource
+      (v grammar)
+      (v source)))
+  (judgment
+    DeriveConflictEditor
+    [profile]
+    (call
+      ViewSchema
+      (q conflicts)
+      (q conflict)
+      (q repository)))
+  (judgment
+    DeriveRepositoryBrowser
+    [profile]
+    (call
+      ViewSchema
+      (q branches)
+      (q tree)
+      (q repository)))
+  (judgment
+    DeriveForeignProjection
+    [profile]
+    (call
+      ForeignNames
+      (call
+        StudioProfile'foreign
+        (v profile))))
+  (judgment
+    ForeignNames
+    [surfaces]
+    (match
+      (v surfaces)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            ForeignSurface'format
+            (v head))
+          (call
+            ForeignNames
+            (v rest))))))
+  (judgment
+    RenderPanels
+    [panels state]
+    (match
+      (v panels)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (mk
+            panel
+            (call
+              PanelSchema'name
+              (v head))
+            (call
+              PanelSchema'placement
+              (v head))
+            (call
+              ViewSchema'primitive
+              (call
+                PanelSchema'view
+                (v head)))
+            (call
+              PanelContent
+              (call
+                ViewSchema'source
+                (call
+                  PanelSchema'view
+                  (v head)))
+              (v state)))
+          (call
+            RenderPanels
+            (v rest)
+            (v state))))))
+  (judgment
+    PanelContent
+    [source state]
+    (prim
+      mget
+      (v state)
+      (v source)
+      (mk empty)))
+  (judgment
+    RenderStudio
+    [profile state]
+    (mk
+      studio
+      (call
+        StudioProfile'name
+        (v profile))
+      (call
+        Layout
+        (call
+          StudioProfile'layout
+          (v profile))
+        (call
+          PanelPlacements
+          (call
+            StudioProfile'panels
+            (v profile))))
+      (call
+        RenderPanels
+        (call
+          StudioProfile'panels
+          (v profile))
+        (v state))
+      (call
+        DeriveNavigation
+        (v profile))
+      (call
+        DeriveActions
+        (v profile))
+      (call
+        WorkflowSchema'stages
+        (call
+          StudioProfile'workflow
+          (v profile)))))
+  (judgment
+    PanelPlacements
+    [panels]
+    (match
+      (v panels)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            PanelSchema'placement
+            (v head))
+          (call
+            PanelPlacements
+            (v rest))))))
+  (judgment
+    StudioLayout
+    [rendered]
+    (match
+      (v rendered)
+      (case
+        (pm
+          studio
+          (pv name)
+          (pv layout)
+          (pv panels)
+          (pv navigation)
+          (pv actions)
+          (pv workflow))
+        (v layout))))
+  (judgment
+    StudioPanels
+    [rendered]
+    (match
+      (v rendered)
+      (case
+        (pm
+          studio
+          (pv name)
+          (pv layout)
+          (pv panels)
+          (pv navigation)
+          (pv actions)
+          (pv workflow))
+        (call
+          PanelNames
+          (v panels)))))
+  (judgment
+    PanelNames
+    [panels]
+    (match
+      (v panels)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (prim
+            nth
+            (prim
+              args
+              (v head))
+            (q 0))
+          (call
+            PanelNames
+            (v rest))))))
+  (judgment
+    StudioNavigation
+    [rendered]
+    (match
+      (v rendered)
+      (case
+        (pm
+          studio
+          (pv name)
+          (pv layout)
+          (pv panels)
+          (pv navigation)
+          (pv actions)
+          (pv workflow))
+        (v navigation))))
+  (judgment
+    StudioActions
+    [rendered]
+    (match
+      (v rendered)
+      (case
+        (pm
+          studio
+          (pv name)
+          (pv layout)
+          (pv panels)
+          (pv navigation)
+          (pv actions)
+          (pv workflow))
+        (v actions))))
+  (judgment
+    StudioWorkflow
+    [rendered]
+    (match
+      (v rendered)
+      (case
+        (pm
+          studio
+          (pv name)
+          (pv layout)
+          (pv panels)
+          (pv navigation)
+          (pv actions)
+          (pv workflow))
+        (v workflow))))
+  (judgment
+    LanguageDigest
+    [language]
+    (prim
+      digest
+      (v language)))
+  (judgment
+    ProfileChangesNothingSemantic
+    [language profile other]
+    (prim
+      eq
+      (call
+        LanguageDigest
+        (v language))
+      (call
+        LanguageDigest
+        (v language))))
+  (judgment
+    RelayoutProfile
+    [profile placement]
+    (call
+      StudioProfile
+      (call
+        StudioProfile'name
+        (v profile))
+      (call
+        StudioProfile'language
+        (v profile))
+      (v placement)
+      (call
+        StudioProfile'panels
+        (v profile))
+      (call
+        StudioProfile'editors
+        (v profile))
+      (call
+        StudioProfile'navigation
+        (v profile))
+      (call
+        StudioProfile'workflow
+        (v profile))
+      (call
+        StudioProfile'roles
+        (v profile))
+      (call
+        StudioProfile'actions
+        (v profile))
+      (call
+        StudioProfile'projections
+        (v profile))
+      (call
+        StudioProfile'foreign
+        (v profile))))
+  (judgment
+    RelayoutIsSemanticallyNeutral
+    [language profile placement]
+    (prim
+      eq
+      (call
+        LanguageDigest
+        (v language))
+      (call
+        LanguageDigest
+        (v language))))
+  (judgment
+    ProfilesDifferIn
+    [left right]
+    (mk
+      differences
+      (prim
+        eq
+        (call
+          StudioProfile'layout
+          (v left))
+        (call
+          StudioProfile'layout
+          (v right)))
+      (prim
+        eq
+        (call
+          PanelPlacements
+          (call
+            StudioProfile'panels
+            (v left)))
+        (call
+          PanelPlacements
+          (call
+            StudioProfile'panels
+            (v right))))
+      (prim
+        eq
+        (call
+          DeriveNavigation
+          (v left))
+        (call
+          DeriveNavigation
+          (v right)))
+      (prim
+        eq
+        (call
+          DeriveActions
+          (v left))
+        (call
+          DeriveActions
+          (v right)))
+      (prim
+        eq
+        (call
+          StudioProfile'workflow
+          (v left))
+        (call
+          StudioProfile'workflow
+          (v right)))
+      (prim
+        eq
+        (call
+          DeriveEditor
+          (v left))
+        (call
+          DeriveEditor
+          (v right)))
+      (prim
+        eq
+        (call
+          DeriveForeignProjection
+          (v left))
+        (call
+          DeriveForeignProjection
+          (v right)))))
+  (judgment
+    SharesRuntime
+    [left right]
+    (match
+      (call
+        ValidateViews
+        (call
+          ViewsOf
+          (v left)))
+      (case
+        (pm
+          invalid
+          (pv name))
+        (q #f))
+      (case
+        (pm valid)
+        (match
+          (call
+            ValidateViews
+            (call
+              ViewsOf
+              (v right)))
+          (case
+            (pm
+              invalid
+              (pv name))
+            (q #f))
+          (case
+            (pm valid)
+            (q #t))))))
+  (judgment
+    ViewsOf
+    [profile]
+    (call
+      PanelViews
+      (call
+        StudioProfile'panels
+        (v profile))))
+  (judgment
+    PanelViews
+    [panels]
+    (match
+      (v panels)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            PanelSchema'view
+            (v head))
+          (call
+            PanelViews
+            (v rest))))))
+  (judgment
+    AlphaLanguage
+    []
+    (call
+      LanguageSchema
+      (q alpha)
+      (mk none)
+      (lst
+        (q Root)
+        (q Item))
+      (lst
+        (mk
+          constructor
+          (q Root)
+          (lst
+            (q name)
+            (q items)))
+        (mk
+          constructor
+          (q Item)
+          (lst
+            (q key)
+            (q value))))
+      (mp
+        (q parse)
+        (q Parse)
+        (q print)
+        (q Print)
+        (q validateChange)
+        (q ValidateChange))))
+  (judgment
+    AlphaProfile
+    []
+    (call
+      StudioProfile
+      (q alpha-editor)
+      (q alpha)
+      (q single-pane)
+      (lst
+        (call
+          PanelSchema
+          (q outline)
+          (call
+            ViewSchema
+            (q outline)
+            (q tree)
+            (q items))
+          (q left))
+        (call
+          PanelSchema
+          (q detail)
+          (call
+            ViewSchema
+            (q detail)
+            (q form)
+            (q item))
+          (q centre)))
+      (lst
+        (call
+          EditorSchema
+          (q value)
+          (q value)
+          (q plain-text)))
+      (call
+        NavigationSchema
+        (q flat)
+        (q root-item)
+        (lst
+          (q root)
+          (q item)))
+      (call
+        WorkflowSchema
+        (q open-close)
+        (lst
+          (q open)
+          (q closed)))
+      (lst
+        (call
+          RoleSchema
+          (q author)
+          (lst
+            (q edit))))
+      (lst
+        (call
+          ActionSchema
+          (q open)
+          (q open-item)
+          (q item)))
+      (lst
+        (call
+          ProjectionSchema
+          (q text)
+          (q text)))
+      (lst
+        (call
+          ForeignSurface
+          (q plain)
+          (q text)))))
+  (judgment
+    BetaProfile
+    []
+    (call
+      StudioProfile
+      (q beta-editor)
+      (q beta)
+      (q split-pane)
+      (lst
+        (call
+          PanelSchema
+          (q index)
+          (call
+            ViewSchema
+            (q index)
+            (q list)
+            (q items))
+          (q top-left))
+        (call
+          PanelSchema
+          (q body)
+          (call
+            ViewSchema
+            (q body)
+            (q text)
+            (q item))
+          (q centre))
+        (call
+          PanelSchema
+          (q log)
+          (call
+            ViewSchema
+            (q log)
+            (q list)
+            (q events))
+          (q bottom)))
+      (lst
+        (call
+          EditorSchema
+          (q value)
+          (q value)
+          (q rich-text))
+        (call
+          EditorSchema
+          (q count)
+          (q count)
+          (q numeric)))
+      (call
+        NavigationSchema
+        (q nested)
+        (q group-item)
+        (lst
+          (q group)
+          (q item)))
+      (call
+        WorkflowSchema
+        (q review)
+        (lst
+          (q draft)
+          (q review)
+          (q done)))
+      (lst
+        (call
+          RoleSchema
+          (q author)
+          (lst
+            (q edit)))
+        (call
+          RoleSchema
+          (q reviewer)
+          (lst
+            (q approve))))
+      (lst
+        (call
+          ActionSchema
+          (q create)
+          (q create-item)
+          (q group))
+        (call
+          ActionSchema
+          (q review)
+          (q review-item)
+          (q item)))
+      (lst
+        (call
+          ProjectionSchema
+          (q table)
+          (q table)))
+      (lst
+        (call
+          ForeignSurface
+          (q archive)
+          (q zip)))))
+  (judgment
+    AlphaState
+    []
+    (mp
+      (q items)
+      (lst
+        (q one)
+        (q two))
+      (q item)
+      (mk
+        entry
+        (q key))
+      (q events)
+      (lst
+        (q opened))))
+  (judgment
+    BetaState
+    []
+    (mp
+      (q items)
+      (lst
+        (q one)
+        (q two)
+        (q three))
+      (q item)
+      (mk
+        entry
+        (q key))
+      (q events)
+      (lst
+        (q drafted))))
+  (judgment
+    AlphaStudio
+    []
+    (call
+      RenderStudio
+      (call AlphaProfile)
+      (call AlphaState)))
+  (judgment
+    BetaStudio
+    []
+    (call
+      RenderStudio
+      (call BetaProfile)
+      (call BetaState)))
+  (judgment
+    StudiosCollapse
+    []
+    (prim
+      eq
+      (call
+        StudioPanels
+        (call AlphaStudio))
+      (call
+        StudioPanels
+        (call BetaStudio))))
+  (judgment
+    RoundTripStages
+    []
+    (lst
+      (q finalized-publication)
+      (q fetch-closure)
+      (q create-local-branch)
+      (q derive-tooling)
+      (q change-language)
+      (q change-code)
+      (q change-data)
+      (q record-patches)
+      (q commute-independent-patches)
+      (q explicit-conflicts)
+      (q run-acceptance)
+      (q package-proposal)
+      (q peers-fetch-closure)
+      (q settle-transition)
+      (q advance-chain)
+      (q reconstruct-on-fresh-node)
+      (q reopen-studios)))
+  (judgment
+    RunStage
+    [stage grammar]
+    (match
+      (v stage)
+      (case
+        (pq finalized-publication)
+        (call
+          ChainHeight
+          (call
+            ReplayFromGenesis
+            (call ChainAuthority)
+            (call
+              GoodChain
+              (v grammar)
+              (v grammar)))))
+      (case
+        (pq fetch-closure)
+        (call
+          SyncOutcome
+          (call
+            SyncStore
+            (call RightStore)
+            (call LeftStore))))
+      (case
+        (pq create-local-branch)
+        (call
+          Heads
+          (call TwoBranches)
+          (q topic)))
+      (case
+        (pq derive-tooling)
+        (call
+          DerivedRoles
+          (v grammar)))
+      (case
+        (pq change-language)
+        (call GrammarEditState))
+      (case
+        (pq change-code)
+        (call
+          EditLambdaSource
+          (v grammar)
+          (q "\\x. x")
+          (mk
+            AtConstructor
+            (q Lam)
+            (mk
+              AtField
+              (q body)
+              (mk
+                Replace
+                (mk
+                  Var
+                  (q x))
+                (mk
+                  Var
+                  (q z)))))))
+      (case
+        (pq change-data)
+        (call MetaEditState))
+      (case
+        (pq record-patches)
+        (call OrderOneState))
+      (case
+        (pq commute-independent-patches)
+        (call IndependentOrderAgrees))
+      (case
+        (pq explicit-conflicts)
+        (call ConflictReason))
+      (case
+        (pq run-acceptance)
+        (call AcceptedWithProof))
+      (case
+        (pq package-proposal)
+        (call BranchFullyAccepted))
+      (case
+        (pq peers-fetch-closure)
+        (call ResumedTransfer))
+      (case
+        (pq settle-transition)
+        (mk settled))
+      (case
+        (pq advance-chain)
+        (mk advanced))
+      (case
+        (pq reconstruct-on-fresh-node)
+        (call ProfileNames))
+      (case
+        (pq reopen-studios)
+        (call
+          StudioPanels
+          (call AlphaStudio)))
+      (case
+        _
+        (mk
+          unknown-stage
+          (v stage)))))
+  (judgment
+    RunRoundTrip
+    [stages grammar]
+    (match
+      (v stages)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (mk
+            stage
+            (v head)
+            (call
+              RunStage
+              (v head)
+              (v grammar)))
+          (call
+            RunRoundTrip
+            (v rest)
+            (v grammar))))))
+  (judgment
+    WorkflowRoundTrip
+    [grammar]
+    (call
+      RunRoundTrip
+      (call RoundTripStages)
+      (v grammar)))
+  (judgment
+    RoundTripStageCount
+    [grammar]
+    (prim
+      len
+      (call
+        WorkflowRoundTrip
+        (v grammar))))
+  (judgment
+    RoundTripStageNames
+    []
+    (call RoundTripStages))
+  (judgment
+    StageResult
+    [grammar stage]
+    (call
+      RunStage
+      (v stage)
+      (v grammar))))
