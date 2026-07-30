@@ -9,3 +9,6 @@ project/project/
 target/
 host-rust/target/
 verifier-lean/.lake/
+.stratum/
+tmp/
+node_modules/

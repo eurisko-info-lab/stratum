@@ -48,19 +48,37 @@ object Cli:
         entries.collect { case (Canon.Sym(k), v) => k -> v }.toMap
       case _ => Map.empty
 
+  /** Reads a declared field of an application manifest. */
+  def applicationField(application: Canon, tag: String): Option[Canon] = field(application, tag)
+
   // ------------------------------------------------------------- loading
 
+  /**
+   * Loads a foundation from `digest.txt` and `closure/` alone.
+   *
+   * The authoring file `foundation.canon` is only consulted when a directory
+   * predates the digest file, so a clean room containing nothing but the digest
+   * and the closure is sufficient.
+   */
   def loadFoundation(root: Path, dir: Path): Either[String, LoadedFoundation] =
     val closureDir = dir.resolve("closure")
     if !Files.isDirectory(closureDir) then Left(s"no closure directory at $closureDir")
     else
       val cas = DirectoryCas(closureDir)
+      val digestFile = dir.resolve("digest.txt")
       val foundationFile = dir.resolve("foundation.canon")
-      if !Files.exists(foundationFile) then Left(s"no foundation manifest at $foundationFile")
-      else
-        Artifact.decode(Files.readAllBytes(foundationFile)) match
-          case Left(m) => Left(m)
-          case Right(foundationArtifact) =>
+      val rootArtifact: Either[String, Artifact] =
+        if Files.exists(digestFile) then
+          Digest.fromHex(Files.readString(digestFile).trim).flatMap { d =>
+            cas.get(d).toRight(s"foundation ${d.hex} is not present in the closure")
+          }
+        else if Files.exists(foundationFile) then Artifact.decode(Files.readAllBytes(foundationFile))
+        else Left(s"no digest.txt in $dir")
+      rootArtifact match
+        case Left(m) => Left(m)
+        case Right(foundationArtifact) =>
+          if foundationArtifact.kind != "foundation" then Left("root artifact is not a foundation")
+          else
             val foundation = foundationArtifact.body
             field(foundation, "application") match
               case Some(Canon.R(appRef)) =>
@@ -122,12 +140,13 @@ object Cli:
     argv.headOption match
       case None                => CommandResult.ok(usage*)
       case Some("help")        => CommandResult.ok(usage*)
-      case Some("host")        => hostCommand(argv.drop(1))
+      case Some("host")        => hostCommand(root, argv.drop(1))
       case Some("canon")       => canonCommand(root, argv.drop(1))
       case Some("grammar")     => grammarCommand(root, argv.drop(1))
       case Some("derive")      => deriveCommand(root, argv.drop(1))
       case Some("meta")        => metaCommand(root, argv.drop(1))
       case Some("foundation")  => FoundationCommands.run(root, argv.drop(1))
+      case Some("lsp")         => stratum.lsp.Commands.run(root, argv.drop(1))
       case Some("transcript")  => Transcript.command(root, argv.drop(1))
       case Some(other)         => CommandResult.fail(s"unknown command $other")
 
@@ -142,6 +161,7 @@ object Cli:
     "stratum foundation verify --dir <dir>",
     "stratum foundation verify-successor --predecessor <dir> --successor <dir>",
     "stratum foundation reconstruct --dir <dir>",
+    "stratum foundation attest --dir <dir> [--out <file>]",
     "stratum transcript run <paths...> [--update]"
   )
 
@@ -177,8 +197,9 @@ object Cli:
 
   // ------------------------------------------------------------ commands
 
-  private def hostCommand(args: Vector[String]): CommandResult =
-    args.headOption match
+  private def hostCommand(root: Path, args: Vector[String]): CommandResult =
+    val opts = options(args)
+    positional(args).headOption match
       case Some("info") | None =>
         CommandResult.ok(
           "host StratumHost0",
@@ -186,6 +207,22 @@ object Cli:
           "machines meta0 grammar0",
           s"capabilities ${Kernel.full.allow.toVector.sorted.mkString(" ")}"
         )
+      case Some("manifest") =>
+        val manifest = HostCore.manifest
+        val lines = Vector(CanonText.write(manifest), s"host-core ${Canon.digest(manifest).hex}")
+        // `--out` writes the committed artifact; `--report` writes the flat form
+        // that the independent host also emits, for byte comparison.
+        opts.get("out").foreach { out =>
+          val target = root.resolve(out)
+          Option(target.getParent).foreach(Files.createDirectories(_))
+          Files.writeString(target, HostCore.header + CanonText.pretty(manifest) + "\n")
+        }
+        opts.get("report").foreach { out =>
+          val target = root.resolve(out)
+          Option(target.getParent).foreach(Files.createDirectories(_))
+          Files.writeString(target, lines.mkString("", "\n", "\n"))
+        }
+        CommandResult.okLines(lines)
       case Some(other) => CommandResult.fail(s"unknown host command $other")
 
   private def readCanonFile(root: Path, path: String): Either[String, Canon] =
@@ -202,6 +239,7 @@ object Cli:
 
   private def canonCommand(root: Path, args: Vector[String]): CommandResult =
     val pos = positional(args)
+    val opts = options(args)
     (pos.headOption, pos.drop(1).headOption) match
       case (Some("read"), Some(file)) =>
         readCanonFile(root, file) match
@@ -211,8 +249,24 @@ object Cli:
         readCanonFile(root, file) match
           case Left(m)  => CommandResult.fail(m)
           case Right(c) => CommandResult.ok(Canon.digest(c).toString)
-      case _ => CommandResult.fail("usage: canon read|digest <file>")
-
+      case (Some("check"), Some(file)) =>
+        // Reports whether raw bytes are canonical. Both hosts must accept and
+        // reject exactly the same inputs.
+        val p = root.resolve(file)
+        val value =
+          if !Files.exists(p) then Canon.node("canon", Canon.Sym("unreadable"))
+          else
+            Canon.decode(Files.readAllBytes(p)) match
+              case Right(decoded) => Canon.node("canon", Canon.Sym("accepted"), Canon.R(Canon.digest(decoded)))
+              case Left(_)        => Canon.node("canon", Canon.Sym("rejected"))
+        val lines = Vector(CanonText.write(value), s"canon ${Canon.digest(value).hex}")
+        opts.get("out").foreach { out =>
+          val target = root.resolve(out)
+          Option(target.getParent).foreach(Files.createDirectories(_))
+          Files.writeString(target, lines.mkString("", "\n", "\n"))
+        }
+        CommandResult.okLines(lines)
+      case _ => CommandResult.fail("usage: canon read|digest|check <file>")
   private def grammarCommand(root: Path, args: Vector[String]): CommandResult =
     val opts = options(args)
     val sub = positional(args).headOption.getOrElse("")

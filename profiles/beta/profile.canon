@@ -1,0 +1,14 @@
+; A second studio profile, differing from the first in every dimension the
+; runtime exposes. The authoritative definition is `BetaProfile` in
+; features/studio/studio.meta; this artifact records the selection.
+(profile
+  (name "beta-editor")
+  (language beta)
+  (layout split-pane)
+  (navigation nested)
+  (panels [index body log])
+  (commands [create-item review-item])
+  (workflow [draft review done])
+  (roles [author reviewer])
+  (projections [table])
+  (foreign [zip]))

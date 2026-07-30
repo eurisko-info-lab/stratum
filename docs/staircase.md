@@ -56,6 +56,7 @@ foundations/Fn/closure/
 foundations/Fn/verdict.canon
 foundations/Fn/evidence.canon
 foundations/Fn/digest.txt
+changes/F(n-1)-Fn/derivation.canon
 
 changes/F(n-1)-Fn/change.canon
 changes/F(n-1)-Fn/delta-meta.canon
@@ -75,6 +76,17 @@ commits.
 stratum foundation build --spec foundations/Fn/build.canon --out foundations/Fn
 stratum foundation verify --dir foundations/Fn
 stratum foundation verify-successor --predecessor foundations/F(n-1) --successor foundations/Fn
+stratum foundation derive-change --predecessor foundations/F(n-1) --successor foundations/Fn --out changes/F(n-1)-Fn/derivation.canon
+stratum foundation derive-successor --predecessor foundations/F(n-1) --derivation changes/F(n-1)-Fn/derivation.canon --expect foundations/Fn
 stratum foundation reconstruct --dir foundations/Fn
 stratum transcript run fixtures
 ```
+
+## Verified versus constructed
+
+`verify-successor` asks the predecessor whether the successor is well formed.
+`derive-successor` asks the predecessor to *build* it: it receives the
+predecessor reference and the canonical change only, applies the change to the
+predecessor's application manifest by field identity, recomputes the application
+identity, assembles the successor foundation manifest and returns its digest.
+The staircase requires both for every step.

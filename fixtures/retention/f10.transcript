@@ -2,8 +2,8 @@
 
 $ foundation verify --dir foundations/F10
 > foundation F10
-> digest 2c8bb7b830d0786eab1175b7ca0012b285414b1de69410df12e6477ae4db25ec
-> closure 71 artifacts
+> digest 8b3b087511f278706fd3f7fed5de4071c7a2d3ea170623180d42146f1160124d
+> closure 73 artifacts
 > check collection-is-nontrivial ok
 > check derived-caches-are-discarded ok
 > check regeneration-inputs-are-retained ok
@@ -23,18 +23,18 @@ $ foundation verify --dir foundations/F10
 $ foundation verify-successor --predecessor foundations/F9 --successor foundations/F10
 > predecessor F9
 > successor F10
-> result (valid #d2964513bf72f8cdb5bc08cb9dd81a632189d9f21860da12736f481fe86ad9264)
+> result (valid #db63c46749b95ee5cf5c8ea06b572bbb99799235830b1931fd962ffc4fd25821a)
 
 $ foundation reconstruct --dir foundations/F10
 > reconstructed F10
-> digest 2c8bb7b830d0786eab1175b7ca0012b285414b1de69410df12e6477ae4db25ec
+> digest 8b3b087511f278706fd3f7fed5de4071c7a2d3ea170623180d42146f1160124d
 > stable yes
-> closure 71 artifacts
+> closure 73 artifacts
 > checks 14 ok
 
 $ foundation attest --dir foundations/F10
-> (attestation (name "F10") (foundation #d2c8bb7b830d0786eab1175b7ca0012b285414b1de69410df12e6477ae4db25ec) (application #d6240bf4d05c9c22e269b053174f8f572354f6ddaf85870ae748e10faf5ee1344) (meta #dacd4c5e0cc3e55abb6751f810f1f12f5c852e5d127680f921cc79c6662eebb93) (closure 71) (kinds {application 11 change 12 foundation 11 grammar 3 meta-program 30 source 4}) (complete #t))
-> attestation c1adc813c26120bfa89eb37dfd4886e383e47f4e95bbedb3c648885995ee30de
+> (attestation (name "F10") (foundation #d8b3b087511f278706fd3f7fed5de4071c7a2d3ea170623180d42146f1160124d) (application #dd2b6aafbb2bd834ff8f1bb9f647eb8668b10d823c715e77778a5015102397afb) (meta #d5da29eb3ec0923e016b5e42b39353895664ee54a02306d32b3f66f47db638612) (closure 73) (kinds {application 11 change 12 data 1 foundation 11 grammar 3 meta-program 31 source 4}) (complete #t))
+> attestation c1ab0f0eada1d2f6294a0cddd97cadd6e3ee379c34ed044ac5b3a6d8ffd52b70
 
 # A nontrivial closure is collected.
 $ derive --foundation foundations/F10 --goal '(call DiscardedKinds)'

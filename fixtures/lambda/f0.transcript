@@ -10,8 +10,8 @@ $ host info
 # The foundation is verified from its own closure.
 $ foundation verify --dir foundations/F0
 > foundation F0
-> digest 220ecf6dd87e2c8e821acbc9eb126436b677111ff0cb264a14a029c7097040f7
-> closure 7 artifacts
+> digest 7eefabbefc9bcc6fde3e51ec162a1063ce66ae63ced2b6378a625496123f9e5b
+> closure 8 artifacts
 > check parse-print-roundtrip ok
 > check parse-print-roundtrip-nested ok
 > check beta-deterministic ok
@@ -25,18 +25,18 @@ $ foundation verify --dir foundations/F0
 > verdict ok
 
 $ foundation closure --dir foundations/F0
-> closure 7 artifacts
+> closure 8 artifacts
 > application 1
 > foundation 1
 > grammar 1
-> meta-program 4
+> meta-program 5
 
 # Reconstruction from digest + closure alone.
 $ foundation reconstruct --dir foundations/F0
 > reconstructed F0
-> digest 220ecf6dd87e2c8e821acbc9eb126436b677111ff0cb264a14a029c7097040f7
+> digest 7eefabbefc9bcc6fde3e51ec162a1063ce66ae63ced2b6378a625496123f9e5b
 > stable yes
-> closure 7 artifacts
+> closure 8 artifacts
 > checks 10 ok
 
 # parse(print(a)) = a

@@ -1,0 +1,238 @@
+module service
+
+; The generic language service.
+;
+; This is the semantic half of the editor. It is deliberately language
+; agnostic: it knows how to search text, how to turn a parse failure into a
+; positioned diagnostic, how to read the keywords out of any grammar artifact,
+; and how to shape diagnostics, symbols and completions. It knows nothing about
+; any particular language.
+;
+; The host adapter that speaks LSP contains no language knowledge at all. It
+; converts offsets to line and character, and JSON to canon. Everything an
+; editor displays is derived here, inside the foundation, under a step budget,
+; and is therefore reproducible and hashed like every other verdict.
+;
+; A deployment binds this library to its own language by defining the fixed
+; entry points ServiceDiagnostics, ServiceSymbols, ServiceCompletions,
+; ServiceFormat and ServiceCommand.
+
+; ------------------------------------------------------------------ text
+
+; The parse tree carries no source spans, and the host may not grow a primitive
+; to provide them without breaking the frozen core. So the service locates
+; things the honest way: by searching the source text for the token that names
+; them. Substring search is written here rather than taken from a primitive,
+; because `index-of` searches lists, not strings.
+
+judgment TextMatchesAt [text needle at] =
+  let stop = prim #add [at prim #slen [needle]] in
+  if prim #gt [stop prim #slen [text]]
+  then false
+  else prim #eq [prim #ssub [text at stop] needle]
+
+judgment TextFindFrom [text needle at] =
+  if prim #gt [prim #add [at prim #slen [needle]] prim #slen [text]]
+  then mk #none []
+  else
+    if call TextMatchesAt [text needle at]
+    then mk #some [at]
+    else call TextFindFrom [text needle prim #add [at 1]]
+
+judgment TextFind [text needle] = call TextFindFrom [text needle 0]
+
+judgment TextAfter [text needle] =
+  match call TextFind [text needle] {
+    case (#some at) ->
+      mk #some [prim #ssub [text prim #add [at prim #slen [needle]] prim #slen [text]]]
+    case (#none) -> mk #none []
+  }
+
+judgment TextDigits [] = list ["0" "1" "2" "3" "4" "5" "6" "7" "8" "9"]
+
+judgment TextLeadingDigits [text at] =
+  if prim #ge [at prim #slen [text]]
+  then prim #ssub [text 0 at]
+  else
+    if prim #contains [call TextDigits [] prim #ssub [text at prim #add [at 1]]]
+    then call TextLeadingDigits [text prim #add [at 1]]
+    else prim #ssub [text 0 at]
+
+; ------------------------------------------------------------ diagnostics
+
+; The grammar machine reports failures as prose with the offset embedded, so
+; the offset is recovered from the message rather than invented.
+judgment ParseErrorOffset [reason] =
+  match call TextAfter [reason "offset "] {
+    case (#some rest) ->
+      let digits = call TextLeadingDigits [rest 0] in
+      if prim #eq [digits ""]
+      then mk #none []
+      else mk #some [prim #str->nat [digits]]
+    case (#none) -> mk #none []
+  }
+
+judgment ParseDiagnostics [reason] =
+  match call ParseErrorOffset [reason] {
+    case (#some at) -> list [call Diagnostic [#error reason at 1]]
+    case (#none) -> list [call Diagnostic [#error reason 0 1]]
+  }
+
+; Everything crossing into the adapter is keyed, never tagged, so the host
+; performs no dispatch on any vocabulary of the system built above it.
+judgment Diagnostic [severity message at length] =
+  prim #mfrom [list [
+    mk #entry [#severity severity]
+    mk #entry [#message message]
+    mk #entry [#offset at]
+    mk #entry [#length length]
+  ]]
+
+judgment SymbolRecord [label kind at length detail] =
+  prim #mfrom [list [
+    mk #entry [#label label]
+    mk #entry [#kind kind]
+    mk #entry [#offset at]
+    mk #entry [#length length]
+    mk #entry [#detail detail]
+  ]]
+
+judgment CompletionRecord [label kind detail] =
+  prim #mfrom [list [
+    mk #entry [#label label]
+    mk #entry [#kind kind]
+    mk #entry [#detail detail]
+  ]]
+
+; A finding names the thing it is about. The thing it is about appears in the
+; source under that name, so the finding can be placed without spans.
+judgment KeyDiagnostic [text severity message key] =
+  let label = prim #sym->str [key] in
+  match call TextFind [text label] {
+    case (#some at) -> call Diagnostic [severity message at prim #slen [label]]
+    case (#none) -> call Diagnostic [severity message 0 1]
+  }
+
+judgment FindingMessage [kind key] =
+  prim #scat [prim #scat [prim #sym->str [kind] ": "] prim #sym->str [key]]
+
+; ---------------------------------------------------------------- symbols
+
+judgment KeySymbol [text key kind detail] =
+  call TextSymbol [text prim #sym->str [key] kind detail]
+
+judgment TextSymbol [text label kind detail] =
+  match call TextFind [text label] {
+    case (#some at) ->
+      call SymbolRecord [label kind at prim #slen [label] detail]
+    case (#none) -> call SymbolRecord [label kind 0 0 detail]
+  }
+
+; ------------------------------------------------------------ completions
+
+; Every keyword of any grammar, read out of the grammar artifact itself. A new
+; language gets keyword completion for free, with no code anywhere.
+judgment GrammarKeywords [grammar] =
+  match call Fetch [grammar #grammar] {
+    case (#some body) -> prim #sort [prim #distinct [call CollectKeywords [body]]]
+    case (#none) -> list []
+  }
+
+judgment CollectKeywords [value] =
+  if prim #is-node [value]
+  then
+    match value {
+      case (#kw word) -> list [word]
+      case _ -> call CollectKeywordsIn [prim #args [value]]
+    }
+  else
+    if prim #is-list [value]
+    then call CollectKeywordsIn [value]
+    else list []
+
+judgment CollectKeywordsIn [items] =
+  match items {
+    case [] -> list []
+    case head :: rest ->
+      prim #append [call CollectKeywords [head] call CollectKeywordsIn [rest]]
+  }
+
+judgment KeywordCompletions [words] =
+  match words {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [call CompletionRecord [head #keyword "keyword"] call KeywordCompletions [rest]]
+  }
+
+judgment GrammarCompletions [grammar] =
+  call KeywordCompletions [call GrammarKeywords [grammar]]
+
+judgment SymbolCompletions [symbols] =
+  match symbols {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        call CompletionRecord [
+          prim #mget [head #label ""]
+          prim #mget [head #kind #object]
+          prim #mget [head #detail ""]
+        ]
+        call SymbolCompletions [rest]
+      ]
+  }
+
+; ----------------------------------------------------------------- format
+
+; Formatting is not a new feature. It is the round trip the platform already
+; guarantees: parse the buffer, print the tree.
+judgment PrintBuffer [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok document) ->
+      match cap #grammar-print [grammar document] {
+        case (#ok printed) -> mk #some [printed]
+        case (#denied reason) -> mk #none []
+      }
+    case (#denied reason) -> mk #none []
+  }
+
+judgment CountMessage [items one many] =
+  if prim #eq [prim #len [items] 1]
+  then prim #scat ["1 " one]
+  else prim #scat [prim #scat [prim #nat->str [prim #len [items]] " "] many]
+
+; ------------------------------------------------------------ live tokens
+
+; Highlighting is not a generated file. The grammar's own token classes are
+; located in the buffer by the grammar machine and reported to the editor on
+; every keystroke, so the colours are the parser's opinion, not a copy of it
+; that can go stale.
+
+judgment LexicalTokens [grammar text] =
+  match cap #grammar-lex [grammar text] {
+    case (#ok tokens) -> tokens
+    case (#denied reason) -> list []
+  }
+
+judgment SemanticTokens [grammar text] =
+  call ClassifyTokens [call LexicalTokens [grammar text]]
+
+judgment ClassifyTokens [tokens] =
+  match tokens {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        prim #mput [head #kind call TokenType [prim #mget [head #kind #sym]]]
+        call ClassifyTokens [rest]
+      ]
+  }
+
+judgment TokenType [kind] =
+  if prim #eq [kind #kw]
+  then #keyword
+  else
+    if prim #eq [kind #str]
+    then #string
+    else
+      if prim #eq [kind #nat]
+      then #number
+      else #variable

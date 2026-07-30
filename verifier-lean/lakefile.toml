@@ -1,0 +1,8 @@
+name = "stratum"
+defaultTargets = ["Stratum"]
+
+# The model has no dependencies.
+
+[[lean_lib]]
+name = "Stratum"
+roots = ["Stratum.Bootstrap", "Stratum.Meta0"]

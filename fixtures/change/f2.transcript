@@ -2,8 +2,8 @@
 
 $ foundation verify --dir foundations/F2
 > foundation F2
-> digest 3a5591f985d56be387815ade4f36e195c62fd68a0636e4d2724370705d37c5ba
-> closure 29 artifacts
+> digest f76021e1ed93708e629352eeebfc9aad3d3e6d30589de7a351c6d558fd018d89
+> closure 31 artifacts
 > check identity-law ok
 > check composition-law ok
 > check derived-change-language-is-deterministic ok
@@ -29,13 +29,13 @@ $ foundation verify --dir foundations/F2
 $ foundation verify-successor --predecessor foundations/F1 --successor foundations/F2
 > predecessor F1
 > successor F2
-> result (valid #dc17548b9954e8e1968d005e77728465d50c9218a4c7c09b0e0a1711e56cc1449)
+> result (valid #d3a8c4b2bba912f56115736df54b0a515afd361eceb458db6a0c31f1b39e49c5e)
 
 $ foundation reconstruct --dir foundations/F2
 > reconstructed F2
-> digest 3a5591f985d56be387815ade4f36e195c62fd68a0636e4d2724370705d37c5ba
+> digest f76021e1ed93708e629352eeebfc9aad3d3e6d30589de7a351c6d558fd018d89
 > stable yes
-> closure 29 artifacts
+> closure 31 artifacts
 > checks 20 ok
 
 # Apply(x, identity) = x

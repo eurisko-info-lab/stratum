@@ -11,6 +11,7 @@
         (file "languages/meta/prelude.meta")
         (file "languages/lambda/lambda.bootstrap.meta")
         (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
       ]))
       (grammars { lambda (file "languages/lambda/lambda.bootstrap.grammar") })
       (entries {})

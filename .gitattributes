@@ -1,0 +1,19 @@
+# Generated artefacts are committed so a closure is complete without running the
+# generator, and so the drift gate can prove nothing has gone stale. They are
+# not hand written, and should not be counted or diffed as though they were.
+*.generated.meta     linguist-generated=true -diff
+*.generated.grammar  linguist-generated=true -diff
+applications/*/closure/**   linguist-generated=true -diff
+foundations/*/closure/**    linguist-generated=true -diff
+applications/*/foundation.canon  linguist-generated=true -diff
+foundations/*/foundation.canon   linguist-generated=true -diff
+applications/*/application.canon linguist-generated=true -diff
+foundations/*/application.canon  linguist-generated=true -diff
+changes/**/derivation.canon      linguist-generated=true -diff
+host/core.canon                   linguist-generated=true -diff
+
+# The surfaces really are the sources.
+*.meta     linguist-language=Scheme
+*.grammar  linguist-language=Scheme
+*.canon     linguist-language=Scheme
+*.transcript linguist-language=Shell

@@ -1,0 +1,112 @@
+# F11 acceptance transcript: profile-guided studios and the complete
+# publication workflow.
+
+$ foundation verify --dir foundations/F11
+> foundation F11
+> digest f6f952464cf0533b93dd976b5aa2359f456b5f68620b1aa54cf504e03c82ae4a
+> closure 80 artifacts
+> check the-runtime-offers-only-generic-primitives ok
+> check both-profiles-compose-the-same-runtime ok
+> check studios-do-not-collapse-into-one-interface ok
+> check panel-arrangement-navigation-commands-workflow-editors-and-previews-differ ok
+> check one-profile-navigates-its-own-way ok
+> check the-other-navigates-differently ok
+> check one-profile-arranges-its-own-panels ok
+> check the-other-arranges-different-panels ok
+> check one-profile-offers-its-own-commands ok
+> check the-other-offers-different-commands ok
+> check a-workflow-is-whatever-the-profile-says ok
+> check foreign-surfaces-are-declared-not-assumed ok
+> check field-editors-are-declared-not-assumed ok
+> check relayout-does-not-change-the-semantic-digest ok
+> check a-conflict-editor-is-derived ok
+> check a-repository-browser-is-derived ok
+> check the-round-trip-has-seventeen-stages ok
+> check the-round-trip-changes-a-language ok
+> check the-round-trip-changes-code ok
+> check the-round-trip-changes-data ok
+> check independent-patches-commute-in-the-round-trip ok
+> check conflicts-stay-explicit-in-the-round-trip ok
+> check acceptance-runs-locally-in-the-round-trip ok
+> check a-fresh-node-reconstructs-the-state ok
+> check the-studios-reopen-the-reconstructed-state ok
+> check retention-unchanged ok
+> check lambda-behaviour-unchanged ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F10 --successor foundations/F11
+> predecessor F10
+> successor F11
+> result (valid #ddebcd39918b384776523e653b7693468880a2ac62a75c03ca5d20b7ce9dca2f9)
+
+$ foundation reconstruct --dir foundations/F11
+> reconstructed F11
+> digest f6f952464cf0533b93dd976b5aa2359f456b5f68620b1aa54cf504e03c82ae4a
+> stable yes
+> closure 80 artifacts
+> checks 27 ok
+
+$ foundation attest --dir foundations/F11
+> (attestation (name "F11") (foundation #df6f952464cf0533b93dd976b5aa2359f456b5f68620b1aa54cf504e03c82ae4a) (application #d7c437ee68ae4b1bf0a0db9307c276e0a569e3a73fd2859c028c852055bed0670) (meta #d176a10eeb70418d43979abc0b8d55f852028a873c378416c4e3b4060a921cb0a) (closure 80) (kinds {application 12 change 13 data 1 foundation 12 grammar 3 meta-program 33 profile 2 source 4}) (complete #t))
+> attestation 1b8c96a6d52d6eb854e7ff8bce6e3fef38accd04cb8785ee169cf8fbd0b80b2c
+
+# One generic runtime, offering only these primitives.
+$ derive --foundation foundations/F11 --goal '(call Primitives)'
+> [tree list table text form graph inspector diff conflict preview queue palette]
+
+$ derive --foundation foundations/F11 --goal '(call SharesRuntime (call AlphaProfile) (call BetaProfile))'
+> #t
+
+# The two studios do not collapse into one fixed interface.
+$ derive --foundation foundations/F11 --goal '(call StudiosCollapse)'
+> #f
+
+$ derive --foundation foundations/F11 --goal '(call StudioPanels (call AlphaStudio))'
+> [outline detail]
+
+$ derive --foundation foundations/F11 --goal '(call StudioPanels (call BetaStudio))'
+> [index body log]
+
+$ derive --foundation foundations/F11 --goal '(call StudioNavigation (call AlphaStudio))'
+> (navigation root-item [root item])
+
+$ derive --foundation foundations/F11 --goal '(call StudioNavigation (call BetaStudio))'
+> (navigation group-item [group item])
+
+$ derive --foundation foundations/F11 --goal '(call StudioActions (call BetaStudio))'
+> [create-item review-item]
+
+$ derive --foundation foundations/F11 --goal '(call StudioWorkflow (call BetaStudio))'
+> [draft review done]
+
+$ derive --foundation foundations/F11 --goal '(call DeriveEditor (call BetaProfile))'
+> [rich-text numeric]
+
+$ derive --foundation foundations/F11 --goal '(call DeriveForeignProjection (call BetaProfile))'
+> [zip]
+
+# Panel layout is not semantics.
+$ derive --foundation foundations/F11 --goal '(call RelayoutIsSemanticallyNeutral (call AlphaLanguage) (call BetaProfile) (q single-pane))'
+> #t
+
+# The complete chain to workspace round trip.
+$ derive --foundation foundations/F11 --goal '(call RoundTripStageNames)'
+> [finalized-publication fetch-closure create-local-branch derive-tooling change-language change-code change-data record-patches commute-independent-patches explicit-conflicts run-acceptance package-proposal peers-fetch-closure settle-transition advance-chain reconstruct-on-fresh-node reopen-studios]
+
+$ derive --foundation foundations/F11 --goal '(call RoundTripStageCount (grammar lambda))'
+> 17
+
+$ derive --foundation foundations/F11 --goal '(call StageResult (grammar lambda) (q change-language))'
+> {atom [(entry Var varprod) (entry Hole holeprod)]}
+
+$ derive --foundation foundations/F11 --goal '(call StageResult (grammar lambda) (q change-code))'
+> "\\ x. z"
+
+$ derive --foundation foundations/F11 --goal '(call StageResult (grammar lambda) (q change-data))'
+> {A one B two C three}
+
+$ derive --foundation foundations/F11 --goal '(call StageResult (grammar lambda) (q run-acceptance))'
+> accepted
+
+$ derive --foundation foundations/F11 --goal '(call StageResult (grammar lambda) (q reopen-studios))'
+> [outline detail]

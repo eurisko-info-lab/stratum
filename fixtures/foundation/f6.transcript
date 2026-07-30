@@ -2,8 +2,8 @@
 
 $ foundation verify --dir foundations/F6
 > foundation F6
-> digest 3deb8608e55a8fcaa1c165c5536d81775e7a3d458f2041e007e999d944e89422
-> closure 51 artifacts
+> digest a9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af
+> closure 53 artifacts
 > check application-is-loaded-from-one-root-digest ok
 > check verification-is-closure-only ok
 > check host-supplied-semantic-overrides-are-rejected ok
@@ -20,20 +20,20 @@ $ foundation verify --dir foundations/F6
 $ foundation verify-successor --predecessor foundations/F5 --successor foundations/F6
 > predecessor F5
 > successor F6
-> result (valid #d856dbce4eec753775b757f67a09b5f2f59f3dfd8fd5a730ad82fd627d08d1a2f)
+> result (valid #dfc6a614680fdb147d9fa4552b6c638eec50d244b61863da96472917a8bc65314)
 
 # Reconstruction in a fresh process from digest plus closure alone.
 $ foundation reconstruct --dir foundations/F6
 > reconstructed F6
-> digest 3deb8608e55a8fcaa1c165c5536d81775e7a3d458f2041e007e999d944e89422
+> digest a9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af
 > stable yes
-> closure 51 artifacts
+> closure 53 artifacts
 > checks 11 ok
 
 # The canonical attestation that both independent hosts must reproduce.
 $ foundation attest --dir foundations/F6
-> (attestation (name "F6") (foundation #d3deb8608e55a8fcaa1c165c5536d81775e7a3d458f2041e007e999d944e89422) (application #d14eb1ce22b65c53d3373d55644461bc51cc1a3b46ba4c3e581be36c986c9c511) (meta #d2ea85ed944b4d2164f81ec7492e6be59f680645605af10affebd8994a60f2136) (closure 51) (kinds {application 7 change 8 foundation 7 grammar 3 meta-program 22 source 4}) (complete #t))
-> attestation 20a309e4de96f098ac177c9f41ec5f017f72955b8d14a848c635efca77bd2f06
+> (attestation (name "F6") (foundation #da9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af) (application #d53742b6764bfe8c36428064f01aae30c8d0da004cb76738f6676574d36c5035f) (meta #d5ab0e6030949ad5e2214d6f68b8fb1b736cb7bd941477d78b7526742af3aebcb) (closure 53) (kinds {application 7 change 8 data 1 foundation 7 grammar 3 meta-program 23 source 4}) (complete #t))
+> attestation 7b9d74bc6fc011e40ba46fb88c8c2a8f55c45f06513f780a599b5c5c6b48b753
 
 # A foundation is verified from a reference and the closure, nothing else.
 $ derive --foundation foundations/F6 --goal '(prim tag (call VerifyRoot (file "foundations/F5/foundation.canon")))'

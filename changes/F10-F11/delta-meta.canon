@@ -1,0 +1,11 @@
+; delta-meta for F10 -> F11: Meta gains studio profiles, views, panels,
+; editors, navigation, workflows, roles, actions, projections and foreign
+; surfaces.
+(change
+  (kind delta-meta)
+  (name "F10->F11 delta-meta")
+  (replace
+    (ReplaceChange
+      interaction-model
+      (absent)
+      (schema-guided studio-profiles))))
