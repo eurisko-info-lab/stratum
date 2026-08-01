@@ -1,0 +1,10 @@
+# Rebuild a foundation, then attest it.
+#
+# It does not rebuild anything itself: it uses the runbook that already knows
+# how, and adds the one step that is its own.
+
+% param node = foundations/F1
+
+% use runbooks/rebuild-a-foundation.transcript node={{node}}
+
+$ foundation attest --dir {{node}}

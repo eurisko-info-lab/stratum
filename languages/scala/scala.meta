@@ -1,0 +1,544 @@
+module scala
+
+record ScalaDocument [items]
+record Brace [body]
+record EmptyBrace []
+record BlockColon [header newline body]
+record BlockColonBare [newline body]
+record BlockEquals [header newline body]
+record BlockEqualsBare [newline body]
+record BlockArrow [header newline body]
+record BlockThen [header newline body]
+record BlockElse [newline body]
+record BlockDo [header newline body]
+record HeaderDocument [items]
+record Colon []
+record Assign []
+record FatArrow []
+record ThenKw []
+record ElseKw []
+record DoKw []
+record Paren [body]
+record EmptyParen []
+record Bracket [body]
+record EmptyBracket []
+record LineComment [value]
+record BlockComment [value]
+record TripleQuoted [value]
+record DQuoted [value]
+record CharLit [value]
+record Number [value]
+record Abstract []
+record CaseKw []
+record Catch []
+record ClassKw []
+record Def []
+record Enum []
+record Extends []
+record Export []
+record Extension []
+record False []
+record Final []
+record Finally []
+record For []
+record Given []
+record If []
+record Implicit []
+record Import []
+record Inline []
+record Lazy []
+record Match []
+record New []
+record NullKw []
+record ObjectKw []
+record Opaque []
+record Override []
+record Package []
+record Private []
+record Protected []
+record Return []
+record Sealed []
+record SelfKw []
+record SuperKw []
+record Throw []
+record Trait []
+record True []
+record Try []
+record TypeKw []
+record Using []
+record Val []
+record Var []
+record While []
+record With []
+record Yield []
+record EndKw []
+record Comma []
+record Semicolon []
+record Dot []
+record Operator [value]
+record Word [value]
+record Newline [value]
+record IndentBlock [body]
+record HeaderDocumentTyped [items]
+record TypedColon []
+
+judgment ParseScala [grammar source] = call Parse [grammar source]
+judgment PrintScala [grammar syntax] = call Print [grammar syntax]
+judgment ScalaWellFormed [grammar source] =
+  match call ParseScala [grammar source] {
+    case (#ScalaDocument items) -> mk #valid [items]
+    case _ -> mk #invalid [#parse]
+  }
+
+; ------------------------------------------------------------ name resolution
+;
+; Same design as TypeScript/Rust/Lean: a second pass over the already-parsed
+; tree (never mutates it) reporting a #binding for every `val`/`var`/`def`/
+; `class`/`object`/`trait`/`enum` name (both the indentation-block forms,
+; `class Foo:` / `def foo(x: Int) =`, and the flat one-liner forms most
+; common for `case class Foo(x: Int)`), function/constructor parameters, and
+; a #reference, resolved against scope built left to right, for every other
+; bare `Word`. `.` is skipped the way it is for the other languages.
+;
+; `case Foo(a, b) =>` and lambda literals (`x => ...`) share one grammar
+; production (BlockArrow), since both are "some header, then =>, then an
+; indented body" -- and conveniently, treating every bare `Word` in that
+; header as a fresh binding is correct for *both*: a pattern's variables and
+; a lambda's parameters. The one imprecision this carries is that a pattern
+; like `Foo(a, b)` also contains the constructor name `Foo`, which gets
+; treated as a fresh binding too rather than a reference to the type -- a
+; false #binding, not a wrong #reference, so it does not corrupt resolution
+; of anything else.
+;
+; Known scope cut, deliberately not attempted: `given`/`extension` headers
+; (whether a `given` introduces a name is genuinely ambiguous by shape --
+; `given Ord[Int]:` does not, `given intOrd: Ord[Int]:` does) and `import`
+; wildcard/rename clauses. Their contents still get walked for references,
+; just without extracting any bindings from them.
+
+judgment ScalaBody [node] = call FlattenSeq [node #ScalaDocument]
+judgment ScalaHeader [node] = call FlattenSeq [node #HeaderDocument]
+judgment ScalaHeaderTyped [node] = call FlattenSeq [node #HeaderDocumentTyped]
+
+judgment ScalaMkBindings [names kind] =
+  match names {
+    case [] -> list []
+    case head :: rest -> prim #cons [mk #binding [head kind] call ScalaMkBindings [rest kind]]
+  }
+
+; The Word right after def/val/var/class/object/trait/enum, if the header
+; (already flattened) starts that way -- modifiers such as `final`/`case`/
+; `private` are never part of `header` itself (they precede the item that
+; contains it), so no allowance for them is needed here.
+judgment ScalaDeclaredName [items] =
+  match items {
+    case (#Def) :: (#Word name) :: rest -> mk #some [name]
+    case (#Val) :: (#Word name) :: rest -> mk #some [name]
+    case (#Var) :: (#Word name) :: rest -> mk #some [name]
+    case (#ClassKw) :: (#Word name) :: rest -> mk #some [name]
+    case (#ObjectKw) :: (#Word name) :: rest -> mk #some [name]
+    case (#Trait) :: (#Word name) :: rest -> mk #some [name]
+    case (#Enum) :: (#Word name) :: rest -> mk #some [name]
+    case _ -> mk #none []
+  }
+
+; Parameter names inside one parenthesized group (already flattened as a
+; plain `document`, so plain `Colon` -- not `TypedColon`, which only appears
+; at a header's own top level -- marks a type position).
+judgment ScalaParamNames [items typePosition] =
+  match items {
+    case [] -> list []
+    case (#Colon) :: rest -> call ScalaParamNames [rest #true]
+    case (#Comma) :: rest -> call ScalaParamNames [rest #false]
+    case (#Paren body) :: rest ->
+      prim #append [call ScalaParamNames [call ScalaBody [body] #false] call ScalaParamNames [rest typePosition]]
+    case (#Word name) :: rest ->
+      if prim #eq [typePosition #true]
+      then call ScalaParamNames [rest typePosition]
+      else prim #cons [name call ScalaParamNames [rest typePosition]]
+    case head :: rest -> call ScalaParamNames [rest typePosition]
+  }
+
+; Every parenthesized group anywhere in a header is a parameter list (a
+; `def` can curry several: `def f(x: Int)(using y: String) = ...`).
+judgment ScalaHeaderParams [items] =
+  match items {
+    case [] -> list []
+    case (#Paren body) :: rest ->
+      prim #append [call ScalaParamNames [call ScalaBody [body] #false] call ScalaHeaderParams [rest]]
+    case head :: rest -> call ScalaHeaderParams [rest]
+  }
+
+; Every bare Word anywhere in a match/lambda header, diving into parens for
+; nested patterns like `Foo(Bar(a), b)`.
+judgment ScalaWordsIn [items] =
+  match items {
+    case [] -> list []
+    case (#Word name) :: rest -> prim #cons [name call ScalaWordsIn [rest]]
+    case (#Paren body) :: rest -> prim #append [call ScalaWordsIn [call ScalaBody [body]] call ScalaWordsIn [rest]]
+    case head :: rest -> call ScalaWordsIn [rest]
+  }
+
+judgment ScalaResolveItems [items scope] =
+  match items {
+    case [] -> list []
+    case (#Dot) :: (#Word name) :: rest ->
+      call ScalaResolveItems [rest scope]
+
+    case (#BlockColon header newline body) :: rest ->
+      let headerItems = call ScalaHeader [header] in
+      match call ScalaDeclaredName [headerItems] {
+        case (#some name) ->
+          let inner = prim #append [prim #snoc [scope name] call ScalaHeaderParams [headerItems]] in
+          prim #cons [
+            mk #binding [name #decl]
+            prim #append [
+              call ScalaResolveItems [call ScalaBody [body] inner]
+              call ScalaResolveItems [rest prim #snoc [scope name]]
+            ]
+          ]
+        case (#none) ->
+          prim #append [
+            call ScalaResolveItems [headerItems scope]
+            prim #append [
+              call ScalaResolveItems [call ScalaBody [body] scope]
+              call ScalaResolveItems [rest scope]
+            ]
+          ]
+      }
+    case (#BlockEquals header newline body) :: rest ->
+      let headerItems = call ScalaHeaderTyped [header] in
+      match call ScalaDeclaredName [headerItems] {
+        case (#some name) ->
+          let inner = prim #append [prim #snoc [scope name] call ScalaHeaderParams [headerItems]] in
+          prim #cons [
+            mk #binding [name #decl]
+            prim #append [
+              call ScalaResolveItems [call ScalaBody [body] inner]
+              call ScalaResolveItems [rest prim #snoc [scope name]]
+            ]
+          ]
+        case (#none) ->
+          prim #append [
+            call ScalaResolveItems [headerItems scope]
+            prim #append [
+              call ScalaResolveItems [call ScalaBody [body] scope]
+              call ScalaResolveItems [rest scope]
+            ]
+          ]
+      }
+    case (#BlockArrow header newline body) :: rest ->
+      let headerItems = call ScalaHeaderTyped [header] in
+      let patternNames = call ScalaWordsIn [headerItems] in
+      prim #append [
+        call ScalaResolveItems [headerItems scope]
+        prim #append [
+          call ScalaResolveItems [call ScalaBody [body] prim #append [scope patternNames]]
+          call ScalaResolveItems [rest scope]
+        ]
+      ]
+    case (#BlockThen header newline body) :: rest ->
+      prim #append [
+        call ScalaResolveItems [call ScalaHeaderTyped [header] scope]
+        prim #append [
+          call ScalaResolveItems [call ScalaBody [body] scope]
+          call ScalaResolveItems [rest scope]
+        ]
+      ]
+    case (#BlockDo header newline body) :: rest ->
+      prim #append [
+        call ScalaResolveItems [call ScalaHeaderTyped [header] scope]
+        prim #append [
+          call ScalaResolveItems [call ScalaBody [body] scope]
+          call ScalaResolveItems [rest scope]
+        ]
+      ]
+    case (#BlockColonBare newline body) :: rest ->
+      prim #append [call ScalaResolveItems [call ScalaBody [body] scope] call ScalaResolveItems [rest scope]]
+    case (#BlockEqualsBare newline body) :: rest ->
+      prim #append [call ScalaResolveItems [call ScalaBody [body] scope] call ScalaResolveItems [rest scope]]
+    case (#BlockElse newline body) :: rest ->
+      prim #append [call ScalaResolveItems [call ScalaBody [body] scope] call ScalaResolveItems [rest scope]]
+    case (#IndentBlock body) :: rest ->
+      prim #append [call ScalaResolveItems [call ScalaBody [body] scope] call ScalaResolveItems [rest scope]]
+    case (#Brace body) :: rest ->
+      prim #append [call ScalaResolveItems [call ScalaBody [body] scope] call ScalaResolveItems [rest scope]]
+    case (#Paren body) :: rest ->
+      prim #append [call ScalaResolveItems [call ScalaBody [body] scope] call ScalaResolveItems [rest scope]]
+    case (#Bracket body) :: rest ->
+      prim #append [call ScalaResolveItems [call ScalaBody [body] scope] call ScalaResolveItems [rest scope]]
+
+    case (#ClassKw) :: (#Word name) :: (#Paren body) :: rest ->
+      let params = call ScalaParamNames [call ScalaBody [body] #false] in
+      prim #append [
+        prim #cons [mk #binding [name #class] call ScalaMkBindings [params #param]]
+        call ScalaResolveItems [rest prim #append [prim #snoc [scope name] params]]
+      ]
+    case (#ClassKw) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #class] call ScalaResolveItems [rest prim #snoc [scope name]]]
+    case (#ObjectKw) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #object] call ScalaResolveItems [rest prim #snoc [scope name]]]
+    case (#Trait) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #trait] call ScalaResolveItems [rest prim #snoc [scope name]]]
+    case (#Enum) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #enum] call ScalaResolveItems [rest prim #snoc [scope name]]]
+    case (#Def) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #def] call ScalaResolveItems [rest prim #snoc [scope name]]]
+    case (#Val) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #val] call ScalaResolveItems [rest prim #snoc [scope name]]]
+    case (#Var) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #var] call ScalaResolveItems [rest prim #snoc [scope name]]]
+
+    case (#Word name) :: rest ->
+      if prim #contains [scope name]
+      then prim #cons [mk #reference [name #resolved] call ScalaResolveItems [rest scope]]
+      else prim #cons [mk #reference [name #free] call ScalaResolveItems [rest scope]]
+    case head :: rest ->
+      call ScalaResolveItems [rest scope]
+  }
+
+judgment ResolveScala [grammar source] =
+  call ScalaResolveItems [call ScalaBody [call ParseScala [grammar source]] list []]
+
+; ---------------------------------------------------- type inference/checking
+
+judgment ScalaTypeWords [tokens] =
+  match tokens {
+    case [] -> list []
+    case (#Word w) :: rest -> prim #cons [w call ScalaTypeWords [rest]]
+    case head :: rest -> call ScalaTypeWords [rest]
+  }
+
+judgment ScalaTakeType [items] =
+  match items {
+    case [] -> mk #taken [list [] list []]
+    case (#Comma) :: rest -> mk #taken [list [] rest]
+    case head :: rest ->
+      match call ScalaTakeType [rest] {
+        case (#taken typeToks remaining) -> mk #taken [prim #cons [head typeToks] remaining]
+      }
+  }
+
+judgment ScalaTakeTypeUntilAssign [items] =
+  match items {
+    case [] -> mk #taken [list [] list []]
+    case (#Assign) :: rest -> mk #taken [list [] rest]
+    case (#Semicolon) :: rest -> mk #taken [list [] rest]
+    case head :: rest ->
+      match call ScalaTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) -> mk #taken [prim #cons [head typeToks] remaining]
+      }
+  }
+
+judgment ScalaParamAnnotations [items] =
+  match items {
+    case [] -> list []
+    case (#Comma) :: rest -> call ScalaParamAnnotations [rest]
+    case (#Word name) :: (#Colon) :: rest ->
+      match call ScalaTakeType [rest] {
+        case (#taken typeToks remaining) ->
+          prim #cons [mk #annotation [name call ScalaTypeWords [typeToks]] call ScalaParamAnnotations [remaining]]
+      }
+    case head :: rest -> call ScalaParamAnnotations [rest]
+  }
+
+judgment ScalaHeaderAnnotations [items] =
+  match items {
+    case [] -> list []
+    case (#Paren body) :: rest ->
+      prim #append [call ScalaParamAnnotations [call ScalaBody [body]] call ScalaHeaderAnnotations [rest]]
+    case head :: rest -> call ScalaHeaderAnnotations [rest]
+  }
+
+judgment ScalaPrimaryType [typeWords] =
+  match typeWords {
+    case [] -> #unknown
+    case t :: rest ->
+      if prim #eq [t "Int"]
+      then #number
+      else if prim #eq [t "Long"]
+      then #number
+      else if prim #eq [t "Float"]
+      then #number
+      else if prim #eq [t "Double"]
+      then #number
+      else if prim #eq [t "BigInt"]
+      then #number
+      else if prim #eq [t "Boolean"]
+      then #boolean
+      else if prim #eq [t "String"]
+      then #string
+      else if prim #eq [t "Char"]
+      then #char
+      else if prim #eq [t "Unit"]
+      then #unit
+      else if prim #eq [t "Any"]
+      then #unknown
+      else if prim #eq [t "AnyRef"]
+      then #unknown
+      else if prim #eq [t "Nothing"]
+      then #unknown
+      else call ScalaPrimaryType [rest]
+  }
+
+judgment ScalaEntriesFromAnnotations [annos] =
+  match annos {
+    case [] -> list []
+    case (#annotation name typeWords) :: rest ->
+      prim #cons [mk #typed [name call ScalaPrimaryType [typeWords]] call ScalaEntriesFromAnnotations [rest]]
+  }
+
+judgment ScalaLookupType [env name] =
+  match env {
+    case [] -> #unknown
+    case (#typed key t) :: rest ->
+      if prim #eq [key name]
+      then t
+      else call ScalaLookupType [rest name]
+  }
+
+judgment ScalaInferExprType [items env] =
+  match items {
+    case [] -> #unknown
+    case (#Number n) :: rest -> #number
+    case (#DQuoted s) :: rest -> #string
+    case (#TripleQuoted s) :: rest -> #string
+    case (#CharLit c) :: rest -> #char
+    case (#True) :: rest -> #boolean
+    case (#False) :: rest -> #boolean
+    case (#Word name) :: rest -> call ScalaLookupType [env name]
+    case head :: rest -> call ScalaInferExprType [rest env]
+  }
+
+judgment ScalaCompatibleType [declared inferred] =
+  if prim #eq [declared #unknown]
+  then #true
+  else if prim #eq [inferred #unknown]
+  then #true
+  else if prim #eq [declared inferred]
+  then #true
+  else #false
+
+judgment ScalaInferItems [items env] =
+  match items {
+    case [] -> list []
+    case (#Val) :: (#Word name) :: (#Colon) :: rest ->
+      match call ScalaTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) ->
+          let declared = call ScalaPrimaryType [call ScalaTypeWords [typeToks]] in
+          let inferred = call ScalaInferExprType [remaining env] in
+          let entry = mk #typed [name declared] in
+          prim #cons [mk #type [name declared #declared inferred] call ScalaInferItems [remaining prim #snoc [env entry]]]
+      }
+    case (#Var) :: (#Word name) :: (#Colon) :: rest ->
+      match call ScalaTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) ->
+          let declared = call ScalaPrimaryType [call ScalaTypeWords [typeToks]] in
+          let inferred = call ScalaInferExprType [remaining env] in
+          let entry = mk #typed [name declared] in
+          prim #cons [mk #type [name declared #declared inferred] call ScalaInferItems [remaining prim #snoc [env entry]]]
+      }
+    case (#Val) :: (#Word name) :: rest ->
+      let inferred = call ScalaInferExprType [rest env] in
+      let entry = mk #typed [name inferred] in
+      prim #cons [mk #type [name inferred #inferred inferred] call ScalaInferItems [rest prim #snoc [env entry]]]
+    case (#Var) :: (#Word name) :: rest ->
+      let inferred = call ScalaInferExprType [rest env] in
+      let entry = mk #typed [name inferred] in
+      prim #cons [mk #type [name inferred #inferred inferred] call ScalaInferItems [rest prim #snoc [env entry]]]
+
+    case (#BlockEquals header newline body) :: rest ->
+      let headerItems = call ScalaHeaderTyped [header] in
+      let paramEntries = call ScalaEntriesFromAnnotations [call ScalaHeaderAnnotations [headerItems]] in
+      match call ScalaDeclaredName [headerItems] {
+        case (#some name) ->
+          let own = mk #typed [name #function] in
+          let inner = prim #append [prim #append [env paramEntries] list [own]] in
+          prim #append [
+            prim #cons [mk #type [name #function #declared #function] call ScalaInferItems [call ScalaBody [body] inner]]
+            call ScalaInferItems [rest prim #snoc [env own]]
+          ]
+        case (#none) ->
+          prim #append [
+            call ScalaInferItems [headerItems env]
+            prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+          ]
+      }
+
+    case (#BlockColon header newline body) :: rest ->
+      let headerItems = call ScalaHeader [header] in
+      match call ScalaDeclaredName [headerItems] {
+        case (#some name) ->
+          let own = mk #typed [name #decl] in
+          prim #append [
+            prim #cons [mk #type [name #decl #declared #decl] call ScalaInferItems [call ScalaBody [body] prim #snoc [env own]]]
+            call ScalaInferItems [rest prim #snoc [env own]]
+          ]
+        case (#none) ->
+          prim #append [
+            call ScalaInferItems [headerItems env]
+            prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+          ]
+      }
+
+    case (#BlockArrow header newline body) :: rest ->
+      prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+    case (#BlockThen header newline body) :: rest ->
+      prim #append [
+        call ScalaInferItems [call ScalaHeaderTyped [header] env]
+        prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+      ]
+    case (#BlockDo header newline body) :: rest ->
+      prim #append [
+        call ScalaInferItems [call ScalaHeaderTyped [header] env]
+        prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+      ]
+    case (#BlockColonBare newline body) :: rest ->
+      prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+    case (#BlockEqualsBare newline body) :: rest ->
+      prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+    case (#BlockElse newline body) :: rest ->
+      prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+    case (#IndentBlock body) :: rest ->
+      prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+    case (#Brace body) :: rest ->
+      prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+    case (#Paren body) :: rest ->
+      prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+    case (#Bracket body) :: rest ->
+      prim #append [call ScalaInferItems [call ScalaBody [body] env] call ScalaInferItems [rest env]]
+
+    case (#ClassKw) :: (#Word name) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #cons [mk #type [name #type #declared #type] call ScalaInferItems [rest prim #snoc [env own]]]
+    case (#ObjectKw) :: (#Word name) :: rest ->
+      let own = mk #typed [name #module] in
+      prim #cons [mk #type [name #module #declared #module] call ScalaInferItems [rest prim #snoc [env own]]]
+    case (#Trait) :: (#Word name) :: rest ->
+      let own = mk #typed [name #typeclass] in
+      prim #cons [mk #type [name #typeclass #declared #typeclass] call ScalaInferItems [rest prim #snoc [env own]]]
+    case (#Enum) :: (#Word name) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #cons [mk #type [name #type #declared #type] call ScalaInferItems [rest prim #snoc [env own]]]
+    case (#Def) :: (#Word name) :: rest ->
+      let own = mk #typed [name #function] in
+      prim #cons [mk #type [name #function #declared #function] call ScalaInferItems [rest prim #snoc [env own]]]
+
+    case head :: rest -> call ScalaInferItems [rest env]
+  }
+
+judgment ScalaTypeErrors [typed] =
+  match typed {
+    case [] -> list []
+    case (#type name declared #declared inferred) :: rest ->
+      if call ScalaCompatibleType [declared inferred]
+      then call ScalaTypeErrors [rest]
+      else prim #cons [mk #type-error [name declared inferred] call ScalaTypeErrors [rest]]
+    case head :: rest -> call ScalaTypeErrors [rest]
+  }
+
+judgment InferScala [grammar source] =
+  call ScalaInferItems [call ScalaBody [call ParseScala [grammar source]] list []]
+
+judgment TypeCheckScala [grammar source] =
+  call ScalaTypeErrors [call InferScala [grammar source]]

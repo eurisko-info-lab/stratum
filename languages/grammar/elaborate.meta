@@ -1,0 +1,88 @@
+; Grammar elaboration to canonical Grammar0.
+(program
+  (module grammar)
+
+  (judgment Unescape [text index accumulator]
+    (if (prim ge (v index) (prim slen (v text)))
+        (v accumulator)
+        (let character (prim ssub (v text) (v index) (prim add (v index) (q 1)))
+          (if (prim eq (v character) (q "\\"))
+              (call Unescape (v text) (prim add (v index) (q 2))
+                (prim scat (v accumulator)
+                  (call EscapeValue
+                    (prim ssub (v text) (prim add (v index) (q 1)) (prim add (v index) (q 2))))))
+              (call Unescape (v text) (prim add (v index) (q 1))
+                (prim scat (v accumulator) (v character)))))))
+
+  (judgment EscapeValue [character]
+    (if (prim eq (v character) (q "n"))
+        (q "\n")
+        (if (prim eq (v character) (q "t"))
+            (q "\t")
+            (if (prim eq (v character) (q "r")) (q "\r") (v character)))))
+
+  (judgment TextValue [literal]
+    (call Unescape (call Unquote (v literal)) (q 0) (q "")))
+
+  (judgment ElabGrammar [ast]
+    (prim node (q grammar) (call ElabGrammarDecls (call FlattenSeq (v ast) (q Seq)))))
+
+  (judgment ElabGrammarDecls [declarations]
+    (match (v declarations)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (prim cons (call ElabGrammarDecl (v head)) (call ElabGrammarDecls (v rest))))))
+
+  (judgment ElabGrammarDecl [declaration]
+    (match (v declaration)
+      (case (pm GrammarName (pv name)) (mk name (call TextValue (v name))))
+      (case (pm Start (pv category)) (mk start (v category)))
+      (case (pm Token (pv name) (pv kind) (pv pattern))
+        (prim node (q token)
+          (prim cons (v name) (prim cons (v kind) (prim cons (call TextValue (v pattern)) (q []))))))
+      (case (pm Skip (pv pattern)) (mk skip (call TextValue (v pattern))))
+      (case (pm Category (pv name) (pv productions))
+        (prim node (q category)
+          (prim cons (v name)
+            (call ElabProductions (call FlattenSeq (v productions) (q Productions))))))))
+
+  (judgment ElabProductions [productions]
+    (match (v productions)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (prim cons (call ElabProduction (v head)) (call ElabProductions (v rest))))))
+
+  (judgment ElabProduction [production]
+    (match (v production)
+      (case (pm Production (pv tag) (pv elements))
+        (call Apply2 (q prod) (v tag)
+          (call ElabElements (call FlattenSeq (v elements) (q Elements)))))
+      (case (pm Pass (pv target)) (mk pass (v target)))
+      (case (pm Fold (pv tag) (pv target)) (call Apply2 (q fold) (v tag) (v target)))
+      (case (pm Paren (pv open) (pv target) (pv close))
+        (prim node (q paren)
+          (prim cons (call TextValue (v open))
+            (prim cons (v target) (prim cons (call TextValue (v close)) (q []))))))))
+
+  (judgment ElabElements [elements]
+    (match (v elements)
+      (case (pnil) (q []))
+      (case (pcons (pv head) (pv rest))
+        (prim cons (call ElabElement (v head)) (call ElabElements (v rest))))))
+
+  (judgment ElabElement [element]
+    (match (v element)
+      (case (pm Keyword (pv text)) (mk kw (call TextValue (v text))))
+      (case (pm Binding (pv field) (pv target)) (call Apply2 (q bind) (v field) (v target)))))
+
+  (judgment ElaborateGrammarSource [grammar source]
+    (call ElabGrammar (call Parse (v grammar) (v source))))
+
+  ; The reconstructed grammar must equal the committed grammar artifact.
+  (judgment GrammarReconstructs [grammar source artifactReference]
+    (match (call Fetch (v artifactReference) (q grammar))
+      (case (pm none) (mk reconstruct (q artifact-missing)))
+      (case (pm some (pv committed))
+        (if (prim eq (v committed) (call ElaborateGrammarSource (v grammar) (v source)))
+            (mk reconstruct (q ok))
+            (mk reconstruct (q mismatch)))))))

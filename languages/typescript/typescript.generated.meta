@@ -1,0 +1,2577 @@
+; Generated from languages/typescript/typescript.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module typescript)
+  (judgment
+    TypeScriptDocument
+    [items]
+    (mk
+      TypeScriptDocument
+      (v items)))
+  (judgment
+    TypeScriptDocument'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Brace
+    [body]
+    (mk
+      Brace
+      (v body)))
+  (judgment
+    Brace'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyBrace
+    []
+    (mk EmptyBrace))
+  (judgment
+    FunctionDecl
+    [name header body]
+    (mk
+      FunctionDecl
+      (v name)
+      (v header)
+      (v body)))
+  (judgment
+    FunctionDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FunctionDecl'header
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FunctionDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ClassDecl
+    [name body]
+    (mk
+      ClassDecl
+      (v name)
+      (v body)))
+  (judgment
+    ClassDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ClassDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ClassDeclHeritage
+    [name heritage body]
+    (mk
+      ClassDeclHeritage
+      (v name)
+      (v heritage)
+      (v body)))
+  (judgment
+    ClassDeclHeritage'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ClassDeclHeritage'heritage
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ClassDeclHeritage'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    InterfaceDecl
+    [name body]
+    (mk
+      InterfaceDecl
+      (v name)
+      (v body)))
+  (judgment
+    InterfaceDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    InterfaceDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    InterfaceDeclHeritage
+    [name heritage body]
+    (mk
+      InterfaceDeclHeritage
+      (v name)
+      (v heritage)
+      (v body)))
+  (judgment
+    InterfaceDeclHeritage'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    InterfaceDeclHeritage'heritage
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    InterfaceDeclHeritage'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    IfStatement
+    [condition thenBody]
+    (mk
+      IfStatement
+      (v condition)
+      (v thenBody)))
+  (judgment
+    IfStatement'condition
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IfStatement'thenBody
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IfElseStatement
+    [condition thenBody elseBody]
+    (mk
+      IfElseStatement
+      (v condition)
+      (v thenBody)
+      (v elseBody)))
+  (judgment
+    IfElseStatement'condition
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IfElseStatement'thenBody
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IfElseStatement'elseBody
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ForStatement
+    [header body]
+    (mk
+      ForStatement
+      (v header)
+      (v body)))
+  (judgment
+    ForStatement'header
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ForStatement'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    WhileStatement
+    [condition body]
+    (mk
+      WhileStatement
+      (v condition)
+      (v body)))
+  (judgment
+    WhileStatement'condition
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    WhileStatement'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    TryStatement
+    [body name handler]
+    (mk
+      TryStatement
+      (v body)
+      (v name)
+      (v handler)))
+  (judgment
+    TryStatement'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TryStatement'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    TryStatement'handler
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ArrowParams
+    [params]
+    (mk
+      ArrowParams
+      (v params)))
+  (judgment
+    ArrowParams'params
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyArrowParams
+    []
+    (mk EmptyArrowParams))
+  (judgment
+    ArrowParamBare
+    [param]
+    (mk
+      ArrowParamBare
+      (v param)))
+  (judgment
+    ArrowParamBare'param
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    HeaderDocument
+    [items]
+    (mk
+      HeaderDocument
+      (v items)))
+  (judgment
+    HeaderDocument'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Paren
+    [body]
+    (mk
+      Paren
+      (v body)))
+  (judgment
+    Paren'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyParen
+    []
+    (mk EmptyParen))
+  (judgment
+    Bracket
+    [body]
+    (mk
+      Bracket
+      (v body)))
+  (judgment
+    Bracket'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyBracket
+    []
+    (mk EmptyBracket))
+  (judgment
+    DQuoted
+    [value]
+    (mk
+      DQuoted
+      (v value)))
+  (judgment
+    DQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    SQuoted
+    [value]
+    (mk
+      SQuoted
+      (v value)))
+  (judgment
+    SQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Template
+    [value]
+    (mk
+      Template
+      (v value)))
+  (judgment
+    Template'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Number
+    [value]
+    (mk
+      Number
+      (v value)))
+  (judgment
+    Number'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Import
+    []
+    (mk Import))
+  (judgment
+    Export
+    []
+    (mk Export))
+  (judgment
+    Interface
+    []
+    (mk Interface))
+  (judgment
+    TypeKw
+    []
+    (mk TypeKw))
+  (judgment
+    Function
+    []
+    (mk Function))
+  (judgment
+    Class
+    []
+    (mk Class))
+  (judgment
+    Const
+    []
+    (mk Const))
+  (judgment
+    Let
+    []
+    (mk Let))
+  (judgment
+    Var
+    []
+    (mk Var))
+  (judgment
+    Return
+    []
+    (mk Return))
+  (judgment
+    If
+    []
+    (mk If))
+  (judgment
+    Else
+    []
+    (mk Else))
+  (judgment
+    For
+    []
+    (mk For))
+  (judgment
+    While
+    []
+    (mk While))
+  (judgment
+    New
+    []
+    (mk New))
+  (judgment
+    Async
+    []
+    (mk Async))
+  (judgment
+    Await
+    []
+    (mk Await))
+  (judgment
+    Extends
+    []
+    (mk Extends))
+  (judgment
+    Implements
+    []
+    (mk Implements))
+  (judgment
+    Public
+    []
+    (mk Public))
+  (judgment
+    Private
+    []
+    (mk Private))
+  (judgment
+    Readonly
+    []
+    (mk Readonly))
+  (judgment
+    Static
+    []
+    (mk Static))
+  (judgment
+    Void
+    []
+    (mk Void))
+  (judgment
+    Null
+    []
+    (mk Null))
+  (judgment
+    Undefined
+    []
+    (mk Undefined))
+  (judgment
+    True
+    []
+    (mk True))
+  (judgment
+    False
+    []
+    (mk False))
+  (judgment
+    This
+    []
+    (mk This))
+  (judgment
+    Typeof
+    []
+    (mk Typeof))
+  (judgment
+    In
+    []
+    (mk In))
+  (judgment
+    Of
+    []
+    (mk Of))
+  (judgment
+    Default
+    []
+    (mk Default))
+  (judgment
+    From
+    []
+    (mk From))
+  (judgment
+    As
+    []
+    (mk As))
+  (judgment
+    Enum
+    []
+    (mk Enum))
+  (judgment
+    Namespace
+    []
+    (mk Namespace))
+  (judgment
+    Declare
+    []
+    (mk Declare))
+  (judgment
+    Try
+    []
+    (mk Try))
+  (judgment
+    Catch
+    []
+    (mk Catch))
+  (judgment
+    Finally
+    []
+    (mk Finally))
+  (judgment
+    Throw
+    []
+    (mk Throw))
+  (judgment
+    Switch
+    []
+    (mk Switch))
+  (judgment
+    Case
+    []
+    (mk Case))
+  (judgment
+    Break
+    []
+    (mk Break))
+  (judgment
+    Continue
+    []
+    (mk Continue))
+  (judgment
+    Super
+    []
+    (mk Super))
+  (judgment
+    Instanceof
+    []
+    (mk Instanceof))
+  (judgment
+    Delete
+    []
+    (mk Delete))
+  (judgment
+    Arrow
+    []
+    (mk Arrow))
+  (judgment
+    OptionalChain
+    []
+    (mk OptionalChain))
+  (judgment
+    Nullish
+    []
+    (mk Nullish))
+  (judgment
+    Spread
+    []
+    (mk Spread))
+  (judgment
+    StrictEq
+    []
+    (mk StrictEq))
+  (judgment
+    StrictNeq
+    []
+    (mk StrictNeq))
+  (judgment
+    Eq
+    []
+    (mk Eq))
+  (judgment
+    Neq
+    []
+    (mk Neq))
+  (judgment
+    Le
+    []
+    (mk Le))
+  (judgment
+    Ge
+    []
+    (mk Ge))
+  (judgment
+    And
+    []
+    (mk And))
+  (judgment
+    Or
+    []
+    (mk Or))
+  (judgment
+    PlusEq
+    []
+    (mk PlusEq))
+  (judgment
+    MinusEq
+    []
+    (mk MinusEq))
+  (judgment
+    StarEq
+    []
+    (mk StarEq))
+  (judgment
+    SlashEq
+    []
+    (mk SlashEq))
+  (judgment
+    Increment
+    []
+    (mk Increment))
+  (judgment
+    Decrement
+    []
+    (mk Decrement))
+  (judgment
+    Plus
+    []
+    (mk Plus))
+  (judgment
+    Minus
+    []
+    (mk Minus))
+  (judgment
+    Star
+    []
+    (mk Star))
+  (judgment
+    Slash
+    []
+    (mk Slash))
+  (judgment
+    Percent
+    []
+    (mk Percent))
+  (judgment
+    Assign
+    []
+    (mk Assign))
+  (judgment
+    Bang
+    []
+    (mk Bang))
+  (judgment
+    Question
+    []
+    (mk Question))
+  (judgment
+    Colon
+    []
+    (mk Colon))
+  (judgment
+    Comma
+    []
+    (mk Comma))
+  (judgment
+    Dot
+    []
+    (mk Dot))
+  (judgment
+    Semicolon
+    []
+    (mk Semicolon))
+  (judgment
+    Less
+    []
+    (mk Less))
+  (judgment
+    Greater
+    []
+    (mk Greater))
+  (judgment
+    Amp
+    []
+    (mk Amp))
+  (judgment
+    Pipe
+    []
+    (mk Pipe))
+  (judgment
+    Caret
+    []
+    (mk Caret))
+  (judgment
+    Tilde
+    []
+    (mk Tilde))
+  (judgment
+    Word
+    [value]
+    (mk
+      Word
+      (v value)))
+  (judgment
+    Word'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseTypeScript
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintTypeScript
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    TypeScriptWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseTypeScript
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          TypeScriptDocument
+          (pv items))
+        (mk
+          valid
+          (v items)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    TSBody
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q TypeScriptDocument)))
+  (judgment
+    TSHeader
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q HeaderDocument)))
+  (judgment
+    TSDeclaredNames
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (v name)
+          (call
+            TSDeclaredNames
+            (v rest))))
+      (case
+        (pcons
+          (pm Const)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (v name)
+          (call
+            TSDeclaredNames
+            (v rest))))
+      (case
+        (pcons
+          (pm Var)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (v name)
+          (call
+            TSDeclaredNames
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSDeclaredNames
+          (v rest)))))
+  (judgment
+    TSParamNames
+    [items typePosition]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Colon)
+          (pv rest))
+        (call
+          TSParamNames
+          (v rest)
+          (q true)))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (call
+          TSParamNames
+          (v rest)
+          (q false)))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSParamNames
+            (call
+              TSBody
+              (v body))
+            (q false))
+          (call
+            TSParamNames
+            (v rest)
+            (v typePosition))))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v typePosition)
+            (q true))
+          (call
+            TSParamNames
+            (v rest)
+            (v typePosition))
+          (prim
+            cons
+            (v name)
+            (call
+              TSParamNames
+              (v rest)
+              (v typePosition)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSParamNames
+          (v rest)
+          (v typePosition)))))
+  (judgment
+    TSFunctionParams
+    [header]
+    (call
+      TSParamNames
+      (call
+        TSHeader
+        (v header))
+      (q false)))
+  (judgment
+    TSResolveItems
+    [items scope]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q let))
+          (call
+            TSResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Const)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q const))
+          (call
+            TSResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Var)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q var))
+          (call
+            TSResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Dot)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (call
+          TSResolveItems
+          (v rest)
+          (v scope)))
+      (case
+        (pcons
+          (pm OptionalChain)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (call
+          TSResolveItems
+          (v rest)
+          (v scope)))
+      (case
+        (pcons
+          (pm
+            ArrowParams
+            (pv params))
+          (pv rest))
+        (call
+          TSResolveItems
+          (v rest)
+          (prim
+            append
+            (v scope)
+            (call
+              TSParamNames
+              (call
+                TSBody
+                (v params))
+              (q false)))))
+      (case
+        (pcons
+          (pm EmptyArrowParams)
+          (pv rest))
+        (call
+          TSResolveItems
+          (v rest)
+          (v scope)))
+      (case
+        (pcons
+          (pm
+            ArrowParamBare
+            (pv param))
+          (pv rest))
+        (call
+          TSResolveItems
+          (v rest)
+          (prim
+            snoc
+            (v scope)
+            (v param))))
+      (case
+        (pcons
+          (pm
+            FunctionDecl
+            (pv name)
+            (pv header)
+            (pv body))
+          (pv rest))
+        (let
+          inner
+          (prim
+            append
+            (prim
+              append
+              (v scope)
+              (call
+                TSFunctionParams
+                (v header)))
+            (lst
+              (v name)))
+          (prim
+            cons
+            (mk
+              binding
+              (v name)
+              (q function))
+            (prim
+              append
+              (call
+                TSResolveItems
+                (call
+                  TSBody
+                  (v body))
+                (v inner))
+              (call
+                TSResolveItems
+                (v rest)
+                (prim
+                  snoc
+                  (v scope)
+                  (v name)))))))
+      (case
+        (pcons
+          (pm
+            ClassDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q class))
+          (prim
+            append
+            (call
+              TSResolveItems
+              (call
+                TSBody
+                (v body))
+              (prim
+                snoc
+                (v scope)
+                (v name)))
+            (call
+              TSResolveItems
+              (v rest)
+              (prim
+                snoc
+                (v scope)
+                (v name))))))
+      (case
+        (pcons
+          (pm
+            ClassDeclHeritage
+            (pv name)
+            (pv heritage)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q class))
+          (prim
+            append
+            (call
+              TSResolveItems
+              (call
+                TSBody
+                (v body))
+              (prim
+                snoc
+                (v scope)
+                (v name)))
+            (call
+              TSResolveItems
+              (v rest)
+              (prim
+                snoc
+                (v scope)
+                (v name))))))
+      (case
+        (pcons
+          (pm
+            InterfaceDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q interface))
+          (call
+            TSResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            InterfaceDeclHeritage
+            (pv name)
+            (pv heritage)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q interface))
+          (call
+            TSResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            IfStatement
+            (pv condition)
+            (pv thenBody))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSResolveItems
+            (call
+              TSBody
+              (v condition))
+            (v scope))
+          (prim
+            append
+            (call
+              TSResolveItems
+              (call
+                TSBody
+                (v thenBody))
+              (v scope))
+            (call
+              TSResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pm
+            IfElseStatement
+            (pv condition)
+            (pv thenBody)
+            (pv elseBody))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSResolveItems
+            (call
+              TSBody
+              (v condition))
+            (v scope))
+          (prim
+            append
+            (call
+              TSResolveItems
+              (call
+                TSBody
+                (v thenBody))
+              (v scope))
+            (prim
+              append
+              (call
+                TSResolveItems
+                (call
+                  TSBody
+                  (v elseBody))
+                (v scope))
+              (call
+                TSResolveItems
+                (v rest)
+                (v scope))))))
+      (case
+        (pcons
+          (pm
+            ForStatement
+            (pv header)
+            (pv body))
+          (pv rest))
+        (let
+          headerItems
+          (call
+            TSBody
+            (v header))
+          (let
+            headerNames
+            (call
+              TSDeclaredNames
+              (v headerItems))
+            (prim
+              append
+              (call
+                TSResolveItems
+                (v headerItems)
+                (v scope))
+              (prim
+                append
+                (call
+                  TSResolveItems
+                  (call
+                    TSBody
+                    (v body))
+                  (prim
+                    append
+                    (v scope)
+                    (v headerNames)))
+                (call
+                  TSResolveItems
+                  (v rest)
+                  (v scope)))))))
+      (case
+        (pcons
+          (pm
+            WhileStatement
+            (pv condition)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSResolveItems
+            (call
+              TSBody
+              (v condition))
+            (v scope))
+          (prim
+            append
+            (call
+              TSResolveItems
+              (call
+                TSBody
+                (v body))
+              (v scope))
+            (call
+              TSResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pm
+            TryStatement
+            (pv body)
+            (pv name)
+            (pv handler))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSResolveItems
+            (call
+              TSBody
+              (v body))
+            (v scope))
+          (prim
+            append
+            (call
+              TSResolveItems
+              (call
+                TSBody
+                (v handler))
+              (prim
+                snoc
+                (v scope)
+                (v name)))
+            (call
+              TSResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pm
+            Brace
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSResolveItems
+            (call
+              TSBody
+              (v body))
+            (v scope))
+          (call
+            TSResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSResolveItems
+            (call
+              TSBody
+              (v body))
+            (v scope))
+          (call
+            TSResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Bracket
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSResolveItems
+            (call
+              TSBody
+              (v body))
+            (v scope))
+          (call
+            TSResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v scope)
+            (v name))
+          (prim
+            cons
+            (mk
+              reference
+              (v name)
+              (q resolved))
+            (call
+              TSResolveItems
+              (v rest)
+              (v scope)))
+          (prim
+            cons
+            (mk
+              reference
+              (v name)
+              (q free))
+            (call
+              TSResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSResolveItems
+          (v rest)
+          (v scope)))))
+  (judgment
+    ResolveTypeScript
+    [grammar source]
+    (call
+      TSResolveItems
+      (call
+        TSBody
+        (call
+          ParseTypeScript
+          (v grammar)
+          (v source)))
+      (lst)))
+  (judgment
+    TSTypeWords
+    [tokens]
+    (match
+      (v tokens)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv w))
+          (pv rest))
+        (prim
+          cons
+          (v w)
+          (call
+            TSTypeWords
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSTypeWords
+          (v rest)))))
+  (judgment
+    TSTakeType
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (mk taken (lst) (lst)))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            TSTakeType
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (mk
+              taken
+              (prim
+                cons
+                (v head)
+                (v typeToks))
+              (v remaining)))))))
+  (judgment
+    TSTakeTypeUntilAssign
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (mk taken (lst) (lst)))
+      (case
+        (pcons
+          (pm Assign)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pm Semicolon)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            TSTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (mk
+              taken
+              (prim
+                cons
+                (v head)
+                (v typeToks))
+              (v remaining)))))))
+  (judgment
+    TSParamAnnotations
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (call
+          TSParamAnnotations
+          (v rest)))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pcons
+            (pm Colon)
+            (pv rest)))
+        (match
+          (call
+            TSTakeType
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (prim
+              cons
+              (mk
+                annotation
+                (v name)
+                (call
+                  TSTypeWords
+                  (v typeToks)))
+              (call
+                TSParamAnnotations
+                (v remaining))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSParamAnnotations
+          (v rest)))))
+  (judgment
+    TSHeaderAnnotations
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSParamAnnotations
+            (call
+              TSBody
+              (v body)))
+          (call
+            TSHeaderAnnotations
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSHeaderAnnotations
+          (v rest)))))
+  (judgment
+    TSEntriesFromAnnotations
+    [annos]
+    (match
+      (v annos)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            annotation
+            (pv name)
+            (pv typeWords))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            typed
+            (v name)
+            (call
+              TSPrimaryType
+              (v typeWords)))
+          (call
+            TSEntriesFromAnnotations
+            (v rest))))))
+  (judgment
+    TSLookupType
+    [env name]
+    (match
+      (v env)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            typed
+            (pv key)
+            (pv t))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v key)
+            (v name))
+          (v t)
+          (call
+            TSLookupType
+            (v rest)
+            (v name))))))
+  (judgment
+    TSInferExprType
+    [items env]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            Number
+            (pv n))
+          (pv rest))
+        (q number))
+      (case
+        (pcons
+          (pm
+            DQuoted
+            (pv t))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            SQuoted
+            (pv t))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            Template
+            (pv t))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm True)
+          (pv rest))
+        (q boolean))
+      (case
+        (pcons
+          (pm False)
+          (pv rest))
+        (q boolean))
+      (case
+        (pcons
+          (pm Null)
+          (pv rest))
+        (q null))
+      (case
+        (pcons
+          (pm Undefined)
+          (pv rest))
+        (q undefined))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (call
+          TSLookupType
+          (v env)
+          (v name)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSInferExprType
+          (v rest)
+          (v env)))))
+  (judgment
+    TSPrimaryType
+    [typeWords]
+    (match
+      (v typeWords)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pv t)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v t)
+            (q "number"))
+          (q number)
+          (if
+            (prim
+              eq
+              (v t)
+              (q "string"))
+            (q string)
+            (if
+              (prim
+                eq
+                (v t)
+                (q "boolean"))
+              (q boolean)
+              (if
+                (prim
+                  eq
+                  (v t)
+                  (q "null"))
+                (q null)
+                (if
+                  (prim
+                    eq
+                    (v t)
+                    (q "undefined"))
+                  (q undefined)
+                  (if
+                    (prim
+                      eq
+                      (v t)
+                      (q "any"))
+                    (q any)
+                    (if
+                      (prim
+                        eq
+                        (v t)
+                        (q "unknown"))
+                      (q unknown)
+                      (call
+                        TSPrimaryType
+                        (v rest))))))))))))
+  (judgment
+    TSCompatibleType
+    [declared inferred]
+    (if
+      (prim
+        eq
+        (v declared)
+        (q any))
+      (q true)
+      (if
+        (prim
+          eq
+          (v declared)
+          (q unknown))
+        (q true)
+        (if
+          (prim
+            eq
+            (v inferred)
+            (q unknown))
+          (q true)
+          (if
+            (prim
+              eq
+              (v declared)
+              (v inferred))
+            (q true)
+            (q false))))))
+  (judgment
+    TSInferItems
+    [items env]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pcons
+              (pm Colon)
+              (pv rest))))
+        (match
+          (call
+            TSTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (let
+              declared
+              (call
+                TSPrimaryType
+                (call
+                  TSTypeWords
+                  (v typeToks)))
+              (let
+                inferred
+                (call
+                  TSInferExprType
+                  (v remaining)
+                  (v env))
+                (let
+                  entry
+                  (mk
+                    typed
+                    (v name)
+                    (v declared))
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (v declared)
+                      (q declared)
+                      (v inferred))
+                    (call
+                      TSInferItems
+                      (v remaining)
+                      (prim
+                        snoc
+                        (v env)
+                        (v entry))))))))))
+      (case
+        (pcons
+          (pm Const)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pcons
+              (pm Colon)
+              (pv rest))))
+        (match
+          (call
+            TSTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (let
+              declared
+              (call
+                TSPrimaryType
+                (call
+                  TSTypeWords
+                  (v typeToks)))
+              (let
+                inferred
+                (call
+                  TSInferExprType
+                  (v remaining)
+                  (v env))
+                (let
+                  entry
+                  (mk
+                    typed
+                    (v name)
+                    (v declared))
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (v declared)
+                      (q declared)
+                      (v inferred))
+                    (call
+                      TSInferItems
+                      (v remaining)
+                      (prim
+                        snoc
+                        (v env)
+                        (v entry))))))))))
+      (case
+        (pcons
+          (pm Var)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pcons
+              (pm Colon)
+              (pv rest))))
+        (match
+          (call
+            TSTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (let
+              declared
+              (call
+                TSPrimaryType
+                (call
+                  TSTypeWords
+                  (v typeToks)))
+              (let
+                inferred
+                (call
+                  TSInferExprType
+                  (v remaining)
+                  (v env))
+                (let
+                  entry
+                  (mk
+                    typed
+                    (v name)
+                    (v declared))
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (v declared)
+                      (q declared)
+                      (v inferred))
+                    (call
+                      TSInferItems
+                      (v remaining)
+                      (prim
+                        snoc
+                        (v env)
+                        (v entry))))))))))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          inferred
+          (call
+            TSInferExprType
+            (v rest)
+            (v env))
+          (let
+            entry
+            (mk
+              typed
+              (v name)
+              (v inferred))
+            (prim
+              cons
+              (mk
+                type
+                (v name)
+                (v inferred)
+                (q inferred)
+                (v inferred))
+              (call
+                TSInferItems
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (v entry)))))))
+      (case
+        (pcons
+          (pm Const)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          inferred
+          (call
+            TSInferExprType
+            (v rest)
+            (v env))
+          (let
+            entry
+            (mk
+              typed
+              (v name)
+              (v inferred))
+            (prim
+              cons
+              (mk
+                type
+                (v name)
+                (v inferred)
+                (q inferred)
+                (v inferred))
+              (call
+                TSInferItems
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (v entry)))))))
+      (case
+        (pcons
+          (pm Var)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          inferred
+          (call
+            TSInferExprType
+            (v rest)
+            (v env))
+          (let
+            entry
+            (mk
+              typed
+              (v name)
+              (v inferred))
+            (prim
+              cons
+              (mk
+                type
+                (v name)
+                (v inferred)
+                (q inferred)
+                (v inferred))
+              (call
+                TSInferItems
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (v entry)))))))
+      (case
+        (pcons
+          (pm
+            FunctionDecl
+            (pv name)
+            (pv header)
+            (pv body))
+          (pv rest))
+        (let
+          paramAnnos
+          (call
+            TSHeaderAnnotations
+            (call
+              TSHeader
+              (v header)))
+          (let
+            paramEntries
+            (call
+              TSEntriesFromAnnotations
+              (v paramAnnos))
+            (let
+              inner
+              (prim
+                append
+                (prim
+                  append
+                  (v env)
+                  (v paramEntries))
+                (lst
+                  (mk
+                    typed
+                    (v name)
+                    (q function))))
+              (prim
+                append
+                (prim
+                  cons
+                  (mk
+                    type
+                    (v name)
+                    (q function)
+                    (q declared)
+                    (q function))
+                  (call
+                    TSInferItems
+                    (call
+                      TSBody
+                      (v body))
+                    (v inner)))
+                (call
+                  TSInferItems
+                  (v rest)
+                  (prim
+                    snoc
+                    (v env)
+                    (mk
+                      typed
+                      (v name)
+                      (q function)))))))))
+      (case
+        (pcons
+          (pm
+            ArrowParams
+            (pv params))
+          (pv rest))
+        (let
+          paramAnnos
+          (call
+            TSParamAnnotations
+            (call
+              TSBody
+              (v params)))
+          (call
+            TSInferItems
+            (v rest)
+            (prim
+              append
+              (v env)
+              (call
+                TSEntriesFromAnnotations
+                (v paramAnnos))))))
+      (case
+        (pcons
+          (pm
+            Brace
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSInferItems
+            (call
+              TSBody
+              (v body))
+            (v env))
+          (call
+            TSInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSInferItems
+            (call
+              TSBody
+              (v body))
+            (v env))
+          (call
+            TSInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Bracket
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSInferItems
+            (call
+              TSBody
+              (v body))
+            (v env))
+          (call
+            TSInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            IfStatement
+            (pv condition)
+            (pv thenBody))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSInferItems
+            (call
+              TSBody
+              (v condition))
+            (v env))
+          (prim
+            append
+            (call
+              TSInferItems
+              (call
+                TSBody
+                (v thenBody))
+              (v env))
+            (call
+              TSInferItems
+              (v rest)
+              (v env)))))
+      (case
+        (pcons
+          (pm
+            IfElseStatement
+            (pv condition)
+            (pv thenBody)
+            (pv elseBody))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSInferItems
+            (call
+              TSBody
+              (v condition))
+            (v env))
+          (prim
+            append
+            (call
+              TSInferItems
+              (call
+                TSBody
+                (v thenBody))
+              (v env))
+            (prim
+              append
+              (call
+                TSInferItems
+                (call
+                  TSBody
+                  (v elseBody))
+                (v env))
+              (call
+                TSInferItems
+                (v rest)
+                (v env))))))
+      (case
+        (pcons
+          (pm
+            ForStatement
+            (pv header)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSInferItems
+            (call
+              TSBody
+              (v header))
+            (v env))
+          (prim
+            append
+            (call
+              TSInferItems
+              (call
+                TSBody
+                (v body))
+              (v env))
+            (call
+              TSInferItems
+              (v rest)
+              (v env)))))
+      (case
+        (pcons
+          (pm
+            WhileStatement
+            (pv condition)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSInferItems
+            (call
+              TSBody
+              (v condition))
+            (v env))
+          (prim
+            append
+            (call
+              TSInferItems
+              (call
+                TSBody
+                (v body))
+              (v env))
+            (call
+              TSInferItems
+              (v rest)
+              (v env)))))
+      (case
+        (pcons
+          (pm
+            TryStatement
+            (pv body)
+            (pv name)
+            (pv handler))
+          (pv rest))
+        (prim
+          append
+          (call
+            TSInferItems
+            (call
+              TSBody
+              (v body))
+            (v env))
+          (prim
+            append
+            (call
+              TSInferItems
+              (call
+                TSBody
+                (v handler))
+              (prim
+                snoc
+                (v env)
+                (mk
+                  typed
+                  (v name)
+                  (q unknown))))
+            (call
+              TSInferItems
+              (v rest)
+              (v env)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSInferItems
+          (v rest)
+          (v env)))))
+  (judgment
+    TSTypeErrors
+    [typed]
+    (match
+      (v typed)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            type
+            (pv name)
+            (pv declared)
+            (pq declared)
+            (pv inferred))
+          (pv rest))
+        (if
+          (call
+            TSCompatibleType
+            (v declared)
+            (v inferred))
+          (call
+            TSTypeErrors
+            (v rest))
+          (prim
+            cons
+            (mk
+              type-error
+              (v name)
+              (v declared)
+              (v inferred))
+            (call
+              TSTypeErrors
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TSTypeErrors
+          (v rest)))))
+  (judgment
+    InferTypeScript
+    [grammar source]
+    (call
+      TSInferItems
+      (call
+        TSBody
+        (call
+          ParseTypeScript
+          (v grammar)
+          (v source)))
+      (lst)))
+  (judgment
+    TypeCheckTypeScript
+    [grammar source]
+    (call
+      TSTypeErrors
+      (call
+        InferTypeScript
+        (v grammar)
+        (v source)))))

@@ -32,7 +32,7 @@
             (Compose
               (AtKey
                 meta
-                (Replace #d5ab0e6030949ad5e2214d6f68b8fb1b736cb7bd941477d78b7526742af3aebcb #dc0fc8d9397d934438c6e11073c5c2916e30b678df15ca6e88a63872ecac0930e))
+                (Replace #d01e72ccb9e479a79e63c2a89cb4c0b04385162bf0e2cf8eaa2f9019f245e835d #d32cde3d4a0c657cd46e6d16ce0d763109d3932a4f6735d5008e12dd95ceaf519))
               (AtKey
                 checks
                 (Replace
@@ -43,19 +43,19 @@
                         tag
                         (call
                           VerifyRoot
-                          (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)))
+                          (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)))
                       (value valid))
                     (check
                       verification-is-closure-only
                       (call
                         VerificationIsClosureOnly
-                        (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca))
+                        (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe))
                       (value #t))
                     (check
                       host-supplied-semantic-overrides-are-rejected
                       (call
                         VerifyClaimed
-                        (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
+                        (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
                         (q
                           (foundation
                             (name "forged"))))
@@ -65,22 +65,22 @@
                       predecessor-compatibility-is-witnessed
                       (call
                         CompatibilityReason
-                        (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                        (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca))
+                        (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                        (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe))
                       (value compatible))
                     (check
                       wrong-predecessor-is-rejected
                       (call
                         CompatibilityReason
-                        (q #d5e16df8b7d32f18c7d98676c4b499d53d24746ef8db2e90d6c235a33930093ea)
-                        (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca))
+                        (q #d3133e39892c7ff46c61d5a2dc6741419536368b932ef018cc36c7d67bd2a1592)
+                        (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe))
                       (value wrong-predecessor))
                     (check
                       successor-requires-accepted-patches
                       (call
                         SuccessorIsGoverned
-                        (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                        (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
+                        (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                        (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
                         (call MixedDecisions))
                       (value
                         (blocked unaccepted-patches)))
@@ -90,8 +90,8 @@
                         tag
                         (call
                           SuccessorIsGoverned
-                          (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                          (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
+                          (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                          (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
                           (call AcceptedDecisions)))
                       (value SuccessorFoundation))
                     (check

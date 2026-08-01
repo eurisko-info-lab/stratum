@@ -2,15 +2,60 @@
 
 [![staircase](https://github.com/eurisko-info-lab/stratum/actions/workflows/staircase.yml/badge.svg)](https://github.com/eurisko-info-lab/stratum/actions/workflows/staircase.yml)
 
-Stratum is a twelve-step semantic staircase. Each foundation is produced from the
-one beneath it by a single canonical change, and the predecessor validates the
-successor.
+**Stratum builds a programming system out of itself, one provable step at a
+time, and never trusts a step it cannot re-derive.**
 
-$$
-F_0 \prec F_1 \prec \cdots \prec F_{11}
-$$
+It starts from a small frozen interpreter that knows nothing: no types, no
+modules, no languages, no editors. Everything else - the languages, the change
+calculus, the version control, the publication ledger, the governance, the
+editors - is built as data that the interpreter runs, and each layer is derived
+from the one beneath it by a single recorded change.
 
-The complete specification is [PROMPT.md](PROMPT.md).
+By the top of the staircase that is three things, not one: a **workbench**
+where a language arrives with its own tooling and its own editor; a
+**repository** whose history is a causal graph of semantic patches rather than
+text diffs; and a **publication chain** where a change is accepted under a
+constitution and settled between federated peers, so that a fresh node can
+reconstruct the whole state from the chain and nothing else. The
+[publication workflow](docs/publication-workflow.md) is the cycle that joins
+them.
+
+The point is that nothing above the frozen host boundary is accepted when it
+can instead be re-derived:
+
+- every layer is **rebuilt from source** on every run, and its identity is the
+  SHA-256 of what it actually is, so drift is impossible to hide;
+- a layer is **constructed** from its predecessor plus one change, rather than
+  merely checked against it, so succession is a derivation and not an
+  assertion;
+- **two independent implementations** - one in Scala, one in Rust with no
+  dependencies at all - agree on every verdict, byte for byte;
+- the whole thing **reconstructs in a clean room** from an executable, a digest
+  and a closure, with no source tree present.
+
+What remains trusted is worth naming, because a claim that hides its own root
+is not much of a claim: the executable you start from, the compiler and runtime
+that produced and run it, SHA-256 behaving as assumed, and the committed frozen
+core. Clean-room reconstruction shrinks that root to three things; it does not
+abolish it.
+
+```text
+F0  ->  F1  ->  ...  ->  F12
+  each arrow is one canonical change, and the predecessor validates it
+```
+
+### Try it
+
+```bash
+./tools/staircase.sh    # rebuild all twelve layers and check every digest
+sbt test                # replay every transcript
+./tools/parity.sh       # make the two hosts agree
+./tools/cleanroom.sh    # rebuild from executable, digest and closure alone
+```
+
+Start reading at [docs/staircase.md](docs/staircase.md) for how the layers
+stack up, or [docs/invariants.md](docs/invariants.md) for what is actually
+guaranteed. The original specification is [PROMPT.md](PROMPT.md).
 
 ## The shape of the system
 
@@ -53,13 +98,14 @@ verdict with evidence.
 | F2 | generic semantic change calculus | 20 | [F2](docs/foundations/F2.md) |
 | F3 | local causal semantic repository | 17 | [F3](docs/foundations/F3.md) |
 | F4 | schema-derived language toolchains | 17 | [F4](docs/foundations/F4.md) |
-| F5 | constitution-relative governance | 20 | [F5](docs/foundations/F5.md) |
+| F5 | constitution-relative governance | 23 | [F5](docs/foundations/F5.md) |
 | F6 | self-hosted application and foundation protocol | 11 | [F6](docs/foundations/F6.md) |
 | F7 | signed publication ledger | 12 | [F7](docs/foundations/F7.md) |
 | F8 | distributed closure and branch synchronization | 12 | [F8](docs/foundations/F8.md) |
 | F9 | constituted agreement and settlement | 12 | [F9](docs/foundations/F9.md) |
 | F10 | constituted semantic retention and archives | 14 | [F10](docs/foundations/F10.md) |
 | F11 | profile-guided studios and the publication workflow | 27 | [F11](docs/foundations/F11.md) |
+| F12 | semantic filesystem projections and materialization-profile law | 0 | [F12](docs/foundations/F12.md) |
 
 ## Quick start
 
@@ -94,6 +140,7 @@ Windows.
 | --- | --- |
 | $F_n \vdash F_{n+1}$ constructively | `foundation derive-successor`, run for every step by [tools/staircase.sh](tools/staircase.sh) |
 | $\mathsf{ScalaDerive} = \mathsf{RustDerive}$ | [tools/parity.sh](tools/parity.sh) compares every verdict digest, including evidence and resource accounting |
+| a runbook still works | [RunbookSuite](test-scala/RunbookSuite.scala) rehearses every [runbook](runbooks), performing it in full and keeping nothing |
 | canonical bytes mean one thing | [fixtures/canon/adversarial](fixtures/canon/adversarial), judged identically by both hosts |
 | the host core is frozen | [host/core.canon](host/core.canon), referenced by F1..F11 and checked by [test-scala/HostCoreSuite.scala](test-scala/HostCoreSuite.scala) |
 | reconstruction needs nothing else | [tools/cleanroom.sh](tools/cleanroom.sh) |
@@ -124,6 +171,27 @@ calculus:
 ```bash
 sbt "runMain stratum.cli.Stratum host manifest --out host/core.canon"
 ```
+
+## A concrete Stratum repository
+
+The semantic repository tool is a separate program above the frozen host
+boundary. It records file content as immutable blobs, a canonical file tree as
+a semantic add/remove/replace patch, and anchors that patch in an append-only
+chain:
+
+```bash
+sbt "repoTool/runMain stratum.repo.StratumRepo init --dir ../stratum-repo"
+sbt "repoTool/runMain stratum.repo.StratumRepo record --dir ../stratum-repo --source . --message stratum-genesis"
+sbt "repoTool/runMain stratum.repo.StratumRepo verify --dir ../stratum-repo"
+sbt "repoTool/runMain stratum.repo.StratumRepo status --dir ../stratum-repo --source ."
+sbt "repoTool/runMain stratum.repo.StratumRepo log --dir ../stratum-repo"
+sbt "repoTool/runMain stratum.repo.StratumRepo branch --dir ../stratum-repo --name featured/example --from main"
+sbt "repoTool/runMain stratum.repo.StratumRepo checkout --dir ../stratum-repo --branch featured/example --out ../example"
+```
+
+The mutable `refs/main` file names only the current block. Blobs, trees,
+patches, and blocks live in the canonical content-addressed object store, and
+verification traverses the complete closure and predecessor chain.
 
 ## Transcripts
 
@@ -174,12 +242,22 @@ See [docs/studio.md](docs/studio.md).
 
 ## Documentation
 
-- [docs/invariants.md](docs/invariants.md)
-- [docs/staircase.md](docs/staircase.md)
-- [docs/native-boundary.md](docs/native-boundary.md)
-- [docs/publication-workflow.md](docs/publication-workflow.md)
-- [docs/studio.md](docs/studio.md)
-- [docs/foundations](docs/foundations)
+Rendered at **<https://eurisko-info-lab.github.io/stratum/>**, and readable in
+the repository as the same files:
+
+- [docs/staircase.md](docs/staircase.md) — how one foundation constructs the next
+- [docs/invariants.md](docs/invariants.md) — the properties every layer must hold
+- [docs/native-boundary.md](docs/native-boundary.md) — what the host is allowed to know
+- [docs/studio.md](docs/studio.md) — how an editor is derived from a profile
+- [docs/publication-workflow.md](docs/publication-workflow.md) — how a release is produced
+- [docs/foundations](docs/foundations) — one page per layer
+
+## How this is written
+
+Every line of code here is written by an AI agent. Humans set the direction,
+review what comes back and decide what ships; the code itself is
+machine-written. The gates exist so that this is a testable claim rather than a
+boast — see [docs/sponsoring.md](docs/sponsoring.md).
 
 ## Licence
 

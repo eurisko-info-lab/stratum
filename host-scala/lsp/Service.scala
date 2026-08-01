@@ -98,7 +98,7 @@ final class Service(val root: Path, val worldDir: Path, val world: LoadedFoundat
     Canon.node("q", Canon.L(entries))
 
   /** What the world contains, rather than what one buffer contains. */
-  def catalogue(language: String): Vector[Canon] =
+  def documents(language: String): Vector[Canon] =
     records("ServiceCatalogue", language, Vector(declaredDocuments)).getOrElse(Vector.empty)
 
   /** The document as an actual PDF, through the world's projection language. */
@@ -106,6 +106,19 @@ final class Service(val root: Path, val worldDir: Path, val world: LoadedFoundat
     call("ServicePdf", language, Vector(buffer(text))) match
       case Right(Canon.S(document)) => document
       case _                        => ""
+
+  /** Evaluates a selection of the buffer, when the world offers evaluation. */
+  def evaluate(language: String, text: String, offset: Int, length: Int): Either[String, String] =
+    val selection = Canon.node(
+      "q",
+      Canon.M(
+        Vector(
+          Canon.Sym("length") -> Canon.nat(length),
+          Canon.Sym("offset") -> Canon.nat(offset)
+        )
+      )
+    )
+    call("ServiceEvaluate", language, Vector(buffer(text), selection)).map(Service.text)
 
   /** The rendered document, for a preview beside the source it came from. */
   def preview(language: String, text: String): Vector[Canon] =
@@ -215,8 +228,8 @@ object Service:
       case _ => Map.empty[String, String]
     val navigator = get(body, "navigator").map { n =>
       Navigator(
-        string(n, "name", "catalogue"),
-        string(n, "title", "Catalogue"),
+        string(n, "name", "documents"),
+        string(n, "title", "Documents"),
         string(n, "placement", "left"),
         flag(n, "reveal")
       )

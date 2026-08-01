@@ -1,0 +1,934 @@
+; Generated from languages/html/html.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module html)
+  (judgment
+    HtmlDocument
+    [nodes]
+    (mk
+      HtmlDocument
+      (v nodes)))
+  (judgment
+    HtmlDocument'nodes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Doctype
+    [name kind]
+    (mk
+      Doctype
+      (v name)
+      (v kind)))
+  (judgment
+    Doctype'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Doctype'kind
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    VoidArea
+    [attributes]
+    (mk
+      VoidArea
+      (v attributes)))
+  (judgment
+    VoidArea'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidAreaBare
+    []
+    (mk VoidAreaBare))
+  (judgment
+    VoidBase
+    [attributes]
+    (mk
+      VoidBase
+      (v attributes)))
+  (judgment
+    VoidBase'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidBaseBare
+    []
+    (mk VoidBaseBare))
+  (judgment
+    VoidBr
+    [attributes]
+    (mk
+      VoidBr
+      (v attributes)))
+  (judgment
+    VoidBr'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidBrBare
+    []
+    (mk VoidBrBare))
+  (judgment
+    VoidCol
+    [attributes]
+    (mk
+      VoidCol
+      (v attributes)))
+  (judgment
+    VoidCol'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidColBare
+    []
+    (mk VoidColBare))
+  (judgment
+    VoidEmbed
+    [attributes]
+    (mk
+      VoidEmbed
+      (v attributes)))
+  (judgment
+    VoidEmbed'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidEmbedBare
+    []
+    (mk VoidEmbedBare))
+  (judgment
+    VoidHr
+    [attributes]
+    (mk
+      VoidHr
+      (v attributes)))
+  (judgment
+    VoidHr'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidHrBare
+    []
+    (mk VoidHrBare))
+  (judgment
+    VoidImg
+    [attributes]
+    (mk
+      VoidImg
+      (v attributes)))
+  (judgment
+    VoidImg'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidImgBare
+    []
+    (mk VoidImgBare))
+  (judgment
+    VoidInput
+    [attributes]
+    (mk
+      VoidInput
+      (v attributes)))
+  (judgment
+    VoidInput'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidInputBare
+    []
+    (mk VoidInputBare))
+  (judgment
+    VoidLink
+    [attributes]
+    (mk
+      VoidLink
+      (v attributes)))
+  (judgment
+    VoidLink'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidLinkBare
+    []
+    (mk VoidLinkBare))
+  (judgment
+    VoidMeta
+    [attributes]
+    (mk
+      VoidMeta
+      (v attributes)))
+  (judgment
+    VoidMeta'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidMetaBare
+    []
+    (mk VoidMetaBare))
+  (judgment
+    VoidParam
+    [attributes]
+    (mk
+      VoidParam
+      (v attributes)))
+  (judgment
+    VoidParam'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidParamBare
+    []
+    (mk VoidParamBare))
+  (judgment
+    VoidSource
+    [attributes]
+    (mk
+      VoidSource
+      (v attributes)))
+  (judgment
+    VoidSource'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidSourceBare
+    []
+    (mk VoidSourceBare))
+  (judgment
+    VoidTrack
+    [attributes]
+    (mk
+      VoidTrack
+      (v attributes)))
+  (judgment
+    VoidTrack'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidTrackBare
+    []
+    (mk VoidTrackBare))
+  (judgment
+    VoidWbr
+    [attributes]
+    (mk
+      VoidWbr
+      (v attributes)))
+  (judgment
+    VoidWbr'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    VoidWbrBare
+    []
+    (mk VoidWbrBare))
+  (judgment
+    SelfClosing
+    [name attributes]
+    (mk
+      SelfClosing
+      (v name)
+      (v attributes)))
+  (judgment
+    SelfClosing'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    SelfClosing'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    SelfClosingBare
+    [name]
+    (mk
+      SelfClosingBare
+      (v name)))
+  (judgment
+    SelfClosingBare'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Element
+    [name attributes children closeName]
+    (mk
+      Element
+      (v name)
+      (v attributes)
+      (v children)
+      (v closeName)))
+  (judgment
+    Element'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Element'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Element'children
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Element'closeName
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    ElementBare
+    [name children closeName]
+    (mk
+      ElementBare
+      (v name)
+      (v children)
+      (v closeName)))
+  (judgment
+    ElementBare'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ElementBare'children
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ElementBare'closeName
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    EmptyElement
+    [name attributes closeName]
+    (mk
+      EmptyElement
+      (v name)
+      (v attributes)
+      (v closeName)))
+  (judgment
+    EmptyElement'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyElement'attributes
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    EmptyElement'closeName
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    EmptyElementBare
+    [name closeName]
+    (mk
+      EmptyElementBare
+      (v name)
+      (v closeName)))
+  (judgment
+    EmptyElementBare'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyElementBare'closeName
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    TextWord
+    [value]
+    (mk
+      TextWord
+      (v value)))
+  (judgment
+    TextWord'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TextNumber
+    [value]
+    (mk
+      TextNumber
+      (v value)))
+  (judgment
+    TextNumber'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TextQuoted
+    [value]
+    (mk
+      TextQuoted
+      (v value)))
+  (judgment
+    TextQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TextSymbol
+    [value]
+    (mk
+      TextSymbol
+      (v value)))
+  (judgment
+    TextSymbol'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TextLess
+    []
+    (mk TextLess))
+  (judgment
+    TextGreater
+    []
+    (mk TextGreater))
+  (judgment
+    TextSlash
+    []
+    (mk TextSlash))
+  (judgment
+    TextBang
+    []
+    (mk TextBang))
+  (judgment
+    TextEquals
+    []
+    (mk TextEquals))
+  (judgment
+    LineBreak
+    [newline]
+    (mk
+      LineBreak
+      (v newline)))
+  (judgment
+    LineBreak'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Attributes
+    [values]
+    (mk
+      Attributes
+      (v values)))
+  (judgment
+    Attributes'values
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Attribute
+    [name value]
+    (mk
+      Attribute
+      (v name)
+      (v value)))
+  (judgment
+    Attribute'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Attribute'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BareAttribute
+    [name]
+    (mk
+      BareAttribute
+      (v name)))
+  (judgment
+    BareAttribute'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    AttributeSymbol
+    [value]
+    (mk
+      AttributeSymbol
+      (v value)))
+  (judgment
+    AttributeSymbol'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseHtml
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintHtml
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    HtmlWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseHtml
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          HtmlDocument
+          (pv nodes))
+        (mk
+          valid
+          (v nodes)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    HtmlNodes
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q HtmlDocument)))
+  (judgment
+    HtmlInferNodes
+    [nodes]
+    (match
+      (v nodes)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Element
+            (pv name)
+            (pv attributes)
+            (pv children)
+            (pv closeName))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v name)
+            (q element)
+            (q declared)
+            (q element))
+          (prim
+            append
+            (call
+              HtmlInferNodes
+              (call
+                HtmlNodes
+                (v children)))
+            (call
+              HtmlInferNodes
+              (v rest)))))
+      (case
+        (pcons
+          (pm
+            EmptyElement
+            (pv name)
+            (pv attributes)
+            (pv closeName))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v name)
+            (q element)
+            (q declared)
+            (q element))
+          (call
+            HtmlInferNodes
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            EmptyElementBare
+            (pv name)
+            (pv closeName))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v name)
+            (q element)
+            (q declared)
+            (q element))
+          (call
+            HtmlInferNodes
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            SelfClosing
+            (pv name)
+            (pv attributes))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v name)
+            (q element)
+            (q declared)
+            (q element))
+          (call
+            HtmlInferNodes
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            SelfClosingBare
+            (pv name))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v name)
+            (q element)
+            (q declared)
+            (q element))
+          (call
+            HtmlInferNodes
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          HtmlInferNodes
+          (v rest)))))
+  (judgment
+    HtmlCheckNodes
+    [nodes]
+    (match
+      (v nodes)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Element
+            (pv name)
+            (pv attributes)
+            (pv children)
+            (pv closeName))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v name)
+            (v closeName))
+          (prim
+            append
+            (call
+              HtmlCheckNodes
+              (call
+                HtmlNodes
+                (v children)))
+            (call
+              HtmlCheckNodes
+              (v rest)))
+          (prim
+            cons
+            (mk
+              type-error
+              (v name)
+              (v closeName)
+              (q close-mismatch))
+            (prim
+              append
+              (call
+                HtmlCheckNodes
+                (call
+                  HtmlNodes
+                  (v children)))
+              (call
+                HtmlCheckNodes
+                (v rest))))))
+      (case
+        (pcons
+          (pm
+            EmptyElement
+            (pv name)
+            (pv attributes)
+            (pv closeName))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v name)
+            (v closeName))
+          (call
+            HtmlCheckNodes
+            (v rest))
+          (prim
+            cons
+            (mk
+              type-error
+              (v name)
+              (v closeName)
+              (q close-mismatch))
+            (call
+              HtmlCheckNodes
+              (v rest)))))
+      (case
+        (pcons
+          (pm
+            EmptyElementBare
+            (pv name)
+            (pv closeName))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v name)
+            (v closeName))
+          (call
+            HtmlCheckNodes
+            (v rest))
+          (prim
+            cons
+            (mk
+              type-error
+              (v name)
+              (v closeName)
+              (q close-mismatch))
+            (call
+              HtmlCheckNodes
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          HtmlCheckNodes
+          (v rest)))))
+  (judgment
+    InferHtml
+    [grammar source]
+    (call
+      HtmlInferNodes
+      (call
+        HtmlNodes
+        (call
+          ParseHtml
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckHtml
+    [grammar source]
+    (call
+      HtmlCheckNodes
+      (call
+        HtmlNodes
+        (call
+          ParseHtml
+          (v grammar)
+          (v source))))))

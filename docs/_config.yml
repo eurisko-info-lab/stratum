@@ -1,0 +1,36 @@
+title: Stratum
+description: >-
+  A programming system built out of itself, one provable step at a time,
+  and never trusting a step it cannot re-derive.
+url: https://eurisko-info-lab.github.io
+baseurl: /stratum
+
+# The documentation is written to be read in the repository first. These
+# plugins let the same files be a website without a second copy of anything:
+# pages need no front matter, and links between .md files keep working.
+plugins:
+  - jekyll-optional-front-matter
+  - jekyll-relative-links
+  - jekyll-titles-from-headings
+
+optional_front_matter:
+  remove_originals: true
+
+relative_links:
+  enabled: true
+  collections: true
+
+titles_from_headings:
+  enabled: true
+  strip_title: true
+  collections: true
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+exclude:
+  - Gemfile
+  - Gemfile.lock

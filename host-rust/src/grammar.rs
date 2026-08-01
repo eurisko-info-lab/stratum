@@ -50,6 +50,19 @@ pub struct Grammar {
     pub reachable: BTreeMap<String, BTreeSet<String>>,
     pub reachable_open: BTreeMap<String, BTreeSet<String>>,
     pub tag_production: BTreeMap<String, Production>,
+    pub layout: bool,
+    /// Whether this grammar declares a token whose own pattern can match
+    /// plain whitespace (YAML's `spaces`, for instance). Such a grammar
+    /// never lets the lexer silently skip whitespace -- every run of it
+    /// becomes a real, explicit token the tree captures -- so the printer
+    /// must never invent a separating space of its own: on reparse that
+    /// invented space would be lexed right back in as one more token the
+    /// original tree never had, breaking the fixpoint. Grammars with no such
+    /// token (the ordinary case) keep whitespace insignificant, so the
+    /// printer's own single-space join is exactly the harmless,
+    /// purely-cosmetic default it always was. Mirrors
+    /// host-scala/grammar/GrammarMachine0.scala's `explicitWhitespace`.
+    pub explicit_whitespace: bool,
 }
 
 fn closure_over(
@@ -79,6 +92,7 @@ pub fn load(value: &Canon) -> Result<Grammar, String> {
     };
 
     let mut start = String::new();
+    let mut layout = false;
     let mut tokens: Vec<TokenDef> = Vec::new();
     let mut skips: Vec<Regex> = Vec::new();
     let mut categories: Vec<(String, Vec<Production>)> = Vec::new();
@@ -93,6 +107,15 @@ pub fn load(value: &Canon) -> Result<Grammar, String> {
                 Canon::Str(pattern) => skips.push(Regex::compile(pattern)?),
                 _ => return Err("skip pattern must be a string".to_string()),
             },
+            // `token layout ...` is a reserved marker, not a real token: see
+            // the matching comment in host-scala/grammar/GrammarMachine0.scala
+            // for why this rides on existing `token` syntax instead of adding
+            // a new declaration to the grammar DSL.
+            Canon::Node(tag, args)
+                if tag == "token" && args.len() == 3 && args[0].as_sym() == Some("layout") =>
+            {
+                layout = true;
+            }
             Canon::Node(tag, args) if tag == "token" && args.len() == 3 => {
                 let name = args[0].as_sym().ok_or("token name must be a symbol")?.to_string();
                 let kind = args[1].as_sym().ok_or("token kind must be a symbol")?.to_string();
@@ -184,6 +207,8 @@ pub fn load(value: &Canon) -> Result<Grammar, String> {
     let token_names = tokens.iter().map(|token| token.name.clone()).collect();
     let reachable = closure_over(&categories, &direct);
     let reachable_open = closure_over(&categories, &direct_open);
+    let space_char = [' '];
+    let explicit_whitespace = tokens.iter().any(|token| token.pattern.match_at(&space_char, 0).is_some());
 
     Ok(Grammar {
         start,
@@ -195,6 +220,8 @@ pub fn load(value: &Canon) -> Result<Grammar, String> {
         reachable,
         reachable_open,
         tag_production,
+        layout,
+        explicit_whitespace,
     })
 }
 
@@ -268,7 +295,13 @@ pub fn lex(grammar: &Grammar, input: &str) -> Result<Vec<Token>, String> {
     let mut out = Vec::new();
     let mut index = 0usize;
     while index < characters.len() {
-        if characters[index].is_whitespace() {
+        let explicit_whitespace_token = characters[index].is_whitespace()
+            && grammar.tokens.iter().any(|token| {
+                token.pattern
+                    .match_at(&characters, index)
+                    .is_some_and(|end| end > index)
+            });
+        if characters[index].is_whitespace() && !explicit_whitespace_token {
             index += 1;
             continue;
         }
@@ -333,7 +366,89 @@ pub fn lex(grammar: &Grammar, input: &str) -> Result<Vec<Token>, String> {
             }
         }
     }
-    Ok(out)
+    Ok(if grammar.layout { apply_layout(&characters, out) } else { out })
+}
+
+/// The off-side rule, mirroring host-scala/grammar/GrammarMachine0.scala's
+/// `applyLayout` exactly: see the comment there for the design. Offsets here
+/// are character indices into `characters`, matching how this lexer already
+/// counts them (not UTF-8 byte offsets).
+const INDENT_TEXT: &str = "INDENT";
+const DEDENT_TEXT: &str = "DEDENT";
+
+fn column_of(characters: &[char], offset: usize) -> usize {
+    if offset == 0 {
+        return 0;
+    }
+    let mut i = offset;
+    while i > 0 {
+        i -= 1;
+        if characters[i] == '\n' {
+            return offset - i - 1;
+        }
+    }
+    offset
+}
+
+fn layout_token(text: &str, offset: usize) -> Token {
+    Token { kind: "kw".to_string(), text: text.to_string(), value: Canon::Str(text.to_string()), offset }
+}
+
+fn apply_layout(characters: &[char], tokens: Vec<Token>) -> Vec<Token> {
+    let mut out = Vec::new();
+    let mut stack: Vec<usize> = vec![0];
+
+    if let Some(first) = tokens.first() {
+        let col = column_of(characters, first.offset);
+        if col > *stack.last().unwrap() {
+            stack.push(col);
+            out.push(layout_token(INDENT_TEXT, first.offset));
+        }
+    }
+
+    let mut i = 0;
+    while i < tokens.len() {
+        // A token counts as ending its line if its text ends in a real
+        // newline -- true for the `newline` token kind, but also for any
+        // token whose own pattern absorbs a trailing newline (for example
+        // Scala's line comments, which do exactly that to keep two
+        // consecutive comments from merging when the printer re-joins them).
+        let ends_line = tokens[i].text.ends_with('\n');
+        out.push(tokens[i].clone());
+        if ends_line {
+            let mut j = i + 1;
+            // Blank lines carry no structure of their own -- only the line
+            // that follows them matters for the indent/dedent comparison --
+            // so their newline tokens are dropped rather than passed
+            // through, sparing every grammar from having to consume one
+            // blank-line token per blank line just to keep matching.
+            while j < tokens.len() && tokens[j].kind == "newline" {
+                j += 1;
+            }
+            if j < tokens.len() {
+                let col = column_of(characters, tokens[j].offset);
+                if col > *stack.last().unwrap() {
+                    stack.push(col);
+                    out.push(layout_token(INDENT_TEXT, tokens[j].offset));
+                } else {
+                    while stack.len() > 1 && col < *stack.last().unwrap() {
+                        stack.pop();
+                        out.push(layout_token(DEDENT_TEXT, tokens[j].offset));
+                    }
+                }
+            }
+            i = j;
+        } else {
+            i += 1;
+        }
+    }
+
+    while stack.len() > 1 {
+        stack.pop();
+        out.push(layout_token(DEDENT_TEXT, characters.len()));
+    }
+
+    out
 }
 
 // ------------------------------------------------------------------- parse
@@ -343,6 +458,17 @@ struct Parser<'a> {
     tokens: &'a [Token],
     position: usize,
     furthest: usize,
+    // Packrat memoization: without it, a category tried at the same
+    // position by several sibling alternatives that share a prefix (for
+    // example Scala's several `header : headerDocumentTyped ...` block
+    // forms) re-parses that whole shared prefix once per sibling, and that
+    // cost multiplies with nesting depth -- deeply nested real code can make
+    // an unmemoized parse take minutes. Parsing a given category from a
+    // given position is a pure function of (position, category) here (no
+    // external state affects it), so caching the outcome is
+    // behavior-preserving and turns that multiplicative blowup back into
+    // linear-ish work.
+    memo: std::collections::HashMap<(usize, String), Option<(Canon, usize)>>,
 }
 
 impl<'a> Parser<'a> {
@@ -362,14 +488,27 @@ impl<'a> Parser<'a> {
     }
 
     fn category(&mut self, name: &str) -> Option<Canon> {
+        let key = (self.position, name.to_string());
+        if let Some(cached) = self.memo.get(&key) {
+            return match cached {
+                Some((value, end)) => {
+                    self.position = *end;
+                    Some(value.clone())
+                }
+                None => None,
+            };
+        }
+        let start = self.position;
         let productions = self.productions(name)?;
         for production in productions {
             let saved = self.position;
             if let Some(value) = self.production(production) {
+                self.memo.insert((start, name.to_string()), Some((value.clone(), self.position)));
                 return Some(value);
             }
             self.position = saved;
         }
+        self.memo.insert((start, name.to_string()), None);
         None
     }
 
@@ -389,10 +528,13 @@ impl<'a> Parser<'a> {
                                 return None;
                             }
                         }
-                        Element::Bind(_, target) => match self.target(target) {
-                            Some(value) => bound.push(value),
-                            None => return None,
-                        },
+                        Element::Bind(field, target) => {
+                            let _ = field;
+                            match self.target(target) {
+                                Some(value) => bound.push(value),
+                                None => return None,
+                            }
+                        }
                     }
                 }
                 Some(Canon::Node(tag.clone(), bound))
@@ -454,7 +596,8 @@ impl<'a> Parser<'a> {
 
 pub fn parse(grammar: &Grammar, input: &str) -> Result<Canon, String> {
     let tokens = lex(grammar, input)?;
-    let mut parser = Parser { grammar, tokens: &tokens, position: 0, furthest: 0 };
+    let mut parser =
+        Parser { grammar, tokens: &tokens, position: 0, furthest: 0, memo: std::collections::HashMap::new() };
     let start = grammar.start.clone();
     match parser.category(&start) {
         Some(value) if parser.position == tokens.len() => Ok(value),
@@ -472,31 +615,107 @@ pub fn parse(grammar: &Grammar, input: &str) -> Result<Canon, String> {
 
 // ------------------------------------------------------------------- print
 
-const CLOSERS: [&str; 6] = [")", "]", "}", ".", ",", ";"];
+const CLOSERS: [&str; 7] = [")", "]", "}", ".", ",", ";", ":"];
 const OPENERS: [&str; 3] = ["(", "[", "{"];
 
+/// INDENT/DEDENT never print as literal text: they adjust a running depth,
+/// and the token right after a real newline is prefixed with that many
+/// levels of indent instead of the "no space" join a newline otherwise
+/// gets. Grammars that never emit these two tokens keep level at 0, where
+/// two spaces repeated zero times is the empty string this join already
+/// produced -- so this is behaviorally identical to the original for every
+/// existing grammar. Mirrors host-scala/grammar/GrammarMachine0.scala's
+/// `join` exactly.
+/// A printed piece of text, tagged with whether it came from a literal
+/// keyword in a production (a real structural delimiter the grammar wrote
+/// into the .grammar file, like Brace's `{`) versus an arbitrary captured
+/// token value (whatever a language's own free-form token, like `word`,
+/// happened to match). The bracket/punctuation spacing rules below only
+/// make sense for the former: a bound token's text can coincidentally equal
+/// "{" (for example Markdown prose containing a literal brace character)
+/// without meaning "structural opener", and treating it as one would
+/// suppress a separating space that the source actually had -- printing
+/// `{targetKey` for `{ targetKey`, which then relexes as one word. Mirrors
+/// host-scala/grammar/GrammarMachine0.scala's `Piece` exactly.
+struct Piece {
+    text: String,
+    literal: bool,
+}
+
 pub fn print(grammar: &Grammar, value: &Canon) -> Result<String, String> {
-    let mut out: Vec<String> = Vec::new();
+    let mut out: Vec<Piece> = Vec::new();
     let start = grammar.start.clone();
     emit(grammar, value, &start, &mut out)?;
     let mut text = String::new();
-    for (index, token) in out.iter().enumerate() {
-        if index == 0 {
-            text.push_str(token);
-        } else {
-            let previous = &out[index - 1];
-            if CLOSERS.contains(&token.as_str()) || OPENERS.contains(&previous.as_str()) {
+    let mut level: usize = 0;
+    let mut previous: Option<&Piece> = None;
+    for piece in &out {
+        let token = piece.text.as_str();
+        if piece.literal && token == INDENT_TEXT {
+            level += 1;
+            continue;
+        }
+        if piece.literal && token == DEDENT_TEXT {
+            level = level.saturating_sub(1);
+            continue;
+        }
+        match previous {
+            None => text.push_str(token),
+            // A closer that starts a fresh line (for example a `}` closing
+            // an indented block, or a fluent call chain's leading `.`)
+            // still needs its line's indentation -- only a closer joining
+            // the *same* line skips the separating space, so this check
+            // must come after the newline case, not before it. "Ends with"
+            // rather than exact-equals, because a line comment's own text
+            // carries its trailing newline (see the matching note on the
+            // layout trigger) rather than that newline being a separate
+            // token.
+            Some(p) if p.text.ends_with('\n') => {
+                text.push_str(&"  ".repeat(level));
                 text.push_str(token);
-            } else {
+            }
+            // A token that is itself entirely whitespace (for example
+            // YAML's `spaces` atom, which carries its literal run of
+            // indentation or separator spaces as its own text) already
+            // provides whatever separation is needed on either side of it.
+            // Adding this join's own separating space in front of it, or in
+            // front of whatever follows it, would let two whitespace-only
+            // sources stack -- one real space becomes three once reparsed,
+            // since the extra spaces this join inserted get lexed right
+            // back into the token's own run. So a whitespace-only token
+            // joins directly onto its neighbour on either side, same as a
+            // closer/opener would.
+            Some(p) if is_all_whitespace(token) || is_all_whitespace(&p.text) => text.push_str(token),
+            Some(p)
+                if (piece.literal && CLOSERS.contains(&token))
+                    || (p.literal && OPENERS.contains(&p.text.as_str())) =>
+            {
+                text.push_str(token)
+            }
+            // A grammar with explicit whitespace tokens (see
+            // `explicit_whitespace` on Grammar) never has insignificant
+            // space for this join to safely invent: whatever separation two
+            // neighbouring pieces need must already be represented by an
+            // atom somewhere in the tree (a `Space`, a `newline`, ...).
+            // Falling through to the ordinary single-space join here would
+            // add a space the tree never asked for, and reparsing would lex
+            // it right back in as a real, unwanted token.
+            Some(_) if grammar.explicit_whitespace => text.push_str(token),
+            Some(_) => {
                 text.push(' ');
                 text.push_str(token);
             }
         }
+        previous = Some(piece);
     }
     Ok(text)
 }
 
-fn emit(grammar: &Grammar, value: &Canon, category: &str, out: &mut Vec<String>) -> Result<(), String> {
+fn is_all_whitespace(text: &str) -> bool {
+    !text.is_empty() && text.chars().all(|c| c.is_whitespace())
+}
+
+fn emit(grammar: &Grammar, value: &Canon, category: &str, out: &mut Vec<Piece>) -> Result<(), String> {
     match value {
         Canon::Node(tag, args) => {
             let production = grammar
@@ -510,9 +729,9 @@ fn emit(grammar: &Grammar, value: &Canon, category: &str, out: &mut Vec<String>)
             } else {
                 match find_paren(grammar, category) {
                     Some(Production::Paren { open, target, close, .. }) => {
-                        out.push(open);
+                        out.push(Piece { text: open, literal: true });
                         emit(grammar, value, &target, out)?;
-                        out.push(close);
+                        out.push(Piece { text: close, literal: true });
                         Ok(())
                     }
                     _ => Err(format!(
@@ -523,7 +742,7 @@ fn emit(grammar: &Grammar, value: &Canon, category: &str, out: &mut Vec<String>)
             }
         }
         other => {
-            out.push(primitive_text(other)?);
+            out.push(Piece { text: primitive_text(other)?, literal: false });
             Ok(())
         }
     }
@@ -548,7 +767,7 @@ fn emit_production(
     grammar: &Grammar,
     production: &Production,
     args: &[Canon],
-    out: &mut Vec<String>,
+    out: &mut Vec<Piece>,
 ) -> Result<(), String> {
     match production {
         Production::Build { tag, elements, .. } => {
@@ -567,12 +786,13 @@ fn emit_production(
             let mut index = 0usize;
             for element in elements {
                 match element {
-                    Element::Keyword(text) => out.push(text.clone()),
-                    Element::Bind(_, target) => {
+                    Element::Keyword(text) => out.push(Piece { text: text.clone(), literal: true }),
+                    Element::Bind(field, target) => {
+                        let _ = field;
                         let value = &args[index];
                         index += 1;
                         if grammar.token_names.contains(target) {
-                            out.push(primitive_text(value)?);
+                            out.push(Piece { text: primitive_text(value)?, literal: false });
                         } else {
                             emit(grammar, value, target, out)?;
                         }

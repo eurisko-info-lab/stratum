@@ -1,0 +1,4 @@
+; F11->F12 meta delta
+; Repository semantics were strengthened in host-side implementation and tests.
+(delta-meta
+  (summary "bind materializer identity, block profiles, and profile-aware verification"))

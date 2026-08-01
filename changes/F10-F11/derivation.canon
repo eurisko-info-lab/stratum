@@ -11,7 +11,7 @@
       (Compose
         (AtKey
           meta
-          (Replace #d5da29eb3ec0923e016b5e42b39353895664ee54a02306d32b3f66f47db638612 #d176a10eeb70418d43979abc0b8d55f852028a873c378416c4e3b4060a921cb0a))
+          (Replace #d9f9e98e51828e645774ccb75926100c2104794d5d8556575652f4e17f8c573c1 #d4a790640c8b6c06b54de624e525963a338cc65903f79895fa44b73d024e5c249))
         (Compose
           (AtKey
             checks
@@ -86,9 +86,9 @@
                     SettledHeight
                     (call
                       SettleTwo
-                      (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                      (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
-                      (q #da9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af)))
+                      (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                      (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
+                      (q #d95e347a8b8e553794744473007b080456462c3eeaee863f25ee48edad809cb02)))
                   (value 2))
                 (check
                   lambda-behaviour-unchanged

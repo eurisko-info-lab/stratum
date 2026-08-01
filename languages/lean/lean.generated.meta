@@ -1,0 +1,2202 @@
+; Generated from languages/lean/lean.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module lean)
+  (judgment
+    LeanDocument
+    [items]
+    (mk
+      LeanDocument
+      (v items)))
+  (judgment
+    LeanDocument'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Brace
+    [body]
+    (mk
+      Brace
+      (v body)))
+  (judgment
+    Brace'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyBrace
+    []
+    (mk EmptyBrace))
+  (judgment
+    Paren
+    [body]
+    (mk
+      Paren
+      (v body)))
+  (judgment
+    Paren'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyParen
+    []
+    (mk EmptyParen))
+  (judgment
+    Bracket
+    [body]
+    (mk
+      Bracket
+      (v body)))
+  (judgment
+    Bracket'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyBracket
+    []
+    (mk EmptyBracket))
+  (judgment
+    InductiveDecl
+    [name ctors]
+    (mk
+      InductiveDecl
+      (v name)
+      (v ctors)))
+  (judgment
+    InductiveDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    InductiveDecl'ctors
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    InductiveDeclDeriving
+    [name ctors derives]
+    (mk
+      InductiveDeclDeriving
+      (v name)
+      (v ctors)
+      (v derives)))
+  (judgment
+    InductiveDeclDeriving'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    InductiveDeclDeriving'ctors
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    InductiveDeclDeriving'derives
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    InductiveDeclTyped
+    [name indexType ctors]
+    (mk
+      InductiveDeclTyped
+      (v name)
+      (v indexType)
+      (v ctors)))
+  (judgment
+    InductiveDeclTyped'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    InductiveDeclTyped'indexType
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    InductiveDeclTyped'ctors
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    InductiveDeclTypedDeriving
+    [name indexType ctors derives]
+    (mk
+      InductiveDeclTypedDeriving
+      (v name)
+      (v indexType)
+      (v ctors)
+      (v derives)))
+  (judgment
+    InductiveDeclTypedDeriving'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    InductiveDeclTypedDeriving'indexType
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    InductiveDeclTypedDeriving'ctors
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    InductiveDeclTypedDeriving'derives
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    DQuoted
+    [value]
+    (mk
+      DQuoted
+      (v value)))
+  (judgment
+    DQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Number
+    [value]
+    (mk
+      Number
+      (v value)))
+  (judgment
+    Number'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Namespace
+    []
+    (mk Namespace))
+  (judgment
+    End
+    []
+    (mk End))
+  (judgment
+    Inductive
+    []
+    (mk Inductive))
+  (judgment
+    Structure
+    []
+    (mk Structure))
+  (judgment
+    ClassKw
+    []
+    (mk ClassKw))
+  (judgment
+    Instance
+    []
+    (mk Instance))
+  (judgment
+    Def
+    []
+    (mk Def))
+  (judgment
+    Abbrev
+    []
+    (mk Abbrev))
+  (judgment
+    Theorem
+    []
+    (mk Theorem))
+  (judgment
+    Lemma
+    []
+    (mk Lemma))
+  (judgment
+    Example
+    []
+    (mk Example))
+  (judgment
+    Where
+    []
+    (mk Where))
+  (judgment
+    Deriving
+    []
+    (mk Deriving))
+  (judgment
+    Do
+    []
+    (mk Do))
+  (judgment
+    Let
+    []
+    (mk Let))
+  (judgment
+    Fun
+    []
+    (mk Fun))
+  (judgment
+    Match
+    []
+    (mk Match))
+  (judgment
+    With
+    []
+    (mk With))
+  (judgment
+    If
+    []
+    (mk If))
+  (judgment
+    Then
+    []
+    (mk Then))
+  (judgment
+    Else
+    []
+    (mk Else))
+  (judgment
+    By
+    []
+    (mk By))
+  (judgment
+    Have
+    []
+    (mk Have))
+  (judgment
+    Show
+    []
+    (mk Show))
+  (judgment
+    From
+    []
+    (mk From))
+  (judgment
+    Suffices
+    []
+    (mk Suffices))
+  (judgment
+    Sorry
+    []
+    (mk Sorry))
+  (judgment
+    Import
+    []
+    (mk Import))
+  (judgment
+    Open
+    []
+    (mk Open))
+  (judgment
+    Section
+    []
+    (mk Section))
+  (judgment
+    Variable
+    []
+    (mk Variable))
+  (judgment
+    Variables
+    []
+    (mk Variables))
+  (judgment
+    Universe
+    []
+    (mk Universe))
+  (judgment
+    Mutual
+    []
+    (mk Mutual))
+  (judgment
+    Partial
+    []
+    (mk Partial))
+  (judgment
+    Noncomputable
+    []
+    (mk Noncomputable))
+  (judgment
+    Private
+    []
+    (mk Private))
+  (judgment
+    Protected
+    []
+    (mk Protected))
+  (judgment
+    Macro
+    []
+    (mk Macro))
+  (judgment
+    Syntax
+    []
+    (mk Syntax))
+  (judgment
+    Notation
+    []
+    (mk Notation))
+  (judgment
+    Attribute
+    []
+    (mk Attribute))
+  (judgment
+    SetOption
+    []
+    (mk SetOption))
+  (judgment
+    TerminationBy
+    []
+    (mk TerminationBy))
+  (judgment
+    In
+    []
+    (mk In))
+  (judgment
+    Cons
+    []
+    (mk Cons))
+  (judgment
+    Assign
+    []
+    (mk Assign))
+  (judgment
+    DoubleArrow
+    []
+    (mk DoubleArrow))
+  (judgment
+    ArrowAscii
+    []
+    (mk ArrowAscii))
+  (judgment
+    Arrow
+    []
+    (mk Arrow))
+  (judgment
+    Iff
+    []
+    (mk Iff))
+  (judgment
+    Forall
+    []
+    (mk Forall))
+  (judgment
+    Exists
+    []
+    (mk Exists))
+  (judgment
+    Not
+    []
+    (mk Not))
+  (judgment
+    AndOp
+    []
+    (mk AndOp))
+  (judgment
+    OrOp
+    []
+    (mk OrOp))
+  (judgment
+    Le
+    []
+    (mk Le))
+  (judgment
+    Ge
+    []
+    (mk Ge))
+  (judgment
+    Ne
+    []
+    (mk Ne))
+  (judgment
+    Times
+    []
+    (mk Times))
+  (judgment
+    Colon
+    []
+    (mk Colon))
+  (judgment
+    Comma
+    []
+    (mk Comma))
+  (judgment
+    Semicolon
+    []
+    (mk Semicolon))
+  (judgment
+    Bar
+    []
+    (mk Bar))
+  (judgment
+    Dot
+    []
+    (mk Dot))
+  (judgment
+    Eq
+    []
+    (mk Eq))
+  (judgment
+    Less
+    []
+    (mk Less))
+  (judgment
+    Greater
+    []
+    (mk Greater))
+  (judgment
+    Slash
+    []
+    (mk Slash))
+  (judgment
+    Minus
+    []
+    (mk Minus))
+  (judgment
+    Word
+    [value]
+    (mk
+      Word
+      (v value)))
+  (judgment
+    Word'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CtorList
+    [items]
+    (mk
+      CtorList
+      (v items)))
+  (judgment
+    CtorList'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Constructor
+    [name type]
+    (mk
+      Constructor
+      (v name)
+      (v type)))
+  (judgment
+    Constructor'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Constructor'type
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ConstructorNoType
+    [name]
+    (mk
+      ConstructorNoType
+      (v name)))
+  (judgment
+    ConstructorNoType'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CtorTypeDocument
+    [items]
+    (mk
+      CtorTypeDocument
+      (v items)))
+  (judgment
+    CtorTypeDocument'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CtorParen
+    [body]
+    (mk
+      CtorParen
+      (v body)))
+  (judgment
+    CtorParen'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CtorEmptyParen
+    []
+    (mk CtorEmptyParen))
+  (judgment
+    CtorWord
+    [value]
+    (mk
+      CtorWord
+      (v value)))
+  (judgment
+    CtorWord'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CtorNumber
+    [value]
+    (mk
+      CtorNumber
+      (v value)))
+  (judgment
+    CtorNumber'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CtorDQuoted
+    [value]
+    (mk
+      CtorDQuoted
+      (v value)))
+  (judgment
+    CtorDQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CtorArrow
+    []
+    (mk CtorArrow))
+  (judgment
+    CtorArrowAscii
+    []
+    (mk CtorArrowAscii))
+  (judgment
+    CtorDoubleArrow
+    []
+    (mk CtorDoubleArrow))
+  (judgment
+    CtorIff
+    []
+    (mk CtorIff))
+  (judgment
+    CtorForall
+    []
+    (mk CtorForall))
+  (judgment
+    CtorExists
+    []
+    (mk CtorExists))
+  (judgment
+    CtorNot
+    []
+    (mk CtorNot))
+  (judgment
+    CtorAndOp
+    []
+    (mk CtorAndOp))
+  (judgment
+    CtorOrOp
+    []
+    (mk CtorOrOp))
+  (judgment
+    CtorLe
+    []
+    (mk CtorLe))
+  (judgment
+    CtorGe
+    []
+    (mk CtorGe))
+  (judgment
+    CtorNe
+    []
+    (mk CtorNe))
+  (judgment
+    CtorTimes
+    []
+    (mk CtorTimes))
+  (judgment
+    CtorComma
+    []
+    (mk CtorComma))
+  (judgment
+    CtorDot
+    []
+    (mk CtorDot))
+  (judgment
+    CtorEq
+    []
+    (mk CtorEq))
+  (judgment
+    CtorLess
+    []
+    (mk CtorLess))
+  (judgment
+    CtorGreater
+    []
+    (mk CtorGreater))
+  (judgment
+    CtorMinus
+    []
+    (mk CtorMinus))
+  (judgment
+    CtorAssign
+    []
+    (mk CtorAssign))
+  (judgment
+    CtorCons
+    []
+    (mk CtorCons))
+  (judgment
+    ParseLean
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintLean
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    LeanWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseLean
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          LeanDocument
+          (pv items))
+        (mk
+          valid
+          (v items)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    LeanBody
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q LeanDocument)))
+  (judgment
+    LeanCtorItems
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q CtorList)))
+  (judgment
+    LeanCtorNames
+    [ctors]
+    (match
+      (v ctors)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv name)
+            (pv type))
+          (pv rest))
+        (prim
+          cons
+          (v name)
+          (call
+            LeanCtorNames
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            ConstructorNoType
+            (pv name))
+          (pv rest))
+        (prim
+          cons
+          (v name)
+          (call
+            LeanCtorNames
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LeanCtorNames
+          (v rest)))))
+  (judgment
+    LeanMkBindings
+    [names kind]
+    (match
+      (v names)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v head)
+            (v kind))
+          (call
+            LeanMkBindings
+            (v rest)
+            (v kind))))))
+  (judgment
+    LeanFunParams
+    [items]
+    (match
+      (v items)
+      (case
+        (pcons
+          (pm DoubleArrow)
+          (pv rest))
+        (mk
+          some
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (match
+          (call
+            LeanFunParams
+            (v rest))
+          (case
+            (pm
+              some
+              (pv params)
+              (pv remaining))
+            (mk
+              some
+              (prim
+                cons
+                (v name)
+                (v params))
+              (v remaining)))
+          (case
+            (pm none)
+            (mk none))))
+      (case
+        _
+        (mk none))))
+  (judgment
+    LeanResolveItems
+    [items scope]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Dot)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (call
+          LeanResolveItems
+          (v rest)
+          (v scope)))
+      (case
+        (pcons
+          (pm Def)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q def))
+          (call
+            LeanResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Abbrev)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q abbrev))
+          (call
+            LeanResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Theorem)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q theorem))
+          (call
+            LeanResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Lemma)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q lemma))
+          (call
+            LeanResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Structure)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q structure))
+          (call
+            LeanResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm ClassKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q class))
+          (call
+            LeanResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Instance)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q instance))
+          (call
+            LeanResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q let))
+          (call
+            LeanResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Fun)
+          (pv rest))
+        (match
+          (call
+            LeanFunParams
+            (v rest))
+          (case
+            (pm
+              some
+              (pv params)
+              (pv remaining))
+            (call
+              LeanResolveItems
+              (v remaining)
+              (prim
+                append
+                (v scope)
+                (v params))))
+          (case
+            (pm none)
+            (call
+              LeanResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pm
+            InductiveDecl
+            (pv name)
+            (pv ctors))
+          (pv rest))
+        (let
+          ctorNames
+          (call
+            LeanCtorNames
+            (call
+              LeanCtorItems
+              (v ctors)))
+          (prim
+            append
+            (prim
+              cons
+              (mk
+                binding
+                (v name)
+                (q inductive))
+              (call
+                LeanMkBindings
+                (v ctorNames)
+                (q constructor)))
+            (call
+              LeanResolveItems
+              (v rest)
+              (prim
+                append
+                (prim
+                  snoc
+                  (v scope)
+                  (v name))
+                (v ctorNames))))))
+      (case
+        (pcons
+          (pm
+            InductiveDeclDeriving
+            (pv name)
+            (pv ctors)
+            (pv derives))
+          (pv rest))
+        (let
+          ctorNames
+          (call
+            LeanCtorNames
+            (call
+              LeanCtorItems
+              (v ctors)))
+          (prim
+            append
+            (prim
+              cons
+              (mk
+                binding
+                (v name)
+                (q inductive))
+              (call
+                LeanMkBindings
+                (v ctorNames)
+                (q constructor)))
+            (call
+              LeanResolveItems
+              (v rest)
+              (prim
+                append
+                (prim
+                  snoc
+                  (v scope)
+                  (v name))
+                (v ctorNames))))))
+      (case
+        (pcons
+          (pm
+            InductiveDeclTyped
+            (pv name)
+            (pv indexType)
+            (pv ctors))
+          (pv rest))
+        (let
+          ctorNames
+          (call
+            LeanCtorNames
+            (call
+              LeanCtorItems
+              (v ctors)))
+          (prim
+            append
+            (prim
+              cons
+              (mk
+                binding
+                (v name)
+                (q inductive))
+              (call
+                LeanMkBindings
+                (v ctorNames)
+                (q constructor)))
+            (call
+              LeanResolveItems
+              (v rest)
+              (prim
+                append
+                (prim
+                  snoc
+                  (v scope)
+                  (v name))
+                (v ctorNames))))))
+      (case
+        (pcons
+          (pm
+            InductiveDeclTypedDeriving
+            (pv name)
+            (pv indexType)
+            (pv ctors)
+            (pv derives))
+          (pv rest))
+        (let
+          ctorNames
+          (call
+            LeanCtorNames
+            (call
+              LeanCtorItems
+              (v ctors)))
+          (prim
+            append
+            (prim
+              cons
+              (mk
+                binding
+                (v name)
+                (q inductive))
+              (call
+                LeanMkBindings
+                (v ctorNames)
+                (q constructor)))
+            (call
+              LeanResolveItems
+              (v rest)
+              (prim
+                append
+                (prim
+                  snoc
+                  (v scope)
+                  (v name))
+                (v ctorNames))))))
+      (case
+        (pcons
+          (pm
+            Brace
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            LeanResolveItems
+            (call
+              LeanBody
+              (v body))
+            (v scope))
+          (call
+            LeanResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            LeanResolveItems
+            (call
+              LeanBody
+              (v body))
+            (v scope))
+          (call
+            LeanResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Bracket
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            LeanResolveItems
+            (call
+              LeanBody
+              (v body))
+            (v scope))
+          (call
+            LeanResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v scope)
+            (v name))
+          (prim
+            cons
+            (mk
+              reference
+              (v name)
+              (q resolved))
+            (call
+              LeanResolveItems
+              (v rest)
+              (v scope)))
+          (prim
+            cons
+            (mk
+              reference
+              (v name)
+              (q free))
+            (call
+              LeanResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LeanResolveItems
+          (v rest)
+          (v scope)))))
+  (judgment
+    ResolveLean
+    [grammar source]
+    (call
+      LeanResolveItems
+      (call
+        LeanBody
+        (call
+          ParseLean
+          (v grammar)
+          (v source)))
+      (lst)))
+  (judgment
+    LeanTypeWords
+    [tokens]
+    (match
+      (v tokens)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv w))
+          (pv rest))
+        (prim
+          cons
+          (v w)
+          (call
+            LeanTypeWords
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LeanTypeWords
+          (v rest)))))
+  (judgment
+    LeanTakeTypeUntilAssign
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (mk taken (lst) (lst)))
+      (case
+        (pcons
+          (pm Assign)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pm Semicolon)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            LeanTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (mk
+              taken
+              (prim
+                cons
+                (v head)
+                (v typeToks))
+              (v remaining)))))))
+  (judgment
+    LeanPrimaryType
+    [typeWords]
+    (match
+      (v typeWords)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pv t)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v t)
+            (q "Nat"))
+          (q number)
+          (if
+            (prim
+              eq
+              (v t)
+              (q "Int"))
+            (q number)
+            (if
+              (prim
+                eq
+                (v t)
+                (q "Float"))
+              (q number)
+              (if
+                (prim
+                  eq
+                  (v t)
+                  (q "Bool"))
+                (q boolean)
+                (if
+                  (prim
+                    eq
+                    (v t)
+                    (q "String"))
+                  (q string)
+                  (if
+                    (prim
+                      eq
+                      (v t)
+                      (q "Char"))
+                    (q char)
+                    (if
+                      (prim
+                        eq
+                        (v t)
+                        (q "Prop"))
+                      (q proposition)
+                      (if
+                        (prim
+                          eq
+                          (v t)
+                          (q "Type"))
+                        (q type)
+                        (call
+                          LeanPrimaryType
+                          (v rest)))))))))))))
+  (judgment
+    LeanLookupType
+    [env name]
+    (match
+      (v env)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            typed
+            (pv key)
+            (pv t))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v key)
+            (v name))
+          (v t)
+          (call
+            LeanLookupType
+            (v rest)
+            (v name))))))
+  (judgment
+    LeanInferExprType
+    [items env]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            Number
+            (pv n))
+          (pv rest))
+        (q number))
+      (case
+        (pcons
+          (pm
+            DQuoted
+            (pv s))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm True)
+          (pv rest))
+        (q boolean))
+      (case
+        (pcons
+          (pm False)
+          (pv rest))
+        (q boolean))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (call
+          LeanLookupType
+          (v env)
+          (v name)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LeanInferExprType
+          (v rest)
+          (v env)))))
+  (judgment
+    LeanCompatibleType
+    [declared inferred]
+    (if
+      (prim
+        eq
+        (v declared)
+        (q unknown))
+      (q true)
+      (if
+        (prim
+          eq
+          (v inferred)
+          (q unknown))
+        (q true)
+        (if
+          (prim
+            eq
+            (v declared)
+            (v inferred))
+          (q true)
+          (q false)))))
+  (judgment
+    LeanInferItems
+    [items env]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pcons
+              (pm Colon)
+              (pv rest))))
+        (match
+          (call
+            LeanTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (let
+              declared
+              (call
+                LeanPrimaryType
+                (call
+                  LeanTypeWords
+                  (v typeToks)))
+              (let
+                inferred
+                (call
+                  LeanInferExprType
+                  (v remaining)
+                  (v env))
+                (let
+                  entry
+                  (mk
+                    typed
+                    (v name)
+                    (v declared))
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (v declared)
+                      (q declared)
+                      (v inferred))
+                    (call
+                      LeanInferItems
+                      (v remaining)
+                      (prim
+                        snoc
+                        (v env)
+                        (v entry))))))))))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          inferred
+          (call
+            LeanInferExprType
+            (v rest)
+            (v env))
+          (let
+            entry
+            (mk
+              typed
+              (v name)
+              (v inferred))
+            (prim
+              cons
+              (mk
+                type
+                (v name)
+                (v inferred)
+                (q inferred)
+                (v inferred))
+              (call
+                LeanInferItems
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (v entry)))))))
+      (case
+        (pcons
+          (pm Def)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q definition))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q definition)
+              (q declared)
+              (q definition))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm Abbrev)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q definition))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q definition)
+              (q declared)
+              (q definition))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm Theorem)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q proposition))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q proposition)
+              (q declared)
+              (q proposition))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm Lemma)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q proposition))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q proposition)
+              (q declared)
+              (q proposition))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm Structure)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q type)
+              (q declared)
+              (q type))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm ClassKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q typeclass))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q typeclass)
+              (q declared)
+              (q typeclass))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm Instance)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q instance))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q instance)
+              (q declared)
+              (q instance))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            InductiveDecl
+            (pv name)
+            (pv ctors))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            append
+            (call
+              LeanInferItems
+              (call
+                LeanCtorItems
+                (v ctors))
+              (prim
+                snoc
+                (v env)
+                (v own)))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            InductiveDeclDeriving
+            (pv name)
+            (pv ctors)
+            (pv derives))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            append
+            (call
+              LeanInferItems
+              (call
+                LeanCtorItems
+                (v ctors))
+              (prim
+                snoc
+                (v env)
+                (v own)))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            InductiveDeclTyped
+            (pv name)
+            (pv indexType)
+            (pv ctors))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            append
+            (call
+              LeanInferItems
+              (call
+                LeanCtorItems
+                (v ctors))
+              (prim
+                snoc
+                (v env)
+                (v own)))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            InductiveDeclTypedDeriving
+            (pv name)
+            (pv indexType)
+            (pv ctors)
+            (pv derives))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            append
+            (call
+              LeanInferItems
+              (call
+                LeanCtorItems
+                (v ctors))
+              (prim
+                snoc
+                (v env)
+                (v own)))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv name)
+            (pv type))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q constructor))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q constructor)
+              (q declared)
+              (q constructor))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            ConstructorNoType
+            (pv name))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q constructor))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q constructor)
+              (q declared)
+              (q constructor))
+            (call
+              LeanInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            Brace
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            LeanInferItems
+            (call
+              LeanBody
+              (v body))
+            (v env))
+          (call
+            LeanInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            LeanInferItems
+            (call
+              LeanBody
+              (v body))
+            (v env))
+          (call
+            LeanInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Bracket
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            LeanInferItems
+            (call
+              LeanBody
+              (v body))
+            (v env))
+          (call
+            LeanInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LeanInferItems
+          (v rest)
+          (v env)))))
+  (judgment
+    LeanTypeErrors
+    [typed]
+    (match
+      (v typed)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            type
+            (pv name)
+            (pv declared)
+            (pq declared)
+            (pv inferred))
+          (pv rest))
+        (if
+          (call
+            LeanCompatibleType
+            (v declared)
+            (v inferred))
+          (call
+            LeanTypeErrors
+            (v rest))
+          (prim
+            cons
+            (mk
+              type-error
+              (v name)
+              (v declared)
+              (v inferred))
+            (call
+              LeanTypeErrors
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LeanTypeErrors
+          (v rest)))))
+  (judgment
+    InferLean
+    [grammar source]
+    (call
+      LeanInferItems
+      (call
+        LeanBody
+        (call
+          ParseLean
+          (v grammar)
+          (v source)))
+      (lst)))
+  (judgment
+    TypeCheckLean
+    [grammar source]
+    (call
+      LeanTypeErrors
+      (call
+        InferLean
+        (v grammar)
+        (v source)))))

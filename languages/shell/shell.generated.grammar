@@ -1,0 +1,369 @@
+; Generated from languages/shell/shell.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "shell")
+  (start document)
+  (token dquoted str "\"(\\\\.|[^\"\\\\\\r\\n])*\"")
+  (token squoted str "'[^'\\r\\n]*'")
+  (token word str "[^ \\t\\r\\n|&;<>(){}\\[\\]'\"=#]+")
+  (token newline sym "\\n")
+  (category
+    document
+    (fold ShellDocument statement))
+  (category
+    statement
+    (prod
+      Comment
+      [
+        (kw "#")
+        (bind content commentAtoms)
+        (bind newline newline)])
+    (prod
+      CommentBlank
+      [
+        (kw "#")
+        (bind newline newline)])
+    (prod
+      Assignment
+      [
+        (bind name word)
+        (kw "=")
+        (bind value atoms)
+        (bind newline newline)])
+    (prod
+      FunctionDef
+      [
+        (bind name word)
+        (kw "(")
+        (kw ")")
+        (kw "{")
+        (bind newline newline)
+        (bind body document)
+        (kw "}")
+        (bind newline2 newline)])
+    (prod
+      IfStatement
+      [
+        (kw "if")
+        (bind condition headerAtoms)
+        (kw ";")
+        (kw "then")
+        (bind newline newline)
+        (bind thenBody document)
+        (bind tail ifTail)])
+    (prod
+      ForStatement
+      [
+        (kw "for")
+        (bind var word)
+        (kw "in")
+        (bind items headerAtoms)
+        (kw ";")
+        (kw "do")
+        (bind newline newline)
+        (bind body document)
+        (kw "done")
+        (bind newline2 newline)])
+    (prod
+      WhileStatement
+      [
+        (kw "while")
+        (bind condition headerAtoms)
+        (kw ";")
+        (kw "do")
+        (bind newline newline)
+        (bind body document)
+        (kw "done")
+        (bind newline2 newline)])
+    (prod
+      UntilStatement
+      [
+        (kw "until")
+        (bind condition headerAtoms)
+        (kw ";")
+        (kw "do")
+        (bind newline newline)
+        (bind body document)
+        (kw "done")
+        (bind newline2 newline)])
+    (prod
+      Statement
+      [
+        (bind content atoms)
+        (bind newline newline)])
+    (prod
+      Blank
+      [
+        (bind newline newline)]))
+  (category
+    ifTail
+    (prod
+      ElifTail
+      [
+        (kw "elif")
+        (bind condition headerAtoms)
+        (kw ";")
+        (kw "then")
+        (bind newline newline)
+        (bind body document)
+        (bind rest ifTail)])
+    (prod
+      ElseTail
+      [
+        (kw "else")
+        (bind newline newline)
+        (bind body document)
+        (kw "fi")
+        (bind newline2 newline)])
+    (prod
+      EndTail
+      [
+        (kw "fi")
+        (bind newline newline)]))
+  (category
+    atoms
+    (fold Atoms atom))
+  (category
+    atom
+    (prod
+      DQuoted
+      [
+        (bind value dquoted)])
+    (prod
+      SQuoted
+      [
+        (bind value squoted)])
+    (prod
+      Word
+      [
+        (bind value word)])
+    (prod
+      If
+      [
+        (kw "if")])
+    (prod
+      For
+      [
+        (kw "for")])
+    (prod
+      While
+      [
+        (kw "while")])
+    (prod
+      Until
+      [
+        (kw "until")])
+    (prod
+      Function
+      [
+        (kw "function")])
+    (prod
+      In
+      [
+        (kw "in")])
+    (prod
+      DoubleOpenBracket
+      [
+        (kw "[[")])
+    (prod
+      DoubleCloseBracket
+      [
+        (kw "]]")])
+    (prod
+      OpenBracket
+      [
+        (kw "[")])
+    (prod
+      CloseBracket
+      [
+        (kw "]")])
+    (prod
+      OpenParen
+      [
+        (kw "(")])
+    (prod
+      CloseParen
+      [
+        (kw ")")])
+    (prod
+      OpenBrace
+      [
+        (kw "{")])
+    (prod
+      CloseBrace
+      [
+        (kw "}")])
+    (prod
+      Semicolon
+      [
+        (kw ";")])
+    (prod
+      Or
+      [
+        (kw "||")])
+    (prod
+      Pipe
+      [
+        (kw "|")])
+    (prod
+      And
+      [
+        (kw "&&")])
+    (prod
+      Background
+      [
+        (kw "&")])
+    (prod
+      AppendRedirect
+      [
+        (kw ">>")])
+    (prod
+      RedirectOut
+      [
+        (kw ">")])
+    (prod
+      RedirectIn
+      [
+        (kw "<")])
+    (prod
+      NotEqual
+      [
+        (kw "!=")])
+    (prod
+      Bang
+      [
+        (kw "!")])
+    (prod
+      Equals
+      [
+        (kw "=")])
+    (prod
+      Hash
+      [
+        (kw "#")])
+    (prod
+      Apostrophe
+      [
+        (kw "'")])
+    (prod
+      QuoteMark
+      [
+        (kw "\"")]))
+  (category
+    commentAtoms
+    (fold CommentAtoms commentAtom))
+  (category
+    commentAtom
+    (pass atom)
+    (prod
+      CommentThen
+      [
+        (kw "then")])
+    (prod
+      CommentElif
+      [
+        (kw "elif")])
+    (prod
+      CommentElse
+      [
+        (kw "else")])
+    (prod
+      CommentFi
+      [
+        (kw "fi")])
+    (prod
+      CommentDo
+      [
+        (kw "do")])
+    (prod
+      CommentDone
+      [
+        (kw "done")]))
+  (category
+    headerAtoms
+    (fold HeaderAtoms headerAtom))
+  (category
+    headerAtom
+    (prod
+      HeaderDQuoted
+      [
+        (bind value dquoted)])
+    (prod
+      HeaderSQuoted
+      [
+        (bind value squoted)])
+    (prod
+      HeaderWord
+      [
+        (bind value word)])
+    (prod
+      HeaderDoubleOpenBracket
+      [
+        (kw "[[")])
+    (prod
+      HeaderDoubleCloseBracket
+      [
+        (kw "]]")])
+    (prod
+      HeaderOpenBracket
+      [
+        (kw "[")])
+    (prod
+      HeaderCloseBracket
+      [
+        (kw "]")])
+    (prod
+      HeaderOpenParen
+      [
+        (kw "(")])
+    (prod
+      HeaderCloseParen
+      [
+        (kw ")")])
+    (prod
+      HeaderOr
+      [
+        (kw "||")])
+    (prod
+      HeaderPipe
+      [
+        (kw "|")])
+    (prod
+      HeaderAnd
+      [
+        (kw "&&")])
+    (prod
+      HeaderRedirectOut
+      [
+        (kw ">")])
+    (prod
+      HeaderRedirectIn
+      [
+        (kw "<")])
+    (prod
+      HeaderNotEqual
+      [
+        (kw "!=")])
+    (prod
+      HeaderBang
+      [
+        (kw "!")])
+    (prod
+      HeaderEquals
+      [
+        (kw "=")])
+    (prod
+      HeaderHash
+      [
+        (kw "#")])
+    (prod
+      HeaderApostrophe
+      [
+        (kw "'")])
+    (prod
+      HeaderQuoteMark
+      [
+        (kw "\"")])
+    (prod
+      HeaderNewline
+      [
+        (bind newline newline)])))

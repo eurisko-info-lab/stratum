@@ -291,12 +291,12 @@ object Server:
             }
           respond(id, arrangement.getOrElse(Null))
 
-        case "stratum/catalogue" =>
+        case "stratum/documents" =>
           // The world's own documents, grouped as the world groups them.
           val language = service.descriptor.bindings.headOption.map(_.name).getOrElse("")
           respond(
             id,
-            Json.arr(service.catalogue(language).map { subject =>
+            Json.arr(service.documents(language).map { subject =>
               Json.obj(
                 "name" -> Str(Service.string(subject, "name")),
                 "reports" -> Json.arr(
@@ -336,6 +336,24 @@ object Server:
               binding <- service.bindingForUri(pdfUri)
             yield service.pdf(binding.name, text)
           respond(id, Str(produced.getOrElse("")))
+
+        case "stratum/evaluate" =>
+          // Evaluating part of a buffer is the world's business; the adapter
+          // only carries the offsets across.
+          val target = (params / "uri").str.getOrElse("")
+          val answer =
+            for
+              text <- documents.get(target)
+              binding <- service.bindingForUri(target)
+            yield service
+              .evaluate(
+                binding.name,
+                text,
+                (params / "offset").num.map(_.toInt).getOrElse(0),
+                (params / "length").num.map(_.toInt).getOrElse(0)
+              )
+              .fold(m => s"error: $m", identity)
+          respond(id, Str(answer.getOrElse("")))
 
         case "stratum/views" =>
           val uri = (params / "uri").str.getOrElse("")

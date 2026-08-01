@@ -1,0 +1,573 @@
+; Generated from languages/markdown/markdown.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module markdown)
+  (judgment
+    MarkdownDocument
+    [blocks]
+    (mk
+      MarkdownDocument
+      (v blocks)))
+  (judgment
+    MarkdownDocument'blocks
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Heading
+    [level content newline]
+    (mk
+      Heading
+      (v level)
+      (v content)
+      (v newline)))
+  (judgment
+    Heading'level
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Heading'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Heading'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FenceClose
+    [marker newline]
+    (mk
+      FenceClose
+      (v marker)
+      (v newline)))
+  (judgment
+    FenceClose'marker
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FenceClose'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Fence
+    [marker language newline]
+    (mk
+      Fence
+      (v marker)
+      (v language)
+      (v newline)))
+  (judgment
+    Fence'marker
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Fence'language
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Fence'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Bullet
+    [content newline]
+    (mk
+      Bullet
+      (v content)
+      (v newline)))
+  (judgment
+    Bullet'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Bullet'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Quote
+    [content newline]
+    (mk
+      Quote
+      (v content)
+      (v newline)))
+  (judgment
+    Quote'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Quote'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Paragraph
+    [content newline]
+    (mk
+      Paragraph
+      (v content)
+      (v newline)))
+  (judgment
+    Paragraph'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Paragraph'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Blank
+    [newline]
+    (mk
+      Blank
+      (v newline)))
+  (judgment
+    Blank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Inlines
+    [items]
+    (mk
+      Inlines
+      (v items)))
+  (judgment
+    Inlines'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Strong
+    [content]
+    (mk
+      Strong
+      (v content)))
+  (judgment
+    Strong'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Emph
+    [content]
+    (mk
+      Emph
+      (v content)))
+  (judgment
+    Emph'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Image
+    [text url]
+    (mk
+      Image
+      (v text)
+      (v url)))
+  (judgment
+    Image'text
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Image'url
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Link
+    [text url]
+    (mk
+      Link
+      (v text)
+      (v url)))
+  (judgment
+    Link'text
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Link'url
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Code
+    [value]
+    (mk
+      Code
+      (v value)))
+  (judgment
+    Code'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Word
+    [value]
+    (mk
+      Word
+      (v value)))
+  (judgment
+    Word'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    HeadingMark
+    [value]
+    (mk
+      HeadingMark
+      (v value)))
+  (judgment
+    HeadingMark'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Dash
+    []
+    (mk Dash))
+  (judgment
+    Greater
+    []
+    (mk Greater))
+  (judgment
+    StrongMark
+    []
+    (mk StrongMark))
+  (judgment
+    EmphMark
+    []
+    (mk EmphMark))
+  (judgment
+    Bang
+    []
+    (mk Bang))
+  (judgment
+    OpenBracket
+    []
+    (mk OpenBracket))
+  (judgment
+    CloseBracket
+    []
+    (mk CloseBracket))
+  (judgment
+    OpenParen
+    []
+    (mk OpenParen))
+  (judgment
+    CloseParen
+    []
+    (mk CloseParen))
+  (judgment
+    Punctuation
+    [value]
+    (mk
+      Punctuation
+      (v value)))
+  (judgment
+    Punctuation'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseMarkdown
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintMarkdown
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    MarkdownWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseMarkdown
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          MarkdownDocument
+          (pv blocks))
+        (mk
+          valid
+          (v blocks)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    MarkdownBlocks
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q MarkdownDocument)))
+  (judgment
+    MarkdownInferBlocks
+    [blocks]
+    (match
+      (v blocks)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Heading
+            (pv level)
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q heading)
+            (q block)
+            (q declared)
+            (q block))
+          (call
+            MarkdownInferBlocks
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Fence
+            (pv marker)
+            (pv language)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q fence)
+            (q block)
+            (q declared)
+            (q block))
+          (call
+            MarkdownInferBlocks
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            FenceClose
+            (pv marker)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q fence-close)
+            (q block)
+            (q declared)
+            (q block))
+          (call
+            MarkdownInferBlocks
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Bullet
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q bullet)
+            (q block)
+            (q declared)
+            (q block))
+          (call
+            MarkdownInferBlocks
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Quote
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q quote)
+            (q block)
+            (q declared)
+            (q block))
+          (call
+            MarkdownInferBlocks
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Paragraph
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q paragraph)
+            (q block)
+            (q declared)
+            (q block))
+          (call
+            MarkdownInferBlocks
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          MarkdownInferBlocks
+          (v rest)))))
+  (judgment
+    InferMarkdown
+    [grammar source]
+    (call
+      MarkdownInferBlocks
+      (call
+        MarkdownBlocks
+        (call
+          ParseMarkdown
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckMarkdown
+    [grammar source]
+    (lst)))

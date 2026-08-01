@@ -85,6 +85,31 @@ class HostParitySuite extends munit.FunSuite:
       }
   }
 
+  test("both hosts agree about a run neither of them has to repeat") {
+    if requireRust() then
+      val record = root.resolve("target/parity-run.canon")
+      val rehearsed = Cli.run(
+        root,
+        Vector(
+          "transcript", "rehearse", "runbooks/rebuild-a-foundation.transcript",
+          "--record", root.relativize(record).toString
+        )
+      )
+      assertEquals(rehearsed.code, 0, s"the runbook did not rehearse: ${rehearsed.output}")
+      assert(Files.exists(record), "rehearsing recorded nothing")
+
+      val relative = root.relativize(record).toString
+      val scala = Cli.run(root, Vector("transcript", "examine", relative))
+      assertEquals(scala.code, 0, s"scala host: ${scala.output}")
+      val (code, output) = runRust("run", relative)
+      assertEquals(code, 0, s"rust host failed: ${output.mkString("\n")}")
+      assertEquals(
+        output,
+        scala.lines,
+        "the two hosts disagree about what a run did, or about the identity of its record"
+      )
+  }
+
   test("both hosts accept and reject exactly the same bytes") {
     if requireRust() then
       val corpus = root.resolve("fixtures/canon/adversarial")

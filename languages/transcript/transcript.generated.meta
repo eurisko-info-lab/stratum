@@ -1,0 +1,431 @@
+; Generated from languages/transcript/transcript.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module transcript)
+  (judgment
+    TranscriptDocument
+    [lines]
+    (mk
+      TranscriptDocument
+      (v lines)))
+  (judgment
+    TranscriptDocument'lines
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Comment
+    [content newline]
+    (mk
+      Comment
+      (v content)
+      (v newline)))
+  (judgment
+    Comment'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Comment'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    CommentBlank
+    [newline]
+    (mk
+      CommentBlank
+      (v newline)))
+  (judgment
+    CommentBlank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Command
+    [content newline]
+    (mk
+      Command
+      (v content)
+      (v newline)))
+  (judgment
+    Command'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Command'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    CommandBlank
+    [newline]
+    (mk
+      CommandBlank
+      (v newline)))
+  (judgment
+    CommandBlank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Output
+    [content newline]
+    (mk
+      Output
+      (v content)
+      (v newline)))
+  (judgment
+    Output'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Output'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    OutputBlank
+    [newline]
+    (mk
+      OutputBlank
+      (v newline)))
+  (judgment
+    OutputBlank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParamDirective
+    [name content newline]
+    (mk
+      ParamDirective
+      (v name)
+      (v content)
+      (v newline)))
+  (judgment
+    ParamDirective'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParamDirective'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ParamDirective'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    UseDirective
+    [content newline]
+    (mk
+      UseDirective
+      (v content)
+      (v newline)))
+  (judgment
+    UseDirective'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    UseDirective'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Blank
+    [newline]
+    (mk
+      Blank
+      (v newline)))
+  (judgment
+    Blank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Atoms
+    [items]
+    (mk
+      Atoms
+      (v items)))
+  (judgment
+    Atoms'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Word
+    [value]
+    (mk
+      Word
+      (v value)))
+  (judgment
+    Word'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Hash
+    []
+    (mk Hash))
+  (judgment
+    Dollar
+    []
+    (mk Dollar))
+  (judgment
+    Percent
+    []
+    (mk Percent))
+  (judgment
+    Greater
+    []
+    (mk Greater))
+  (judgment
+    Equals
+    []
+    (mk Equals))
+  (judgment
+    ParamWord
+    []
+    (mk ParamWord))
+  (judgment
+    UseWord
+    []
+    (mk UseWord))
+  (judgment
+    ParseTranscript
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintTranscript
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    TranscriptWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseTranscript
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          TranscriptDocument
+          (pv lines))
+        (mk
+          valid
+          (v lines)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    TranscriptLines
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q TranscriptDocument)))
+  (judgment
+    TranscriptInferLines
+    [lines]
+    (match
+      (v lines)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Comment
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q comment)
+            (q line)
+            (q declared)
+            (q line))
+          (call
+            TranscriptInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Command
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q command)
+            (q line)
+            (q declared)
+            (q line))
+          (call
+            TranscriptInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Output
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q output)
+            (q line)
+            (q declared)
+            (q line))
+          (call
+            TranscriptInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            ParamDirective
+            (pv name)
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v name)
+            (q param)
+            (q declared)
+            (q param))
+          (call
+            TranscriptInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            UseDirective
+            (pv content)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (q use)
+            (q directive)
+            (q declared)
+            (q directive))
+          (call
+            TranscriptInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TranscriptInferLines
+          (v rest)))))
+  (judgment
+    InferTranscript
+    [grammar source]
+    (call
+      TranscriptInferLines
+      (call
+        TranscriptLines
+        (call
+          ParseTranscript
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckTranscript
+    [grammar source]
+    (lst)))

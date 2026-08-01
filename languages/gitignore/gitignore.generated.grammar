@@ -1,0 +1,21 @@
+; Generated from languages/gitignore/gitignore.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "gitignore")
+  (start file)
+  (token pattern str "[^\\r\\n \\t]([^\\r\\n]*[^\\r\\n \\t])?")
+  (token newline sym "\\n")
+  (skip "#[^\\n]*")
+  (category
+    file
+    (fold GitIgnoreFile line))
+  (category
+    line
+    (prod
+      Ignore
+      [
+        (bind pattern pattern)
+        (bind newline newline)])
+    (prod
+      Blank
+      [
+        (bind newline newline)])))

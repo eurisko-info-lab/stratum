@@ -1,0 +1,1123 @@
+; Generated from languages/shell/shell.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module shell)
+  (judgment
+    ShellDocument
+    [statements]
+    (mk
+      ShellDocument
+      (v statements)))
+  (judgment
+    ShellDocument'statements
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Comment
+    [content newline]
+    (mk
+      Comment
+      (v content)
+      (v newline)))
+  (judgment
+    Comment'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Comment'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    CommentBlank
+    [newline]
+    (mk
+      CommentBlank
+      (v newline)))
+  (judgment
+    CommentBlank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Assignment
+    [name value newline]
+    (mk
+      Assignment
+      (v name)
+      (v value)
+      (v newline)))
+  (judgment
+    Assignment'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Assignment'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Assignment'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FunctionDef
+    [name newline body newline2]
+    (mk
+      FunctionDef
+      (v name)
+      (v newline)
+      (v body)
+      (v newline2)))
+  (judgment
+    FunctionDef'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FunctionDef'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FunctionDef'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    FunctionDef'newline2
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    IfStatement
+    [condition newline thenBody tail]
+    (mk
+      IfStatement
+      (v condition)
+      (v newline)
+      (v thenBody)
+      (v tail)))
+  (judgment
+    IfStatement'condition
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IfStatement'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IfStatement'thenBody
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    IfStatement'tail
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    ForStatement
+    [var items newline body newline2]
+    (mk
+      ForStatement
+      (v var)
+      (v items)
+      (v newline)
+      (v body)
+      (v newline2)))
+  (judgment
+    ForStatement'var
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ForStatement'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ForStatement'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ForStatement'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    ForStatement'newline2
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    WhileStatement
+    [condition newline body newline2]
+    (mk
+      WhileStatement
+      (v condition)
+      (v newline)
+      (v body)
+      (v newline2)))
+  (judgment
+    WhileStatement'condition
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    WhileStatement'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    WhileStatement'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    WhileStatement'newline2
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    UntilStatement
+    [condition newline body newline2]
+    (mk
+      UntilStatement
+      (v condition)
+      (v newline)
+      (v body)
+      (v newline2)))
+  (judgment
+    UntilStatement'condition
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    UntilStatement'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    UntilStatement'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    UntilStatement'newline2
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    Statement
+    [content newline]
+    (mk
+      Statement
+      (v content)
+      (v newline)))
+  (judgment
+    Statement'content
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Statement'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Blank
+    [newline]
+    (mk
+      Blank
+      (v newline)))
+  (judgment
+    Blank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ElifTail
+    [condition newline body rest]
+    (mk
+      ElifTail
+      (v condition)
+      (v newline)
+      (v body)
+      (v rest)))
+  (judgment
+    ElifTail'condition
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ElifTail'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ElifTail'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ElifTail'rest
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    ElseTail
+    [newline body newline2]
+    (mk
+      ElseTail
+      (v newline)
+      (v body)
+      (v newline2)))
+  (judgment
+    ElseTail'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ElseTail'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ElseTail'newline2
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    EndTail
+    [newline]
+    (mk
+      EndTail
+      (v newline)))
+  (judgment
+    EndTail'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Atoms
+    [items]
+    (mk
+      Atoms
+      (v items)))
+  (judgment
+    Atoms'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    DQuoted
+    [value]
+    (mk
+      DQuoted
+      (v value)))
+  (judgment
+    DQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    SQuoted
+    [value]
+    (mk
+      SQuoted
+      (v value)))
+  (judgment
+    SQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Word
+    [value]
+    (mk
+      Word
+      (v value)))
+  (judgment
+    Word'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    If
+    []
+    (mk If))
+  (judgment
+    For
+    []
+    (mk For))
+  (judgment
+    While
+    []
+    (mk While))
+  (judgment
+    Until
+    []
+    (mk Until))
+  (judgment
+    Function
+    []
+    (mk Function))
+  (judgment
+    In
+    []
+    (mk In))
+  (judgment
+    DoubleOpenBracket
+    []
+    (mk DoubleOpenBracket))
+  (judgment
+    DoubleCloseBracket
+    []
+    (mk DoubleCloseBracket))
+  (judgment
+    OpenBracket
+    []
+    (mk OpenBracket))
+  (judgment
+    CloseBracket
+    []
+    (mk CloseBracket))
+  (judgment
+    OpenParen
+    []
+    (mk OpenParen))
+  (judgment
+    CloseParen
+    []
+    (mk CloseParen))
+  (judgment
+    OpenBrace
+    []
+    (mk OpenBrace))
+  (judgment
+    CloseBrace
+    []
+    (mk CloseBrace))
+  (judgment
+    Semicolon
+    []
+    (mk Semicolon))
+  (judgment
+    Or
+    []
+    (mk Or))
+  (judgment
+    Pipe
+    []
+    (mk Pipe))
+  (judgment
+    And
+    []
+    (mk And))
+  (judgment
+    Background
+    []
+    (mk Background))
+  (judgment
+    AppendRedirect
+    []
+    (mk AppendRedirect))
+  (judgment
+    RedirectOut
+    []
+    (mk RedirectOut))
+  (judgment
+    RedirectIn
+    []
+    (mk RedirectIn))
+  (judgment
+    NotEqual
+    []
+    (mk NotEqual))
+  (judgment
+    Bang
+    []
+    (mk Bang))
+  (judgment
+    Equals
+    []
+    (mk Equals))
+  (judgment
+    Hash
+    []
+    (mk Hash))
+  (judgment
+    Apostrophe
+    []
+    (mk Apostrophe))
+  (judgment
+    QuoteMark
+    []
+    (mk QuoteMark))
+  (judgment
+    HeaderAtoms
+    [items]
+    (mk
+      HeaderAtoms
+      (v items)))
+  (judgment
+    HeaderAtoms'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    HeaderDQuoted
+    [value]
+    (mk
+      HeaderDQuoted
+      (v value)))
+  (judgment
+    HeaderDQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    HeaderSQuoted
+    [value]
+    (mk
+      HeaderSQuoted
+      (v value)))
+  (judgment
+    HeaderSQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    HeaderWord
+    [value]
+    (mk
+      HeaderWord
+      (v value)))
+  (judgment
+    HeaderWord'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    HeaderDoubleOpenBracket
+    []
+    (mk HeaderDoubleOpenBracket))
+  (judgment
+    HeaderDoubleCloseBracket
+    []
+    (mk HeaderDoubleCloseBracket))
+  (judgment
+    HeaderOpenBracket
+    []
+    (mk HeaderOpenBracket))
+  (judgment
+    HeaderCloseBracket
+    []
+    (mk HeaderCloseBracket))
+  (judgment
+    HeaderOpenParen
+    []
+    (mk HeaderOpenParen))
+  (judgment
+    HeaderCloseParen
+    []
+    (mk HeaderCloseParen))
+  (judgment
+    HeaderOr
+    []
+    (mk HeaderOr))
+  (judgment
+    HeaderPipe
+    []
+    (mk HeaderPipe))
+  (judgment
+    HeaderAnd
+    []
+    (mk HeaderAnd))
+  (judgment
+    HeaderRedirectOut
+    []
+    (mk HeaderRedirectOut))
+  (judgment
+    HeaderRedirectIn
+    []
+    (mk HeaderRedirectIn))
+  (judgment
+    HeaderNotEqual
+    []
+    (mk HeaderNotEqual))
+  (judgment
+    HeaderBang
+    []
+    (mk HeaderBang))
+  (judgment
+    HeaderEquals
+    []
+    (mk HeaderEquals))
+  (judgment
+    HeaderHash
+    []
+    (mk HeaderHash))
+  (judgment
+    HeaderApostrophe
+    []
+    (mk HeaderApostrophe))
+  (judgment
+    HeaderQuoteMark
+    []
+    (mk HeaderQuoteMark))
+  (judgment
+    HeaderNewline
+    [newline]
+    (mk
+      HeaderNewline
+      (v newline)))
+  (judgment
+    HeaderNewline'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CommentAtoms
+    [items]
+    (mk
+      CommentAtoms
+      (v items)))
+  (judgment
+    CommentAtoms'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CommentThen
+    []
+    (mk CommentThen))
+  (judgment
+    CommentElif
+    []
+    (mk CommentElif))
+  (judgment
+    CommentElse
+    []
+    (mk CommentElse))
+  (judgment
+    CommentFi
+    []
+    (mk CommentFi))
+  (judgment
+    CommentDo
+    []
+    (mk CommentDo))
+  (judgment
+    CommentDone
+    []
+    (mk CommentDone))
+  (judgment
+    ParseShell
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintShell
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    ShellWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseShell
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          ShellDocument
+          (pv statements))
+        (mk
+          valid
+          (v statements)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    ShellStatements
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q ShellDocument)))
+  (judgment
+    ShellAtoms
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q Atoms)))
+  (judgment
+    ShellWordType
+    [value]
+    (if
+      (prim
+        eq
+        (v value)
+        (q "true"))
+      (q boolean)
+      (if
+        (prim
+          eq
+          (v value)
+          (q "false"))
+        (q boolean)
+        (if
+          (prim
+            eq
+            (v value)
+            (q ""))
+          (q string)
+          (q string)))))
+  (judgment
+    ShellValueType
+    [valueNode]
+    (match
+      (v valueNode)
+      (case
+        (pm
+          DQuoted
+          (pv value))
+        (q string))
+      (case
+        (pm
+          SQuoted
+          (pv value))
+        (q string))
+      (case
+        (pm
+          Word
+          (pv value))
+        (call
+          ShellWordType
+          (v value)))
+      (case
+        (pm
+          Atoms
+          (pv items))
+        (call
+          ShellAtomsType
+          (call
+            ShellAtoms
+            (v valueNode))))
+      (case
+        _
+        (q unknown))))
+  (judgment
+    ShellAtomsType
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            DQuoted
+            (pv value))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            SQuoted
+            (pv value))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv value))
+          (pv rest))
+        (call
+          ShellWordType
+          (v value)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ShellAtomsType
+          (v rest)))))
+  (judgment
+    ShellInferStatements
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Assignment
+            (pv name)
+            (pv value)
+            (pv newline))
+          (pv rest))
+        (let
+          t
+          (call
+            ShellValueType
+            (v value))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (v t)
+              (q declared)
+              (v t))
+            (call
+              ShellInferStatements
+              (v rest)))))
+      (case
+        (pcons
+          (pm
+            FunctionDef
+            (pv name)
+            (pv newline)
+            (pv body)
+            (pv newline2))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v name)
+            (q function)
+            (q declared)
+            (q function))
+          (prim
+            append
+            (call
+              ShellInferStatements
+              (call
+                ShellStatements
+                (v body)))
+            (call
+              ShellInferStatements
+              (v rest)))))
+      (case
+        (pcons
+          (pm
+            IfStatement
+            (pv condition)
+            (pv newline)
+            (pv thenBody)
+            (pv tail))
+          (pv rest))
+        (prim
+          append
+          (call
+            ShellInferStatements
+            (call
+              ShellStatements
+              (v thenBody)))
+          (call
+            ShellInferStatements
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            ForStatement
+            (pv var)
+            (pv itemsNode)
+            (pv newline)
+            (pv body)
+            (pv newline2))
+          (pv rest))
+        (prim
+          append
+          (prim
+            cons
+            (mk
+              type
+              (v var)
+              (q string)
+              (q declared)
+              (q string))
+            (call
+              ShellInferStatements
+              (call
+                ShellStatements
+                (v body))))
+          (call
+            ShellInferStatements
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            WhileStatement
+            (pv condition)
+            (pv newline)
+            (pv body)
+            (pv newline2))
+          (pv rest))
+        (prim
+          append
+          (call
+            ShellInferStatements
+            (call
+              ShellStatements
+              (v body)))
+          (call
+            ShellInferStatements
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            UntilStatement
+            (pv condition)
+            (pv newline)
+            (pv body)
+            (pv newline2))
+          (pv rest))
+        (prim
+          append
+          (call
+            ShellInferStatements
+            (call
+              ShellStatements
+              (v body)))
+          (call
+            ShellInferStatements
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ShellInferStatements
+          (v rest)))))
+  (judgment
+    InferShell
+    [grammar source]
+    (call
+      ShellInferStatements
+      (call
+        ShellStatements
+        (call
+          ParseShell
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckShell
+    [grammar source]
+    (lst)))

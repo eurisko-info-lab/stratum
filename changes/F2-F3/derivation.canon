@@ -11,7 +11,7 @@
       (Compose
         (AtKey
           meta
-          (Replace #d22cca162b7dcff14456d44a9e7a7237519924be554de40a35d5dffd1b0a16df0 #dbedb848e7b6221d3fcd1df9d4f2b5500eae9923df41a9538ca594209f5581cdb))
+          (Replace #de9c097bdc508ba519a3c740d558d0bdd3275a2a8c58ec816745fb93ef72d01a6 #d8806484eae42f2576917f020c9135bfc84cad170624d38552ac27f21bbfe3191))
         (AtKey
           checks
           (Replace
@@ -68,7 +68,7 @@
                 (prim
                   eq
                   (call DeltaLambda)
-                  (call DeltaMeta1))
+                  (call DeltaMeta))
                 (value #f))
               (check
                 field-edit-survives-reformatting

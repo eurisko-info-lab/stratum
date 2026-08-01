@@ -1,0 +1,171 @@
+; Generated from languages/gitattributes/gitattributes.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module gitattributes)
+  (judgment
+    GitAttributesFile
+    [lines]
+    (mk
+      GitAttributesFile
+      (v lines)))
+  (judgment
+    GitAttributesFile'lines
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Attributes
+    [pattern values newline]
+    (mk
+      Attributes
+      (v pattern)
+      (v values)
+      (v newline)))
+  (judgment
+    Attributes'pattern
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Attributes'values
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Attributes'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Attribute
+    [value]
+    (mk
+      Attribute
+      (v value)))
+  (judgment
+    Attribute'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Blank
+    [newline]
+    (mk
+      Blank
+      (v newline)))
+  (judgment
+    Blank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseGitAttributes
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintGitAttributes
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    GitAttributesWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseGitAttributes
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          GitAttributesFile
+          (pv lines))
+        (mk
+          valid
+          (v lines)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    GitAttributesLines
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q GitAttributesFile)))
+  (judgment
+    GitAttributesInferLines
+    [lines]
+    (match
+      (v lines)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Attributes
+            (pv pattern)
+            (pv values)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v pattern)
+            (q attributes)
+            (q declared)
+            (q attributes))
+          (call
+            GitAttributesInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          GitAttributesInferLines
+          (v rest)))))
+  (judgment
+    InferGitAttributes
+    [grammar source]
+    (call
+      GitAttributesInferLines
+      (call
+        GitAttributesLines
+        (call
+          ParseGitAttributes
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckGitAttributes
+    [grammar source]
+    (lst)))

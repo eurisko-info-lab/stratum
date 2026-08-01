@@ -2,7 +2,7 @@
 (derivation
   (name "F2")
   (bootstrap "StratumHost0/1")
-  (change #da987aba74e4931a19c6f6055e9533839d9ca8c050ef930ba5a40ce1c42829f82)
+  (change #d3bec937a6dab1d01f7f18200b1e1d8f7931f67ce099bdab3412d9e3210e4e5d4)
   (application-change
     (Compose
       (AtKey
@@ -11,58 +11,58 @@
       (Compose
         (AtKey
           meta
-          (Replace #da56706cb0a0ef1120c87b4eda3452576aee25cf8f066e75fb30a57d939742f88 #d22cca162b7dcff14456d44a9e7a7237519924be554de40a35d5dffd1b0a16df0))
+          (Replace #dfee3474e07f668f75d79129a65a7a12befe5bed0ef423478999212531edb65b6 #de9c097bdc508ba519a3c740d558d0bdd3275a2a8c58ec816745fb93ef72d01a6))
         (AtKey
           checks
           (Replace
             [
               (check
-                meta1-parse-print-roundtrip
+                meta-parse-print-roundtrip
                 (call
                   RoundTrip
-                  (q #d3fb035f6c158b9733c21e2bf88aae3c423ff6d0f43024c24273adfada9620d56)
+                  (q #d1c70e70576f61ab6c04c583f3f908139eef7dad096a3bb36df83ce61e742cb8a)
                   (call
                     SourceText
                     (q #deff33f3cfca55a0554d3ed41c243707fc6c0b2c79517f5b4b753ada1c8786fa2)))
                 (value
                   (roundtrip ok)))
               (check
-                grammar1-parse-print-roundtrip
+                grammar-parse-print-roundtrip
                 (call
                   RoundTrip
-                  (q #dcd44bd226da2c78ab4549aa4d2653862148ac2fffcd9b7696febae3f397d1045)
+                  (q #dfc344f6525535e09eff9301d529e8524a4df82179863c375fa37e9ca12feeec0)
                   (call
                     SourceText
-                    (q #dfeee6bbf50dcb90d3207824ffd54a44d6a805f139124f60d50d7da9aebc061b6)))
+                    (q #d9a72928b432107d69d9a546e129cfb5700b2239eaedd8ec1bf1ac71786d920b5)))
                 (value
                   (roundtrip ok)))
               (check
-                grammar1-describes-itself
+                grammar-describes-itself
                 (call
                   GrammarReconstructs
-                  (q #dcd44bd226da2c78ab4549aa4d2653862148ac2fffcd9b7696febae3f397d1045)
+                  (q #dfc344f6525535e09eff9301d529e8524a4df82179863c375fa37e9ca12feeec0)
                   (call
                     SourceText
-                    (q #dfeee6bbf50dcb90d3207824ffd54a44d6a805f139124f60d50d7da9aebc061b6))
-                  (q #dcd44bd226da2c78ab4549aa4d2653862148ac2fffcd9b7696febae3f397d1045))
+                    (q #d9a72928b432107d69d9a546e129cfb5700b2239eaedd8ec1bf1ac71786d920b5))
+                  (q #dfc344f6525535e09eff9301d529e8524a4df82179863c375fa37e9ca12feeec0))
                 (value
                   (reconstruct ok)))
               (check
-                meta1-grammar-reconstructs
+                meta-grammar-reconstructs
                 (call
                   GrammarReconstructs
-                  (q #dcd44bd226da2c78ab4549aa4d2653862148ac2fffcd9b7696febae3f397d1045)
+                  (q #dfc344f6525535e09eff9301d529e8524a4df82179863c375fa37e9ca12feeec0)
                   (call
                     SourceText
-                    (q #d21baba20bb86c58bd53320e25ef0dad533129041f51261f3c4e234c07d7c4acb))
-                  (q #d3fb035f6c158b9733c21e2bf88aae3c423ff6d0f43024c24273adfada9620d56))
+                    (q #ddcf9368073a4df3db171fffe47e477c4e9a65c380d7daf4527a86f1be0de7e54))
+                  (q #d1c70e70576f61ab6c04c583f3f908139eef7dad096a3bb36df83ce61e742cb8a))
                 (value
                   (reconstruct ok)))
               (check
                 lambda-grammar-reconstructs
                 (call
                   GrammarReconstructs
-                  (q #dcd44bd226da2c78ab4549aa4d2653862148ac2fffcd9b7696febae3f397d1045)
+                  (q #dfc344f6525535e09eff9301d529e8524a4df82179863c375fa37e9ca12feeec0)
                   (call
                     SourceText
                     (q #de65a8c0c77d6254f07c365ef3a89e993534ace850ab63dcfc77974062dc6e2a4))
@@ -73,7 +73,7 @@
                 lambda-program-fixpoint
                 (call
                   SelfDescriptionFixpoint
-                  (q #d3fb035f6c158b9733c21e2bf88aae3c423ff6d0f43024c24273adfada9620d56)
+                  (q #d1c70e70576f61ab6c04c583f3f908139eef7dad096a3bb36df83ce61e742cb8a)
                   (call
                     SourceText
                     (q #deff33f3cfca55a0554d3ed41c243707fc6c0b2c79517f5b4b753ada1c8786fa2))
@@ -84,7 +84,7 @@
                 elaboration-stable-under-printing
                 (call
                   ElaborationStable
-                  (q #d3fb035f6c158b9733c21e2bf88aae3c423ff6d0f43024c24273adfada9620d56)
+                  (q #d1c70e70576f61ab6c04c583f3f908139eef7dad096a3bb36df83ce61e742cb8a)
                   (call
                     SourceText
                     (q #deff33f3cfca55a0554d3ed41c243707fc6c0b2c79517f5b4b753ada1c8786fa2)))
@@ -93,29 +93,29 @@
                 delta-meta-applies
                 (call
                   ApplyDelta
-                  (q #d2926d7e7ce0e8c0b10b85f7c601c921e428e47f58574125ca7f28eb7f0f56655)
+                  (q #dd3fae2d236be751f0f55091ac6ae620b1848f93c0901ad6065d01064a59dc05d)
                   (q
                     (bootstrap meta0)))
                 (value
                   (applied
-                    (surface meta1))))
+                    (surface meta))))
               (check
                 delta-grammar-applies
                 (call
                   ApplyDelta
-                  (q #ddcdfe40744835a197041ffd548c02da8a1dbdfaeb2726b0a16ce1070afeae6c8)
+                  (q #d1a28a860251f26877ddfe11f91d0db4a59542d46647c653272ed23a3772fde5f)
                   (q
                     (bootstrap grammar0)))
                 (value
                   (applied
-                    (surface grammar1))))
+                    (surface grammar))))
               (check
                 delta-meta-is-predecessor-bound
                 (call
                   ApplyDelta
-                  (q #d2926d7e7ce0e8c0b10b85f7c601c921e428e47f58574125ca7f28eb7f0f56655)
+                  (q #dd3fae2d236be751f0f55091ac6ae620b1848f93c0901ad6065d01064a59dc05d)
                   (q
-                    (surface meta1)))
+                    (surface meta)))
                 (value
                   (rejected predecessor-mismatch)))
               (check
@@ -230,7 +230,7 @@
                 (prim
                   eq
                   (call DeltaLambda)
-                  (call DeltaMeta1))
+                  (call DeltaMeta))
                 (value #f))
               (check
                 field-edit-survives-reformatting

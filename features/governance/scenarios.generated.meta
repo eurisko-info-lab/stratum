@@ -44,7 +44,7 @@
         (q meta))
       (lst
         (q lambda)
-        (q meta1))))
+        (q meta))))
   (judgment
     Now
     []
@@ -581,4 +581,83 @@
     []
     (call
       AcceptanceDecision'predecessor
-      (call AcceptedDecision))))
+      (call AcceptedDecision)))
+  (judgment
+    CompletedRun
+    []
+    (prim
+      mput
+      (prim
+        mput
+        (prim mnew)
+        (q steps)
+        (lst
+          (prim
+            mput
+            (prim mnew)
+            (q exit)
+            (q 0))))
+      (q changed)
+      (lst
+        (prim
+          mput
+          (prim mnew)
+          (q after)
+          (q "d")))))
+  (judgment
+    FailedRun
+    []
+    (prim
+      mput
+      (prim
+        mput
+        (prim mnew)
+        (q steps)
+        (lst
+          (prim
+            mput
+            (prim mnew)
+            (q exit)
+            (q 1))))
+      (q changed)
+      (lst)))
+  (judgment
+    LosingRun
+    []
+    (prim
+      mput
+      (prim
+        mput
+        (prim mnew)
+        (q steps)
+        (lst
+          (prim
+            mput
+            (prim mnew)
+            (q exit)
+            (q 0))))
+      (q changed)
+      (lst
+        (prim
+          mput
+          (prim mnew)
+          (q before)
+          (q "d")))))
+  (judgment
+    RunAccepted
+    []
+    (call
+      EvaluateRun
+      (call CompletedRun)))
+  (judgment
+    RunWithFailedStepRefused
+    []
+    (call
+      EvaluateRun
+      (call FailedRun)))
+  (judgment
+    RunThatOnlyRemovesRefused
+    []
+    (call
+      EvaluateRun
+      (call LosingRun))))

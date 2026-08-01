@@ -1,0 +1,135 @@
+grammar "lean"
+start document
+
+skip "--[^\\r\\n]*"
+skip "/-([^-]|-+[^-/])*-+/"
+
+token dquoted str "\"(\\\\.|[^\"\\\\\\r\\n])*\""
+token number str "[0-9]+(\\.[0-9]+)?"
+token word str "[^ \\t\\r\\n(){}\\[\\]\"\\-:,;|.=<>/]+"
+
+category document
+  fold LeanDocument item
+
+category item
+  prod Brace "{" body : document "}"
+  prod EmptyBrace "{" "}"
+  prod Paren "(" body : document ")"
+  prod EmptyParen "(" ")"
+  prod Bracket "[" body : document "]"
+  prod EmptyBracket "[" "]"
+  prod InductiveDecl "inductive" name : word "where" ctors : ctorList
+  prod InductiveDeclDeriving "inductive" name : word "where" ctors : ctorList "deriving" derives : ctorTypeDocument
+  prod InductiveDeclTyped "inductive" name : word ":" indexType : ctorTypeDocument "where" ctors : ctorList
+  prod InductiveDeclTypedDeriving "inductive" name : word ":" indexType : ctorTypeDocument "where" ctors : ctorList "deriving" derives : ctorTypeDocument
+  prod DQuoted value : dquoted
+  prod Number value : number
+  prod Namespace "namespace"
+  prod End "end"
+  prod Inductive "inductive"
+  prod Structure "structure"
+  prod ClassKw "class"
+  prod Instance "instance"
+  prod Def "def"
+  prod Abbrev "abbrev"
+  prod Theorem "theorem"
+  prod Lemma "lemma"
+  prod Example "example"
+  prod Where "where"
+  prod Deriving "deriving"
+  prod Do "do"
+  prod Let "let"
+  prod Fun "fun"
+  prod Match "match"
+  prod With "with"
+  prod If "if"
+  prod Then "then"
+  prod Else "else"
+  prod By "by"
+  prod Have "have"
+  prod Show "show"
+  prod From "from"
+  prod Suffices "suffices"
+  prod Sorry "sorry"
+  prod Import "import"
+  prod Open "open"
+  prod Section "section"
+  prod Variable "variable"
+  prod Variables "variables"
+  prod Universe "universe"
+  prod Mutual "mutual"
+  prod Partial "partial"
+  prod Noncomputable "noncomputable"
+  prod Private "private"
+  prod Protected "protected"
+  prod Macro "macro"
+  prod Syntax "syntax"
+  prod Notation "notation"
+  prod Attribute "attribute"
+  prod SetOption "set_option"
+  prod TerminationBy "termination_by"
+  prod In "in"
+  prod Cons "::"
+  prod Assign ":="
+  prod DoubleArrow "=>"
+  prod ArrowAscii "->"
+  prod Arrow "→"
+  prod Iff "↔"
+  prod Forall "∀"
+  prod Exists "∃"
+  prod Not "¬"
+  prod AndOp "∧"
+  prod OrOp "∨"
+  prod Le "≤"
+  prod Ge "≥"
+  prod Ne "≠"
+  prod Times "×"
+  prod Colon ":"
+  prod Comma ","
+  prod Semicolon ";"
+  prod Bar "|"
+  prod Dot "."
+  prod Eq "="
+  prod Less "<"
+  prod Greater ">"
+  prod Slash "/"
+  prod Minus "-"
+  prod Word value : word
+
+category ctorList
+  fold CtorList ctor
+
+category ctor
+  prod Constructor "|" name : word ":" type : ctorTypeDocument
+  prod ConstructorNoType "|" name : word
+
+category ctorTypeDocument
+  fold CtorTypeDocument ctorTypeAtom
+
+category ctorTypeAtom
+  prod CtorParen "(" body : document ")"
+  prod CtorEmptyParen "(" ")"
+  prod CtorWord value : word
+  prod CtorNumber value : number
+  prod CtorDQuoted value : dquoted
+  prod CtorArrow "→"
+  prod CtorArrowAscii "->"
+  prod CtorDoubleArrow "=>"
+  prod CtorIff "↔"
+  prod CtorForall "∀"
+  prod CtorExists "∃"
+  prod CtorNot "¬"
+  prod CtorAndOp "∧"
+  prod CtorOrOp "∨"
+  prod CtorLe "≤"
+  prod CtorGe "≥"
+  prod CtorNe "≠"
+  prod CtorTimes "×"
+  prod CtorComma ","
+  prod CtorDot "."
+  prod CtorEq "="
+  prod CtorLess "<"
+  prod CtorGreater ">"
+  prod CtorMinus "-"
+  prod CtorAssign ":="
+  prod CtorCons "::"

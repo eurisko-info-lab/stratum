@@ -378,8 +378,8 @@ judgment DescFoundation [] =
   ]
 
 judgment DeltaLambda [] = call FreeChange [call DescLambda []]
-judgment DeltaMeta1 [] = call FreeChange [call DescProgram []]
-judgment DeltaGrammar1 [] = call FreeChange [call DescGrammar []]
+judgment DeltaMeta [] = call FreeChange [call DescProgram []]
+judgment DeltaGrammar [] = call FreeChange [call DescGrammar []]
 judgment DeltaFoundation [] = call FreeChange [call DescFoundation []]
 
 ; --------------------------------------------------------- lambda editing

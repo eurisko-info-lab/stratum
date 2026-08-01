@@ -12,3 +12,4 @@ verifier-lean/.lake/
 .stratum/
 tmp/
 node_modules/
+studio/vscode/out/

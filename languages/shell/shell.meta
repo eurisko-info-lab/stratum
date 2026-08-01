@@ -1,0 +1,142 @@
+module shell
+
+record ShellDocument [statements]
+record Comment [content newline]
+record CommentBlank [newline]
+record Assignment [name value newline]
+record FunctionDef [name newline body newline2]
+record IfStatement [condition newline thenBody tail]
+record ForStatement [var items newline body newline2]
+record WhileStatement [condition newline body newline2]
+record UntilStatement [condition newline body newline2]
+record Statement [content newline]
+record Blank [newline]
+record ElifTail [condition newline body rest]
+record ElseTail [newline body newline2]
+record EndTail [newline]
+record Atoms [items]
+record DQuoted [value]
+record SQuoted [value]
+record Word [value]
+record If []
+record For []
+record While []
+record Until []
+record Function []
+record In []
+record DoubleOpenBracket []
+record DoubleCloseBracket []
+record OpenBracket []
+record CloseBracket []
+record OpenParen []
+record CloseParen []
+record OpenBrace []
+record CloseBrace []
+record Semicolon []
+record Or []
+record Pipe []
+record And []
+record Background []
+record AppendRedirect []
+record RedirectOut []
+record RedirectIn []
+record NotEqual []
+record Bang []
+record Equals []
+record Hash []
+record Apostrophe []
+record QuoteMark []
+record HeaderAtoms [items]
+record HeaderDQuoted [value]
+record HeaderSQuoted [value]
+record HeaderWord [value]
+record HeaderDoubleOpenBracket []
+record HeaderDoubleCloseBracket []
+record HeaderOpenBracket []
+record HeaderCloseBracket []
+record HeaderOpenParen []
+record HeaderCloseParen []
+record HeaderOr []
+record HeaderPipe []
+record HeaderAnd []
+record HeaderRedirectOut []
+record HeaderRedirectIn []
+record HeaderNotEqual []
+record HeaderBang []
+record HeaderEquals []
+record HeaderHash []
+record HeaderApostrophe []
+record HeaderQuoteMark []
+record HeaderNewline [newline]
+record CommentAtoms [items]
+record CommentThen []
+record CommentElif []
+record CommentElse []
+record CommentFi []
+record CommentDo []
+record CommentDone []
+
+judgment ParseShell [grammar source] = call Parse [grammar source]
+judgment PrintShell [grammar syntax] = call Print [grammar syntax]
+judgment ShellWellFormed [grammar source] =
+  match call ParseShell [grammar source] {
+    case (#ShellDocument statements) -> mk #valid [statements]
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment ShellStatements [node] = call FlattenSeq [node #ShellDocument]
+judgment ShellAtoms [node] = call FlattenSeq [node #Atoms]
+
+judgment ShellWordType [value] =
+  if prim #eq [value "true"]
+  then #boolean
+  else if prim #eq [value "false"]
+  then #boolean
+  else if prim #eq [value ""]
+  then #string
+  else #string
+
+judgment ShellValueType [valueNode] =
+  match valueNode {
+    case (#DQuoted value) -> #string
+    case (#SQuoted value) -> #string
+    case (#Word value) -> call ShellWordType [value]
+    case (#Atoms items) -> call ShellAtomsType [call ShellAtoms [valueNode]]
+    case _ -> #unknown
+  }
+
+judgment ShellAtomsType [items] =
+  match items {
+    case [] -> #unknown
+    case (#DQuoted value) :: rest -> #string
+    case (#SQuoted value) :: rest -> #string
+    case (#Word value) :: rest -> call ShellWordType [value]
+    case head :: rest -> call ShellAtomsType [rest]
+  }
+
+judgment ShellInferStatements [items] =
+  match items {
+    case [] -> list []
+    case (#Assignment name value newline) :: rest ->
+      let t = call ShellValueType [value] in
+      prim #cons [mk #type [name t #declared t] call ShellInferStatements [rest]]
+    case (#FunctionDef name newline body newline2) :: rest ->
+      prim #cons [mk #type [name #function #declared #function] prim #append [call ShellInferStatements [call ShellStatements [body]] call ShellInferStatements [rest]]]
+    case (#IfStatement condition newline thenBody tail) :: rest ->
+      prim #append [call ShellInferStatements [call ShellStatements [thenBody]] call ShellInferStatements [rest]]
+    case (#ForStatement var itemsNode newline body newline2) :: rest ->
+      prim #append [
+        prim #cons [mk #type [var #string #declared #string] call ShellInferStatements [call ShellStatements [body]]]
+        call ShellInferStatements [rest]
+      ]
+    case (#WhileStatement condition newline body newline2) :: rest ->
+      prim #append [call ShellInferStatements [call ShellStatements [body]] call ShellInferStatements [rest]]
+    case (#UntilStatement condition newline body newline2) :: rest ->
+      prim #append [call ShellInferStatements [call ShellStatements [body]] call ShellInferStatements [rest]]
+    case head :: rest -> call ShellInferStatements [rest]
+  }
+
+judgment InferShell [grammar source] =
+  call ShellInferStatements [call ShellStatements [call ParseShell [grammar source]]]
+
+judgment TypeCheckShell [grammar source] = list []

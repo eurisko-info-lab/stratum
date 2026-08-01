@@ -1,0 +1,145 @@
+; Generated from languages/gitignore/gitignore.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module gitignore)
+  (judgment
+    GitIgnoreFile
+    [lines]
+    (mk
+      GitIgnoreFile
+      (v lines)))
+  (judgment
+    GitIgnoreFile'lines
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Ignore
+    [pattern newline]
+    (mk
+      Ignore
+      (v pattern)
+      (v newline)))
+  (judgment
+    Ignore'pattern
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Ignore'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Blank
+    [newline]
+    (mk
+      Blank
+      (v newline)))
+  (judgment
+    Blank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseGitIgnore
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintGitIgnore
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    GitIgnoreWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseGitIgnore
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          GitIgnoreFile
+          (pv lines))
+        (mk
+          valid
+          (v lines)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    GitIgnoreLines
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q GitIgnoreFile)))
+  (judgment
+    GitIgnoreInferLines
+    [lines]
+    (match
+      (v lines)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Ignore
+            (pv pattern)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v pattern)
+            (q glob)
+            (q declared)
+            (q glob))
+          (call
+            GitIgnoreInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          GitIgnoreInferLines
+          (v rest)))))
+  (judgment
+    InferGitIgnore
+    [grammar source]
+    (call
+      GitIgnoreInferLines
+      (call
+        GitIgnoreLines
+        (call
+          ParseGitIgnore
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckGitIgnore
+    [grammar source]
+    (lst)))

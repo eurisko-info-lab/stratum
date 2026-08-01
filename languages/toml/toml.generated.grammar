@@ -1,0 +1,80 @@
+; Generated from languages/toml/toml.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "toml")
+  (start file)
+  (token string str "\"[^\"]*\"")
+  (token integer str "[+-]?[0-9]+")
+  (token key sym "[A-Za-z_][A-Za-z0-9_.-]*")
+  (token newline sym "\\n")
+  (skip "#[^\\n]*")
+  (category
+    file
+    (fold TomlFile statement))
+  (category
+    statement
+    (prod
+      Assignment
+      [
+        (bind key key)
+        (kw "=")
+        (bind value value)
+        (bind newline newline)])
+    (prod
+      Table
+      [
+        (kw "[")
+        (bind name key)
+        (kw "]")
+        (bind newline newline)])
+    (prod
+      ArrayTable
+      [
+        (kw "[[")
+        (bind name key)
+        (kw "]]")
+        (bind newline newline)])
+    (prod
+      Blank
+      [
+        (bind newline newline)]))
+  (category
+    value
+    (prod
+      String
+      [
+        (bind value string)])
+    (prod
+      Integer
+      [
+        (bind value integer)])
+    (prod
+      True
+      [
+        (kw "true")])
+    (prod
+      False
+      [
+        (kw "false")])
+    (prod
+      EmptyArray
+      [
+        (kw "[")
+        (kw "]")])
+    (prod
+      Array
+      [
+        (kw "[")
+        (bind values values)
+        (kw "]")]))
+  (category
+    values
+    (prod
+      MoreValues
+      [
+        (bind value value)
+        (kw ",")
+        (bind rest values)])
+    (prod
+      LastValue
+      [
+        (bind value value)])))

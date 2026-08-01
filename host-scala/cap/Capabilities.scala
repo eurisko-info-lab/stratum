@@ -1,6 +1,7 @@
 package stratum.cap
 
 import stratum.artifact.{Artifact, Cas}
+import stratum.journal.Journal
 import stratum.canon.{Canon, CanonText, Digest}
 
 import java.nio.charset.StandardCharsets
@@ -27,13 +28,31 @@ trait CapabilityHandler:
   def handle(req: CapabilityRequest): CapabilityResponse
 
 object CapabilityHandler:
+  /**
+   * The answers a run cannot recompute for itself.
+   *
+   * Everything else a capability offers is derivable from the closure, which
+   * is content addressed, so asking again gives the same answer and writing it
+   * down proves nothing. These do not: they are where a run touches the world.
+   */
+  val environmental: Set[String] =
+    Set("now", "random-bytes", "receive", "pending", "fs-read", "fs-exists", "fs-list")
+
   def compose(handlers: CapabilityHandler*): CapabilityHandler = new CapabilityHandler:
     private val table = handlers.flatMap(h => h.names.map(_ -> h)).toMap
     def names: Set[String] = table.keySet
     def handle(req: CapabilityRequest): CapabilityResponse =
-      table.get(req.name) match
+      val response = table.get(req.name) match
         case Some(h) => h.handle(req)
         case None    => CapabilityResponse(false, Canon.Sym("unknown-capability"))
+      if environmental.contains(req.name) then
+        Journal.observe(
+          Canon.map(
+            Canon.Sym("request") -> req.toCanon,
+            Canon.Sym("response") -> response.toCanon
+          )
+        )
+      response
 
   val empty: CapabilityHandler = new CapabilityHandler:
     def names: Set[String] = Set.empty
@@ -90,8 +109,8 @@ final class FileCapability(root: Path) extends CapabilityHandler:
     case ("fs-write", Vector(Canon.S(rel), Canon.Y(bytes))) =>
       resolve(rel) match
         case Some(p) =>
-          Files.createDirectories(p.getParent)
-          Files.write(p, bytes.toArray)
+          Journal.createDirectories(p.getParent)
+          Journal.write(p, bytes.toArray)
           CapabilityResponse(true, Canon.U)
         case None => CapabilityResponse(false, Canon.Sym("path-escape"))
     case _ => CapabilityResponse(false, Canon.Sym("bad-request"))
@@ -204,25 +223,46 @@ final class GrammarCapability(cas: Cas) extends CapabilityHandler:
 /** In-process transport used for closure and branch exchange. */
 final class TransportCapability extends CapabilityHandler:
   private val queues = mutable.LinkedHashMap.empty[String, mutable.Queue[Canon]]
+  private var recordedFor: Long = -1
 
   def names: Set[String] = Set("send", "receive", "open-connection", "close-connection", "pending")
 
   private def queue(peer: String): mutable.Queue[Canon] =
     queues.getOrElseUpdate(peer, mutable.Queue.empty)
 
+  /**
+   * Joins the run in progress, once, before anything is exchanged.
+   *
+   * An exchange is a write into another node's storage, so it is undoable like
+   * any other write, and a run that fails must leave no message behind.
+   */
+  private def record(): Unit =
+    if Journal.armed && recordedFor != Journal.current then
+      recordedFor = Journal.current
+      val prior = queues.map { case (peer, q) => peer -> q.toVector }.toVector
+      Journal.enlist { () =>
+        queues.clear()
+        prior.foreach { case (peer, items) => queues.put(peer, mutable.Queue.from(items)) }
+        recordedFor = -1
+      }
+
   def handle(req: CapabilityRequest): CapabilityResponse = (req.name, req.args) match
     case ("open-connection", Vector(Canon.S(peer))) =>
+      record()
       queue(peer)
       CapabilityResponse(true, Canon.U)
     case ("close-connection", Vector(Canon.S(peer))) =>
+      record()
       queues.remove(peer)
       CapabilityResponse(true, Canon.U)
     case ("send", Vector(Canon.S(peer), message)) =>
+      record()
       queue(peer).enqueue(message)
       CapabilityResponse(true, Canon.U)
     case ("pending", Vector(Canon.S(peer))) =>
       CapabilityResponse(true, Canon.N(BigInt(queue(peer).size)))
     case ("receive", Vector(Canon.S(peer))) =>
+      record()
       val q = queue(peer)
       if q.isEmpty then CapabilityResponse(true, Canon.Node("empty", Vector.empty))
       else CapabilityResponse(true, Canon.Node("message", Vector(q.dequeue())))

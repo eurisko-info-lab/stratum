@@ -1,0 +1,2815 @@
+; Generated from languages/scala/scala.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module scala)
+  (judgment
+    ScalaDocument
+    [items]
+    (mk
+      ScalaDocument
+      (v items)))
+  (judgment
+    ScalaDocument'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Brace
+    [body]
+    (mk
+      Brace
+      (v body)))
+  (judgment
+    Brace'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyBrace
+    []
+    (mk EmptyBrace))
+  (judgment
+    BlockColon
+    [header newline body]
+    (mk
+      BlockColon
+      (v header)
+      (v newline)
+      (v body)))
+  (judgment
+    BlockColon'header
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockColon'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BlockColon'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    BlockColonBare
+    [newline body]
+    (mk
+      BlockColonBare
+      (v newline)
+      (v body)))
+  (judgment
+    BlockColonBare'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockColonBare'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BlockEquals
+    [header newline body]
+    (mk
+      BlockEquals
+      (v header)
+      (v newline)
+      (v body)))
+  (judgment
+    BlockEquals'header
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockEquals'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BlockEquals'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    BlockEqualsBare
+    [newline body]
+    (mk
+      BlockEqualsBare
+      (v newline)
+      (v body)))
+  (judgment
+    BlockEqualsBare'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockEqualsBare'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BlockArrow
+    [header newline body]
+    (mk
+      BlockArrow
+      (v header)
+      (v newline)
+      (v body)))
+  (judgment
+    BlockArrow'header
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockArrow'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BlockArrow'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    BlockThen
+    [header newline body]
+    (mk
+      BlockThen
+      (v header)
+      (v newline)
+      (v body)))
+  (judgment
+    BlockThen'header
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockThen'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BlockThen'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    BlockElse
+    [newline body]
+    (mk
+      BlockElse
+      (v newline)
+      (v body)))
+  (judgment
+    BlockElse'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockElse'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BlockDo
+    [header newline body]
+    (mk
+      BlockDo
+      (v header)
+      (v newline)
+      (v body)))
+  (judgment
+    BlockDo'header
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockDo'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    BlockDo'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    HeaderDocument
+    [items]
+    (mk
+      HeaderDocument
+      (v items)))
+  (judgment
+    HeaderDocument'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Colon
+    []
+    (mk Colon))
+  (judgment
+    Assign
+    []
+    (mk Assign))
+  (judgment
+    FatArrow
+    []
+    (mk FatArrow))
+  (judgment
+    ThenKw
+    []
+    (mk ThenKw))
+  (judgment
+    ElseKw
+    []
+    (mk ElseKw))
+  (judgment
+    DoKw
+    []
+    (mk DoKw))
+  (judgment
+    Paren
+    [body]
+    (mk
+      Paren
+      (v body)))
+  (judgment
+    Paren'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyParen
+    []
+    (mk EmptyParen))
+  (judgment
+    Bracket
+    [body]
+    (mk
+      Bracket
+      (v body)))
+  (judgment
+    Bracket'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyBracket
+    []
+    (mk EmptyBracket))
+  (judgment
+    LineComment
+    [value]
+    (mk
+      LineComment
+      (v value)))
+  (judgment
+    LineComment'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    BlockComment
+    [value]
+    (mk
+      BlockComment
+      (v value)))
+  (judgment
+    BlockComment'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TripleQuoted
+    [value]
+    (mk
+      TripleQuoted
+      (v value)))
+  (judgment
+    TripleQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    DQuoted
+    [value]
+    (mk
+      DQuoted
+      (v value)))
+  (judgment
+    DQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CharLit
+    [value]
+    (mk
+      CharLit
+      (v value)))
+  (judgment
+    CharLit'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Number
+    [value]
+    (mk
+      Number
+      (v value)))
+  (judgment
+    Number'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Abstract
+    []
+    (mk Abstract))
+  (judgment
+    CaseKw
+    []
+    (mk CaseKw))
+  (judgment
+    Catch
+    []
+    (mk Catch))
+  (judgment
+    ClassKw
+    []
+    (mk ClassKw))
+  (judgment
+    Def
+    []
+    (mk Def))
+  (judgment
+    Enum
+    []
+    (mk Enum))
+  (judgment
+    Extends
+    []
+    (mk Extends))
+  (judgment
+    Export
+    []
+    (mk Export))
+  (judgment
+    Extension
+    []
+    (mk Extension))
+  (judgment
+    False
+    []
+    (mk False))
+  (judgment
+    Final
+    []
+    (mk Final))
+  (judgment
+    Finally
+    []
+    (mk Finally))
+  (judgment
+    For
+    []
+    (mk For))
+  (judgment
+    Given
+    []
+    (mk Given))
+  (judgment
+    If
+    []
+    (mk If))
+  (judgment
+    Implicit
+    []
+    (mk Implicit))
+  (judgment
+    Import
+    []
+    (mk Import))
+  (judgment
+    Inline
+    []
+    (mk Inline))
+  (judgment
+    Lazy
+    []
+    (mk Lazy))
+  (judgment
+    Match
+    []
+    (mk Match))
+  (judgment
+    New
+    []
+    (mk New))
+  (judgment
+    NullKw
+    []
+    (mk NullKw))
+  (judgment
+    ObjectKw
+    []
+    (mk ObjectKw))
+  (judgment
+    Opaque
+    []
+    (mk Opaque))
+  (judgment
+    Override
+    []
+    (mk Override))
+  (judgment
+    Package
+    []
+    (mk Package))
+  (judgment
+    Private
+    []
+    (mk Private))
+  (judgment
+    Protected
+    []
+    (mk Protected))
+  (judgment
+    Return
+    []
+    (mk Return))
+  (judgment
+    Sealed
+    []
+    (mk Sealed))
+  (judgment
+    SelfKw
+    []
+    (mk SelfKw))
+  (judgment
+    SuperKw
+    []
+    (mk SuperKw))
+  (judgment
+    Throw
+    []
+    (mk Throw))
+  (judgment
+    Trait
+    []
+    (mk Trait))
+  (judgment
+    True
+    []
+    (mk True))
+  (judgment
+    Try
+    []
+    (mk Try))
+  (judgment
+    TypeKw
+    []
+    (mk TypeKw))
+  (judgment
+    Using
+    []
+    (mk Using))
+  (judgment
+    Val
+    []
+    (mk Val))
+  (judgment
+    Var
+    []
+    (mk Var))
+  (judgment
+    While
+    []
+    (mk While))
+  (judgment
+    With
+    []
+    (mk With))
+  (judgment
+    Yield
+    []
+    (mk Yield))
+  (judgment
+    EndKw
+    []
+    (mk EndKw))
+  (judgment
+    Comma
+    []
+    (mk Comma))
+  (judgment
+    Semicolon
+    []
+    (mk Semicolon))
+  (judgment
+    Dot
+    []
+    (mk Dot))
+  (judgment
+    Operator
+    [value]
+    (mk
+      Operator
+      (v value)))
+  (judgment
+    Operator'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Word
+    [value]
+    (mk
+      Word
+      (v value)))
+  (judgment
+    Word'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Newline
+    [value]
+    (mk
+      Newline
+      (v value)))
+  (judgment
+    Newline'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IndentBlock
+    [body]
+    (mk
+      IndentBlock
+      (v body)))
+  (judgment
+    IndentBlock'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    HeaderDocumentTyped
+    [items]
+    (mk
+      HeaderDocumentTyped
+      (v items)))
+  (judgment
+    HeaderDocumentTyped'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TypedColon
+    []
+    (mk TypedColon))
+  (judgment
+    ParseScala
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintScala
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    ScalaWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseScala
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          ScalaDocument
+          (pv items))
+        (mk
+          valid
+          (v items)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    ScalaBody
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q ScalaDocument)))
+  (judgment
+    ScalaHeader
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q HeaderDocument)))
+  (judgment
+    ScalaHeaderTyped
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q HeaderDocumentTyped)))
+  (judgment
+    ScalaMkBindings
+    [names kind]
+    (match
+      (v names)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v head)
+            (v kind))
+          (call
+            ScalaMkBindings
+            (v rest)
+            (v kind))))))
+  (judgment
+    ScalaDeclaredName
+    [items]
+    (match
+      (v items)
+      (case
+        (pcons
+          (pm Def)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (mk
+          some
+          (v name)))
+      (case
+        (pcons
+          (pm Val)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (mk
+          some
+          (v name)))
+      (case
+        (pcons
+          (pm Var)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (mk
+          some
+          (v name)))
+      (case
+        (pcons
+          (pm ClassKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (mk
+          some
+          (v name)))
+      (case
+        (pcons
+          (pm ObjectKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (mk
+          some
+          (v name)))
+      (case
+        (pcons
+          (pm Trait)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (mk
+          some
+          (v name)))
+      (case
+        (pcons
+          (pm Enum)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (mk
+          some
+          (v name)))
+      (case
+        _
+        (mk none))))
+  (judgment
+    ScalaParamNames
+    [items typePosition]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Colon)
+          (pv rest))
+        (call
+          ScalaParamNames
+          (v rest)
+          (q true)))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (call
+          ScalaParamNames
+          (v rest)
+          (q false)))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaParamNames
+            (call
+              ScalaBody
+              (v body))
+            (q false))
+          (call
+            ScalaParamNames
+            (v rest)
+            (v typePosition))))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v typePosition)
+            (q true))
+          (call
+            ScalaParamNames
+            (v rest)
+            (v typePosition))
+          (prim
+            cons
+            (v name)
+            (call
+              ScalaParamNames
+              (v rest)
+              (v typePosition)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaParamNames
+          (v rest)
+          (v typePosition)))))
+  (judgment
+    ScalaHeaderParams
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaParamNames
+            (call
+              ScalaBody
+              (v body))
+            (q false))
+          (call
+            ScalaHeaderParams
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaHeaderParams
+          (v rest)))))
+  (judgment
+    ScalaWordsIn
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (prim
+          cons
+          (v name)
+          (call
+            ScalaWordsIn
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaWordsIn
+            (call
+              ScalaBody
+              (v body)))
+          (call
+            ScalaWordsIn
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaWordsIn
+          (v rest)))))
+  (judgment
+    ScalaResolveItems
+    [items scope]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Dot)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (call
+          ScalaResolveItems
+          (v rest)
+          (v scope)))
+      (case
+        (pcons
+          (pm
+            BlockColon
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (let
+          headerItems
+          (call
+            ScalaHeader
+            (v header))
+          (match
+            (call
+              ScalaDeclaredName
+              (v headerItems))
+            (case
+              (pm
+                some
+                (pv name))
+              (let
+                inner
+                (prim
+                  append
+                  (prim
+                    snoc
+                    (v scope)
+                    (v name))
+                  (call
+                    ScalaHeaderParams
+                    (v headerItems)))
+                (prim
+                  cons
+                  (mk
+                    binding
+                    (v name)
+                    (q decl))
+                  (prim
+                    append
+                    (call
+                      ScalaResolveItems
+                      (call
+                        ScalaBody
+                        (v body))
+                      (v inner))
+                    (call
+                      ScalaResolveItems
+                      (v rest)
+                      (prim
+                        snoc
+                        (v scope)
+                        (v name)))))))
+            (case
+              (pm none)
+              (prim
+                append
+                (call
+                  ScalaResolveItems
+                  (v headerItems)
+                  (v scope))
+                (prim
+                  append
+                  (call
+                    ScalaResolveItems
+                    (call
+                      ScalaBody
+                      (v body))
+                    (v scope))
+                  (call
+                    ScalaResolveItems
+                    (v rest)
+                    (v scope))))))))
+      (case
+        (pcons
+          (pm
+            BlockEquals
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (let
+          headerItems
+          (call
+            ScalaHeaderTyped
+            (v header))
+          (match
+            (call
+              ScalaDeclaredName
+              (v headerItems))
+            (case
+              (pm
+                some
+                (pv name))
+              (let
+                inner
+                (prim
+                  append
+                  (prim
+                    snoc
+                    (v scope)
+                    (v name))
+                  (call
+                    ScalaHeaderParams
+                    (v headerItems)))
+                (prim
+                  cons
+                  (mk
+                    binding
+                    (v name)
+                    (q decl))
+                  (prim
+                    append
+                    (call
+                      ScalaResolveItems
+                      (call
+                        ScalaBody
+                        (v body))
+                      (v inner))
+                    (call
+                      ScalaResolveItems
+                      (v rest)
+                      (prim
+                        snoc
+                        (v scope)
+                        (v name)))))))
+            (case
+              (pm none)
+              (prim
+                append
+                (call
+                  ScalaResolveItems
+                  (v headerItems)
+                  (v scope))
+                (prim
+                  append
+                  (call
+                    ScalaResolveItems
+                    (call
+                      ScalaBody
+                      (v body))
+                    (v scope))
+                  (call
+                    ScalaResolveItems
+                    (v rest)
+                    (v scope))))))))
+      (case
+        (pcons
+          (pm
+            BlockArrow
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (let
+          headerItems
+          (call
+            ScalaHeaderTyped
+            (v header))
+          (let
+            patternNames
+            (call
+              ScalaWordsIn
+              (v headerItems))
+            (prim
+              append
+              (call
+                ScalaResolveItems
+                (v headerItems)
+                (v scope))
+              (prim
+                append
+                (call
+                  ScalaResolveItems
+                  (call
+                    ScalaBody
+                    (v body))
+                  (prim
+                    append
+                    (v scope)
+                    (v patternNames)))
+                (call
+                  ScalaResolveItems
+                  (v rest)
+                  (v scope)))))))
+      (case
+        (pcons
+          (pm
+            BlockThen
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaHeaderTyped
+              (v header))
+            (v scope))
+          (prim
+            append
+            (call
+              ScalaResolveItems
+              (call
+                ScalaBody
+                (v body))
+              (v scope))
+            (call
+              ScalaResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pm
+            BlockDo
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaHeaderTyped
+              (v header))
+            (v scope))
+          (prim
+            append
+            (call
+              ScalaResolveItems
+              (call
+                ScalaBody
+                (v body))
+              (v scope))
+            (call
+              ScalaResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pm
+            BlockColonBare
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaBody
+              (v body))
+            (v scope))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            BlockEqualsBare
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaBody
+              (v body))
+            (v scope))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            BlockElse
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaBody
+              (v body))
+            (v scope))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            IndentBlock
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaBody
+              (v body))
+            (v scope))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Brace
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaBody
+              (v body))
+            (v scope))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaBody
+              (v body))
+            (v scope))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Bracket
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaResolveItems
+            (call
+              ScalaBody
+              (v body))
+            (v scope))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm ClassKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pcons
+              (pm
+                Paren
+                (pv body))
+              (pv rest))))
+        (let
+          params
+          (call
+            ScalaParamNames
+            (call
+              ScalaBody
+              (v body))
+            (q false))
+          (prim
+            append
+            (prim
+              cons
+              (mk
+                binding
+                (v name)
+                (q class))
+              (call
+                ScalaMkBindings
+                (v params)
+                (q param)))
+            (call
+              ScalaResolveItems
+              (v rest)
+              (prim
+                append
+                (prim
+                  snoc
+                  (v scope)
+                  (v name))
+                (v params))))))
+      (case
+        (pcons
+          (pm ClassKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q class))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm ObjectKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q object))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Trait)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q trait))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Enum)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q enum))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Def)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q def))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Val)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q val))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Var)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q var))
+          (call
+            ScalaResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v scope)
+            (v name))
+          (prim
+            cons
+            (mk
+              reference
+              (v name)
+              (q resolved))
+            (call
+              ScalaResolveItems
+              (v rest)
+              (v scope)))
+          (prim
+            cons
+            (mk
+              reference
+              (v name)
+              (q free))
+            (call
+              ScalaResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaResolveItems
+          (v rest)
+          (v scope)))))
+  (judgment
+    ResolveScala
+    [grammar source]
+    (call
+      ScalaResolveItems
+      (call
+        ScalaBody
+        (call
+          ParseScala
+          (v grammar)
+          (v source)))
+      (lst)))
+  (judgment
+    ScalaTypeWords
+    [tokens]
+    (match
+      (v tokens)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv w))
+          (pv rest))
+        (prim
+          cons
+          (v w)
+          (call
+            ScalaTypeWords
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaTypeWords
+          (v rest)))))
+  (judgment
+    ScalaTakeType
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (mk taken (lst) (lst)))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            ScalaTakeType
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (mk
+              taken
+              (prim
+                cons
+                (v head)
+                (v typeToks))
+              (v remaining)))))))
+  (judgment
+    ScalaTakeTypeUntilAssign
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (mk taken (lst) (lst)))
+      (case
+        (pcons
+          (pm Assign)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pm Semicolon)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            ScalaTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (mk
+              taken
+              (prim
+                cons
+                (v head)
+                (v typeToks))
+              (v remaining)))))))
+  (judgment
+    ScalaParamAnnotations
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (call
+          ScalaParamAnnotations
+          (v rest)))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pcons
+            (pm Colon)
+            (pv rest)))
+        (match
+          (call
+            ScalaTakeType
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (prim
+              cons
+              (mk
+                annotation
+                (v name)
+                (call
+                  ScalaTypeWords
+                  (v typeToks)))
+              (call
+                ScalaParamAnnotations
+                (v remaining))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaParamAnnotations
+          (v rest)))))
+  (judgment
+    ScalaHeaderAnnotations
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaParamAnnotations
+            (call
+              ScalaBody
+              (v body)))
+          (call
+            ScalaHeaderAnnotations
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaHeaderAnnotations
+          (v rest)))))
+  (judgment
+    ScalaPrimaryType
+    [typeWords]
+    (match
+      (v typeWords)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pv t)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v t)
+            (q "Int"))
+          (q number)
+          (if
+            (prim
+              eq
+              (v t)
+              (q "Long"))
+            (q number)
+            (if
+              (prim
+                eq
+                (v t)
+                (q "Float"))
+              (q number)
+              (if
+                (prim
+                  eq
+                  (v t)
+                  (q "Double"))
+                (q number)
+                (if
+                  (prim
+                    eq
+                    (v t)
+                    (q "BigInt"))
+                  (q number)
+                  (if
+                    (prim
+                      eq
+                      (v t)
+                      (q "Boolean"))
+                    (q boolean)
+                    (if
+                      (prim
+                        eq
+                        (v t)
+                        (q "String"))
+                      (q string)
+                      (if
+                        (prim
+                          eq
+                          (v t)
+                          (q "Char"))
+                        (q char)
+                        (if
+                          (prim
+                            eq
+                            (v t)
+                            (q "Unit"))
+                          (q unit)
+                          (if
+                            (prim
+                              eq
+                              (v t)
+                              (q "Any"))
+                            (q unknown)
+                            (if
+                              (prim
+                                eq
+                                (v t)
+                                (q "AnyRef"))
+                              (q unknown)
+                              (if
+                                (prim
+                                  eq
+                                  (v t)
+                                  (q "Nothing"))
+                                (q unknown)
+                                (call
+                                  ScalaPrimaryType
+                                  (v rest)))))))))))))))))
+  (judgment
+    ScalaEntriesFromAnnotations
+    [annos]
+    (match
+      (v annos)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            annotation
+            (pv name)
+            (pv typeWords))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            typed
+            (v name)
+            (call
+              ScalaPrimaryType
+              (v typeWords)))
+          (call
+            ScalaEntriesFromAnnotations
+            (v rest))))))
+  (judgment
+    ScalaLookupType
+    [env name]
+    (match
+      (v env)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            typed
+            (pv key)
+            (pv t))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v key)
+            (v name))
+          (v t)
+          (call
+            ScalaLookupType
+            (v rest)
+            (v name))))))
+  (judgment
+    ScalaInferExprType
+    [items env]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            Number
+            (pv n))
+          (pv rest))
+        (q number))
+      (case
+        (pcons
+          (pm
+            DQuoted
+            (pv s))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            TripleQuoted
+            (pv s))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            CharLit
+            (pv c))
+          (pv rest))
+        (q char))
+      (case
+        (pcons
+          (pm True)
+          (pv rest))
+        (q boolean))
+      (case
+        (pcons
+          (pm False)
+          (pv rest))
+        (q boolean))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (call
+          ScalaLookupType
+          (v env)
+          (v name)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaInferExprType
+          (v rest)
+          (v env)))))
+  (judgment
+    ScalaCompatibleType
+    [declared inferred]
+    (if
+      (prim
+        eq
+        (v declared)
+        (q unknown))
+      (q true)
+      (if
+        (prim
+          eq
+          (v inferred)
+          (q unknown))
+        (q true)
+        (if
+          (prim
+            eq
+            (v declared)
+            (v inferred))
+          (q true)
+          (q false)))))
+  (judgment
+    ScalaInferItems
+    [items env]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Val)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pcons
+              (pm Colon)
+              (pv rest))))
+        (match
+          (call
+            ScalaTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (let
+              declared
+              (call
+                ScalaPrimaryType
+                (call
+                  ScalaTypeWords
+                  (v typeToks)))
+              (let
+                inferred
+                (call
+                  ScalaInferExprType
+                  (v remaining)
+                  (v env))
+                (let
+                  entry
+                  (mk
+                    typed
+                    (v name)
+                    (v declared))
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (v declared)
+                      (q declared)
+                      (v inferred))
+                    (call
+                      ScalaInferItems
+                      (v remaining)
+                      (prim
+                        snoc
+                        (v env)
+                        (v entry))))))))))
+      (case
+        (pcons
+          (pm Var)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pcons
+              (pm Colon)
+              (pv rest))))
+        (match
+          (call
+            ScalaTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (let
+              declared
+              (call
+                ScalaPrimaryType
+                (call
+                  ScalaTypeWords
+                  (v typeToks)))
+              (let
+                inferred
+                (call
+                  ScalaInferExprType
+                  (v remaining)
+                  (v env))
+                (let
+                  entry
+                  (mk
+                    typed
+                    (v name)
+                    (v declared))
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (v declared)
+                      (q declared)
+                      (v inferred))
+                    (call
+                      ScalaInferItems
+                      (v remaining)
+                      (prim
+                        snoc
+                        (v env)
+                        (v entry))))))))))
+      (case
+        (pcons
+          (pm Val)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          inferred
+          (call
+            ScalaInferExprType
+            (v rest)
+            (v env))
+          (let
+            entry
+            (mk
+              typed
+              (v name)
+              (v inferred))
+            (prim
+              cons
+              (mk
+                type
+                (v name)
+                (v inferred)
+                (q inferred)
+                (v inferred))
+              (call
+                ScalaInferItems
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (v entry)))))))
+      (case
+        (pcons
+          (pm Var)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          inferred
+          (call
+            ScalaInferExprType
+            (v rest)
+            (v env))
+          (let
+            entry
+            (mk
+              typed
+              (v name)
+              (v inferred))
+            (prim
+              cons
+              (mk
+                type
+                (v name)
+                (v inferred)
+                (q inferred)
+                (v inferred))
+              (call
+                ScalaInferItems
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (v entry)))))))
+      (case
+        (pcons
+          (pm
+            BlockEquals
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (let
+          headerItems
+          (call
+            ScalaHeaderTyped
+            (v header))
+          (let
+            paramEntries
+            (call
+              ScalaEntriesFromAnnotations
+              (call
+                ScalaHeaderAnnotations
+                (v headerItems)))
+            (match
+              (call
+                ScalaDeclaredName
+                (v headerItems))
+              (case
+                (pm
+                  some
+                  (pv name))
+                (let
+                  own
+                  (mk
+                    typed
+                    (v name)
+                    (q function))
+                  (let
+                    inner
+                    (prim
+                      append
+                      (prim
+                        append
+                        (v env)
+                        (v paramEntries))
+                      (lst
+                        (v own)))
+                    (prim
+                      append
+                      (prim
+                        cons
+                        (mk
+                          type
+                          (v name)
+                          (q function)
+                          (q declared)
+                          (q function))
+                        (call
+                          ScalaInferItems
+                          (call
+                            ScalaBody
+                            (v body))
+                          (v inner)))
+                      (call
+                        ScalaInferItems
+                        (v rest)
+                        (prim
+                          snoc
+                          (v env)
+                          (v own)))))))
+              (case
+                (pm none)
+                (prim
+                  append
+                  (call
+                    ScalaInferItems
+                    (v headerItems)
+                    (v env))
+                  (prim
+                    append
+                    (call
+                      ScalaInferItems
+                      (call
+                        ScalaBody
+                        (v body))
+                      (v env))
+                    (call
+                      ScalaInferItems
+                      (v rest)
+                      (v env)))))))))
+      (case
+        (pcons
+          (pm
+            BlockColon
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (let
+          headerItems
+          (call
+            ScalaHeader
+            (v header))
+          (match
+            (call
+              ScalaDeclaredName
+              (v headerItems))
+            (case
+              (pm
+                some
+                (pv name))
+              (let
+                own
+                (mk
+                  typed
+                  (v name)
+                  (q decl))
+                (prim
+                  append
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (q decl)
+                      (q declared)
+                      (q decl))
+                    (call
+                      ScalaInferItems
+                      (call
+                        ScalaBody
+                        (v body))
+                      (prim
+                        snoc
+                        (v env)
+                        (v own))))
+                  (call
+                    ScalaInferItems
+                    (v rest)
+                    (prim
+                      snoc
+                      (v env)
+                      (v own))))))
+            (case
+              (pm none)
+              (prim
+                append
+                (call
+                  ScalaInferItems
+                  (v headerItems)
+                  (v env))
+                (prim
+                  append
+                  (call
+                    ScalaInferItems
+                    (call
+                      ScalaBody
+                      (v body))
+                    (v env))
+                  (call
+                    ScalaInferItems
+                    (v rest)
+                    (v env))))))))
+      (case
+        (pcons
+          (pm
+            BlockArrow
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaBody
+              (v body))
+            (v env))
+          (call
+            ScalaInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            BlockThen
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaHeaderTyped
+              (v header))
+            (v env))
+          (prim
+            append
+            (call
+              ScalaInferItems
+              (call
+                ScalaBody
+                (v body))
+              (v env))
+            (call
+              ScalaInferItems
+              (v rest)
+              (v env)))))
+      (case
+        (pcons
+          (pm
+            BlockDo
+            (pv header)
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaHeaderTyped
+              (v header))
+            (v env))
+          (prim
+            append
+            (call
+              ScalaInferItems
+              (call
+                ScalaBody
+                (v body))
+              (v env))
+            (call
+              ScalaInferItems
+              (v rest)
+              (v env)))))
+      (case
+        (pcons
+          (pm
+            BlockColonBare
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaBody
+              (v body))
+            (v env))
+          (call
+            ScalaInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            BlockEqualsBare
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaBody
+              (v body))
+            (v env))
+          (call
+            ScalaInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            BlockElse
+            (pv newline)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaBody
+              (v body))
+            (v env))
+          (call
+            ScalaInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            IndentBlock
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaBody
+              (v body))
+            (v env))
+          (call
+            ScalaInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Brace
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaBody
+              (v body))
+            (v env))
+          (call
+            ScalaInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaBody
+              (v body))
+            (v env))
+          (call
+            ScalaInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Bracket
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            ScalaInferItems
+            (call
+              ScalaBody
+              (v body))
+            (v env))
+          (call
+            ScalaInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm ClassKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q type)
+              (q declared)
+              (q type))
+            (call
+              ScalaInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm ObjectKw)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q module))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q module)
+              (q declared)
+              (q module))
+            (call
+              ScalaInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm Trait)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q typeclass))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q typeclass)
+              (q declared)
+              (q typeclass))
+            (call
+              ScalaInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm Enum)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q type)
+              (q declared)
+              (q type))
+            (call
+              ScalaInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm Def)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q function))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q function)
+              (q declared)
+              (q function))
+            (call
+              ScalaInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaInferItems
+          (v rest)
+          (v env)))))
+  (judgment
+    ScalaTypeErrors
+    [typed]
+    (match
+      (v typed)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            type
+            (pv name)
+            (pv declared)
+            (pq declared)
+            (pv inferred))
+          (pv rest))
+        (if
+          (call
+            ScalaCompatibleType
+            (v declared)
+            (v inferred))
+          (call
+            ScalaTypeErrors
+            (v rest))
+          (prim
+            cons
+            (mk
+              type-error
+              (v name)
+              (v declared)
+              (v inferred))
+            (call
+              ScalaTypeErrors
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ScalaTypeErrors
+          (v rest)))))
+  (judgment
+    InferScala
+    [grammar source]
+    (call
+      ScalaInferItems
+      (call
+        ScalaBody
+        (call
+          ParseScala
+          (v grammar)
+          (v source)))
+      (lst)))
+  (judgment
+    TypeCheckScala
+    [grammar source]
+    (call
+      ScalaTypeErrors
+      (call
+        InferScala
+        (v grammar)
+        (v source)))))

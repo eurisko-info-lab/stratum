@@ -1,0 +1,25 @@
+; Generated from languages/gitattributes/gitattributes.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "gitattributes")
+  (start file)
+  (token word str "[^\\t \\r\\n]+")
+  (token newline sym "\\n")
+  (skip "#[^\\n]*")
+  (category
+    file
+    (fold GitAttributesFile line))
+  (category
+    line
+    (prod
+      Attributes
+      [
+        (bind pattern word)
+        (bind values attributes)
+        (bind newline newline)])
+    (prod
+      Blank
+      [
+        (bind newline newline)]))
+  (category
+    attributes
+    (fold Attribute word)))

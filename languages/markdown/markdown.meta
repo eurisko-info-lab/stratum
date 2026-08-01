@@ -1,0 +1,61 @@
+module markdown
+
+record MarkdownDocument [blocks]
+record Heading [level content newline]
+record FenceClose [marker newline]
+record Fence [marker language newline]
+record Bullet [content newline]
+record Quote [content newline]
+record Paragraph [content newline]
+record Blank [newline]
+record Inlines [items]
+record Strong [content]
+record Emph [content]
+record Image [text url]
+record Link [text url]
+record Code [value]
+record Word [value]
+record HeadingMark [value]
+record Dash []
+record Greater []
+record StrongMark []
+record EmphMark []
+record Bang []
+record OpenBracket []
+record CloseBracket []
+record OpenParen []
+record CloseParen []
+record Punctuation [value]
+
+judgment ParseMarkdown [grammar source] = call Parse [grammar source]
+judgment PrintMarkdown [grammar syntax] = call Print [grammar syntax]
+judgment MarkdownWellFormed [grammar source] =
+  match call ParseMarkdown [grammar source] {
+    case (#MarkdownDocument blocks) -> mk #valid [blocks]
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment MarkdownBlocks [node] = call FlattenSeq [node #MarkdownDocument]
+
+judgment MarkdownInferBlocks [blocks] =
+  match blocks {
+    case [] -> list []
+    case (#Heading level content newline) :: rest ->
+      prim #cons [mk #type [#heading #block #declared #block] call MarkdownInferBlocks [rest]]
+    case (#Fence marker language newline) :: rest ->
+      prim #cons [mk #type [#fence #block #declared #block] call MarkdownInferBlocks [rest]]
+    case (#FenceClose marker newline) :: rest ->
+      prim #cons [mk #type [#fence-close #block #declared #block] call MarkdownInferBlocks [rest]]
+    case (#Bullet content newline) :: rest ->
+      prim #cons [mk #type [#bullet #block #declared #block] call MarkdownInferBlocks [rest]]
+    case (#Quote content newline) :: rest ->
+      prim #cons [mk #type [#quote #block #declared #block] call MarkdownInferBlocks [rest]]
+    case (#Paragraph content newline) :: rest ->
+      prim #cons [mk #type [#paragraph #block #declared #block] call MarkdownInferBlocks [rest]]
+    case head :: rest -> call MarkdownInferBlocks [rest]
+  }
+
+judgment InferMarkdown [grammar source] =
+  call MarkdownInferBlocks [call MarkdownBlocks [call ParseMarkdown [grammar source]]]
+
+judgment TypeCheckMarkdown [grammar source] = list []

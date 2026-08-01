@@ -1,0 +1,9 @@
+# Source-language declarations.
+# Format: <name> | <extensions...> [| <exact-paths...>]
+meta | .meta
+grammar | .grammar
+scala | .scala .sbt
+rust | .rs
+shell | .sh
+transcript | .transcript
+text | .txt

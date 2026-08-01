@@ -1,0 +1,4 @@
+; F11->F12 grammar delta
+; No new object-language grammar introduced at the foundation boundary.
+(delta-grammar
+  (summary "no object-language grammar surface delta"))

@@ -1,0 +1,64 @@
+name: A claim did not hold
+description: A gate failed when it should have passed, or passed when it should have failed.
+title: "[claim] "
+labels: ["evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the most valuable kind of issue this repository can receive.
+        The project asserts that every layer is rebuilt from source, agreed on
+        by two independent hosts, and reconstructible from its digest and
+        closure alone. If any of that is untrue on your machine, we want to
+        know before anyone else does.
+
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Which way did it fail?
+      options:
+        - A gate failed and I believe it should have passed
+        - A gate passed and I believe it should have caught something
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: Which gate?
+      options:
+        - "./tools/staircase.sh"
+        - "./tools/deployment.sh"
+        - "sbt test"
+        - "./tools/parity.sh"
+        - "./tools/cleanroom.sh"
+        - "./tools/regenerate.sh"
+        - Something else, or several
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Full output
+      description: Please paste all of it, not just the last line. Digests matter here.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      description: "Output of: git rev-parse HEAD"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: "OS, and the output of: java -version; sbt --version; rustc --version"
+      render: text
+    validations:
+      required: true

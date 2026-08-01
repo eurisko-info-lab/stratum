@@ -1,0 +1,802 @@
+; Generated from languages/yaml/yaml.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module yaml)
+  (judgment
+    YamlDocument
+    [lines]
+    (mk
+      YamlDocument
+      (v lines)))
+  (judgment
+    YamlDocument'lines
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyMapping
+    [key newline]
+    (mk
+      EmptyMapping
+      (v key)
+      (v newline)))
+  (judgment
+    EmptyMapping'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyMapping'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IndentedEmptyMapping
+    [indent key newline]
+    (mk
+      IndentedEmptyMapping
+      (v indent)
+      (v key)
+      (v newline)))
+  (judgment
+    IndentedEmptyMapping'indent
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IndentedEmptyMapping'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IndentedEmptyMapping'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Mapping
+    [key value newline]
+    (mk
+      Mapping
+      (v key)
+      (v value)
+      (v newline)))
+  (judgment
+    Mapping'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Mapping'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Mapping'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    IndentedMapping
+    [indent key value newline]
+    (mk
+      IndentedMapping
+      (v indent)
+      (v key)
+      (v value)
+      (v newline)))
+  (judgment
+    IndentedMapping'indent
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IndentedMapping'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IndentedMapping'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    IndentedMapping'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    Sequence
+    [value newline]
+    (mk
+      Sequence
+      (v value)
+      (v newline)))
+  (judgment
+    Sequence'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Sequence'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IndentedSequence
+    [indent value newline]
+    (mk
+      IndentedSequence
+      (v indent)
+      (v value)
+      (v newline)))
+  (judgment
+    IndentedSequence'indent
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IndentedSequence'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IndentedSequence'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Block
+    [key newline]
+    (mk
+      Block
+      (v key)
+      (v newline)))
+  (judgment
+    Block'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Block'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IndentedBlock
+    [indent key newline]
+    (mk
+      IndentedBlock
+      (v indent)
+      (v key)
+      (v newline)))
+  (judgment
+    IndentedBlock'indent
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IndentedBlock'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    IndentedBlock'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Continuation
+    [indent value newline]
+    (mk
+      Continuation
+      (v indent)
+      (v value)
+      (v newline)))
+  (judgment
+    Continuation'indent
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Continuation'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Continuation'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    IndentedBlank
+    [indent newline]
+    (mk
+      IndentedBlank
+      (v indent)
+      (v newline)))
+  (judgment
+    IndentedBlank'indent
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    IndentedBlank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Blank
+    [newline]
+    (mk
+      Blank
+      (v newline)))
+  (judgment
+    Blank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Atoms
+    [items]
+    (mk
+      Atoms
+      (v items)))
+  (judgment
+    Atoms'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Quoted
+    [value]
+    (mk
+      Quoted
+      (v value)))
+  (judgment
+    Quoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Word
+    [value]
+    (mk
+      Word
+      (v value)))
+  (judgment
+    Word'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Space
+    [value]
+    (mk
+      Space
+      (v value)))
+  (judgment
+    Space'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseYaml
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintYaml
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    YamlWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseYaml
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          YamlDocument
+          (pv lines))
+        (mk
+          valid
+          (v lines)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    YamlLines
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q YamlDocument)))
+  (judgment
+    YamlAtoms
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q Atoms)))
+  (judgment
+    YamlWordType
+    [value]
+    (if
+      (prim
+        eq
+        (v value)
+        (q "true"))
+      (q boolean)
+      (if
+        (prim
+          eq
+          (v value)
+          (q "false"))
+        (q boolean)
+        (if
+          (prim
+            eq
+            (v value)
+            (q "null"))
+          (q null)
+          (q string)))))
+  (judgment
+    YamlAtomsType
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            Quoted
+            (pv value))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv value))
+          (pv rest))
+        (call
+          YamlWordType
+          (v value)))
+      (case
+        (pcons
+          (pm OpenList)
+          (pv rest))
+        (q array))
+      (case
+        (pcons
+          (pm OpenMap)
+          (pv rest))
+        (q object))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          YamlAtomsType
+          (v rest)))))
+  (judgment
+    YamlLookupType
+    [env key]
+    (match
+      (v env)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            typed
+            (pv k)
+            (pv t))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v k)
+            (v key))
+          (v t)
+          (call
+            YamlLookupType
+            (v rest)
+            (v key))))))
+  (judgment
+    YamlInferLines
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Mapping
+            (pv key)
+            (pv value)
+            (pv newline))
+          (pv rest))
+        (let
+          t
+          (call
+            YamlAtomsType
+            (call
+              YamlAtoms
+              (v value)))
+          (prim
+            cons
+            (mk
+              type
+              (v key)
+              (v t)
+              (q declared)
+              (v t))
+            (call
+              YamlInferLines
+              (v rest)))))
+      (case
+        (pcons
+          (pm
+            IndentedMapping
+            (pv indent)
+            (pv key)
+            (pv value)
+            (pv newline))
+          (pv rest))
+        (let
+          t
+          (call
+            YamlAtomsType
+            (call
+              YamlAtoms
+              (v value)))
+          (prim
+            cons
+            (mk
+              type
+              (v key)
+              (v t)
+              (q declared)
+              (v t))
+            (call
+              YamlInferLines
+              (v rest)))))
+      (case
+        (pcons
+          (pm
+            EmptyMapping
+            (pv key)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v key)
+            (q unknown)
+            (q declared)
+            (q unknown))
+          (call
+            YamlInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            IndentedEmptyMapping
+            (pv indent)
+            (pv key)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v key)
+            (q unknown)
+            (q declared)
+            (q unknown))
+          (call
+            YamlInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          YamlInferLines
+          (v rest)))))
+  (judgment
+    YamlCheckLines
+    [items env]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Mapping
+            (pv key)
+            (pv value)
+            (pv newline))
+          (pv rest))
+        (let
+          t
+          (call
+            YamlAtomsType
+            (call
+              YamlAtoms
+              (v value)))
+          (let
+            old
+            (call
+              YamlLookupType
+              (v env)
+              (v key))
+            (if
+              (prim
+                eq
+                (v old)
+                (q unknown))
+              (call
+                YamlCheckLines
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (mk
+                    typed
+                    (v key)
+                    (v t))))
+              (if
+                (prim
+                  eq
+                  (v old)
+                  (v t))
+                (call
+                  YamlCheckLines
+                  (v rest)
+                  (v env))
+                (prim
+                  cons
+                  (mk
+                    type-error
+                    (v key)
+                    (v old)
+                    (v t))
+                  (call
+                    YamlCheckLines
+                    (v rest)
+                    (v env))))))))
+      (case
+        (pcons
+          (pm
+            IndentedMapping
+            (pv indent)
+            (pv key)
+            (pv value)
+            (pv newline))
+          (pv rest))
+        (let
+          t
+          (call
+            YamlAtomsType
+            (call
+              YamlAtoms
+              (v value)))
+          (let
+            old
+            (call
+              YamlLookupType
+              (v env)
+              (v key))
+            (if
+              (prim
+                eq
+                (v old)
+                (q unknown))
+              (call
+                YamlCheckLines
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (mk
+                    typed
+                    (v key)
+                    (v t))))
+              (if
+                (prim
+                  eq
+                  (v old)
+                  (v t))
+                (call
+                  YamlCheckLines
+                  (v rest)
+                  (v env))
+                (prim
+                  cons
+                  (mk
+                    type-error
+                    (v key)
+                    (v old)
+                    (v t))
+                  (call
+                    YamlCheckLines
+                    (v rest)
+                    (v env))))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          YamlCheckLines
+          (v rest)
+          (v env)))))
+  (judgment
+    InferYaml
+    [grammar source]
+    (call
+      YamlInferLines
+      (call
+        YamlLines
+        (call
+          ParseYaml
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckYaml
+    [grammar source]
+    (call
+      YamlCheckLines
+      (call
+        YamlLines
+        (call
+          ParseYaml
+          (v grammar)
+          (v source)))
+      (lst))))

@@ -2,7 +2,7 @@
 
 $ foundation verify --dir foundations/F2
 > foundation F2
-> digest f76021e1ed93708e629352eeebfc9aad3d3e6d30589de7a351c6d558fd018d89
+> digest e11df021072f3e17e2a77ef726fdfcb7b366908fa8cc849fc75a1a7891e8be3f
 > closure 31 artifacts
 > check identity-law ok
 > check composition-law ok
@@ -29,11 +29,11 @@ $ foundation verify --dir foundations/F2
 $ foundation verify-successor --predecessor foundations/F1 --successor foundations/F2
 > predecessor F1
 > successor F2
-> result (valid #d3a8c4b2bba912f56115736df54b0a515afd361eceb458db6a0c31f1b39e49c5e)
+> result (valid #dec874419e2d506498edafe36647059840c4ec20cb25970e0602dcd5485683a16)
 
 $ foundation reconstruct --dir foundations/F2
 > reconstructed F2
-> digest f76021e1ed93708e629352eeebfc9aad3d3e6d30589de7a351c6d558fd018d89
+> digest e11df021072f3e17e2a77ef726fdfcb7b366908fa8cc849fc75a1a7891e8be3f
 > stable yes
 > closure 31 artifacts
 > checks 20 ok

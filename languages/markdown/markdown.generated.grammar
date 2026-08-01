@@ -1,0 +1,141 @@
+; Generated from languages/markdown/markdown.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "markdown")
+  (start document)
+  (token heading sym "#{1,6}")
+  (token fence sym "```")
+  (token code str "`[^`]+`")
+  (token word str "[^ \\t\\r\\n#>`*!\\[\\]()-]+")
+  (token punctuation str "[#>`*_-]")
+  (token newline sym "\\n")
+  (category
+    document
+    (fold MarkdownDocument block))
+  (category
+    block
+    (prod
+      Heading
+      [
+        (bind level heading)
+        (bind content inlines)
+        (bind newline newline)])
+    (prod
+      FenceClose
+      [
+        (bind marker fence)
+        (bind newline newline)])
+    (prod
+      Fence
+      [
+        (bind marker fence)
+        (bind language inlines)
+        (bind newline newline)])
+    (prod
+      Bullet
+      [
+        (kw "-")
+        (bind content inlines)
+        (bind newline newline)])
+    (prod
+      Quote
+      [
+        (kw ">")
+        (bind content inlines)
+        (bind newline newline)])
+    (prod
+      Paragraph
+      [
+        (bind content inlines)
+        (bind newline newline)])
+    (prod
+      Blank
+      [
+        (bind newline newline)]))
+  (category
+    inlines
+    (fold Inlines inline))
+  (category
+    inline
+    (prod
+      Strong
+      [
+        (kw "**")
+        (bind content inlines)
+        (kw "**")])
+    (prod
+      Emph
+      [
+        (kw "*")
+        (bind content inlines)
+        (kw "*")])
+    (prod
+      Image
+      [
+        (kw "!")
+        (kw "[")
+        (bind text inlines)
+        (kw "]")
+        (kw "(")
+        (bind url inlines)
+        (kw ")")])
+    (prod
+      Link
+      [
+        (kw "[")
+        (bind text inlines)
+        (kw "]")
+        (kw "(")
+        (bind url inlines)
+        (kw ")")])
+    (prod
+      Code
+      [
+        (bind value code)])
+    (prod
+      Word
+      [
+        (bind value word)])
+    (prod
+      HeadingMark
+      [
+        (bind value heading)])
+    (prod
+      Dash
+      [
+        (kw "-")])
+    (prod
+      Greater
+      [
+        (kw ">")])
+    (prod
+      StrongMark
+      [
+        (kw "**")])
+    (prod
+      EmphMark
+      [
+        (kw "*")])
+    (prod
+      Bang
+      [
+        (kw "!")])
+    (prod
+      OpenBracket
+      [
+        (kw "[")])
+    (prod
+      CloseBracket
+      [
+        (kw "]")])
+    (prod
+      OpenParen
+      [
+        (kw "(")])
+    (prod
+      CloseParen
+      [
+        (kw ")")])
+    (prod
+      Punctuation
+      [
+        (bind value punctuation)])))
