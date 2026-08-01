@@ -4,7 +4,7 @@ module pdf
 ;
 ; The profile has always declared pdf as a foreign surface. This is that
 ; surface: a printer that turns laid-out text into an actual PDF file, written
-; in Meta1 like everything else, so an export is a derivation under a step
+; in Meta like everything else, so an export is a derivation under a step
 ; budget rather than a feature of some client.
 ;
 ; It is a printer rather than a grammar because the format is not context free:

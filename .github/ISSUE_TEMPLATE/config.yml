@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://eurisko-info-lab.github.io/stratum/
+    about: The staircase, the publication workflow, the invariants, and a page per layer.
+  - name: How this project is written
+    url: https://eurisko-info-lab.github.io/stratum/sponsoring.html
+    about: The code is written by AI agents. What that means, and what it costs.
+  - name: Report something privately
+    url: https://github.com/eurisko-info-lab/stratum/security/advisories/new
+    about: Security, or anything covered by the code of conduct.

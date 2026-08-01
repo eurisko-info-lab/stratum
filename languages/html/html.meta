@@ -1,0 +1,102 @@
+module html
+
+record HtmlDocument [nodes]
+record Doctype [name kind]
+record VoidArea [attributes]
+record VoidAreaBare []
+record VoidBase [attributes]
+record VoidBaseBare []
+record VoidBr [attributes]
+record VoidBrBare []
+record VoidCol [attributes]
+record VoidColBare []
+record VoidEmbed [attributes]
+record VoidEmbedBare []
+record VoidHr [attributes]
+record VoidHrBare []
+record VoidImg [attributes]
+record VoidImgBare []
+record VoidInput [attributes]
+record VoidInputBare []
+record VoidLink [attributes]
+record VoidLinkBare []
+record VoidMeta [attributes]
+record VoidMetaBare []
+record VoidParam [attributes]
+record VoidParamBare []
+record VoidSource [attributes]
+record VoidSourceBare []
+record VoidTrack [attributes]
+record VoidTrackBare []
+record VoidWbr [attributes]
+record VoidWbrBare []
+record SelfClosing [name attributes]
+record SelfClosingBare [name]
+record Element [name attributes children closeName]
+record ElementBare [name children closeName]
+record EmptyElement [name attributes closeName]
+record EmptyElementBare [name closeName]
+record TextWord [value]
+record TextNumber [value]
+record TextQuoted [value]
+record TextSymbol [value]
+record TextLess []
+record TextGreater []
+record TextSlash []
+record TextBang []
+record TextEquals []
+record LineBreak [newline]
+record Attributes [values]
+record Attribute [name value]
+record BareAttribute [name]
+record AttributeSymbol [value]
+
+judgment ParseHtml [grammar source] = call Parse [grammar source]
+judgment PrintHtml [grammar syntax] = call Print [grammar syntax]
+judgment HtmlWellFormed [grammar source] =
+  match call ParseHtml [grammar source] {
+    case (#HtmlDocument nodes) -> mk #valid [nodes]
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment HtmlNodes [node] = call FlattenSeq [node #HtmlDocument]
+
+judgment HtmlInferNodes [nodes] =
+  match nodes {
+    case [] -> list []
+    case (#Element name attributes children closeName) :: rest ->
+      prim #cons [mk #type [name #element #declared #element] prim #append [call HtmlInferNodes [call HtmlNodes [children]] call HtmlInferNodes [rest]]]
+    case (#EmptyElement name attributes closeName) :: rest ->
+      prim #cons [mk #type [name #element #declared #element] call HtmlInferNodes [rest]]
+    case (#EmptyElementBare name closeName) :: rest ->
+      prim #cons [mk #type [name #element #declared #element] call HtmlInferNodes [rest]]
+    case (#SelfClosing name attributes) :: rest ->
+      prim #cons [mk #type [name #element #declared #element] call HtmlInferNodes [rest]]
+    case (#SelfClosingBare name) :: rest ->
+      prim #cons [mk #type [name #element #declared #element] call HtmlInferNodes [rest]]
+    case head :: rest -> call HtmlInferNodes [rest]
+  }
+
+judgment HtmlCheckNodes [nodes] =
+  match nodes {
+    case [] -> list []
+    case (#Element name attributes children closeName) :: rest ->
+      if prim #eq [name closeName]
+      then prim #append [call HtmlCheckNodes [call HtmlNodes [children]] call HtmlCheckNodes [rest]]
+      else prim #cons [mk #type-error [name closeName #close-mismatch] prim #append [call HtmlCheckNodes [call HtmlNodes [children]] call HtmlCheckNodes [rest]]]
+    case (#EmptyElement name attributes closeName) :: rest ->
+      if prim #eq [name closeName]
+      then call HtmlCheckNodes [rest]
+      else prim #cons [mk #type-error [name closeName #close-mismatch] call HtmlCheckNodes [rest]]
+    case (#EmptyElementBare name closeName) :: rest ->
+      if prim #eq [name closeName]
+      then call HtmlCheckNodes [rest]
+      else prim #cons [mk #type-error [name closeName #close-mismatch] call HtmlCheckNodes [rest]]
+    case head :: rest -> call HtmlCheckNodes [rest]
+  }
+
+judgment InferHtml [grammar source] =
+  call HtmlInferNodes [call HtmlNodes [call ParseHtml [grammar source]]]
+
+judgment TypeCheckHtml [grammar source] =
+  call HtmlCheckNodes [call HtmlNodes [call ParseHtml [grammar source]]]

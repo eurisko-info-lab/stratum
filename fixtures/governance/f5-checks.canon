@@ -104,4 +104,20 @@
   (check lambda-behaviour-unchanged
     (call NormalizeToText (q (file "languages/lambda/lambda.generated.grammar")) (q "(\\x. \\y. x) a b"))
     (value "a"))
+
+  ; ------------------------------------------------------------------- runs
+
+  ; An undo is not permission: what a run did is judged, not just reversible.
+
+  (check a-completed-run-is-acceptable
+    (call RunAccepted)
+    (value (valid)))
+
+  (check a-run-with-a-failed-step-is-not
+    (call RunWithFailedStepRefused)
+    (value (invalid step-failed)))
+
+  (check a-run-that-only-removes-is-not
+    (call RunThatOnlyRemovesRefused)
+    (value (invalid removed-without-replacement)))
 ]

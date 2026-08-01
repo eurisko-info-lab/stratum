@@ -1,0 +1,52 @@
+module transcript
+
+record TranscriptDocument [lines]
+record Comment [content newline]
+record CommentBlank [newline]
+record Command [content newline]
+record CommandBlank [newline]
+record Output [content newline]
+record OutputBlank [newline]
+record ParamDirective [name content newline]
+record UseDirective [content newline]
+record Blank [newline]
+record Atoms [items]
+record Word [value]
+record Hash []
+record Dollar []
+record Percent []
+record Greater []
+record Equals []
+record ParamWord []
+record UseWord []
+
+judgment ParseTranscript [grammar source] = call Parse [grammar source]
+judgment PrintTranscript [grammar syntax] = call Print [grammar syntax]
+judgment TranscriptWellFormed [grammar source] =
+  match call ParseTranscript [grammar source] {
+    case (#TranscriptDocument lines) -> mk #valid [lines]
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment TranscriptLines [node] = call FlattenSeq [node #TranscriptDocument]
+
+judgment TranscriptInferLines [lines] =
+  match lines {
+    case [] -> list []
+    case (#Comment content newline) :: rest ->
+      prim #cons [mk #type [#comment #line #declared #line] call TranscriptInferLines [rest]]
+    case (#Command content newline) :: rest ->
+      prim #cons [mk #type [#command #line #declared #line] call TranscriptInferLines [rest]]
+    case (#Output content newline) :: rest ->
+      prim #cons [mk #type [#output #line #declared #line] call TranscriptInferLines [rest]]
+    case (#ParamDirective name content newline) :: rest ->
+      prim #cons [mk #type [name #param #declared #param] call TranscriptInferLines [rest]]
+    case (#UseDirective content newline) :: rest ->
+      prim #cons [mk #type [#use #directive #declared #directive] call TranscriptInferLines [rest]]
+    case head :: rest -> call TranscriptInferLines [rest]
+  }
+
+judgment InferTranscript [grammar source] =
+  call TranscriptInferLines [call TranscriptLines [call ParseTranscript [grammar source]]]
+
+judgment TypeCheckTranscript [grammar source] = list []

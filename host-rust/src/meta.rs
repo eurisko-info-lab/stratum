@@ -10,7 +10,7 @@ use crate::canon::{canonical_map, compare, decode, encode, write_text, Canon, Di
 use crate::grammar;
 use crate::number::{Int, Nat};
 use crate::sha::sha256;
-use crate::store::{digest_of, Artifact, Cas};
+use crate::store::{digest_of, Cas};
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -1212,7 +1212,3 @@ pub fn derive(
     engine.derive(goal)
 }
 
-/// The artifact helper used when reporting attestations.
-pub fn artifact_digest(kind: &str, body: &Canon) -> Digest {
-    Artifact { kind: kind.to_string(), body: body.clone() }.digest()
-}

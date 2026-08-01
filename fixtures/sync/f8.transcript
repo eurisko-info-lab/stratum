@@ -2,7 +2,7 @@
 
 $ foundation verify --dir foundations/F8
 > foundation F8
-> digest 6a17074f182604ed2ff7bb7cf690a944f9f18513440ab32790cf7e293fd60711
+> digest 3be607ba0c1026c3c7c9e27a62ee1dd5eb929dfcbbc8c171e4e4fe7c82dc76ac
 > closure 63 artifacts
 > check two-peers-synchronize-from-disjoint-closures ok
 > check synchronized-store-holds-both-closures ok
@@ -21,11 +21,11 @@ $ foundation verify --dir foundations/F8
 $ foundation verify-successor --predecessor foundations/F7 --successor foundations/F8
 > predecessor F7
 > successor F8
-> result (valid #d60de22bfb20d3edbe5a383ad388ed77eef3adab702da0cdd1e4c7759ed9fb80f)
+> result (valid #dee8bd2a0777a6c0012ca8fd55bafdb62c89b0371d3df91bc6d27f3637865e87b)
 
 $ foundation reconstruct --dir foundations/F8
 > reconstructed F8
-> digest 6a17074f182604ed2ff7bb7cf690a944f9f18513440ab32790cf7e293fd60711
+> digest 3be607ba0c1026c3c7c9e27a62ee1dd5eb929dfcbbc8c171e4e4fe7c82dc76ac
 > stable yes
 > closure 63 artifacts
 > checks 12 ok

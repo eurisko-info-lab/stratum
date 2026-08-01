@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if page.title %}{{ page.title }} &middot; {% endif %}{{ site.title }}</title>
+    <meta name="description" content="{{ page.description | default: site.description | strip_newlines }}">
+    <link rel="canonical" href="{{ page.url | absolute_url }}">
+
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: #14171a;
+        --paper: #ffffff;
+        --muted: #5b6570;
+        --rule: #d8dee4;
+        --accent: #2b5c8a;
+        --code: #f4f6f8;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #dfe3e8;
+          --paper: #14171a;
+          --muted: #98a2ad;
+          --rule: #2c333a;
+          --accent: #78a9d8;
+          --code: #1c2126;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+              "Helvetica Neue", Arial, sans-serif;
+      }
+      .page { max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem 5rem; }
+      header.masthead {
+        border-bottom: 1px solid var(--rule);
+        margin-bottom: 2.5rem;
+        padding-bottom: 1rem;
+      }
+      header.masthead a.wordmark {
+        font-weight: 600;
+        font-size: 1.1rem;
+        letter-spacing: 0.01em;
+        color: var(--ink);
+        text-decoration: none;
+      }
+      nav.sections { margin-top: 0.6rem; font-size: 0.9rem; }
+      nav.sections a { color: var(--muted); text-decoration: none; margin-right: 1rem; }
+      nav.sections a:hover { color: var(--accent); text-decoration: underline; }
+      a { color: var(--accent); }
+      h1, h2, h3 { line-height: 1.25; margin-top: 2.2rem; }
+      h1 { font-size: 1.9rem; margin-top: 0; }
+      h2 { font-size: 1.35rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.3rem; }
+      h3 { font-size: 1.1rem; }
+      code, pre {
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 0.875em;
+      }
+      code { background: var(--code); padding: 0.15em 0.35em; border-radius: 3px; }
+      pre {
+        background: var(--code);
+        padding: 0.9rem 1rem;
+        border-radius: 5px;
+        overflow-x: auto;
+        border: 1px solid var(--rule);
+      }
+      pre code { background: none; padding: 0; }
+      blockquote {
+        margin: 1.4rem 0;
+        padding: 0.2rem 0 0.2rem 1rem;
+        border-left: 3px solid var(--rule);
+        color: var(--muted);
+      }
+      table { border-collapse: collapse; width: 100%; margin: 1.4rem 0; display: block; overflow-x: auto; }
+      th, td { border: 1px solid var(--rule); padding: 0.45rem 0.7rem; text-align: left; }
+      th { background: var(--code); }
+      footer.colophon {
+        margin-top: 4rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--rule);
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+    </style>
+
+    <!-- The staircase is described with equations, so the site has to render
+         them. This is the only thing on the page that is fetched from
+         anywhere else. -->
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+      };
+    </script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  </head>
+
+  <body>
+    <div class="page">
+      <header class="masthead">
+        <a class="wordmark" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+        <nav class="sections">
+          <a href="{{ '/staircase.html' | relative_url }}">Staircase</a>
+          <a href="{{ '/publication-workflow.html' | relative_url }}">Publication</a>
+          <a href="{{ '/invariants.html' | relative_url }}">Invariants</a>
+          <a href="{{ '/native-boundary.html' | relative_url }}">Boundary</a>
+          <a href="{{ '/studio.html' | relative_url }}">Studio</a>
+          <a href="{{ '/sponsoring.html' | relative_url }}">Sponsoring</a>
+          <a href="https://github.com/eurisko-info-lab/stratum/blob/main/CONTRIBUTING.md">Contributing</a>
+          <a href="https://github.com/eurisko-info-lab/stratum">Source</a>
+        </nav>
+      </header>
+
+      <main>
+        {{ content }}
+      </main>
+
+      <footer class="colophon">
+        <p>
+          Stratum is licensed under Apache-2.0. Every page here is a file in
+          <a href="https://github.com/eurisko-info-lab/stratum/tree/main/docs">docs/</a>,
+          rendered rather than rewritten.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -13,4 +13,4 @@
       (name "generic semantic change calculus")
       (programs [(file "features/change/change.generated.meta")])
       (sources [(text-file "features/change/change.meta")])
-      (derived [DeltaMeta1 DeltaGrammar1 DeltaLambda DeltaFoundation]))))
+      (derived [DeltaMeta DeltaGrammar DeltaLambda DeltaFoundation]))))

@@ -10,7 +10,7 @@ judgment AuthorIdentity [] = call Signer [call PublicKey [call AuthorSecret []]]
 judgment OtherIdentity [] = call Signer [call PublicKey [call OtherSecret []]]
 
 judgment CodeScope [] = call AuthorityScope [list [#code] list [#lambda]]
-judgment MetaScope [] = call AuthorityScope [list [#code #meta] list [#lambda #meta1]]
+judgment MetaScope [] = call AuthorityScope [list [#code #meta] list [#lambda #meta]]
 
 judgment Now [] = 10
 
@@ -295,3 +295,27 @@ judgment BranchFullyAccepted [] =
 
 judgment AcceptanceBindsPredecessor [] =
   call AcceptanceDecision'predecessor [call AcceptedDecision []]
+
+; ------------------------------------------------------- runs against state
+
+judgment CompletedRun [] =
+  prim #mput [
+    prim #mput [prim #mnew [] #steps list [prim #mput [prim #mnew [] #exit 0]]]
+    #changed list [prim #mput [prim #mnew [] #after "d"]]
+  ]
+
+judgment FailedRun [] =
+  prim #mput [
+    prim #mput [prim #mnew [] #steps list [prim #mput [prim #mnew [] #exit 1]]]
+    #changed list []
+  ]
+
+judgment LosingRun [] =
+  prim #mput [
+    prim #mput [prim #mnew [] #steps list [prim #mput [prim #mnew [] #exit 0]]]
+    #changed list [prim #mput [prim #mnew [] #before "d"]]
+  ]
+
+judgment RunAccepted [] = call EvaluateRun [call CompletedRun []]
+judgment RunWithFailedStepRefused [] = call EvaluateRun [call FailedRun []]
+judgment RunThatOnlyRemovesRefused [] = call EvaluateRun [call LosingRun []]
