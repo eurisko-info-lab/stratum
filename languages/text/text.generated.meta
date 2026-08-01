@@ -1,0 +1,54 @@
+; Generated from languages/text/text.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module text)
+  (judgment
+    TextFile
+    [text]
+    (mk
+      TextFile
+      (v text)))
+  (judgment
+    TextFile'text
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseText
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintText
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    TextWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseText
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          TextFile
+          (pv text))
+        (mk
+          valid
+          (prim
+            slen
+            (v text))))
+      (case
+        _
+        (mk
+          invalid
+          (q parse))))))

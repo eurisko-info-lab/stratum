@@ -2,7 +2,7 @@
 
 $ foundation verify --dir foundations/F4
 > foundation F4
-> digest 02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0
+> digest 7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47
 > closure 42 artifacts
 > check tools-are-derived-from-the-schema ok
 > check parser-is-selected-by-role ok
@@ -26,11 +26,11 @@ $ foundation verify --dir foundations/F4
 $ foundation verify-successor --predecessor foundations/F3 --successor foundations/F4
 > predecessor F3
 > successor F4
-> result (valid #d66560a27e48c9fd25198cd1a154e89034b5ca1c5209c43290d435bc5b663ca0b)
+> result (valid #db53fcd79a4a5ae6b4c734c90a3793bd2dd1c6994158efd495fffd071f32d61f4)
 
 $ foundation reconstruct --dir foundations/F4
 > reconstructed F4
-> digest 02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0
+> digest 7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47
 > stable yes
 > closure 42 artifacts
 > checks 17 ok
@@ -43,7 +43,7 @@ $ derive --foundation foundations/F4 --goal '(call ToolJudgment (call ToolchainF
 > CompileTerm
 
 # Changing the grammar regenerates the tools that depend on it.
-$ derive --foundation foundations/F4 --goal '(call GrammarChangeAffectsTools (grammar lambda) (grammar meta1) (q parse))'
+$ derive --foundation foundations/F4 --goal '(call GrammarChangeAffectsTools (grammar lambda) (grammar meta) (q parse))'
 > #f
 
 # The evaluator is the judgment the schema selected.

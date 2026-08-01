@@ -3,7 +3,7 @@
 
 $ foundation verify --dir foundations/F11
 > foundation F11
-> digest f6f952464cf0533b93dd976b5aa2359f456b5f68620b1aa54cf504e03c82ae4a
+> digest 647dce639e095e355bf3826f534a968379ac11a43555c41394c9a8de66ca3881
 > closure 80 artifacts
 > check the-runtime-offers-only-generic-primitives ok
 > check both-profiles-compose-the-same-runtime ok
@@ -37,18 +37,18 @@ $ foundation verify --dir foundations/F11
 $ foundation verify-successor --predecessor foundations/F10 --successor foundations/F11
 > predecessor F10
 > successor F11
-> result (valid #ddebcd39918b384776523e653b7693468880a2ac62a75c03ca5d20b7ce9dca2f9)
+> result (valid #d8b83d22856707f4d532964f63ff1ea790e601260d89fb4303a734bc369506aaa)
 
 $ foundation reconstruct --dir foundations/F11
 > reconstructed F11
-> digest f6f952464cf0533b93dd976b5aa2359f456b5f68620b1aa54cf504e03c82ae4a
+> digest 647dce639e095e355bf3826f534a968379ac11a43555c41394c9a8de66ca3881
 > stable yes
 > closure 80 artifacts
 > checks 27 ok
 
 $ foundation attest --dir foundations/F11
-> (attestation (name "F11") (foundation #df6f952464cf0533b93dd976b5aa2359f456b5f68620b1aa54cf504e03c82ae4a) (application #d7c437ee68ae4b1bf0a0db9307c276e0a569e3a73fd2859c028c852055bed0670) (meta #d176a10eeb70418d43979abc0b8d55f852028a873c378416c4e3b4060a921cb0a) (closure 80) (kinds {application 12 change 13 data 1 foundation 12 grammar 3 meta-program 33 profile 2 source 4}) (complete #t))
-> attestation 1b8c96a6d52d6eb854e7ff8bce6e3fef38accd04cb8785ee169cf8fbd0b80b2c
+> (attestation (name "F11") (foundation #d647dce639e095e355bf3826f534a968379ac11a43555c41394c9a8de66ca3881) (application #d588505e5a2d338c0527bf82872dc8f60029f96aba547882fd330f745403e7496) (meta #d4a790640c8b6c06b54de624e525963a338cc65903f79895fa44b73d024e5c249) (closure 80) (kinds {application 12 change 13 data 1 foundation 12 grammar 3 meta-program 33 profile 2 source 4}) (complete #t))
+> attestation 9fb4eef455ff86975b96720b2e58e7d3ae7d0dfe3a748327a8918e4c75b04485
 
 # One generic runtime, offering only these primitives.
 $ derive --foundation foundations/F11 --goal '(call Primitives)'

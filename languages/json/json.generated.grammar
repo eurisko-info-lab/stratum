@@ -1,0 +1,82 @@
+; Generated from languages/json/json.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "json")
+  (start value)
+  (token string str "\"[^\"]*\"")
+  (token number str "-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?")
+  (category
+    value
+    (prod
+      EmptyObject
+      [
+        (kw "{")
+        (kw "}")])
+    (prod
+      Object
+      [
+        (kw "{")
+        (bind members members)
+        (kw "}")])
+    (prod
+      EmptyArray
+      [
+        (kw "[")
+        (kw "]")])
+    (prod
+      Array
+      [
+        (kw "[")
+        (bind elements elements)
+        (kw "]")])
+    (prod
+      String
+      [
+        (bind value string)])
+    (prod
+      Number
+      [
+        (bind value number)])
+    (prod
+      True
+      [
+        (kw "true")])
+    (prod
+      False
+      [
+        (kw "false")])
+    (prod
+      Null
+      [
+        (kw "null")]))
+  (category
+    members
+    (prod
+      MoreMembers
+      [
+        (bind value member)
+        (kw ",")
+        (bind rest members)])
+    (prod
+      LastMember
+      [
+        (bind value member)]))
+  (category
+    member
+    (prod
+      Member
+      [
+        (bind key string)
+        (kw ":")
+        (bind value value)]))
+  (category
+    elements
+    (prod
+      MoreElements
+      [
+        (bind value value)
+        (kw ",")
+        (bind rest elements)])
+    (prod
+      LastElement
+      [
+        (bind value value)])))

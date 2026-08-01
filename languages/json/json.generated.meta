@@ -1,0 +1,219 @@
+; Generated from languages/json/json.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module json)
+  (judgment
+    empty-object
+    []
+    (mk empty-object))
+  (judgment
+    object
+    [members]
+    (mk
+      object
+      (v members)))
+  (judgment
+    empty-array
+    []
+    (mk empty-array))
+  (judgment
+    array
+    [elements]
+    (mk
+      array
+      (v elements)))
+  (judgment
+    string
+    [value]
+    (mk
+      string
+      (v value)))
+  (judgment
+    number
+    [value]
+    (mk
+      number
+      (v value)))
+  (judgment
+    true
+    []
+    (mk true))
+  (judgment
+    false
+    []
+    (mk false))
+  (judgment
+    null
+    []
+    (mk null))
+  (judgment
+    IsJson
+    [value]
+    (prim
+      contains
+      (q
+        [empty-object object empty-array array string number true false null])
+      (prim
+        tag
+        (v value))))
+  (judgment
+    Member
+    [key value]
+    (mk
+      Member
+      (v key)
+      (v value)))
+  (judgment
+    Member'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Member'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ParseJson
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintJson
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    JsonWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseJson
+        (v grammar)
+        (v source))
+      (case
+        (pm EmptyObject)
+        (mk valid))
+      (case
+        (pm
+          Object
+          (pv members))
+        (mk
+          valid
+          (v members)))
+      (case
+        (pm EmptyArray)
+        (mk valid))
+      (case
+        (pm
+          Array
+          (pv elements))
+        (mk
+          valid
+          (v elements)))
+      (case
+        (pm
+          String
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          Number
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm True)
+        (mk valid))
+      (case
+        (pm False)
+        (mk valid))
+      (case
+        (pm Null)
+        (mk valid))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    JsonValueType
+    [node]
+    (match
+      (v node)
+      (case
+        (pm EmptyObject)
+        (q object))
+      (case
+        (pm
+          Object
+          (pv members))
+        (q object))
+      (case
+        (pm EmptyArray)
+        (q array))
+      (case
+        (pm
+          Array
+          (pv elements))
+        (q array))
+      (case
+        (pm
+          String
+          (pv value))
+        (q string))
+      (case
+        (pm
+          Number
+          (pv value))
+        (q number))
+      (case
+        (pm True)
+        (q boolean))
+      (case
+        (pm False)
+        (q boolean))
+      (case
+        (pm Null)
+        (q null))
+      (case
+        _
+        (q unknown))))
+  (judgment
+    InferJson
+    [grammar source]
+    (let
+      root
+      (call
+        ParseJson
+        (v grammar)
+        (v source))
+      (lst
+        (mk
+          type
+          (q root)
+          (call
+            JsonValueType
+            (v root))
+          (q declared)
+          (call
+            JsonValueType
+            (v root))))))
+  (judgment
+    TypeCheckJson
+    [grammar source]
+    (lst)))

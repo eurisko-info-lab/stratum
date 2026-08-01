@@ -1,0 +1,11 @@
+; Generated from languages/text/text.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "text")
+  (start source)
+  (token body str "[^\\r]+")
+  (category
+    source
+    (prod
+      TextFile
+      [
+        (bind text body)])))

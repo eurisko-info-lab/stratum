@@ -1,10 +1,10 @@
 
 artifactevidence
 evidence
-checkmeta1-parse-print-roundtripok
-checkgrammar1-parse-print-roundtripok
-checkgrammar1-describes-itselfok
-checkmeta1-grammar-reconstructsok
+checkmeta-parse-print-roundtripok
+checkgrammar-parse-print-roundtripok
+checkgrammar-describes-itselfok
+checkmeta-grammar-reconstructsok
 checklambda-grammar-reconstructsok
 checklambda-program-fixpointok
 check!elaboration-stable-under-printingok

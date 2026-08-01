@@ -1,0 +1,16 @@
+; The canonical change from F11 to F12.
+;
+; F12 elevates structured content as repository authority for declared
+; languages, binds materialization semantics explicitly, and verifies profile
+; constraints and constructive patch derivation.
+(change
+  (kind foundation)
+  (name "F11->F12")
+  (predecessor (foundation-of "foundations/F11"))
+  (delta-meta (file "changes/F11-F12/delta-meta.canon"))
+  (delta-grammar (file "changes/F11-F12/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "semantic filesystem projections and materialization-profile law")
+      (programs [(text-file "repo-scala/StratumRepo.scala")])
+      (sources [(text-file "repo-scala/LanguageCatalogue.scala")]))))

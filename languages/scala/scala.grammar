@@ -1,0 +1,117 @@
+grammar "scala"
+start document
+
+token layout sym "x"
+token linecomment str "//[^\\r\\n]*\\r?\\n?"
+token blockcomment str "/\\*([^*]|\\*+[^*/])*\\*+/"
+token triplequoted str "\"\"\"([^\"]|\"\"?)*\"\"\""
+token dquoted str "\"(\\$\\{[^{}]*\\}|\\$[A-Za-z_][A-Za-z0-9_]*|\\$|\\\\.|[^\"\\\\$\\r\\n])*\""
+token charlit str "'(\\\\(u[0-9a-fA-F]{4}|.)|[^'\\\\])'"
+token number str "(0x[0-9a-fA-F]+|[0-9]+(\\.[0-9]+)?)[a-zA-Z]*"
+token word str "[A-Za-z_][A-Za-z0-9_]*"
+token operator str "[!#%&*+\\-/<=>?@^|~]+"
+token newline sym "\\n"
+
+category document
+  fold ScalaDocument item
+
+category item
+  prod Brace "{" body : document "}"
+  prod EmptyBrace "{" "}"
+  prod BlockColon header : headerDocument ":" newline : newline "INDENT" body : document "DEDENT"
+  prod BlockColonBare ":" newline : newline "INDENT" body : document "DEDENT"
+  prod BlockEquals header : headerDocumentTyped "=" newline : newline "INDENT" body : document "DEDENT"
+  prod BlockEqualsBare "=" newline : newline "INDENT" body : document "DEDENT"
+  prod BlockArrow header : headerDocumentTyped "=>" newline : newline "INDENT" body : document "DEDENT"
+  prod BlockThen header : headerDocumentTyped "then" newline : newline "INDENT" body : document "DEDENT"
+  prod BlockElse "else" newline : newline "INDENT" body : document "DEDENT"
+  prod BlockDo header : headerDocumentTyped "do" newline : newline "INDENT" body : document "DEDENT"
+  prod IndentBlock "INDENT" body : document "DEDENT"
+  pass itemCore
+
+category itemCore
+  prod Colon ":"
+  prod Assign "="
+  prod FatArrow "=>"
+  prod ThenKw "then"
+  prod ElseKw "else"
+  prod DoKw "do"
+  prod Newline value : newline
+  pass itemCoreNoColon
+
+category itemCoreNoColon
+  prod Paren "(" body : document ")"
+  prod EmptyParen "(" ")"
+  prod Bracket "[" body : document "]"
+  prod EmptyBracket "[" "]"
+  prod LineComment value : linecomment
+  prod BlockComment value : blockcomment
+  prod TripleQuoted value : triplequoted
+  prod DQuoted value : dquoted
+  prod CharLit value : charlit
+  prod Number value : number
+  prod Abstract "abstract"
+  prod CaseKw "case"
+  prod Catch "catch"
+  prod ClassKw "class"
+  prod Def "def"
+  prod Enum "enum"
+  prod Extends "extends"
+  prod Export "export"
+  prod Extension "extension"
+  prod False "false"
+  prod Final "final"
+  prod Finally "finally"
+  prod For "for"
+  prod Given "given"
+  prod If "if"
+  prod Implicit "implicit"
+  prod Import "import"
+  prod Inline "inline"
+  prod Lazy "lazy"
+  prod Match "match"
+  prod New "new"
+  prod NullKw "null"
+  prod ObjectKw "object"
+  prod Opaque "opaque"
+  prod Override "override"
+  prod Package "package"
+  prod Private "private"
+  prod Protected "protected"
+  prod Return "return"
+  prod Sealed "sealed"
+  prod SelfKw "this"
+  prod SuperKw "super"
+  prod Throw "throw"
+  prod Trait "trait"
+  prod True "true"
+  prod Try "try"
+  prod TypeKw "type"
+  prod Using "using"
+  prod Val "val"
+  prod Var "var"
+  prod While "while"
+  prod With "with"
+  prod Yield "yield"
+  prod EndKw "end"
+  prod Comma ","
+  prod Semicolon ";"
+  prod Dot "."
+  prod Operator value : operator
+  prod Word value : word
+
+category headerDocument
+  fold HeaderDocument headerItem
+
+category headerItem
+  pass itemCoreNoColon
+
+category itemCoreWithColon
+  prod TypedColon ":"
+  pass itemCoreNoColon
+
+category headerDocumentTyped
+  fold HeaderDocumentTyped headerItemTyped
+
+category headerItemTyped
+  pass itemCoreWithColon

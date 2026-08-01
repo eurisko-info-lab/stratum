@@ -11,7 +11,7 @@
       (Compose
         (AtKey
           meta
-          (Replace #d8775ae0fa3aac5707fc50a777ca85d42000f770823cabca36b960ec55250301e #d7498ab8afc0f1929408af8712ba84eb55259b86e9c40d9ffdf0b360cc2ff1399))
+          (Replace #d6e8c4370bff2e84737a410a4f3824631a1aa26680d51ccfbab20a75f1a82580f #d8d206d65b8d7d042f52e08d0594e5308ccb73e549a7f8441da2d82c95151b779))
         (Compose
           (AtKey
             checks
@@ -119,9 +119,9 @@
                     SettledHeight
                     (call
                       SettleTwo
-                      (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                      (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
-                      (q #da9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af)))
+                      (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                      (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
+                      (q #d95e347a8b8e553794744473007b080456462c3eeaee863f25ee48edad809cb02)))
                   (value 2))
                 (check
                   settled-head-is-the-last-successor
@@ -131,10 +131,10 @@
                       SettledHead
                       (call
                         SettleTwo
-                        (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                        (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
-                        (q #da9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af)))
-                    (q #da9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af))
+                        (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                        (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
+                        (q #d95e347a8b8e553794744473007b080456462c3eeaee863f25ee48edad809cb02)))
+                    (q #d95e347a8b8e553794744473007b080456462c3eeaee863f25ee48edad809cb02))
                   (value #t))
                 (check
                   a-certificate-for-another-proposal-is-rejected
@@ -142,9 +142,9 @@
                     SettlementRejection
                     (call
                       SettleWrongCertificate
-                      (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                      (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
-                      (q #da9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af)))
+                      (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                      (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
+                      (q #d95e347a8b8e553794744473007b080456462c3eeaee863f25ee48edad809cb02)))
                   (value certificate-for-another-proposal))
                 (check
                   insufficient-agreement-is-rejected
@@ -152,8 +152,8 @@
                     SettlementRejection
                     (call
                       SettleInsufficient
-                      (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                      (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)))
+                      (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                      (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)))
                   (value insufficient-quorum))
                 (check
                   the-wrong-federation-identity-is-rejected
@@ -161,15 +161,15 @@
                     SettlementRejection
                     (call
                       SettleWrongFederation
-                      (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                      (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)))
+                      (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                      (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)))
                   (value wrong-federation))
                 (check
                   a-replica-abstains-from-a-semantically-invalid-transition
                   (call
                     SemanticallyInvalidVote
-                    (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                    (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca))
+                    (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                    (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe))
                   (value
                     (abstained semantically-invalid)))
                 (check
@@ -178,24 +178,24 @@
                     tag
                     (call
                       DoubleVote
-                      (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                      (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
-                      (q #da9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af)))
+                      (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                      (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
+                      (q #d95e347a8b8e553794744473007b080456462c3eeaee863f25ee48edad809cb02)))
                   (value equivocation))
                 (check
                   honest-voting-produces-no-evidence
                   (call
                     HonestVotes
-                    (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                    (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca))
+                    (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                    (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe))
                   (value (none)))
                 (check
                   membership-changes-through-a-settled-transition
                   (call
                     MembershipAfterSettlement
-                    (q #d02100ca0c79fa910178df316afbad1c2daa762ecaac00900301c7c85c5538ee0)
-                    (q #de90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca)
-                    (q #da9e236e08d5ae2ed6e330fefa4a7fea6ff705ecd8887974c7113d5cad64175af))
+                    (q #d7ef39292c96f67fcc38d79e4a81b54518d3e764a821445066e9978cc45c39f47)
+                    (q #d7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe)
+                    (q #d95e347a8b8e553794744473007b080456462c3eeaee863f25ee48edad809cb02))
                   (value 5))
                 (check
                   agreement-threshold-is-three-f-plus-one

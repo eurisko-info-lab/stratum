@@ -1109,4 +1109,88 @@
       (mk publishable)
       (mk
         blocked
-        (q unaccepted-patches)))))
+        (q unaccepted-patches))))
+  (judgment
+    RunSteps
+    [report]
+    (prim
+      mget
+      (v report)
+      (q steps)
+      (lst)))
+  (judgment
+    RunChanged
+    [report]
+    (prim
+      mget
+      (v report)
+      (q changed)
+      (lst)))
+  (judgment
+    StepsSucceeded
+    [steps]
+    (match
+      (v steps)
+      (case
+        (pnil)
+        (q #t))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              mget
+              (v head)
+              (q exit)
+              (q 0))
+            (q 0))
+          (call
+            StepsSucceeded
+            (v rest))
+          (q #f)))))
+  (judgment
+    ChangesArePresent
+    [changed]
+    (match
+      (v changed)
+      (case
+        (pnil)
+        (q #t))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            mhas
+            (v head)
+            (q after))
+          (call
+            ChangesArePresent
+            (v rest))
+          (q #f)))))
+  (judgment
+    EvaluateRun
+    [report]
+    (if
+      (call
+        StepsSucceeded
+        (call
+          RunSteps
+          (v report)))
+      (if
+        (call
+          ChangesArePresent
+          (call
+            RunChanged
+            (v report)))
+        (mk valid)
+        (mk
+          invalid
+          (q removed-without-replacement)))
+      (mk
+        invalid
+        (q step-failed)))))

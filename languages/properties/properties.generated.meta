@@ -1,0 +1,156 @@
+; Generated from languages/properties/properties.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module properties)
+  (judgment
+    PropertiesFile
+    [lines]
+    (mk
+      PropertiesFile
+      (v lines)))
+  (judgment
+    PropertiesFile'lines
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Property
+    [key value newline]
+    (mk
+      Property
+      (v key)
+      (v value)
+      (v newline)))
+  (judgment
+    Property'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Property'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Property'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Blank
+    [newline]
+    (mk
+      Blank
+      (v newline)))
+  (judgment
+    Blank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseProperties
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintProperties
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    PropertiesWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseProperties
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          PropertiesFile
+          (pv lines))
+        (mk
+          valid
+          (v lines)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    PropertiesLines
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q PropertiesFile)))
+  (judgment
+    PropertiesInferLines
+    [lines]
+    (match
+      (v lines)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Property
+            (pv key)
+            (pv value)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v key)
+            (q string)
+            (q declared)
+            (q string))
+          (call
+            PropertiesInferLines
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          PropertiesInferLines
+          (v rest)))))
+  (judgment
+    InferProperties
+    [grammar source]
+    (call
+      PropertiesInferLines
+      (call
+        PropertiesLines
+        (call
+          ParseProperties
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckProperties
+    [grammar source]
+    (lst)))

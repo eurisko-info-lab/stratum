@@ -1,6 +1,6 @@
 
 artifactevidence
-evidence
+evidence
 check+accepted-under-a-single-author-constitutionok
 check,accepted-under-a-test-requiring-constitutionok
 check-accepted-under-a-proof-requiring-constitutionok
@@ -21,3 +21,6 @@
 check&a-fully-accepted-branch-is-publishableok
 checktoolchain-derivation-unchangedok
 checklambda-behaviour-unchangedok
+checka-completed-run-is-acceptableok
+checka-run-with-a-failed-step-is-notok
+checka-run-that-only-removes-is-notok

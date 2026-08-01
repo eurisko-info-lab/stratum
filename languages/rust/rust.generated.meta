@@ -1,0 +1,2505 @@
+; Generated from languages/rust/rust.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module rust)
+  (judgment
+    RustDocument
+    [items]
+    (mk
+      RustDocument
+      (v items)))
+  (judgment
+    RustDocument'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Brace
+    [body]
+    (mk
+      Brace
+      (v body)))
+  (judgment
+    Brace'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyBrace
+    []
+    (mk EmptyBrace))
+  (judgment
+    FunctionDecl
+    [name header body]
+    (mk
+      FunctionDecl
+      (v name)
+      (v header)
+      (v body)))
+  (judgment
+    FunctionDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    FunctionDecl'header
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    FunctionDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    StructDecl
+    [name body]
+    (mk
+      StructDecl
+      (v name)
+      (v body)))
+  (judgment
+    StructDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StructDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    EmptyStructDecl
+    [name]
+    (mk
+      EmptyStructDecl
+      (v name)))
+  (judgment
+    EmptyStructDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TupleStructDecl
+    [name body]
+    (mk
+      TupleStructDecl
+      (v name)
+      (v body)))
+  (judgment
+    TupleStructDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TupleStructDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    UnitStructDecl
+    [name]
+    (mk
+      UnitStructDecl
+      (v name)))
+  (judgment
+    UnitStructDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EnumDecl
+    [name body]
+    (mk
+      EnumDecl
+      (v name)
+      (v body)))
+  (judgment
+    EnumDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EnumDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ImplDecl
+    [heritage body]
+    (mk
+      ImplDecl
+      (v heritage)
+      (v body)))
+  (judgment
+    ImplDecl'heritage
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ImplDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    EmptyImplDecl
+    [heritage]
+    (mk
+      EmptyImplDecl
+      (v heritage)))
+  (judgment
+    EmptyImplDecl'heritage
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TraitDecl
+    [name body]
+    (mk
+      TraitDecl
+      (v name)
+      (v body)))
+  (judgment
+    TraitDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TraitDecl'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    TraitDeclHeritage
+    [name heritage body]
+    (mk
+      TraitDeclHeritage
+      (v name)
+      (v heritage)
+      (v body)))
+  (judgment
+    TraitDeclHeritage'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    TraitDeclHeritage'heritage
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    TraitDeclHeritage'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    ModDecl
+    [name]
+    (mk
+      ModDecl
+      (v name)))
+  (judgment
+    ModDecl'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ModDeclBraced
+    [name body]
+    (mk
+      ModDeclBraced
+      (v name)
+      (v body)))
+  (judgment
+    ModDeclBraced'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ModDeclBraced'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    HeaderDocument
+    [items]
+    (mk
+      HeaderDocument
+      (v items)))
+  (judgment
+    HeaderDocument'items
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Paren
+    [body]
+    (mk
+      Paren
+      (v body)))
+  (judgment
+    Paren'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyParen
+    []
+    (mk EmptyParen))
+  (judgment
+    Bracket
+    [body]
+    (mk
+      Bracket
+      (v body)))
+  (judgment
+    Bracket'body
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    EmptyBracket
+    []
+    (mk EmptyBracket))
+  (judgment
+    DQuoted
+    [value]
+    (mk
+      DQuoted
+      (v value)))
+  (judgment
+    DQuoted'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ByteString
+    [value]
+    (mk
+      ByteString
+      (v value)))
+  (judgment
+    ByteString'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ByteChar
+    [value]
+    (mk
+      ByteChar
+      (v value)))
+  (judgment
+    ByteChar'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    CharLit
+    [value]
+    (mk
+      CharLit
+      (v value)))
+  (judgment
+    CharLit'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Lifetime
+    [value]
+    (mk
+      Lifetime
+      (v value)))
+  (judgment
+    Lifetime'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Number
+    [value]
+    (mk
+      Number
+      (v value)))
+  (judgment
+    Number'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    As
+    []
+    (mk As))
+  (judgment
+    Break
+    []
+    (mk Break))
+  (judgment
+    Const
+    []
+    (mk Const))
+  (judgment
+    Continue
+    []
+    (mk Continue))
+  (judgment
+    Crate
+    []
+    (mk Crate))
+  (judgment
+    Dyn
+    []
+    (mk Dyn))
+  (judgment
+    Else
+    []
+    (mk Else))
+  (judgment
+    Enum
+    []
+    (mk Enum))
+  (judgment
+    Extern
+    []
+    (mk Extern))
+  (judgment
+    False
+    []
+    (mk False))
+  (judgment
+    Fn
+    []
+    (mk Fn))
+  (judgment
+    For
+    []
+    (mk For))
+  (judgment
+    If
+    []
+    (mk If))
+  (judgment
+    Impl
+    []
+    (mk Impl))
+  (judgment
+    In
+    []
+    (mk In))
+  (judgment
+    Let
+    []
+    (mk Let))
+  (judgment
+    Loop
+    []
+    (mk Loop))
+  (judgment
+    Match
+    []
+    (mk Match))
+  (judgment
+    Mod
+    []
+    (mk Mod))
+  (judgment
+    Move
+    []
+    (mk Move))
+  (judgment
+    Mut
+    []
+    (mk Mut))
+  (judgment
+    Pub
+    []
+    (mk Pub))
+  (judgment
+    Ref
+    []
+    (mk Ref))
+  (judgment
+    Return
+    []
+    (mk Return))
+  (judgment
+    SelfUpper
+    []
+    (mk SelfUpper))
+  (judgment
+    SelfLower
+    []
+    (mk SelfLower))
+  (judgment
+    Static
+    []
+    (mk Static))
+  (judgment
+    Struct
+    []
+    (mk Struct))
+  (judgment
+    Super
+    []
+    (mk Super))
+  (judgment
+    Trait
+    []
+    (mk Trait))
+  (judgment
+    True
+    []
+    (mk True))
+  (judgment
+    TypeKw
+    []
+    (mk TypeKw))
+  (judgment
+    Unsafe
+    []
+    (mk Unsafe))
+  (judgment
+    Use
+    []
+    (mk Use))
+  (judgment
+    Where
+    []
+    (mk Where))
+  (judgment
+    While
+    []
+    (mk While))
+  (judgment
+    Async
+    []
+    (mk Async))
+  (judgment
+    Await
+    []
+    (mk Await))
+  (judgment
+    PathSep
+    []
+    (mk PathSep))
+  (judgment
+    Arrow
+    []
+    (mk Arrow))
+  (judgment
+    FatArrow
+    []
+    (mk FatArrow))
+  (judgment
+    DotDotEq
+    []
+    (mk DotDotEq))
+  (judgment
+    DotDot
+    []
+    (mk DotDot))
+  (judgment
+    Dot
+    []
+    (mk Dot))
+  (judgment
+    AndAnd
+    []
+    (mk AndAnd))
+  (judgment
+    OrOr
+    []
+    (mk OrOr))
+  (judgment
+    EqEq
+    []
+    (mk EqEq))
+  (judgment
+    Ne
+    []
+    (mk Ne))
+  (judgment
+    Le
+    []
+    (mk Le))
+  (judgment
+    Ge
+    []
+    (mk Ge))
+  (judgment
+    Shl
+    []
+    (mk Shl))
+  (judgment
+    Shr
+    []
+    (mk Shr))
+  (judgment
+    PlusEq
+    []
+    (mk PlusEq))
+  (judgment
+    MinusEq
+    []
+    (mk MinusEq))
+  (judgment
+    StarEq
+    []
+    (mk StarEq))
+  (judgment
+    SlashEq
+    []
+    (mk SlashEq))
+  (judgment
+    PercentEq
+    []
+    (mk PercentEq))
+  (judgment
+    Less
+    []
+    (mk Less))
+  (judgment
+    Greater
+    []
+    (mk Greater))
+  (judgment
+    Amp
+    []
+    (mk Amp))
+  (judgment
+    Pipe
+    []
+    (mk Pipe))
+  (judgment
+    Plus
+    []
+    (mk Plus))
+  (judgment
+    Minus
+    []
+    (mk Minus))
+  (judgment
+    Star
+    []
+    (mk Star))
+  (judgment
+    Slash
+    []
+    (mk Slash))
+  (judgment
+    Percent
+    []
+    (mk Percent))
+  (judgment
+    Caret
+    []
+    (mk Caret))
+  (judgment
+    Tilde
+    []
+    (mk Tilde))
+  (judgment
+    Question
+    []
+    (mk Question))
+  (judgment
+    Bang
+    []
+    (mk Bang))
+  (judgment
+    Hash
+    []
+    (mk Hash))
+  (judgment
+    At
+    []
+    (mk At))
+  (judgment
+    Colon
+    []
+    (mk Colon))
+  (judgment
+    Comma
+    []
+    (mk Comma))
+  (judgment
+    Semicolon
+    []
+    (mk Semicolon))
+  (judgment
+    Assign
+    []
+    (mk Assign))
+  (judgment
+    Word
+    [value]
+    (mk
+      Word
+      (v value)))
+  (judgment
+    Word'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseRust
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintRust
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    RustWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseRust
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          RustDocument
+          (pv items))
+        (mk
+          valid
+          (v items)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    RustBody
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q RustDocument)))
+  (judgment
+    RustHeader
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q HeaderDocument)))
+  (judgment
+    RustParamNames
+    [items typePosition]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Colon)
+          (pv rest))
+        (call
+          RustParamNames
+          (v rest)
+          (q true)))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (call
+          RustParamNames
+          (v rest)
+          (q false)))
+      (case
+        (pcons
+          (pm Mut)
+          (pv rest))
+        (call
+          RustParamNames
+          (v rest)
+          (v typePosition)))
+      (case
+        (pcons
+          (pm Ref)
+          (pv rest))
+        (call
+          RustParamNames
+          (v rest)
+          (v typePosition)))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustParamNames
+            (call
+              RustBody
+              (v body))
+            (q false))
+          (call
+            RustParamNames
+            (v rest)
+            (v typePosition))))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v typePosition)
+            (q true))
+          (call
+            RustParamNames
+            (v rest)
+            (v typePosition))
+          (prim
+            cons
+            (v name)
+            (call
+              RustParamNames
+              (v rest)
+              (v typePosition)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RustParamNames
+          (v rest)
+          (v typePosition)))))
+  (judgment
+    RustFunctionParams
+    [header]
+    (call
+      RustParamNames
+      (call
+        RustHeader
+        (v header))
+      (q false)))
+  (judgment
+    RustResolveItems
+    [items scope]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm Mut)
+            (pcons
+              (pm
+                Word
+                (pv name))
+              (pv rest))))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q let))
+          (call
+            RustResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q let))
+          (call
+            RustResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm Dot)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (call
+          RustResolveItems
+          (v rest)
+          (v scope)))
+      (case
+        (pcons
+          (pm PathSep)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (call
+          RustResolveItems
+          (v rest)
+          (v scope)))
+      (case
+        (pcons
+          (pm
+            FunctionDecl
+            (pv name)
+            (pv header)
+            (pv body))
+          (pv rest))
+        (let
+          inner
+          (prim
+            append
+            (prim
+              append
+              (v scope)
+              (call
+                RustFunctionParams
+                (v header)))
+            (lst
+              (v name)))
+          (prim
+            cons
+            (mk
+              binding
+              (v name)
+              (q function))
+            (prim
+              append
+              (call
+                RustResolveItems
+                (call
+                  RustBody
+                  (v body))
+                (v inner))
+              (call
+                RustResolveItems
+                (v rest)
+                (prim
+                  snoc
+                  (v scope)
+                  (v name)))))))
+      (case
+        (pcons
+          (pm
+            StructDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q struct))
+          (call
+            RustResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            EmptyStructDecl
+            (pv name))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q struct))
+          (call
+            RustResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            TupleStructDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q struct))
+          (call
+            RustResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            UnitStructDecl
+            (pv name))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q struct))
+          (call
+            RustResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            EnumDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q enum))
+          (call
+            RustResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            ImplDecl
+            (pv heritage)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustResolveItems
+            (call
+              RustBody
+              (v body))
+            (v scope))
+          (call
+            RustResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            EmptyImplDecl
+            (pv heritage))
+          (pv rest))
+        (call
+          RustResolveItems
+          (v rest)
+          (v scope)))
+      (case
+        (pcons
+          (pm
+            TraitDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q trait))
+          (prim
+            append
+            (call
+              RustResolveItems
+              (call
+                RustBody
+                (v body))
+              (prim
+                snoc
+                (v scope)
+                (v name)))
+            (call
+              RustResolveItems
+              (v rest)
+              (prim
+                snoc
+                (v scope)
+                (v name))))))
+      (case
+        (pcons
+          (pm
+            TraitDeclHeritage
+            (pv name)
+            (pv heritage)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q trait))
+          (prim
+            append
+            (call
+              RustResolveItems
+              (call
+                RustBody
+                (v body))
+              (prim
+                snoc
+                (v scope)
+                (v name)))
+            (call
+              RustResolveItems
+              (v rest)
+              (prim
+                snoc
+                (v scope)
+                (v name))))))
+      (case
+        (pcons
+          (pm
+            ModDecl
+            (pv name))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q mod))
+          (call
+            RustResolveItems
+            (v rest)
+            (prim
+              snoc
+              (v scope)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            ModDeclBraced
+            (pv name)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            binding
+            (v name)
+            (q mod))
+          (prim
+            append
+            (call
+              RustResolveItems
+              (call
+                RustBody
+                (v body))
+              (prim
+                snoc
+                (v scope)
+                (v name)))
+            (call
+              RustResolveItems
+              (v rest)
+              (prim
+                snoc
+                (v scope)
+                (v name))))))
+      (case
+        (pcons
+          (pm
+            Brace
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustResolveItems
+            (call
+              RustBody
+              (v body))
+            (v scope))
+          (call
+            RustResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustResolveItems
+            (call
+              RustBody
+              (v body))
+            (v scope))
+          (call
+            RustResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Bracket
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustResolveItems
+            (call
+              RustBody
+              (v body))
+            (v scope))
+          (call
+            RustResolveItems
+            (v rest)
+            (v scope))))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v scope)
+            (v name))
+          (prim
+            cons
+            (mk
+              reference
+              (v name)
+              (q resolved))
+            (call
+              RustResolveItems
+              (v rest)
+              (v scope)))
+          (prim
+            cons
+            (mk
+              reference
+              (v name)
+              (q free))
+            (call
+              RustResolveItems
+              (v rest)
+              (v scope)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RustResolveItems
+          (v rest)
+          (v scope)))))
+  (judgment
+    ResolveRust
+    [grammar source]
+    (call
+      RustResolveItems
+      (call
+        RustBody
+        (call
+          ParseRust
+          (v grammar)
+          (v source)))
+      (lst)))
+  (judgment
+    RustTypeWords
+    [tokens]
+    (match
+      (v tokens)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv w))
+          (pv rest))
+        (prim
+          cons
+          (v w)
+          (call
+            RustTypeWords
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RustTypeWords
+          (v rest)))))
+  (judgment
+    RustTakeType
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (mk taken (lst) (lst)))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            RustTakeType
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (mk
+              taken
+              (prim
+                cons
+                (v head)
+                (v typeToks))
+              (v remaining)))))))
+  (judgment
+    RustTakeTypeUntilAssign
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (mk taken (lst) (lst)))
+      (case
+        (pcons
+          (pm Assign)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pm Semicolon)
+          (pv rest))
+        (mk
+          taken
+          (lst)
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (call
+            RustTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (mk
+              taken
+              (prim
+                cons
+                (v head)
+                (v typeToks))
+              (v remaining)))))))
+  (judgment
+    RustParamAnnotations
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Comma)
+          (pv rest))
+        (call
+          RustParamAnnotations
+          (v rest)))
+      (case
+        (pcons
+          (pm Mut)
+          (pv rest))
+        (call
+          RustParamAnnotations
+          (v rest)))
+      (case
+        (pcons
+          (pm Ref)
+          (pv rest))
+        (call
+          RustParamAnnotations
+          (v rest)))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pcons
+            (pm Colon)
+            (pv rest)))
+        (match
+          (call
+            RustTakeType
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (prim
+              cons
+              (mk
+                annotation
+                (v name)
+                (call
+                  RustTypeWords
+                  (v typeToks)))
+              (call
+                RustParamAnnotations
+                (v remaining))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RustParamAnnotations
+          (v rest)))))
+  (judgment
+    RustHeaderAnnotations
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustParamAnnotations
+            (call
+              RustBody
+              (v body)))
+          (call
+            RustHeaderAnnotations
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RustHeaderAnnotations
+          (v rest)))))
+  (judgment
+    RustPrimaryType
+    [typeWords]
+    (match
+      (v typeWords)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pv t)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v t)
+            (q "bool"))
+          (q boolean)
+          (if
+            (prim
+              eq
+              (v t)
+              (q "str"))
+            (q string)
+            (if
+              (prim
+                eq
+                (v t)
+                (q "String"))
+              (q string)
+              (if
+                (prim
+                  eq
+                  (v t)
+                  (q "char"))
+                (q char)
+                (if
+                  (prim
+                    eq
+                    (v t)
+                    (q "i8"))
+                  (q number)
+                  (if
+                    (prim
+                      eq
+                      (v t)
+                      (q "i16"))
+                    (q number)
+                    (if
+                      (prim
+                        eq
+                        (v t)
+                        (q "i32"))
+                      (q number)
+                      (if
+                        (prim
+                          eq
+                          (v t)
+                          (q "i64"))
+                        (q number)
+                        (if
+                          (prim
+                            eq
+                            (v t)
+                            (q "i128"))
+                          (q number)
+                          (if
+                            (prim
+                              eq
+                              (v t)
+                              (q "isize"))
+                            (q number)
+                            (if
+                              (prim
+                                eq
+                                (v t)
+                                (q "u8"))
+                              (q number)
+                              (if
+                                (prim
+                                  eq
+                                  (v t)
+                                  (q "u16"))
+                                (q number)
+                                (if
+                                  (prim
+                                    eq
+                                    (v t)
+                                    (q "u32"))
+                                  (q number)
+                                  (if
+                                    (prim
+                                      eq
+                                      (v t)
+                                      (q "u64"))
+                                    (q number)
+                                    (if
+                                      (prim
+                                        eq
+                                        (v t)
+                                        (q "u128"))
+                                      (q number)
+                                      (if
+                                        (prim
+                                          eq
+                                          (v t)
+                                          (q "usize"))
+                                        (q number)
+                                        (if
+                                          (prim
+                                            eq
+                                            (v t)
+                                            (q "f32"))
+                                          (q number)
+                                          (if
+                                            (prim
+                                              eq
+                                              (v t)
+                                              (q "f64"))
+                                            (q number)
+                                            (if
+                                              (prim
+                                                eq
+                                                (v t)
+                                                (q "fn"))
+                                              (q function)
+                                              (call
+                                                RustPrimaryType
+                                                (v rest))))))))))))))))))))))))
+  (judgment
+    RustEntriesFromAnnotations
+    [annos]
+    (match
+      (v annos)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            annotation
+            (pv name)
+            (pv typeWords))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            typed
+            (v name)
+            (call
+              RustPrimaryType
+              (v typeWords)))
+          (call
+            RustEntriesFromAnnotations
+            (v rest))))))
+  (judgment
+    RustLookupType
+    [env name]
+    (match
+      (v env)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            typed
+            (pv key)
+            (pv t))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v key)
+            (v name))
+          (v t)
+          (call
+            RustLookupType
+            (v rest)
+            (v name))))))
+  (judgment
+    RustInferExprType
+    [items env]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            Number
+            (pv n))
+          (pv rest))
+        (q number))
+      (case
+        (pcons
+          (pm
+            DQuoted
+            (pv s))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            ByteString
+            (pv s))
+          (pv rest))
+        (q string))
+      (case
+        (pcons
+          (pm
+            CharLit
+            (pv c))
+          (pv rest))
+        (q char))
+      (case
+        (pcons
+          (pm
+            ByteChar
+            (pv c))
+          (pv rest))
+        (q char))
+      (case
+        (pcons
+          (pm True)
+          (pv rest))
+        (q boolean))
+      (case
+        (pcons
+          (pm False)
+          (pv rest))
+        (q boolean))
+      (case
+        (pcons
+          (pm
+            Word
+            (pv name))
+          (pv rest))
+        (call
+          RustLookupType
+          (v env)
+          (v name)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RustInferExprType
+          (v rest)
+          (v env)))))
+  (judgment
+    RustCompatibleType
+    [declared inferred]
+    (if
+      (prim
+        eq
+        (v declared)
+        (q unknown))
+      (q true)
+      (if
+        (prim
+          eq
+          (v inferred)
+          (q unknown))
+        (q true)
+        (if
+          (prim
+            eq
+            (v declared)
+            (v inferred))
+          (q true)
+          (q false)))))
+  (judgment
+    RustInferItems
+    [items env]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm Mut)
+            (pcons
+              (pm
+                Word
+                (pv name))
+              (pcons
+                (pm Colon)
+                (pv rest)))))
+        (match
+          (call
+            RustTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (let
+              declared
+              (call
+                RustPrimaryType
+                (call
+                  RustTypeWords
+                  (v typeToks)))
+              (let
+                inferred
+                (call
+                  RustInferExprType
+                  (v remaining)
+                  (v env))
+                (let
+                  entry
+                  (mk
+                    typed
+                    (v name)
+                    (v declared))
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (v declared)
+                      (q declared)
+                      (v inferred))
+                    (call
+                      RustInferItems
+                      (v remaining)
+                      (prim
+                        snoc
+                        (v env)
+                        (v entry))))))))))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pcons
+              (pm Colon)
+              (pv rest))))
+        (match
+          (call
+            RustTakeTypeUntilAssign
+            (v rest))
+          (case
+            (pm
+              taken
+              (pv typeToks)
+              (pv remaining))
+            (let
+              declared
+              (call
+                RustPrimaryType
+                (call
+                  RustTypeWords
+                  (v typeToks)))
+              (let
+                inferred
+                (call
+                  RustInferExprType
+                  (v remaining)
+                  (v env))
+                (let
+                  entry
+                  (mk
+                    typed
+                    (v name)
+                    (v declared))
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (v declared)
+                      (q declared)
+                      (v inferred))
+                    (call
+                      RustInferItems
+                      (v remaining)
+                      (prim
+                        snoc
+                        (v env)
+                        (v entry))))))))))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm Mut)
+            (pcons
+              (pm
+                Word
+                (pv name))
+              (pv rest))))
+        (let
+          inferred
+          (call
+            RustInferExprType
+            (v rest)
+            (v env))
+          (let
+            entry
+            (mk
+              typed
+              (v name)
+              (v inferred))
+            (prim
+              cons
+              (mk
+                type
+                (v name)
+                (v inferred)
+                (q inferred)
+                (v inferred))
+              (call
+                RustInferItems
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (v entry)))))))
+      (case
+        (pcons
+          (pm Let)
+          (pcons
+            (pm
+              Word
+              (pv name))
+            (pv rest)))
+        (let
+          inferred
+          (call
+            RustInferExprType
+            (v rest)
+            (v env))
+          (let
+            entry
+            (mk
+              typed
+              (v name)
+              (v inferred))
+            (prim
+              cons
+              (mk
+                type
+                (v name)
+                (v inferred)
+                (q inferred)
+                (v inferred))
+              (call
+                RustInferItems
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (v entry)))))))
+      (case
+        (pcons
+          (pm
+            FunctionDecl
+            (pv name)
+            (pv header)
+            (pv body))
+          (pv rest))
+        (let
+          paramAnnos
+          (call
+            RustHeaderAnnotations
+            (call
+              RustHeader
+              (v header)))
+          (let
+            paramEntries
+            (call
+              RustEntriesFromAnnotations
+              (v paramAnnos))
+            (let
+              own
+              (mk
+                typed
+                (v name)
+                (q function))
+              (let
+                inner
+                (prim
+                  append
+                  (prim
+                    append
+                    (v env)
+                    (v paramEntries))
+                  (lst
+                    (v own)))
+                (prim
+                  append
+                  (prim
+                    cons
+                    (mk
+                      type
+                      (v name)
+                      (q function)
+                      (q declared)
+                      (q function))
+                    (call
+                      RustInferItems
+                      (call
+                        RustBody
+                        (v body))
+                      (v inner)))
+                  (call
+                    RustInferItems
+                    (v rest)
+                    (prim
+                      snoc
+                      (v env)
+                      (v own)))))))))
+      (case
+        (pcons
+          (pm
+            StructDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q type)
+              (q declared)
+              (q type))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            EmptyStructDecl
+            (pv name))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q type)
+              (q declared)
+              (q type))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            TupleStructDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q type)
+              (q declared)
+              (q type))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            UnitStructDecl
+            (pv name))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q type)
+              (q declared)
+              (q type))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            EnumDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q type))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q type)
+              (q declared)
+              (q type))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            TraitDecl
+            (pv name)
+            (pv body))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q trait))
+          (prim
+            append
+            (call
+              RustInferItems
+              (call
+                RustBody
+                (v body))
+              (prim
+                snoc
+                (v env)
+                (v own)))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            TraitDeclHeritage
+            (pv name)
+            (pv heritage)
+            (pv body))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q trait))
+          (prim
+            append
+            (call
+              RustInferItems
+              (call
+                RustBody
+                (v body))
+              (prim
+                snoc
+                (v env)
+                (v own)))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            ModDecl
+            (pv name))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q module))
+          (prim
+            cons
+            (mk
+              type
+              (v name)
+              (q module)
+              (q declared)
+              (q module))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            ModDeclBraced
+            (pv name)
+            (pv body))
+          (pv rest))
+        (let
+          own
+          (mk
+            typed
+            (v name)
+            (q module))
+          (prim
+            append
+            (call
+              RustInferItems
+              (call
+                RustBody
+                (v body))
+              (prim
+                snoc
+                (v env)
+                (v own)))
+            (call
+              RustInferItems
+              (v rest)
+              (prim
+                snoc
+                (v env)
+                (v own))))))
+      (case
+        (pcons
+          (pm
+            ImplDecl
+            (pv heritage)
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustInferItems
+            (call
+              RustBody
+              (v body))
+            (v env))
+          (call
+            RustInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            EmptyImplDecl
+            (pv heritage))
+          (pv rest))
+        (call
+          RustInferItems
+          (v rest)
+          (v env)))
+      (case
+        (pcons
+          (pm
+            Brace
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustInferItems
+            (call
+              RustBody
+              (v body))
+            (v env))
+          (call
+            RustInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Paren
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustInferItems
+            (call
+              RustBody
+              (v body))
+            (v env))
+          (call
+            RustInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pm
+            Bracket
+            (pv body))
+          (pv rest))
+        (prim
+          append
+          (call
+            RustInferItems
+            (call
+              RustBody
+              (v body))
+            (v env))
+          (call
+            RustInferItems
+            (v rest)
+            (v env))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RustInferItems
+          (v rest)
+          (v env)))))
+  (judgment
+    RustTypeErrors
+    [typed]
+    (match
+      (v typed)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            type
+            (pv name)
+            (pv declared)
+            (pq declared)
+            (pv inferred))
+          (pv rest))
+        (if
+          (call
+            RustCompatibleType
+            (v declared)
+            (v inferred))
+          (call
+            RustTypeErrors
+            (v rest))
+          (prim
+            cons
+            (mk
+              type-error
+              (v name)
+              (v declared)
+              (v inferred))
+            (call
+              RustTypeErrors
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RustTypeErrors
+          (v rest)))))
+  (judgment
+    InferRust
+    [grammar source]
+    (call
+      RustInferItems
+      (call
+        RustBody
+        (call
+          ParseRust
+          (v grammar)
+          (v source)))
+      (lst)))
+  (judgment
+    TypeCheckRust
+    [grammar source]
+    (call
+      RustTypeErrors
+      (call
+        InferRust
+        (v grammar)
+        (v source)))))

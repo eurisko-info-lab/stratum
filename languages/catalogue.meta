@@ -1,0 +1,154 @@
+module catalogue
+
+; Languages are foundation data. The native host and the concrete repository
+; bridge do not contain a Scala parser, a Rust parser, or knowledge of any
+; other source language. A package binds a name and paths to a Grammar AST and
+; a Meta AST. Each textual language used by this repository owns both
+; artifacts under languages/<language>/.
+
+record LanguagePackage [name extensions exactPaths grammarPath metaPath reader]
+
+judgment SourceLanguage [name extensions exactPaths grammarPath metaPath] =
+  call LanguagePackage [
+    name extensions exactPaths
+    grammarPath
+    metaPath
+    #grammar
+  ]
+
+judgment LanguagePackages [] =
+  list [
+    call LanguagePackage [
+      #canon list [".canon"] list []
+      #native-canon #native-canon #canon
+    ]
+    call LanguagePackage [
+      #canon-adversarial list [] list ["fixtures/canon/adversarial/"]
+      #bytes #bytes #negative-fixture
+    ]
+    call LanguagePackage [
+      #languages-adversarial list [] list ["fixtures/languages/adversarial/"]
+      #bytes #bytes #negative-fixture
+    ]
+    call LanguagePackage [
+      #generated-meta list [".generated.meta"] list [
+        "languages/foundation/delta.meta"
+        "languages/foundation/derive.meta"
+        "languages/foundation/foundation.meta"
+        "languages/grammar/elaborate.meta"
+        "languages/lambda/lambda.bootstrap.meta"
+        "languages/meta/prelude.meta"
+        "languages/meta/elaborate.meta"
+        "languages/meta/source.meta"
+      ]
+      #native-canon #native-canon #canon
+    ]
+    call LanguagePackage [
+      #generated-grammar list [".generated.grammar"] list [
+        "languages/lambda/lambda.bootstrap.grammar"
+      ]
+      #native-canon #native-canon #canon
+    ]
+    call SourceLanguage [
+      #meta list [".meta"] list []
+      "languages/meta/meta.generated.grammar"
+      "languages/meta/elaborate.meta"
+    ]
+    call SourceLanguage [
+      #grammar list [".grammar"] list []
+      "languages/grammar/grammar.generated.grammar"
+      "languages/grammar/elaborate.meta"
+    ]
+    call SourceLanguage [
+      #scala list [".scala" ".sbt"] list []
+      "languages/scala/scala.generated.grammar"
+      "languages/scala/scala.generated.meta"
+    ]
+    call SourceLanguage [
+      #rust list [".rs"] list []
+      "languages/rust/rust.generated.grammar"
+      "languages/rust/rust.generated.meta"
+    ]
+    call SourceLanguage [
+      #typescript list [".ts" ".js"] list []
+      "languages/typescript/typescript.generated.grammar"
+      "languages/typescript/typescript.generated.meta"
+    ]
+    call SourceLanguage [
+      #json list [".json" ".map"] list []
+      "languages/json/json.generated.grammar"
+      "languages/json/json.generated.meta"
+    ]
+    call SourceLanguage [
+      #markdown list [".md"] list []
+      "languages/markdown/markdown.generated.grammar"
+      "languages/markdown/markdown.generated.meta"
+    ]
+    call SourceLanguage [
+      #shell list [".sh"] list []
+      "languages/shell/shell.generated.grammar"
+      "languages/shell/shell.generated.meta"
+    ]
+    call SourceLanguage [
+      #lean list [".lean"] list []
+      "languages/lean/lean.generated.grammar"
+      "languages/lean/lean.generated.meta"
+    ]
+    call SourceLanguage [
+      #toml list [".toml" ".lock"] list []
+      "languages/toml/toml.generated.grammar"
+      "languages/toml/toml.generated.meta"
+    ]
+    call SourceLanguage [
+      #yaml list [".yml" ".yaml"] list []
+      "languages/yaml/yaml.generated.grammar"
+      "languages/yaml/yaml.generated.meta"
+    ]
+    call SourceLanguage [
+      #html list [".html"] list []
+      "languages/html/html.generated.grammar"
+      "languages/html/html.generated.meta"
+    ]
+    call SourceLanguage [
+      #properties list [".properties"] list []
+      "languages/properties/properties.generated.grammar"
+      "languages/properties/properties.generated.meta"
+    ]
+    call SourceLanguage [
+      #gitignore list [".gitignore"] list []
+      "languages/gitignore/gitignore.generated.grammar"
+      "languages/gitignore/gitignore.generated.meta"
+    ]
+    call SourceLanguage [
+      #gitattributes list [".gitattributes"] list []
+      "languages/gitattributes/gitattributes.generated.grammar"
+      "languages/gitattributes/gitattributes.generated.meta"
+    ]
+    call SourceLanguage [
+      #transcript list [".transcript"] list []
+      "languages/transcript/transcript.generated.grammar"
+      "languages/transcript/transcript.generated.meta"
+    ]
+    call SourceLanguage [
+      #text list [".txt"] list ["LICENSE" "verifier-lean/lean-toolchain"]
+      "languages/text/text.generated.grammar"
+      "languages/text/text.generated.meta"
+    ]
+  ]
+
+judgment PackageNames [packages] =
+  match packages {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        call LanguagePackage'name [head]
+        call PackageNames [rest]
+      ]
+  }
+
+judgment DeclaredLanguageNames [] = call PackageNames [call LanguagePackages []]
+
+; Materializes the catalogue through the ordinary `meta elaborate` bridge.
+; Its two inputs are deliberately ignored; the bridge is generic and always
+; supplies a grammar and source argument.
+judgment ExportCatalogue [ignoredGrammar ignoredSource] = call LanguagePackages []

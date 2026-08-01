@@ -1,0 +1,308 @@
+; Generated from languages/catalogue.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module catalogue)
+  (judgment
+    LanguagePackage
+    [name extensions exactPaths grammarPath metaPath reader]
+    (mk
+      LanguagePackage
+      (v name)
+      (v extensions)
+      (v exactPaths)
+      (v grammarPath)
+      (v metaPath)
+      (v reader)))
+  (judgment
+    LanguagePackage'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    LanguagePackage'extensions
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    LanguagePackage'exactPaths
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    LanguagePackage'grammarPath
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 3)))
+  (judgment
+    LanguagePackage'metaPath
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 4)))
+  (judgment
+    LanguagePackage'reader
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 5)))
+  (judgment
+    SourceLanguage
+    [name extensions exactPaths grammarPath metaPath]
+    (call
+      LanguagePackage
+      (v name)
+      (v extensions)
+      (v exactPaths)
+      (v grammarPath)
+      (v metaPath)
+      (q grammar)))
+  (judgment
+    LanguagePackages
+    []
+    (lst
+      (call
+        LanguagePackage
+        (q canon)
+        (lst
+          (q ".canon"))
+        (lst)
+        (q native-canon)
+        (q native-canon)
+        (q canon))
+      (call
+        LanguagePackage
+        (q canon-adversarial)
+        (lst)
+        (lst
+          (q "fixtures/canon/adversarial/"))
+        (q bytes)
+        (q bytes)
+        (q negative-fixture))
+      (call
+        LanguagePackage
+        (q languages-adversarial)
+        (lst)
+        (lst
+          (q "fixtures/languages/adversarial/"))
+        (q bytes)
+        (q bytes)
+        (q negative-fixture))
+      (call
+        LanguagePackage
+        (q generated-meta)
+        (lst
+          (q ".generated.meta"))
+        (lst
+          (q "languages/foundation/delta.meta")
+          (q "languages/foundation/derive.meta")
+          (q "languages/foundation/foundation.meta")
+          (q "languages/grammar/elaborate.meta")
+          (q "languages/lambda/lambda.bootstrap.meta")
+          (q "languages/meta/prelude.meta")
+          (q "languages/meta/elaborate.meta")
+          (q "languages/meta/source.meta"))
+        (q native-canon)
+        (q native-canon)
+        (q canon))
+      (call
+        LanguagePackage
+        (q generated-grammar)
+        (lst
+          (q ".generated.grammar"))
+        (lst
+          (q "languages/lambda/lambda.bootstrap.grammar"))
+        (q native-canon)
+        (q native-canon)
+        (q canon))
+      (call
+        SourceLanguage
+        (q meta)
+        (lst
+          (q ".meta"))
+        (lst)
+        (q "languages/meta/meta.generated.grammar")
+        (q "languages/meta/elaborate.meta"))
+      (call
+        SourceLanguage
+        (q grammar)
+        (lst
+          (q ".grammar"))
+        (lst)
+        (q "languages/grammar/grammar.generated.grammar")
+        (q "languages/grammar/elaborate.meta"))
+      (call
+        SourceLanguage
+        (q scala)
+        (lst
+          (q ".scala")
+          (q ".sbt"))
+        (lst)
+        (q "languages/scala/scala.generated.grammar")
+        (q "languages/scala/scala.generated.meta"))
+      (call
+        SourceLanguage
+        (q rust)
+        (lst
+          (q ".rs"))
+        (lst)
+        (q "languages/rust/rust.generated.grammar")
+        (q "languages/rust/rust.generated.meta"))
+      (call
+        SourceLanguage
+        (q typescript)
+        (lst
+          (q ".ts")
+          (q ".js"))
+        (lst)
+        (q "languages/typescript/typescript.generated.grammar")
+        (q "languages/typescript/typescript.generated.meta"))
+      (call
+        SourceLanguage
+        (q json)
+        (lst
+          (q ".json")
+          (q ".map"))
+        (lst)
+        (q "languages/json/json.generated.grammar")
+        (q "languages/json/json.generated.meta"))
+      (call
+        SourceLanguage
+        (q markdown)
+        (lst
+          (q ".md"))
+        (lst)
+        (q "languages/markdown/markdown.generated.grammar")
+        (q "languages/markdown/markdown.generated.meta"))
+      (call
+        SourceLanguage
+        (q shell)
+        (lst
+          (q ".sh"))
+        (lst)
+        (q "languages/shell/shell.generated.grammar")
+        (q "languages/shell/shell.generated.meta"))
+      (call
+        SourceLanguage
+        (q lean)
+        (lst
+          (q ".lean"))
+        (lst)
+        (q "languages/lean/lean.generated.grammar")
+        (q "languages/lean/lean.generated.meta"))
+      (call
+        SourceLanguage
+        (q toml)
+        (lst
+          (q ".toml")
+          (q ".lock"))
+        (lst)
+        (q "languages/toml/toml.generated.grammar")
+        (q "languages/toml/toml.generated.meta"))
+      (call
+        SourceLanguage
+        (q yaml)
+        (lst
+          (q ".yml")
+          (q ".yaml"))
+        (lst)
+        (q "languages/yaml/yaml.generated.grammar")
+        (q "languages/yaml/yaml.generated.meta"))
+      (call
+        SourceLanguage
+        (q html)
+        (lst
+          (q ".html"))
+        (lst)
+        (q "languages/html/html.generated.grammar")
+        (q "languages/html/html.generated.meta"))
+      (call
+        SourceLanguage
+        (q properties)
+        (lst
+          (q ".properties"))
+        (lst)
+        (q "languages/properties/properties.generated.grammar")
+        (q "languages/properties/properties.generated.meta"))
+      (call
+        SourceLanguage
+        (q gitignore)
+        (lst
+          (q ".gitignore"))
+        (lst)
+        (q "languages/gitignore/gitignore.generated.grammar")
+        (q "languages/gitignore/gitignore.generated.meta"))
+      (call
+        SourceLanguage
+        (q gitattributes)
+        (lst
+          (q ".gitattributes"))
+        (lst)
+        (q "languages/gitattributes/gitattributes.generated.grammar")
+        (q "languages/gitattributes/gitattributes.generated.meta"))
+      (call
+        SourceLanguage
+        (q transcript)
+        (lst
+          (q ".transcript"))
+        (lst)
+        (q "languages/transcript/transcript.generated.grammar")
+        (q "languages/transcript/transcript.generated.meta"))
+      (call
+        SourceLanguage
+        (q text)
+        (lst
+          (q ".txt"))
+        (lst
+          (q "LICENSE")
+          (q "verifier-lean/lean-toolchain"))
+        (q "languages/text/text.generated.grammar")
+        (q "languages/text/text.generated.meta"))))
+  (judgment
+    PackageNames
+    [packages]
+    (match
+      (v packages)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            LanguagePackage'name
+            (v head))
+          (call
+            PackageNames
+            (v rest))))))
+  (judgment
+    DeclaredLanguageNames
+    []
+    (call
+      PackageNames
+      (call LanguagePackages)))
+  (judgment
+    ExportCatalogue
+    [ignoredGrammar ignoredSource]
+    (call LanguagePackages)))

@@ -1,22 +1,0 @@
-
-artifactchange
-change
-kind
-foundation
-nameF1->F2
-predecessor
-foundation-offoundations/F1
-
-delta-meta
-filechanges/F1-F2/delta-meta.canon
-delta-grammar
-file!changes/F1-F2/delta-grammar.canon
-feature
-feature
-name generic semantic change calculus
-programs
-file%features/change/change.generated.meta
-sources
-	text-filefeatures/change/change.meta
-derived
-DeltaMeta1DeltaGrammar1DeltaLambdaDeltaFoundation

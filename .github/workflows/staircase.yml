@@ -2,22 +2,21 @@ name: staircase
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 jobs:
   staircase:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.0.0
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '17.0.20+8'
           cache: sbt
 
-      - uses: sbt/setup-sbt@v1
+      - uses: sbt/setup-sbt@bfea3c5f48abd221b04a6df4798aa5eb8b6a2baf # v1
 
       - name: Build the independent host
         run: cargo build --release --manifest-path host-rust/Cargo.toml
@@ -35,10 +34,10 @@ jobs:
           # catches any change to what they elaborate to.
           for source in languages/service/service.meta languages/pdf/pdf.meta; do
             sbt -batch "runMain stratum.cli.Stratum meta elaborate \
-              --grammar languages/meta1/meta1.generated.grammar \
+              --grammar languages/meta/meta.generated.grammar \
               --program languages/meta/prelude.meta \
-              --program languages/meta1/elaborate.meta \
-              --program languages/grammar1/elaborate.meta \
+              --program languages/meta/elaborate.meta \
+              --program languages/grammar/elaborate.meta \
               --source $source --out ${source%.meta}.generated.meta"
           done
 
@@ -51,7 +50,7 @@ jobs:
           fi
 
       - name: Replay every transcript and run every suite
-        run: sbt -batch test
+        run: sbt -batch test repoTool/test
 
       - name: Two host parity
         run: ./tools/parity.sh
@@ -62,9 +61,9 @@ jobs:
   model:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
 
-      - uses: leanprover/lean-action@v1
+      - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1
         with:
           lake-package-directory: verifier-lean
           build: true

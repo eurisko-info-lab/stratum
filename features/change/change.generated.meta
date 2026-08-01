@@ -1417,13 +1417,13 @@
       FreeChange
       (call DescLambda)))
   (judgment
-    DeltaMeta1
+    DeltaMeta
     []
     (call
       FreeChange
       (call DescProgram)))
   (judgment
-    DeltaGrammar1
+    DeltaGrammar
     []
     (call
       FreeChange

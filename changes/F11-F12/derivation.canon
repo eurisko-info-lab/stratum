@@ -1,0 +1,5 @@
+; Placeholder derivation artifact for F11->F12.
+; To be replaced by foundation derive-change output when F12 canonical build is frozen.
+(derivation
+  (name "F11->F12")
+  (status draft))

@@ -1,0 +1,473 @@
+module rust
+
+record RustDocument [items]
+record Brace [body]
+record EmptyBrace []
+record FunctionDecl [name header body]
+record StructDecl [name body]
+record EmptyStructDecl [name]
+record TupleStructDecl [name body]
+record UnitStructDecl [name]
+record EnumDecl [name body]
+record ImplDecl [heritage body]
+record EmptyImplDecl [heritage]
+record TraitDecl [name body]
+record TraitDeclHeritage [name heritage body]
+record ModDecl [name]
+record ModDeclBraced [name body]
+record HeaderDocument [items]
+record Paren [body]
+record EmptyParen []
+record Bracket [body]
+record EmptyBracket []
+record DQuoted [value]
+record ByteString [value]
+record ByteChar [value]
+record CharLit [value]
+record Lifetime [value]
+record Number [value]
+record As []
+record Break []
+record Const []
+record Continue []
+record Crate []
+record Dyn []
+record Else []
+record Enum []
+record Extern []
+record False []
+record Fn []
+record For []
+record If []
+record Impl []
+record In []
+record Let []
+record Loop []
+record Match []
+record Mod []
+record Move []
+record Mut []
+record Pub []
+record Ref []
+record Return []
+record SelfUpper []
+record SelfLower []
+record Static []
+record Struct []
+record Super []
+record Trait []
+record True []
+record TypeKw []
+record Unsafe []
+record Use []
+record Where []
+record While []
+record Async []
+record Await []
+record PathSep []
+record Arrow []
+record FatArrow []
+record DotDotEq []
+record DotDot []
+record Dot []
+record AndAnd []
+record OrOr []
+record EqEq []
+record Ne []
+record Le []
+record Ge []
+record Shl []
+record Shr []
+record PlusEq []
+record MinusEq []
+record StarEq []
+record SlashEq []
+record PercentEq []
+record Less []
+record Greater []
+record Amp []
+record Pipe []
+record Plus []
+record Minus []
+record Star []
+record Slash []
+record Percent []
+record Caret []
+record Tilde []
+record Question []
+record Bang []
+record Hash []
+record At []
+record Colon []
+record Comma []
+record Semicolon []
+record Assign []
+record Word [value]
+
+judgment ParseRust [grammar source] = call Parse [grammar source]
+judgment PrintRust [grammar syntax] = call Print [grammar syntax]
+judgment RustWellFormed [grammar source] =
+  match call ParseRust [grammar source] {
+    case (#RustDocument items) -> mk #valid [items]
+    case _ -> mk #invalid [#parse]
+  }
+
+; ------------------------------------------------------------ name resolution
+;
+; Same design as TypeScript's ResolveTypeScript: a second pass over the
+; already-parsed tree (never mutates it, so print/reparse fidelity is
+; untouched) that reports a #binding for every `let`/`fn`/`struct`/`enum`/
+; `trait`/`impl`/`mod` name and function parameter, and a #reference,
+; resolved against the scope built up left to right, for every other bare
+; `Word`. Rust's value and type namespaces are collapsed into one flat scope,
+; the same simplification already used for TypeScript. `Self`/`self` are
+; already their own keyword records (SelfUpper/SelfLower), not `Word`, so
+; they never need special-casing here. Path-qualified access (`Enum::Variant`,
+; `module::item`, `Self::method`) is skipped after `::` the same way `.` is
+; skipped for member access.
+;
+; Known scope cut, deliberately not attempted: closures (`|x, y| body`) and
+; `for x in iter { ... }` loop variables are not recognized as bindings.
+; Rust's `|` is also the bitwise-or and pattern-alternation operator, so
+; distinguishing `|params|` from an ordinary `a | b | c` expression cannot be
+; done reliably by shape alone (unlike TypeScript's `(...) =>`, which has no
+; competing meaning) without real risk of misreading ordinary bitwise-or
+; chains as bogus closures; `for` bindings were left out to keep this pass to
+; patterns that are unambiguous by construction, matching the same bar.
+; Closure and loop-bound parameters resolve as free.
+
+judgment RustBody [node] = call FlattenSeq [node #RustDocument]
+judgment RustHeader [node] = call FlattenSeq [node #HeaderDocument]
+
+; Parameter names in a flattened header: a `Word` counts as a parameter
+; unless it appears after a `:` (a type annotation) up to the next `,`; a
+; parenthesized group is the common `(params)` case and is scanned the same
+; way one level down. `mut`/`ref` before a parameter name are transparent.
+judgment RustParamNames [items typePosition] =
+  match items {
+    case [] -> list []
+    case (#Colon) :: rest -> call RustParamNames [rest #true]
+    case (#Comma) :: rest -> call RustParamNames [rest #false]
+    case (#Mut) :: rest -> call RustParamNames [rest typePosition]
+    case (#Ref) :: rest -> call RustParamNames [rest typePosition]
+    case (#Paren body) :: rest ->
+      prim #append [call RustParamNames [call RustBody [body] #false] call RustParamNames [rest typePosition]]
+    case (#Word name) :: rest ->
+      if prim #eq [typePosition #true]
+      then call RustParamNames [rest typePosition]
+      else prim #cons [name call RustParamNames [rest typePosition]]
+    case head :: rest -> call RustParamNames [rest typePosition]
+  }
+
+judgment RustFunctionParams [header] = call RustParamNames [call RustHeader [header] #false]
+
+judgment RustResolveItems [items scope] =
+  match items {
+    case [] -> list []
+    case (#Let) :: (#Mut) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #let] call RustResolveItems [rest prim #snoc [scope name]]]
+    case (#Let) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #let] call RustResolveItems [rest prim #snoc [scope name]]]
+    case (#Dot) :: (#Word name) :: rest ->
+      call RustResolveItems [rest scope]
+    case (#PathSep) :: (#Word name) :: rest ->
+      call RustResolveItems [rest scope]
+    case (#FunctionDecl name header body) :: rest ->
+      let inner = prim #append [prim #append [scope call RustFunctionParams [header]] list [name]] in
+      prim #cons [
+        mk #binding [name #function]
+        prim #append [
+          call RustResolveItems [call RustBody [body] inner]
+          call RustResolveItems [rest prim #snoc [scope name]]
+        ]
+      ]
+    case (#StructDecl name body) :: rest ->
+      prim #cons [mk #binding [name #struct] call RustResolveItems [rest prim #snoc [scope name]]]
+    case (#EmptyStructDecl name) :: rest ->
+      prim #cons [mk #binding [name #struct] call RustResolveItems [rest prim #snoc [scope name]]]
+    case (#TupleStructDecl name body) :: rest ->
+      prim #cons [mk #binding [name #struct] call RustResolveItems [rest prim #snoc [scope name]]]
+    case (#UnitStructDecl name) :: rest ->
+      prim #cons [mk #binding [name #struct] call RustResolveItems [rest prim #snoc [scope name]]]
+    case (#EnumDecl name body) :: rest ->
+      prim #cons [mk #binding [name #enum] call RustResolveItems [rest prim #snoc [scope name]]]
+    case (#ImplDecl heritage body) :: rest ->
+      prim #append [call RustResolveItems [call RustBody [body] scope] call RustResolveItems [rest scope]]
+    case (#EmptyImplDecl heritage) :: rest ->
+      call RustResolveItems [rest scope]
+    case (#TraitDecl name body) :: rest ->
+      prim #cons [
+        mk #binding [name #trait]
+        prim #append [
+          call RustResolveItems [call RustBody [body] prim #snoc [scope name]]
+          call RustResolveItems [rest prim #snoc [scope name]]
+        ]
+      ]
+    case (#TraitDeclHeritage name heritage body) :: rest ->
+      prim #cons [
+        mk #binding [name #trait]
+        prim #append [
+          call RustResolveItems [call RustBody [body] prim #snoc [scope name]]
+          call RustResolveItems [rest prim #snoc [scope name]]
+        ]
+      ]
+    case (#ModDecl name) :: rest ->
+      prim #cons [mk #binding [name #mod] call RustResolveItems [rest prim #snoc [scope name]]]
+    case (#ModDeclBraced name body) :: rest ->
+      prim #cons [
+        mk #binding [name #mod]
+        prim #append [
+          call RustResolveItems [call RustBody [body] prim #snoc [scope name]]
+          call RustResolveItems [rest prim #snoc [scope name]]
+        ]
+      ]
+    case (#Brace body) :: rest ->
+      prim #append [call RustResolveItems [call RustBody [body] scope] call RustResolveItems [rest scope]]
+    case (#Paren body) :: rest ->
+      prim #append [call RustResolveItems [call RustBody [body] scope] call RustResolveItems [rest scope]]
+    case (#Bracket body) :: rest ->
+      prim #append [call RustResolveItems [call RustBody [body] scope] call RustResolveItems [rest scope]]
+    case (#Word name) :: rest ->
+      if prim #contains [scope name]
+      then prim #cons [mk #reference [name #resolved] call RustResolveItems [rest scope]]
+      else prim #cons [mk #reference [name #free] call RustResolveItems [rest scope]]
+    case head :: rest ->
+      call RustResolveItems [rest scope]
+  }
+
+judgment ResolveRust [grammar source] =
+  call RustResolveItems [call RustBody [call ParseRust [grammar source]] list []]
+
+; ---------------------------------------------------- type inference/checking
+
+judgment RustTypeWords [tokens] =
+  match tokens {
+    case [] -> list []
+    case (#Word w) :: rest -> prim #cons [w call RustTypeWords [rest]]
+    case head :: rest -> call RustTypeWords [rest]
+  }
+
+judgment RustTakeType [items] =
+  match items {
+    case [] -> mk #taken [list [] list []]
+    case (#Comma) :: rest -> mk #taken [list [] rest]
+    case head :: rest ->
+      match call RustTakeType [rest] {
+        case (#taken typeToks remaining) -> mk #taken [prim #cons [head typeToks] remaining]
+      }
+  }
+
+judgment RustTakeTypeUntilAssign [items] =
+  match items {
+    case [] -> mk #taken [list [] list []]
+    case (#Assign) :: rest -> mk #taken [list [] rest]
+    case (#Semicolon) :: rest -> mk #taken [list [] rest]
+    case head :: rest ->
+      match call RustTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) -> mk #taken [prim #cons [head typeToks] remaining]
+      }
+  }
+
+judgment RustParamAnnotations [items] =
+  match items {
+    case [] -> list []
+    case (#Comma) :: rest -> call RustParamAnnotations [rest]
+    case (#Mut) :: rest -> call RustParamAnnotations [rest]
+    case (#Ref) :: rest -> call RustParamAnnotations [rest]
+    case (#Word name) :: (#Colon) :: rest ->
+      match call RustTakeType [rest] {
+        case (#taken typeToks remaining) ->
+          prim #cons [mk #annotation [name call RustTypeWords [typeToks]] call RustParamAnnotations [remaining]]
+      }
+    case head :: rest -> call RustParamAnnotations [rest]
+  }
+
+judgment RustHeaderAnnotations [items] =
+  match items {
+    case [] -> list []
+    case (#Paren body) :: rest ->
+      prim #append [call RustParamAnnotations [call RustBody [body]] call RustHeaderAnnotations [rest]]
+    case head :: rest -> call RustHeaderAnnotations [rest]
+  }
+
+judgment RustPrimaryType [typeWords] =
+  match typeWords {
+    case [] -> #unknown
+    case t :: rest ->
+      if prim #eq [t "bool"]
+      then #boolean
+      else if prim #eq [t "str"]
+      then #string
+      else if prim #eq [t "String"]
+      then #string
+      else if prim #eq [t "char"]
+      then #char
+      else if prim #eq [t "i8"]
+      then #number
+      else if prim #eq [t "i16"]
+      then #number
+      else if prim #eq [t "i32"]
+      then #number
+      else if prim #eq [t "i64"]
+      then #number
+      else if prim #eq [t "i128"]
+      then #number
+      else if prim #eq [t "isize"]
+      then #number
+      else if prim #eq [t "u8"]
+      then #number
+      else if prim #eq [t "u16"]
+      then #number
+      else if prim #eq [t "u32"]
+      then #number
+      else if prim #eq [t "u64"]
+      then #number
+      else if prim #eq [t "u128"]
+      then #number
+      else if prim #eq [t "usize"]
+      then #number
+      else if prim #eq [t "f32"]
+      then #number
+      else if prim #eq [t "f64"]
+      then #number
+      else if prim #eq [t "fn"]
+      then #function
+      else call RustPrimaryType [rest]
+  }
+
+judgment RustEntriesFromAnnotations [annos] =
+  match annos {
+    case [] -> list []
+    case (#annotation name typeWords) :: rest ->
+      prim #cons [mk #typed [name call RustPrimaryType [typeWords]] call RustEntriesFromAnnotations [rest]]
+  }
+
+judgment RustLookupType [env name] =
+  match env {
+    case [] -> #unknown
+    case (#typed key t) :: rest ->
+      if prim #eq [key name]
+      then t
+      else call RustLookupType [rest name]
+  }
+
+judgment RustInferExprType [items env] =
+  match items {
+    case [] -> #unknown
+    case (#Number n) :: rest -> #number
+    case (#DQuoted s) :: rest -> #string
+    case (#ByteString s) :: rest -> #string
+    case (#CharLit c) :: rest -> #char
+    case (#ByteChar c) :: rest -> #char
+    case (#True) :: rest -> #boolean
+    case (#False) :: rest -> #boolean
+    case (#Word name) :: rest -> call RustLookupType [env name]
+    case head :: rest -> call RustInferExprType [rest env]
+  }
+
+judgment RustCompatibleType [declared inferred] =
+  if prim #eq [declared #unknown]
+  then #true
+  else if prim #eq [inferred #unknown]
+  then #true
+  else if prim #eq [declared inferred]
+  then #true
+  else #false
+
+judgment RustInferItems [items env] =
+  match items {
+    case [] -> list []
+    case (#Let) :: (#Mut) :: (#Word name) :: (#Colon) :: rest ->
+      match call RustTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) ->
+          let declared = call RustPrimaryType [call RustTypeWords [typeToks]] in
+          let inferred = call RustInferExprType [remaining env] in
+          let entry = mk #typed [name declared] in
+          prim #cons [
+            mk #type [name declared #declared inferred]
+            call RustInferItems [remaining prim #snoc [env entry]]
+          ]
+      }
+    case (#Let) :: (#Word name) :: (#Colon) :: rest ->
+      match call RustTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) ->
+          let declared = call RustPrimaryType [call RustTypeWords [typeToks]] in
+          let inferred = call RustInferExprType [remaining env] in
+          let entry = mk #typed [name declared] in
+          prim #cons [
+            mk #type [name declared #declared inferred]
+            call RustInferItems [remaining prim #snoc [env entry]]
+          ]
+      }
+    case (#Let) :: (#Mut) :: (#Word name) :: rest ->
+      let inferred = call RustInferExprType [rest env] in
+      let entry = mk #typed [name inferred] in
+      prim #cons [mk #type [name inferred #inferred inferred] call RustInferItems [rest prim #snoc [env entry]]]
+    case (#Let) :: (#Word name) :: rest ->
+      let inferred = call RustInferExprType [rest env] in
+      let entry = mk #typed [name inferred] in
+      prim #cons [mk #type [name inferred #inferred inferred] call RustInferItems [rest prim #snoc [env entry]]]
+    case (#FunctionDecl name header body) :: rest ->
+      let paramAnnos = call RustHeaderAnnotations [call RustHeader [header]] in
+      let paramEntries = call RustEntriesFromAnnotations [paramAnnos] in
+      let own = mk #typed [name #function] in
+      let inner = prim #append [prim #append [env paramEntries] list [own]] in
+      prim #append [
+        prim #cons [mk #type [name #function #declared #function] call RustInferItems [call RustBody [body] inner]]
+        call RustInferItems [rest prim #snoc [env own]]
+      ]
+    case (#StructDecl name body) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #cons [mk #type [name #type #declared #type] call RustInferItems [rest prim #snoc [env own]]]
+    case (#EmptyStructDecl name) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #cons [mk #type [name #type #declared #type] call RustInferItems [rest prim #snoc [env own]]]
+    case (#TupleStructDecl name body) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #cons [mk #type [name #type #declared #type] call RustInferItems [rest prim #snoc [env own]]]
+    case (#UnitStructDecl name) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #cons [mk #type [name #type #declared #type] call RustInferItems [rest prim #snoc [env own]]]
+    case (#EnumDecl name body) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #cons [mk #type [name #type #declared #type] call RustInferItems [rest prim #snoc [env own]]]
+    case (#TraitDecl name body) :: rest ->
+      let own = mk #typed [name #trait] in
+      prim #append [call RustInferItems [call RustBody [body] prim #snoc [env own]] call RustInferItems [rest prim #snoc [env own]]]
+    case (#TraitDeclHeritage name heritage body) :: rest ->
+      let own = mk #typed [name #trait] in
+      prim #append [call RustInferItems [call RustBody [body] prim #snoc [env own]] call RustInferItems [rest prim #snoc [env own]]]
+    case (#ModDecl name) :: rest ->
+      let own = mk #typed [name #module] in
+      prim #cons [mk #type [name #module #declared #module] call RustInferItems [rest prim #snoc [env own]]]
+    case (#ModDeclBraced name body) :: rest ->
+      let own = mk #typed [name #module] in
+      prim #append [call RustInferItems [call RustBody [body] prim #snoc [env own]] call RustInferItems [rest prim #snoc [env own]]]
+    case (#ImplDecl heritage body) :: rest ->
+      prim #append [call RustInferItems [call RustBody [body] env] call RustInferItems [rest env]]
+    case (#EmptyImplDecl heritage) :: rest ->
+      call RustInferItems [rest env]
+    case (#Brace body) :: rest ->
+      prim #append [call RustInferItems [call RustBody [body] env] call RustInferItems [rest env]]
+    case (#Paren body) :: rest ->
+      prim #append [call RustInferItems [call RustBody [body] env] call RustInferItems [rest env]]
+    case (#Bracket body) :: rest ->
+      prim #append [call RustInferItems [call RustBody [body] env] call RustInferItems [rest env]]
+    case head :: rest -> call RustInferItems [rest env]
+  }
+
+judgment RustTypeErrors [typed] =
+  match typed {
+    case [] -> list []
+    case (#type name declared #declared inferred) :: rest ->
+      if call RustCompatibleType [declared inferred]
+      then call RustTypeErrors [rest]
+      else prim #cons [mk #type-error [name declared inferred] call RustTypeErrors [rest]]
+    case head :: rest -> call RustTypeErrors [rest]
+  }
+
+judgment InferRust [grammar source] =
+  call RustInferItems [call RustBody [call ParseRust [grammar source]] list []]
+
+judgment TypeCheckRust [grammar source] =
+  call RustTypeErrors [call InferRust [grammar source]]

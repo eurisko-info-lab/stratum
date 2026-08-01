@@ -1,0 +1,24 @@
+; Generated from languages/properties/properties.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "properties")
+  (start file)
+  (token key sym "[A-Za-z][A-Za-z0-9_.-]*")
+  (token value str "[^\\r\\n= \\t]([^\\r\\n=]*[^\\r\\n= \\t])?")
+  (token newline sym "\\n")
+  (skip "[#!][^\\n]*")
+  (category
+    file
+    (fold PropertiesFile line))
+  (category
+    line
+    (prod
+      Property
+      [
+        (bind key key)
+        (kw "=")
+        (bind value value)
+        (bind newline newline)])
+    (prod
+      Blank
+      [
+        (bind newline newline)])))

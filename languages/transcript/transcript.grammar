@@ -1,0 +1,32 @@
+grammar "transcript"
+start document
+
+token word str "[^ \\t\\r\\n#$%>]+"
+token newline sym "\\n"
+
+category document
+  fold TranscriptDocument line
+
+category line
+  prod Comment "#" content : atoms newline : newline
+  prod CommentBlank "#" newline : newline
+  prod Command "$" content : atoms newline : newline
+  prod CommandBlank "$" newline : newline
+  prod Output ">" content : atoms newline : newline
+  prod OutputBlank ">" newline : newline
+  prod ParamDirective "%" "param" name : word "=" content : atoms newline : newline
+  prod UseDirective "%" "use" content : atoms newline : newline
+  prod Blank newline : newline
+
+category atoms
+  fold Atoms atom
+
+category atom
+  prod Word value : word
+  prod Hash "#"
+  prod Dollar "$"
+  prod Percent "%"
+  prod Greater ">"
+  prod Equals "="
+  prod ParamWord "param"
+  prod UseWord "use"

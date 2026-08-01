@@ -1,0 +1,440 @@
+; Generated from languages/toml/toml.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module toml)
+  (judgment
+    TomlFile
+    [statements]
+    (mk
+      TomlFile
+      (v statements)))
+  (judgment
+    TomlFile'statements
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Assignment
+    [key value newline]
+    (mk
+      Assignment
+      (v key)
+      (v value)
+      (v newline)))
+  (judgment
+    Assignment'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Assignment'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Assignment'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 2)))
+  (judgment
+    Table
+    [name newline]
+    (mk
+      Table
+      (v name)
+      (v newline)))
+  (judgment
+    Table'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Table'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    ArrayTable
+    [name newline]
+    (mk
+      ArrayTable
+      (v name)
+      (v newline)))
+  (judgment
+    ArrayTable'name
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ArrayTable'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    String
+    [value]
+    (mk
+      String
+      (v value)))
+  (judgment
+    String'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    Integer
+    [value]
+    (mk
+      Integer
+      (v value)))
+  (judgment
+    Integer'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    True
+    []
+    (mk True))
+  (judgment
+    False
+    []
+    (mk False))
+  (judgment
+    EmptyArray
+    []
+    (mk EmptyArray))
+  (judgment
+    Array
+    [values]
+    (mk
+      Array
+      (v values)))
+  (judgment
+    Array'values
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    LastValue
+    [value]
+    (mk
+      LastValue
+      (v value)))
+  (judgment
+    LastValue'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    MoreValues
+    [value rest]
+    (mk
+      MoreValues
+      (v value)
+      (v rest)))
+  (judgment
+    MoreValues'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    MoreValues'rest
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    Blank
+    [newline]
+    (mk
+      Blank
+      (v newline)))
+  (judgment
+    Blank'newline
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseToml
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintToml
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    TomlWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseToml
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          TomlFile
+          (pv statements))
+        (mk
+          valid
+          (v statements)))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    TomlStatements
+    [node]
+    (call
+      FlattenSeq
+      (v node)
+      (q TomlFile)))
+  (judgment
+    TomlValueType
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          String
+          (pv value))
+        (q string))
+      (case
+        (pm
+          Integer
+          (pv value))
+        (q number))
+      (case
+        (pm True)
+        (q boolean))
+      (case
+        (pm False)
+        (q boolean))
+      (case
+        (pm EmptyArray)
+        (q array))
+      (case
+        (pm
+          Array
+          (pv values))
+        (q array))
+      (case
+        _
+        (q unknown))))
+  (judgment
+    TomlLookupType
+    [env key]
+    (match
+      (v env)
+      (case
+        (pnil)
+        (q unknown))
+      (case
+        (pcons
+          (pm
+            typed
+            (pv k)
+            (pv t))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v k)
+            (v key))
+          (v t)
+          (call
+            TomlLookupType
+            (v rest)
+            (v key))))))
+  (judgment
+    TomlInferStatements
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Assignment
+            (pv key)
+            (pv value)
+            (pv newline))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            type
+            (v key)
+            (call
+              TomlValueType
+              (v value))
+            (q declared)
+            (call
+              TomlValueType
+              (v value)))
+          (call
+            TomlInferStatements
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TomlInferStatements
+          (v rest)))))
+  (judgment
+    TomlCheckStatements
+    [items env]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Assignment
+            (pv key)
+            (pv value)
+            (pv newline))
+          (pv rest))
+        (let
+          t
+          (call
+            TomlValueType
+            (v value))
+          (let
+            old
+            (call
+              TomlLookupType
+              (v env)
+              (v key))
+            (if
+              (prim
+                eq
+                (v old)
+                (q unknown))
+              (call
+                TomlCheckStatements
+                (v rest)
+                (prim
+                  snoc
+                  (v env)
+                  (mk
+                    typed
+                    (v key)
+                    (v t))))
+              (if
+                (prim
+                  eq
+                  (v old)
+                  (v t))
+                (call
+                  TomlCheckStatements
+                  (v rest)
+                  (v env))
+                (prim
+                  cons
+                  (mk
+                    type-error
+                    (v key)
+                    (v old)
+                    (v t))
+                  (call
+                    TomlCheckStatements
+                    (v rest)
+                    (v env))))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TomlCheckStatements
+          (v rest)
+          (v env)))))
+  (judgment
+    InferToml
+    [grammar source]
+    (call
+      TomlInferStatements
+      (call
+        TomlStatements
+        (call
+          ParseToml
+          (v grammar)
+          (v source)))))
+  (judgment
+    TypeCheckToml
+    [grammar source]
+    (call
+      TomlCheckStatements
+      (call
+        TomlStatements
+        (call
+          ParseToml
+          (v grammar)
+          (v source)))
+      (lst))))

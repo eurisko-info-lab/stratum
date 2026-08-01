@@ -1,0 +1,29 @@
+module gitignore
+
+record GitIgnoreFile [lines]
+record Ignore [pattern newline]
+record Blank [newline]
+
+judgment ParseGitIgnore [grammar source] = call Parse [grammar source]
+judgment PrintGitIgnore [grammar syntax] = call Print [grammar syntax]
+
+judgment GitIgnoreWellFormed [grammar source] =
+	match call ParseGitIgnore [grammar source] {
+		case (#GitIgnoreFile lines) -> mk #valid [lines]
+		case _ -> mk #invalid [#parse]
+	}
+
+judgment GitIgnoreLines [node] = call FlattenSeq [node #GitIgnoreFile]
+
+judgment GitIgnoreInferLines [lines] =
+	match lines {
+		case [] -> list []
+		case (#Ignore pattern newline) :: rest ->
+			prim #cons [mk #type [pattern #glob #declared #glob] call GitIgnoreInferLines [rest]]
+		case head :: rest -> call GitIgnoreInferLines [rest]
+	}
+
+judgment InferGitIgnore [grammar source] =
+	call GitIgnoreInferLines [call GitIgnoreLines [call ParseGitIgnore [grammar source]]]
+
+judgment TypeCheckGitIgnore [grammar source] = list []

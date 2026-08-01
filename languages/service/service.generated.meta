@@ -627,4 +627,60 @@
             (v kind)
             (q nat))
           (q number)
-          (q variable))))))
+          (q variable)))))
+  (judgment
+    TextSlice
+    [text offset length]
+    (let
+      stop
+      (prim
+        add
+        (v offset)
+        (v length))
+      (if
+        (prim
+          gt
+          (v stop)
+          (prim
+            slen
+            (v text)))
+        (prim
+          ssub
+          (v text)
+          (v offset)
+          (prim
+            slen
+            (v text)))
+        (prim
+          ssub
+          (v text)
+          (v offset)
+          (v stop)))))
+  (judgment
+    SelectionText
+    [text selection]
+    (let
+      offset
+      (prim
+        mget
+        (v selection)
+        (q offset)
+        (q 0))
+      (let
+        length
+        (prim
+          mget
+          (v selection)
+          (q length)
+          (q 0))
+        (if
+          (prim
+            eq
+            (v length)
+            (q 0))
+          (v text)
+          (call
+            TextSlice
+            (v text)
+            (v offset)
+            (v length)))))))
