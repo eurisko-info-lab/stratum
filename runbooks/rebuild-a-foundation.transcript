@@ -1,0 +1,20 @@
+# Rebuild a foundation and prove it still says what it said.
+#
+# This is a runbook, not a fixture. A fixture is replayed and compared exactly;
+# a runbook is performed, and states only what must be true for it to have
+# worked. Every parameter has a default, so it can be rehearsed -- run in full
+# and then put back -- which is how it is proven without being performed.
+#
+#   stratum transcript describe  runbooks/rebuild-a-foundation.transcript
+#   stratum transcript rehearse  runbooks/rebuild-a-foundation.transcript
+#   stratum transcript apply     runbooks/rebuild-a-foundation.transcript \
+#     --set node=foundations/F11 --record run.canon
+
+% param node = foundations/F1
+
+$ foundation build --spec {{node}}/build.canon --out {{node}}
+
+$ foundation verify --dir {{node}}
+> verdict ok
+
+$ foundation reconstruct --dir {{node}}

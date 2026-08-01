@@ -2,7 +2,7 @@
 
 $ foundation verify --dir foundations/F10
 > foundation F10
-> digest 8b3b087511f278706fd3f7fed5de4071c7a2d3ea170623180d42146f1160124d
+> digest e015ff06d0d7edafae9fbe62b21cf6f83e58db340a7a3da8af4a91437f70fa22
 > closure 73 artifacts
 > check collection-is-nontrivial ok
 > check derived-caches-are-discarded ok
@@ -23,18 +23,18 @@ $ foundation verify --dir foundations/F10
 $ foundation verify-successor --predecessor foundations/F9 --successor foundations/F10
 > predecessor F9
 > successor F10
-> result (valid #db63c46749b95ee5cf5c8ea06b572bbb99799235830b1931fd962ffc4fd25821a)
+> result (valid #de325e28dfd09141f15cb397e381de832cca939f7b6b7016707fba500775c5f68)
 
 $ foundation reconstruct --dir foundations/F10
 > reconstructed F10
-> digest 8b3b087511f278706fd3f7fed5de4071c7a2d3ea170623180d42146f1160124d
+> digest e015ff06d0d7edafae9fbe62b21cf6f83e58db340a7a3da8af4a91437f70fa22
 > stable yes
 > closure 73 artifacts
 > checks 14 ok
 
 $ foundation attest --dir foundations/F10
-> (attestation (name "F10") (foundation #d8b3b087511f278706fd3f7fed5de4071c7a2d3ea170623180d42146f1160124d) (application #dd2b6aafbb2bd834ff8f1bb9f647eb8668b10d823c715e77778a5015102397afb) (meta #d5da29eb3ec0923e016b5e42b39353895664ee54a02306d32b3f66f47db638612) (closure 73) (kinds {application 11 change 12 data 1 foundation 11 grammar 3 meta-program 31 source 4}) (complete #t))
-> attestation c1ab0f0eada1d2f6294a0cddd97cadd6e3ee379c34ed044ac5b3a6d8ffd52b70
+> (attestation (name "F10") (foundation #de015ff06d0d7edafae9fbe62b21cf6f83e58db340a7a3da8af4a91437f70fa22) (application #d6113949b1b88319a759e00fcfe60d3a18ac0c8f5ad32388bcbdfc38bae1b7a12) (meta #d9f9e98e51828e645774ccb75926100c2104794d5d8556575652f4e17f8c573c1) (closure 73) (kinds {application 11 change 12 data 1 foundation 11 grammar 3 meta-program 31 source 4}) (complete #t))
+> attestation 0bd3ecd75fac67ee72300f1981aba4c8bb4b91c4f0fb45d00179e0ec2370e2b1
 
 # A nontrivial closure is collected.
 $ derive --foundation foundations/F10 --goal '(call DiscardedKinds)'

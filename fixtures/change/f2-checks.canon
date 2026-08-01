@@ -21,7 +21,7 @@
     (value #t))
 
   (check derived-change-languages-differ-by-shape
-    (prim eq (call DeltaLambda) (call DeltaMeta1))
+    (prim eq (call DeltaLambda) (call DeltaMeta))
     (value #f))
 
   ; ------------------------------------------------------- semantic paths

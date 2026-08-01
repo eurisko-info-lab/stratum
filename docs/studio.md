@@ -43,7 +43,7 @@ primitive to add them. So positions are recovered inside the foundation:
 - a syntax error is reported by the grammar machine with its offset in the
   message, so `ParseErrorOffset` reads it back.
 
-Substring search is written in Meta1 because `index-of` searches lists, not
+Substring search is written in Meta because `index-of` searches lists, not
 strings.
 
 ## What a language gets for free
@@ -119,5 +119,5 @@ lives with the client.
 
 An editing session is a transcript like any other derivation. A branch that
 carries an application carries one in `fixtures/lsp`: it opens buffers that
-exist on no disk, including one of the platform's own Meta1 sources with a
+exist on no disk, including one of the platform's own Meta sources with a
 syntax error, and records every byte the server sent back.

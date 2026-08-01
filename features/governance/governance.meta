@@ -265,3 +265,45 @@ judgment PublishableBranch [decisions] =
   if call AllAccepted [decisions]
   then mk #publishable []
   else mk #blocked [#unaccepted-patches]
+
+; ------------------------------------------------------------------- runs
+
+; A run of a document against real state, as the host recorded it.
+;
+; The host can journal what a run wrote and put it back, but an undo is not
+; permission. Whether a run was allowed to do what it did is decided here,
+; against a constitution, exactly as a proposal is. The host dispatched on
+; nothing to produce the record -- it is a keyed map, not a tagged node -- so
+; reading it is this layer's work and not its.
+
+judgment RunSteps [report] = prim #mget [report #steps list []]
+
+judgment RunChanged [report] = prim #mget [report #changed list []]
+
+judgment StepsSucceeded [steps] =
+  match steps {
+    case [] -> true
+    case head :: rest ->
+      if prim #eq [prim #mget [head #exit 0] 0]
+      then call StepsSucceeded [rest]
+      else false
+  }
+
+; A run that took something away and put nothing back is not a change, it is
+; a loss, and a constitution is entitled to refuse it.
+judgment ChangesArePresent [changed] =
+  match changed {
+    case [] -> true
+    case head :: rest ->
+      if prim #mhas [head #after]
+      then call ChangesArePresent [rest]
+      else false
+  }
+
+judgment EvaluateRun [report] =
+  if call StepsSucceeded [call RunSteps [report]]
+  then
+    if call ChangesArePresent [call RunChanged [report]]
+    then mk #valid []
+    else mk #invalid [#removed-without-replacement]
+  else mk #invalid [#step-failed]

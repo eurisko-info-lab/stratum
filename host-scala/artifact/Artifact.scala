@@ -1,5 +1,6 @@
 package stratum.artifact
 
+import stratum.journal.Journal
 import stratum.canon.{Canon, CanonText, Digest}
 
 import java.nio.file.{Files, Path, StandardOpenOption}
@@ -42,7 +43,7 @@ final class MemoryCas(initial: Map[Digest, Artifact] = Map.empty) extends Cas:
 
 /** A CAS backed by a directory of `<digest>.canon` files. */
 final class DirectoryCas(val root: Path) extends Cas:
-  Files.createDirectories(root)
+  Journal.createDirectories(root)
   private val cache = mutable.HashMap.empty[Digest, Artifact]
 
   private def pathOf(d: Digest): Path = root.resolve(s"${d.hex}.canon")
@@ -63,7 +64,7 @@ final class DirectoryCas(val root: Path) extends Cas:
     val d = a.digest
     val p = pathOf(d)
     if !Files.exists(p) then
-      Files.write(p, a.bytes, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
+      Journal.writeNew(p, a.bytes)
     cache.put(d, a)
     d
 

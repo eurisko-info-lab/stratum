@@ -3,8 +3,8 @@
 //! The independent host has no dependencies, so the lexical classes of a
 //! grammar artifact are matched by this engine. It supports literals, escapes,
 //! `.`, character classes with ranges and negation, groups, alternation and the
-//! greedy quantifiers `*`, `+` and `?`, which is exactly what canonical token
-//! declarations use.
+//! greedy quantifiers `*`, `+`, `?` and `{n}` / `{n,}` / `{n,m}`, which is
+//! exactly what canonical token declarations use.
 
 #[derive(Clone, Debug)]
 enum Node {
@@ -83,7 +83,53 @@ impl Parser {
                 self.position += 1;
                 Ok(Node::Repeat(Box::new(atom), 0, Some(1)))
             }
+            Some('{') => self.bound(atom),
             _ => Ok(atom),
+        }
+    }
+
+    /// Parses a bound quantifier `{n}`, `{n,}` or `{n,m}` following `atom`.
+    /// A `{` that does not form a valid bound is not a quantifier here: it is
+    /// left for the caller to consume as a literal character, matching how
+    /// the reference host's regex engine treats a bare `{`.
+    fn bound(&mut self, atom: Node) -> Result<Node, String> {
+        let start = self.position;
+        self.position += 1;
+        let minimum = self.digits();
+        if minimum.is_none() {
+            self.position = start;
+            return Ok(atom);
+        }
+        let minimum = minimum.unwrap();
+        let maximum = if self.peek() == Some(',') {
+            self.position += 1;
+            let upper = self.digits();
+            if self.peek() != Some('}') {
+                self.position = start;
+                return Ok(atom);
+            }
+            self.position += 1;
+            upper
+        } else if self.peek() == Some('}') {
+            self.position += 1;
+            Some(minimum)
+        } else {
+            self.position = start;
+            return Ok(atom);
+        };
+        Ok(Node::Repeat(Box::new(atom), minimum, maximum))
+    }
+
+    /// Consumes a run of ASCII digits, if any, returning their value.
+    fn digits(&mut self) -> Option<usize> {
+        let start = self.position;
+        while matches!(self.peek(), Some(c) if c.is_ascii_digit()) {
+            self.position += 1;
+        }
+        if self.position == start {
+            None
+        } else {
+            self.characters[start..self.position].iter().collect::<String>().parse().ok()
         }
     }
 

@@ -1,0 +1,16 @@
+grammar "gitattributes"
+start file
+
+token word str "[^\\t \\r\\n]+"
+token newline sym "\\n"
+skip "#[^\\n]*"
+
+category file
+  fold GitAttributesFile line
+
+category line
+  prod Attributes pattern : word values : attributes newline : newline
+  prod Blank newline : newline
+
+category attributes
+  fold Attribute word

@@ -2,7 +2,7 @@
 
 $ foundation verify --dir foundations/F3
 > foundation F3
-> digest 5e16df8b7d32f18c7d98676c4b499d53d24746ef8db2e90d6c235a33930093ea
+> digest 3133e39892c7ff46c61d5a2dc6741419536368b932ef018cc36c7d67bd2a1592
 > closure 37 artifacts
 > check two-branches-diverge ok
 > check branch-state-is-derived-by-replay ok
@@ -26,11 +26,11 @@ $ foundation verify --dir foundations/F3
 $ foundation verify-successor --predecessor foundations/F2 --successor foundations/F3
 > predecessor F2
 > successor F3
-> result (valid #d9a11503650600992a85be048a43f7e7d6dec1c31ff3864414f69a68deeb97106)
+> result (valid #d7a26aa7b68ade69f09f7f39e48ebe24744b1ceb77d02f0e583ba2984545e5a09)
 
 $ foundation reconstruct --dir foundations/F3
 > reconstructed F3
-> digest 5e16df8b7d32f18c7d98676c4b499d53d24746ef8db2e90d6c235a33930093ea
+> digest 3133e39892c7ff46c61d5a2dc6741419536368b932ef018cc36c7d67bd2a1592
 > stable yes
 > closure 37 artifacts
 > checks 17 ok

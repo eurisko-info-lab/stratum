@@ -301,7 +301,7 @@ judgment TranslationPreservesMeaning [grammar source] =
     call NormalizeToText [grammar source]
   ]
 
-; Meta1 string literals are raw: a backslash stands for itself.
+; Meta string literals are raw: a backslash stands for itself.
 judgment RegressionCorpus [] =
   list [
     "(\x. x) a"

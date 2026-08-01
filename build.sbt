@@ -24,6 +24,9 @@ lazy val root = (project in file("."))
     scalacOptions ++= Seq("-deprecation", "-feature"),
     run / fork := true,
     Test / fork := true,
+    // The journal that makes a run undoable is one per process, and a run may
+    // not nest, so suites that perform runs must not overlap.
+    Test / parallelExecution := false,
     javaOptions ++= Seq("-Xss256m"),
     Compile / mainClass := Some("stratum.cli.Stratum"),
     distribution := {
@@ -75,4 +78,25 @@ lazy val root = (project in file("."))
       log.info(s"Built ${archive.getAbsolutePath}")
       archive
     }
+  )
+
+lazy val repoTool = (project in file("stratum-repo-tool"))
+  .dependsOn(root)
+  .settings(
+    name := "stratum-repo",
+    Compile / scalaSource := baseDirectory.value.getParentFile / "repo-scala",
+    Test / scalaSource := baseDirectory.value.getParentFile / "test-repo-scala",
+    libraryDependencies += "org.scalameta" %% "munit" % "1.0.4" % Test,
+    run / fork := true,
+    Test / fork := true,
+    // A token-dense source file elaborates into a fold tree one level deep
+    // per token; printing or comparing that tree recurses one stack frame
+    // per level, same as the root project's own tests. javaOptions only
+    // affects forked processes, so both run and Test must fork to use it.
+    javaOptions ++= Seq("-Xss256m"),
+    // Forking otherwise moves the working directory to this subproject's own
+    // folder; the tool resolves paths (including the language declarations)
+    // relative to the repository root, exactly as it did unforked.
+    run / baseDirectory := (ThisBuild / baseDirectory).value,
+    Compile / mainClass := Some("stratum.repo.StratumRepo")
   )
