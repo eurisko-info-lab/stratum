@@ -1,0 +1,78 @@
+# F1 acceptance transcript: self-described Meta and Grammar.
+# The lambda language of F1 is elaborated from Meta and Grammar sources.
+
+$ foundation verify --dir foundations/F1
+> foundation F1
+> digest ec0af3864b13863e4ad8f48817d4f9ed6e0c0a27dd139c0e434b92fa55488297
+> closure 26 artifacts
+> check meta-parse-print-roundtrip ok
+> check grammar-parse-print-roundtrip ok
+> check grammar-describes-itself ok
+> check meta-grammar-reconstructs ok
+> check lambda-grammar-reconstructs ok
+> check lambda-program-fixpoint ok
+> check elaboration-stable-under-printing ok
+> check delta-meta-applies ok
+> check delta-grammar-applies ok
+> check delta-meta-is-predecessor-bound ok
+> check parse-print-roundtrip ok
+> check beta-deterministic ok
+> check beta-church-two ok
+> check alpha-equivalent ok
+> check alpha-distinct ok
+> check free-variables ok
+> check resource-exhaustion-is-a-verdict ok
+> verdict ok
+
+$ foundation closure --dir foundations/F1
+> closure 26 artifacts
+> application 2
+> change 3
+> data 1
+> foundation 2
+> grammar 3
+> meta-program 11
+> source 4
+
+# The predecessor validates the successor.
+$ foundation verify-successor --predecessor foundations/F0 --successor foundations/F1
+> predecessor F0
+> successor F1
+> result (valid #d2fc5385fb851961c4bb7898e3a76abae27bc0d24d7880cdfee804b1906d0ba6b)
+
+# The successor reconstructs itself from its own closure.
+$ foundation reconstruct --dir foundations/F1
+> reconstructed F1
+> digest ec0af3864b13863e4ad8f48817d4f9ed6e0c0a27dd139c0e434b92fa55488297
+> stable yes
+> closure 26 artifacts
+> checks 17 ok
+
+# Grammar parses its own grammar and rebuilds the committed artifact.
+$ derive --foundation foundations/F1 --goal '(call GrammarReconstructs (grammar grammar) (call SourceText (source "languages/grammar/grammar.grammar")) (grammar grammar))'
+> (reconstruct ok)
+
+# Meta elaborates the lambda language back to its canonical Meta0 artifact.
+$ derive --foundation foundations/F1 --goal '(call ElaborationStable (grammar meta) (call SourceText (source "languages/lambda/lambda.meta")))'
+> #t
+
+# The canonical change from F0 to F1 is predecessor bound.
+$ derive --foundation foundations/F1 --goal '(call ApplyDelta (file "changes/F0-F1/delta-meta.canon") (q (bootstrap meta0)))'
+> (applied (surface meta))
+
+$ derive --foundation foundations/F1 --goal '(call ApplyDelta (file "changes/F0-F1/delta-meta.canon") (q (surface meta)))'
+> (rejected predecessor-mismatch)
+
+# Lambda behaviour is identical to F0.
+$ derive --foundation foundations/F1 --goal '(call NormalizeToText (grammar lambda) (q "(\\x. \\y. x) a b"))'
+> "a"
+
+$ derive --foundation foundations/F1 --goal '(call NormalizeToText (grammar lambda) (q "(\\f. \\x. f (f x)) g y"))'
+> "g (g y)"
+
+$ derive --foundation foundations/F1 --goal '(call AlphaEquivalent (grammar lambda) (q "\\x. x") (q "\\y. y"))'
+> #t
+
+$ derive --foundation foundations/F1 --goal '(call NormalizeToText (grammar lambda) (q "(\\x. x x) (\\x. x x)"))' --budget 20000
+> error resource-exhausted "budget of 20000 steps exhausted"
+> exit 1

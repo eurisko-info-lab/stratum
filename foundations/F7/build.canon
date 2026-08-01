@@ -11,8 +11,8 @@
       (meta (program-of [
         (file "languages/meta/prelude.meta")
         (file "languages/meta/source.meta")
-        (file "languages/meta1/elaborate.meta")
-        (file "languages/grammar1/elaborate.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
         (file "languages/foundation/foundation.meta")
         (file "languages/foundation/derive.meta")
         (file "languages/foundation/delta.meta")
@@ -28,8 +28,8 @@
       ]))
       (grammars {
         lambda (file "languages/lambda/lambda.generated.grammar")
-        meta1 (file "languages/meta1/meta1.generated.grammar")
-        grammar1 (file "languages/grammar1/grammar1.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
       })
       (entries {})
       (checks (include "fixtures/ledger/f7-checks.canon"))

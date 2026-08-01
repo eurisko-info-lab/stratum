@@ -2,7 +2,7 @@
 
 $ foundation verify --dir foundations/F5
 > foundation F5
-> digest e90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca
+> digest 7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe
 > closure 48 artifacts
 > check accepted-under-a-single-author-constitution ok
 > check accepted-under-a-test-requiring-constitution ok
@@ -24,19 +24,22 @@ $ foundation verify --dir foundations/F5
 > check a-fully-accepted-branch-is-publishable ok
 > check toolchain-derivation-unchanged ok
 > check lambda-behaviour-unchanged ok
+> check a-completed-run-is-acceptable ok
+> check a-run-with-a-failed-step-is-not ok
+> check a-run-that-only-removes-is-not ok
 > verdict ok
 
 $ foundation verify-successor --predecessor foundations/F4 --successor foundations/F5
 > predecessor F4
 > successor F5
-> result (valid #d301019771ef5845c58c06d01e16797e99b865ab410bf2447f3e9e9d036e9e788)
+> result (valid #d8a35e098060900900f674c8394f96779d470275388021d39e1ae2252f720f4f9)
 
 $ foundation reconstruct --dir foundations/F5
 > reconstructed F5
-> digest e90d3bb03dc583495cbf7daf91db21e7e356cd745d3177a80b2597c31f7d12ca
+> digest 7597906c290ba91511ff77ddc0be2a42e3848b1c2431eaa7ed8649b469fdb5fe
 > stable yes
 > closure 48 artifacts
-> checks 20 ok
+> checks 23 ok
 
 # A change is accepted only relative to a constitution.
 $ derive --foundation foundations/F5 --goal '(call AcceptedLocal)'

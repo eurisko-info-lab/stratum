@@ -1,0 +1,8 @@
+# The independent host is built with one named toolchain, not with whatever the
+# machine happens to have. A system whose whole claim is that identity is the
+# digest of what a thing actually is should not resolve its own compiler by
+# floating reference.
+[toolchain]
+channel = "1.91.1"
+components = ["rustfmt"]
+profile = "minimal"

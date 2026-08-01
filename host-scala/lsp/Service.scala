@@ -107,6 +107,19 @@ final class Service(val root: Path, val worldDir: Path, val world: LoadedFoundat
       case Right(Canon.S(document)) => document
       case _                        => ""
 
+  /** Evaluates a selection of the buffer, when the world offers evaluation. */
+  def evaluate(language: String, text: String, offset: Int, length: Int): Either[String, String] =
+    val selection = Canon.node(
+      "q",
+      Canon.M(
+        Vector(
+          Canon.Sym("length") -> Canon.nat(length),
+          Canon.Sym("offset") -> Canon.nat(offset)
+        )
+      )
+    )
+    call("ServiceEvaluate", language, Vector(buffer(text), selection)).map(Service.text)
+
   /** The rendered document, for a preview beside the source it came from. */
   def preview(language: String, text: String): Vector[Canon] =
     records("ServicePreview", language, Vector(buffer(text))).getOrElse(Vector.empty)

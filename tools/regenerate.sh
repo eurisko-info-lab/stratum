@@ -12,26 +12,36 @@ run() {
   sbt -batch --error "runMain stratum.cli.Stratum $*"
 }
 
-META="--program languages/meta/prelude.meta --program languages/meta1/elaborate.meta --program languages/grammar1/elaborate.meta"
+META="--program languages/meta/prelude.meta --program languages/meta/elaborate.meta --program languages/grammar/elaborate.meta"
+LANGUAGE_PACKAGES="gitattributes gitignore html json lean markdown properties rust scala shell text toml transcript typescript yaml"
 
 echo "regenerating grammars"
-run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META \
+run meta elaborate --grammar languages/grammar/grammar.generated.grammar $META \
   --judgment ElaborateGrammarSource \
-  --source languages/grammar1/grammar1.grammar \
-  --out languages/grammar1/grammar1.generated.grammar
-run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META \
+  --source languages/grammar/grammar.grammar \
+  --out languages/grammar/grammar.generated.grammar
+run meta elaborate --grammar languages/grammar/grammar.generated.grammar $META \
   --judgment ElaborateGrammarSource \
-  --source languages/meta1/meta1.grammar \
-  --out languages/meta1/meta1.generated.grammar
-run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META \
+  --source languages/meta/meta.grammar \
+  --out languages/meta/meta.generated.grammar
+run meta elaborate --grammar languages/grammar/grammar.generated.grammar $META \
   --judgment ElaborateGrammarSource \
   --source languages/lambda/lambda.grammar \
   --out languages/lambda/lambda.generated.grammar
 
+for language in $LANGUAGE_PACKAGES; do
+  source="languages/$language/$language.grammar"
+  echo "  $source"
+  run meta elaborate --grammar languages/grammar/grammar.generated.grammar $META \
+    --judgment ElaborateGrammarSource \
+    --source "$source" \
+    --out "${source%.grammar}.generated.grammar"
+done
+
 if [ -d applications ]; then
   for source in $(find applications -name '*.grammar' ! -name '*.generated.grammar' | sort); do
     echo "  $source"
-    run meta elaborate --grammar languages/grammar1/grammar1.generated.grammar $META \
+    run meta elaborate --grammar languages/grammar/grammar.generated.grammar $META \
       --judgment ElaborateGrammarSource \
       --source "$source" \
       --out "${source%.grammar}.generated.grammar"
@@ -39,13 +49,28 @@ if [ -d applications ]; then
 fi
 
 echo "regenerating meta programs"
-run meta elaborate --grammar languages/meta1/meta1.generated.grammar $META \
+run meta elaborate --grammar languages/meta/meta.generated.grammar $META \
   --source languages/lambda/lambda.meta \
   --out languages/lambda/lambda.generated.meta
 
 for source in $(find features applications languages/service languages/pdf -name '*.meta' ! -name '*.generated.meta' 2>/dev/null | sort); do
   echo "  $source"
-  run meta elaborate --grammar languages/meta1/meta1.generated.grammar $META \
+  run meta elaborate --grammar languages/meta/meta.generated.grammar $META \
+    --source "$source" \
+    --out "${source%.meta}.generated.meta"
+done
+
+for language in $LANGUAGE_PACKAGES; do
+  source="languages/$language/$language.meta"
+  echo "  $source"
+  run meta elaborate --grammar languages/meta/meta.generated.grammar $META \
+    --source "$source" \
+    --out "${source%.meta}.generated.meta"
+done
+
+for source in languages/catalogue.meta; do
+  echo "  $source"
+  run meta elaborate --grammar languages/meta/meta.generated.grammar $META \
     --source "$source" \
     --out "${source%.meta}.generated.meta"
 done

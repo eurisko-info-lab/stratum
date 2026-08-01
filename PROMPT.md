@@ -589,11 +589,21 @@ Make Meta and Grammar ordinary languages interpreted by the bootstrap machines.
 
 After this commit, the Scala bootstrap must no longer contain the evolving Meta or Grammar definitions.
 
+## Naming
+
+The bootstrap machines are `Meta0` and `Grammar0`, and they are frozen. The
+surface languages are `Meta` and `Grammar`, and they carry no numeral: the `0`
+already marks the two definitions that cannot change, so a suffix on the
+surface language would name a stage that has no successor.
+
+Their artifacts live in `languages/meta` and `languages/grammar`, one directory
+per language.
+
 ## Meta change
 
-Define `Meta1` using Meta0.
+Define `Meta` using Meta0.
 
-Meta1 provides surface declarations for:
+Meta provides surface declarations for:
 
 ```text
 data
@@ -610,13 +620,13 @@ module
 import
 ```
 
-Meta1 elaborates to canonical Meta0.
+Meta elaborates to canonical Meta0.
 
 ## Grammar change
 
-Define `Grammar1` using Meta1 and Grammar0.
+Define `Grammar` using Meta and Grammar0.
 
-Grammar1 provides declarations for:
+Grammar provides declarations for:
 
 ```text
 token
@@ -630,17 +640,17 @@ source span
 canonical print
 ```
 
-Grammar1 elaborates to canonical Grammar0.
+Grammar elaborates to canonical Grammar0.
 
 ## Self-description
 
 The foundation must:
 
-1. load Meta1 from artifacts;
-2. parse Meta1’s own source;
-3. reconstruct the canonical Meta1 AST;
-4. load Grammar1;
-5. parse Grammar1’s own grammar;
+1. load Meta from artifacts;
+2. parse Meta’s own source;
+3. reconstruct the canonical Meta AST;
+4. load Grammar;
+5. parse Grammar’s own grammar;
 6. reconstruct its canonical grammar AST;
 7. reconstruct the lambda language;
 8. derive the same lambda behavior as (F_0).
@@ -648,7 +658,7 @@ The foundation must:
 Require:
 
 $$
-\mathsf{Meta0}(\mathsf{Meta1})=\mathsf{Meta1}
+\mathsf{Meta0}(\mathsf{Meta})=\mathsf{Meta}
 $$
 
 at the canonical artifact level.
@@ -659,13 +669,13 @@ After this commit:
 
 * Meta0 is immutable;
 * Grammar0 is immutable;
-* Meta1 and Grammar1 evolve through their own change languages;
+* Meta and Grammar evolve through their own change languages;
 * new features must not introduce host semantic logic.
 
 ## Acceptance tests
 
-* Meta1 parse/print round-trip;
-* Grammar1 parse/print round-trip;
+* Meta parse/print round-trip;
+* Grammar parse/print round-trip;
 * self-description fixpoint;
 * lambda behavior identical under (F_0) and (F_1);
 * no host-built lambda AST or evaluator is used;
@@ -783,8 +793,8 @@ FreeChangeWitness {
 Automatically derive:
 
 ```text
-DeltaMeta1
-DeltaGrammar1
+DeltaMeta
+DeltaGrammar
 DeltaLambda
 DeltaFoundation
 ```

@@ -236,3 +236,22 @@ judgment TokenType [kind] =
       if prim #eq [kind #nat]
       then #number
       else #variable
+
+; --------------------------------------------------------------- selections
+
+; An editor can ask a world to evaluate a part of a buffer rather than the
+; whole of it. The slice is taken here, because a selection is a pair of
+; offsets into text and the adapter is not allowed to know what text means.
+
+judgment TextSlice [text offset length] =
+  let stop = prim #add [offset length] in
+  if prim #gt [stop prim #slen [text]]
+  then prim #ssub [text offset prim #slen [text]]
+  else prim #ssub [text offset stop]
+
+judgment SelectionText [text selection] =
+  let offset = prim #mget [selection #offset 0] in
+  let length = prim #mget [selection #length 0] in
+  if prim #eq [length 0]
+  then text
+  else call TextSlice [text offset length]

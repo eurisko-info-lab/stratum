@@ -1,0 +1,58 @@
+name: A change worth making
+description: Describe a change precisely enough for an agent to implement and the gates to judge.
+title: "[change] "
+labels: ["change"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The code here is written by AI agents, so the useful unit of
+        contribution is a description rather than a patch. State what should
+        become true and how anyone would know it had — which is the same
+        standard the code is held to, and is worth writing down even if you
+        were going to implement it yourself.
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What should become true?
+      description: The behaviour or property that is missing or wrong. Not the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How would anyone know it had?
+      description: >-
+        The check that would fail today and pass afterwards. A transcript, a
+        world check, a digest that should be stable, a program that should run
+        and its answer.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Where does it belong?
+      description: >-
+        The platform names no application and no editor; a world lives on its
+        own branch. See CONTRIBUTING.md.
+      options:
+        - The platform (main)
+        - A world or an editor client (featured/*)
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Does it need a boundary relaxed?
+      description: >-
+        The frozen host core, the native boundary, the platform naming no
+        domain, or committed generated artefacts. If so, say which and why —
+        that is the part worth discussing first.
+    validations:
+      required: false

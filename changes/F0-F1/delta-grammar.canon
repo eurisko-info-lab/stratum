@@ -1,5 +1,5 @@
 ; delta-grammar for F0 -> F1: the Grammar language becomes the self-described
-; surface language Grammar1.
+; surface language Grammar.
 (change
   (kind delta-grammar)
   (name "F0->F1 delta-grammar")
@@ -7,4 +7,4 @@
     (ReplaceChange
       grammar-language
       (bootstrap grammar0)
-      (surface grammar1))))
+      (surface grammar))))

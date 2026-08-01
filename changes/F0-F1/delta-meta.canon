@@ -1,5 +1,5 @@
 ; delta-meta for F0 -> F1: the Meta language stops being a host artifact and
-; becomes the self-described surface language Meta1.
+; becomes the self-described surface language Meta.
 (change
   (kind delta-meta)
   (name "F0->F1 delta-meta")
@@ -7,4 +7,4 @@
     (ReplaceChange
       meta-language
       (bootstrap meta0)
-      (surface meta1))))
+      (surface meta))))

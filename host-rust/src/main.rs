@@ -14,7 +14,7 @@ mod regex;
 mod sha;
 mod store;
 
-use canon::{decode, write_text, Canon, Digest};
+use canon::{decode, read_text, write_text, Canon, Digest};
 use meta::{Budget, Kernel, Program};
 use std::env;
 use std::fs;
@@ -193,6 +193,84 @@ fn canon_check(path: &Path) -> Canon {
     }
 }
 
+/// Parses `text_path` under the grammar declared at `grammar_path`, using the
+/// same generic GrammarMachine0 data interpreter the reference host uses, so
+/// the two hosts can be compared file by file without either containing any
+/// language-specific parsing code.
+fn grammar_parse(grammar_path: &Path, text_path: &Path) -> Result<Canon, String> {
+    let grammar_source = fs::read_to_string(grammar_path)
+        .map_err(|error| format!("{}: {}", grammar_path.display(), error))?;
+    let grammar_value = read_text(&grammar_source)?;
+    let loaded = grammar::load(&grammar_value)?;
+    let text = fs::read_to_string(text_path)
+        .map_err(|error| format!("{}: {}", text_path.display(), error))?;
+    grammar::parse(&loaded, &text)
+}
+
+/// Reads a keyed field out of a map. The verifier dispatches on no tag of the
+/// system above it, exactly as the other host does not.
+fn field<'a>(value: &'a Canon, key: &str) -> Option<&'a Canon> {
+    match value {
+        Canon::Map(entries) => entries
+            .iter()
+            .find(|(k, _)| matches!(k, Canon::Sym(name) if name == key))
+            .map(|(_, v)| v),
+        _ => None,
+    }
+}
+
+fn items(value: Option<&Canon>) -> Vec<Canon> {
+    match value {
+        Some(Canon::List(items)) => items.clone(),
+        _ => Vec::new(),
+    }
+}
+
+/// Examines a run this host did not perform.
+///
+/// A run happens on whichever host holds the working tree, so the other one
+/// cannot repeat it. What it can do is read the record and say whether the
+/// tree now agrees with what the record claims was left behind. Together with
+/// the answers the run wrote down, that is the part of a run two hosts can
+/// agree about without both performing it.
+fn examine_run(path: &Path) -> Result<Canon, String> {
+    let text = fs::read_to_string(path).map_err(|_| format!("unreadable record {}", path.display()))?;
+    let record = read_text(&text).map_err(|m| format!("record is not canonical: {}", m))?;
+
+    let root = path.parent().unwrap_or(Path::new("."));
+    let mut agreed = 0usize;
+    let mut disagreed: Vec<Canon> = Vec::new();
+
+    for entry in items(field(&record, "changed")) {
+        let name = match field(&entry, "path") {
+            Some(Canon::Str(text)) => text.clone(),
+            _ => continue,
+        };
+        // Only what the run says it left behind can be checked now. A prior
+        // state it replaced is gone, and a record that claimed otherwise would
+        // be claiming something unfalsifiable.
+        if let Some(Canon::Ref(expected)) = field(&entry, "after") {
+            let found = fs::read(root.join(&name)).ok().map(|bytes| Digest(sha::sha256(&bytes)));
+            match found {
+                Some(actual) if actual.hex() == expected.hex() => agreed += 1,
+                _ => disagreed.push(Canon::Str(name)),
+            }
+        }
+    }
+
+    let outcome = field(&record, "outcome").cloned().unwrap_or(Canon::sym("unstated"));
+    // Written in canonical key order, because a map that is not sorted is not
+    // a canonical value and the other host would be right to reject it.
+    Ok(Canon::Map(vec![
+        (Canon::sym("agreed"), Canon::nat(agreed as u128)),
+        (Canon::sym("disagreed"), Canon::List(disagreed)),
+        (Canon::sym("outcome"), outcome),
+        (Canon::sym("read"), Canon::nat(items(field(&record, "read")).len() as u128)),
+        (Canon::sym("record"), Canon::Ref(digest_of(&record))),
+        (Canon::sym("steps"), Canon::nat(items(field(&record, "steps")).len() as u128)),
+    ]))
+}
+
 fn option(args: &[String], name: &str) -> Option<String> {
     args.iter()
         .position(|argument| argument == name)
@@ -211,7 +289,21 @@ fn emit(label: &str, value: &Canon, out: Option<String>) {
     print!("{}", lines);
 }
 
+/// A token-dense source file can elaborate into a fold tree one Canon::Node
+/// deep per token, and printing or dropping that tree recurses one stack
+/// frame per level. The default thread stack is not enough for every real
+/// file this host must agree with the reference host about, so the actual
+/// work runs on a thread sized for that, rather than reshaping the recursion.
 fn main() {
+    std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(run)
+        .expect("failed to spawn worker thread")
+        .join()
+        .expect("worker thread panicked");
+}
+
+fn run() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!("usage: stratum-verify <attest|report|derive|canon|host-manifest> [path] [options]");
@@ -226,7 +318,7 @@ fn main() {
     }
 
     if args.len() < 3 {
-        eprintln!("usage: stratum-verify <attest|report|derive|canon> <path> [options]");
+        eprintln!("usage: stratum-verify <attest|report|derive|canon|run> <path> [options]");
         std::process::exit(2);
     }
     let path = args[2].clone();
@@ -243,6 +335,13 @@ fn main() {
             emit("canon", &value, out);
             Ok(())
         }
+        "run" => examine_run(Path::new(&path)).map(|value| emit("run", &value, out)),
+        "grammar-parse" => match option(&args, "--text-file") {
+            Some(text_path) => grammar_parse(Path::new(&path), Path::new(&text_path)).map(|value| {
+                println!("{}", write_text(&value));
+            }),
+            None => Err("grammar-parse requires --text-file <path>".to_string()),
+        },
         other => Err(format!("unknown command {}", other)),
     };
 

@@ -1,6 +1,7 @@
 package stratum.cli
 
 import stratum.artifact.*
+import stratum.journal.Journal
 import stratum.canon.{Canon, CanonText, Digest}
 import stratum.cap.{Capabilities, CapabilityHandler}
 import stratum.grammar.GrammarMachine0
@@ -214,13 +215,13 @@ object Cli:
         // that the independent host also emits, for byte comparison.
         opts.get("out").foreach { out =>
           val target = root.resolve(out)
-          Option(target.getParent).foreach(Files.createDirectories(_))
-          Files.writeString(target, HostCore.header + CanonText.pretty(manifest) + "\n")
+          Option(target.getParent).foreach(Journal.createDirectories(_))
+          Journal.writeString(target, HostCore.header + CanonText.pretty(manifest) + "\n")
         }
         opts.get("report").foreach { out =>
           val target = root.resolve(out)
-          Option(target.getParent).foreach(Files.createDirectories(_))
-          Files.writeString(target, lines.mkString("", "\n", "\n"))
+          Option(target.getParent).foreach(Journal.createDirectories(_))
+          Journal.writeString(target, lines.mkString("", "\n", "\n"))
         }
         CommandResult.okLines(lines)
       case Some(other) => CommandResult.fail(s"unknown host command $other")
@@ -262,8 +263,8 @@ object Cli:
         val lines = Vector(CanonText.write(value), s"canon ${Canon.digest(value).hex}")
         opts.get("out").foreach { out =>
           val target = root.resolve(out)
-          Option(target.getParent).foreach(Files.createDirectories(_))
-          Files.writeString(target, lines.mkString("", "\n", "\n"))
+          Option(target.getParent).foreach(Journal.createDirectories(_))
+          Journal.writeString(target, lines.mkString("", "\n", "\n"))
         }
         CommandResult.okLines(lines)
       case _ => CommandResult.fail("usage: canon read|digest|check <file>")
@@ -424,9 +425,9 @@ object Cli:
                     case None => CommandResult.ok(CanonText.pretty(value))
                     case Some(outPath) =>
                       val out = root.resolve(outPath)
-                      Option(out.getParent).foreach(Files.createDirectories(_))
+                      Option(out.getParent).foreach(Journal.createDirectories(_))
                       val header = s"; Generated from $sourceFile by $judgment. Do not edit by hand.\n"
-                      Files.writeString(out, header + CanonText.pretty(value) + "\n")
+                      Journal.writeString(out, header + CanonText.pretty(value) + "\n")
                       CommandResult.ok(
                         s"elaborated $sourceFile",
                         s"judgment $judgment",

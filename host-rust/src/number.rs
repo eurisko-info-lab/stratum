@@ -20,10 +20,6 @@ pub struct Nat {
 }
 
 impl Nat {
-    pub fn zero() -> Nat {
-        Nat { chunks: vec![0] }
-    }
-
     pub fn from_chunks(mut chunks: Vec<u8>) -> Nat {
         while chunks.len() > 1 && *chunks.last().unwrap() == 0 {
             chunks.pop();

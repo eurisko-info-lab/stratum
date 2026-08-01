@@ -1,0 +1,101 @@
+module yaml
+
+record YamlDocument [lines]
+record EmptyMapping [key newline]
+record IndentedEmptyMapping [indent key newline]
+record Mapping [key value newline]
+record IndentedMapping [indent key value newline]
+record Sequence [value newline]
+record IndentedSequence [indent value newline]
+record Block [key newline]
+record IndentedBlock [indent key newline]
+record Continuation [indent value newline]
+record IndentedBlank [indent newline]
+record Blank [newline]
+record Atoms [items]
+record Quoted [value]
+record Word [value]
+record Space [value]
+
+judgment ParseYaml [grammar source] = call Parse [grammar source]
+judgment PrintYaml [grammar syntax] = call Print [grammar syntax]
+judgment YamlWellFormed [grammar source] =
+  match call ParseYaml [grammar source] {
+    case (#YamlDocument lines) -> mk #valid [lines]
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment YamlLines [node] = call FlattenSeq [node #YamlDocument]
+judgment YamlAtoms [node] = call FlattenSeq [node #Atoms]
+
+judgment YamlWordType [value] =
+  if prim #eq [value "true"]
+  then #boolean
+  else if prim #eq [value "false"]
+  then #boolean
+  else if prim #eq [value "null"]
+  then #null
+  else #string
+
+judgment YamlAtomsType [items] =
+  match items {
+    case [] -> #unknown
+    case (#Quoted value) :: rest -> #string
+    case (#Word value) :: rest -> call YamlWordType [value]
+    case (#OpenList) :: rest -> #array
+    case (#OpenMap) :: rest -> #object
+    case head :: rest -> call YamlAtomsType [rest]
+  }
+
+judgment YamlLookupType [env key] =
+  match env {
+    case [] -> #unknown
+    case (#typed k t) :: rest ->
+      if prim #eq [k key]
+      then t
+      else call YamlLookupType [rest key]
+  }
+
+judgment YamlInferLines [items] =
+  match items {
+    case [] -> list []
+    case (#Mapping key value newline) :: rest ->
+      let t = call YamlAtomsType [call YamlAtoms [value]] in
+      prim #cons [mk #type [key t #declared t] call YamlInferLines [rest]]
+    case (#IndentedMapping indent key value newline) :: rest ->
+      let t = call YamlAtomsType [call YamlAtoms [value]] in
+      prim #cons [mk #type [key t #declared t] call YamlInferLines [rest]]
+    case (#EmptyMapping key newline) :: rest ->
+      prim #cons [mk #type [key #unknown #declared #unknown] call YamlInferLines [rest]]
+    case (#IndentedEmptyMapping indent key newline) :: rest ->
+      prim #cons [mk #type [key #unknown #declared #unknown] call YamlInferLines [rest]]
+    case head :: rest -> call YamlInferLines [rest]
+  }
+
+judgment YamlCheckLines [items env] =
+  match items {
+    case [] -> list []
+    case (#Mapping key value newline) :: rest ->
+      let t = call YamlAtomsType [call YamlAtoms [value]] in
+      let old = call YamlLookupType [env key] in
+      if prim #eq [old #unknown]
+      then call YamlCheckLines [rest prim #snoc [env mk #typed [key t]]]
+      else if prim #eq [old t]
+      then call YamlCheckLines [rest env]
+      else prim #cons [mk #type-error [key old t] call YamlCheckLines [rest env]]
+    case (#IndentedMapping indent key value newline) :: rest ->
+      let t = call YamlAtomsType [call YamlAtoms [value]] in
+      let old = call YamlLookupType [env key] in
+      if prim #eq [old #unknown]
+      then call YamlCheckLines [rest prim #snoc [env mk #typed [key t]]]
+      else if prim #eq [old t]
+      then call YamlCheckLines [rest env]
+      else prim #cons [mk #type-error [key old t] call YamlCheckLines [rest env]]
+    case head :: rest -> call YamlCheckLines [rest env]
+  }
+
+judgment InferYaml [grammar source] =
+  call YamlInferLines [call YamlLines [call ParseYaml [grammar source]]]
+
+judgment TypeCheckYaml [grammar source] =
+  call YamlCheckLines [call YamlLines [call ParseYaml [grammar source]] list []]

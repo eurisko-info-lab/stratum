@@ -120,6 +120,18 @@ deterministic resource accounting, plus the attestation and the host core
 identity. It also replays an adversarial encoding corpus that both hosts must
 accept and reject identically.
 
+The claim is about **what the system concludes**, not about what it does. Two
+hosts must derive the same verdict from the same closure; they need not both be
+able to *perform* a run against real state. Applying a transcript is an effect,
+not a judgment: it belongs to whichever host is holding the working tree, and it
+is gated by rehearsal rather than by parity. What the run produces is a
+canonical record, and that is back inside the claim, because it is ordinary
+Canon and its digest is fixed by the encoding both hosts implement.
+
+A reader who wants the shorter rule: if two hosts could disagree about it, it is
+gated by parity. If only one host can do it at all, it is gated by a rehearsal
+that proves it and keeps nothing.
+
 ## Semantic and surface separation
 
 A language's meaning and its presentation are separate artifacts. Changing a

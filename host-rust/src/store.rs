@@ -20,10 +20,6 @@ impl Artifact {
         )
     }
 
-    pub fn digest(&self) -> Digest {
-        Digest(sha256(&encode(&self.to_canon())))
-    }
-
     pub fn from_canon(value: Canon) -> Result<Artifact, String> {
         match value {
             Canon::Node(tag, mut args) if tag == "artifact" && args.len() == 2 => {

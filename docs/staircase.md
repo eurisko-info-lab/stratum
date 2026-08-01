@@ -30,6 +30,7 @@ $$
 | F9 | `federation` | constituted agreement and settlement |
 | F10 | `retention` | constituted semantic retention and archives |
 | F11 | `studio` | profile-guided studios and the complete publication workflow |
+| F12 | `semantic-fs` | structured-content authority, generated projections, and materialization profiles |
 
 ## Protocol for step `n`
 

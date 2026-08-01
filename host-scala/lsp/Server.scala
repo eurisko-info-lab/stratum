@@ -337,6 +337,24 @@ object Server:
             yield service.pdf(binding.name, text)
           respond(id, Str(produced.getOrElse("")))
 
+        case "stratum/evaluate" =>
+          // Evaluating part of a buffer is the world's business; the adapter
+          // only carries the offsets across.
+          val target = (params / "uri").str.getOrElse("")
+          val answer =
+            for
+              text <- documents.get(target)
+              binding <- service.bindingForUri(target)
+            yield service
+              .evaluate(
+                binding.name,
+                text,
+                (params / "offset").num.map(_.toInt).getOrElse(0),
+                (params / "length").num.map(_.toInt).getOrElse(0)
+              )
+              .fold(m => s"error: $m", identity)
+          respond(id, Str(answer.getOrElse("")))
+
         case "stratum/views" =>
           val uri = (params / "uri").str.getOrElse("")
           val result =

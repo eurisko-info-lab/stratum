@@ -25,7 +25,7 @@
   (check changing-the-grammar-regenerates-affected-tools
     (call GrammarChangeAffectsTools
       (q (file "languages/lambda/lambda.generated.grammar"))
-      (q (file "languages/meta1/meta1.generated.grammar"))
+      (q (file "languages/meta/meta.generated.grammar"))
       (q parse))
     (value #f))
 
