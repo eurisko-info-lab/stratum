@@ -1,0 +1,39 @@
+
+artifactgrammar
+grammar
+namesds
+startdocument
+tokenidentsym[A-Za-z_][A-Za-z0-9_'-]*
+tokennumbernat[0-9]+
+tokentextstr"[^"]*"
+skip;[^
+]*
+categorydocument
+prodDocument
+kwdocument
+bindtitletext
+bindsectionssections
+categorysections
+foldSectionssection
+categorysection
+prodSection
+kwsection
+bindnumbernumber
+bindheadingtext
+bindentriesentries
+categoryentries
+foldEntriesentry
+categoryentry
+prodSentence
+kwsentence
+bindkeyident
+bindbodytext
+prodField
+kwfield
+bindkeyident
+bindamountnumber
+bindunitsident
+prod	Component
+kw	component
+bindkeyident
+bindfractionnumber

@@ -1,0 +1,29 @@
+
+artifactchange
+change
+kindapplication
+nameF11->SDS
+predecessor
+foundation-offoundations/F11
+feature
+feature
+namesds deployment
+	languages
+file&applications/sds/sds.generated.grammar
+file)applications/sds/sds-v2.generated.grammar
+programs
+file(languages/service/service.generated.meta
+file#applications/sds/sds.generated.meta
+sources
+	text-fileapplications/sds/sds.grammar
+	text-fileapplications/sds/sds-v2.grammar
+	text-fileapplications/sds/sds.meta
+	text-filelanguages/service/service.meta
+profiles
+file!applications/sds/profile-v1.canon
+file!applications/sds/profile-v2.canon
+services
+fileapplications/sds/service.canon
+	documents
+	text-file)applications/sds/documents/acetone-v1.sds
+	text-file)applications/sds/documents/acetone-v2.sds

@@ -1,0 +1,2321 @@
+; Generated from applications/sds/sds.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module sds)
+  (judgment
+    TryParse
+    [grammar source]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          ok
+          (pv document))
+        (mk accepted))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (mk rejected))))
+  (judgment
+    ParseDocument
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintDocument
+    [grammar document]
+    (call
+      Print
+      (v grammar)
+      (v document)))
+  (judgment
+    DocumentRoundTrip
+    [grammar source]
+    (call
+      RoundTrip
+      (v grammar)
+      (v source)))
+  (judgment
+    DocumentTitle
+    [document]
+    (prim
+      nth
+      (prim
+        args
+        (v document))
+      (q 0)))
+  (judgment
+    DocumentSections
+    [document]
+    (call
+      FlattenSeq
+      (prim
+        nth
+        (prim
+          args
+          (v document))
+        (q 1))
+      (q Sections)))
+  (judgment
+    SectionNumber
+    [section]
+    (prim
+      nth
+      (prim
+        args
+        (v section))
+      (q 0)))
+  (judgment
+    SectionHeading
+    [section]
+    (prim
+      nth
+      (prim
+        args
+        (v section))
+      (q 1)))
+  (judgment
+    SectionEntries
+    [section]
+    (call
+      FlattenSeq
+      (prim
+        nth
+        (prim
+          args
+          (v section))
+        (q 2))
+      (q Entries)))
+  (judgment
+    AllEntries
+    [sections]
+    (match
+      (v sections)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          append
+          (call
+            SectionEntries
+            (v head))
+          (call
+            AllEntries
+            (v rest))))))
+  (judgment
+    DocumentEntries
+    [document]
+    (call
+      AllEntries
+      (call
+        DocumentSections
+        (v document))))
+  (judgment
+    KnownUnits
+    []
+    (lst
+      (q celsius)
+      (q kelvin)
+      (q pascal)
+      (q percent)))
+  (judgment
+    ValidateEntry
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          Field
+          (pv key)
+          (pv amount)
+          (pv units))
+        (if
+          (prim
+            contains
+            (call KnownUnits)
+            (v units))
+          (lst)
+          (lst
+            (mk
+              finding
+              (q unknown-unit)
+              (v key)))))
+      (case
+        (pm
+          Component
+          (pv key)
+          (pv fraction))
+        (if
+          (prim
+            gt
+            (v fraction)
+            (q 100))
+          (lst
+            (mk
+              finding
+              (q fraction-out-of-range)
+              (v key)))
+          (lst)))
+      (case
+        (pm
+          Hazard
+          (pv key)
+          (pv statement)
+          (pv severity))
+        (if
+          (prim
+            gt
+            (v severity)
+            (q 4))
+          (lst
+            (mk
+              finding
+              (q severity-out-of-range)
+              (v key)))
+          (lst)))
+      (case _ (lst))))
+  (judgment
+    ValidateEntries
+    [entries]
+    (match
+      (v entries)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          append
+          (call
+            ValidateEntry
+            (v head))
+          (call
+            ValidateEntries
+            (v rest))))))
+  (judgment
+    ValidateDocument
+    [document]
+    (call
+      ValidateEntries
+      (call
+        DocumentEntries
+        (v document))))
+  (judgment
+    ValidateSource
+    [grammar source]
+    (call
+      ValidateDocument
+      (call
+        ParseDocument
+        (v grammar)
+        (v source))))
+  (judgment
+    EntryKey
+    [entry]
+    (prim
+      nth
+      (prim
+        args
+        (v entry))
+      (q 0)))
+  (judgment
+    IndexEntries
+    [entries]
+    (match
+      (v entries)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            EntryKey
+            (v head))
+          (call
+            IndexEntries
+            (v rest))))))
+  (judgment
+    IndexDocument
+    [document]
+    (call
+      IndexEntries
+      (call
+        DocumentEntries
+        (v document))))
+  (judgment
+    IndexSource
+    [grammar source]
+    (call
+      IndexDocument
+      (call
+        ParseDocument
+        (v grammar)
+        (v source))))
+  (judgment
+    FieldAmount
+    [entries key]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (v head)
+          (case
+            (pm
+              Field
+              (pv found)
+              (pv amount)
+              (pv units))
+            (if
+              (prim
+                eq
+                (v found)
+                (v key))
+              (mk
+                some
+                (v amount))
+              (call
+                FieldAmount
+                (v rest)
+                (v key))))
+          (case
+            _
+            (call
+              FieldAmount
+              (v rest)
+              (v key)))))))
+  (judgment
+    MeasuredValue
+    [grammar source key]
+    (call
+      FieldAmount
+      (call
+        DocumentEntries
+        (call
+          ParseDocument
+          (v grammar)
+          (v source)))
+      (v key)))
+  (judgment
+    HazardKeys
+    [entries]
+    (match
+      (v entries)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (v head)
+          (case
+            (pm
+              Hazard
+              (pv key)
+              (pv statement)
+              (pv severity))
+            (prim
+              cons
+              (v key)
+              (call
+                HazardKeys
+                (v rest))))
+          (case
+            _
+            (call
+              HazardKeys
+              (v rest)))))))
+  (judgment
+    Hazards
+    [grammar source]
+    (call
+      HazardKeys
+      (call
+        DocumentEntries
+        (call
+          ParseDocument
+          (v grammar)
+          (v source)))))
+  (judgment
+    DeployedLanguage
+    [grammar]
+    (call
+      LanguageSchema
+      (q sds)
+      (v grammar)
+      (lst
+        (q Document)
+        (q Section)
+        (q Sentence)
+        (q Field)
+        (q Component))
+      (lst
+        (mk
+          constructor
+          (q Document)
+          (lst
+            (q title)
+            (q sections)))
+        (mk
+          constructor
+          (q Section)
+          (lst
+            (q number)
+            (q heading)
+            (q entries)))
+        (mk
+          constructor
+          (q Sentence)
+          (lst
+            (q key)
+            (q body)))
+        (mk
+          constructor
+          (q Field)
+          (lst
+            (q key)
+            (q amount)
+            (q units)))
+        (mk
+          constructor
+          (q Component)
+          (lst
+            (q key)
+            (q fraction))))
+      (mp
+        (q parse)
+        (q ParseDocument)
+        (q print)
+        (q PrintDocument)
+        (q format)
+        (q FormatSource)
+        (q index)
+        (q IndexDocument)
+        (q diagnostics)
+        (q ValidateDocument))))
+  (judgment
+    DeployedPanelsV1
+    []
+    (lst
+      (call
+        PanelSchema
+        (q sections)
+        (call
+          ViewSchema
+          (q sections)
+          (q tree)
+          (q sections))
+        (q left))
+      (call
+        PanelSchema
+        (q entries)
+        (call
+          ViewSchema
+          (q entries)
+          (q table)
+          (q entries))
+        (q centre))
+      (call
+        PanelSchema
+        (q findings)
+        (call
+          ViewSchema
+          (q findings)
+          (q list)
+          (q findings))
+        (q bottom))
+      (call
+        PanelSchema
+        (q preview)
+        (call
+          ViewSchema
+          (q preview)
+          (q preview)
+          (q pdf))
+        (q right))))
+  (judgment
+    DeployedPanelsV2
+    []
+    (prim
+      append
+      (call DeployedPanelsV1)
+      (lst
+        (call
+          PanelSchema
+          (q hazards)
+          (call
+            ViewSchema
+            (q hazards)
+            (q table)
+            (q hazards))
+          (q centre-lower)))))
+  (judgment
+    DeployedActionsV1
+    []
+    (lst
+      (call
+        ActionSchema
+        (q validate)
+        (q run-validation)
+        (q document))
+      (call
+        ActionSchema
+        (q submit)
+        (q submit-for-review)
+        (q document))))
+  (judgment
+    DeployedActionsV2
+    []
+    (prim
+      append
+      (call DeployedActionsV1)
+      (lst
+        (call
+          ActionSchema
+          (q classify)
+          (q classify-hazard)
+          (q entry)))))
+  (judgment
+    DeployedProfile
+    [name panels editors actions]
+    (call
+      StudioProfile
+      (v name)
+      (q sds)
+      (q document-workflow)
+      (v panels)
+      (v editors)
+      (call
+        NavigationSchema
+        (q document-centric)
+        (q section-entry)
+        (lst
+          (q section)
+          (q entry)))
+      (call
+        WorkflowSchema
+        (q approval)
+        (lst
+          (q draft)
+          (q review)
+          (q approve)
+          (q publish)))
+      (lst
+        (call
+          RoleSchema
+          (q author)
+          (lst
+            (q edit)
+            (q submit)))
+        (call
+          RoleSchema
+          (q reviewer)
+          (lst
+            (q approve))))
+      (v actions)
+      (lst
+        (call
+          ProjectionSchema
+          (q spreadsheet)
+          (q table)))
+      (lst
+        (call
+          ForeignSurface
+          (q print)
+          (q pdf)))))
+  (judgment
+    DeployedEditorsV1
+    []
+    (lst
+      (call
+        EditorSchema
+        (q sentence)
+        (q body)
+        (q regulated-text))
+      (call
+        EditorSchema
+        (q amount)
+        (q amount)
+        (q typed-quantity))))
+  (judgment
+    DeployedEditorsV2
+    []
+    (prim
+      append
+      (call DeployedEditorsV1)
+      (lst
+        (call
+          EditorSchema
+          (q statement)
+          (q statement)
+          (q regulated-text)))))
+  (judgment
+    DeployedProfileV1
+    []
+    (call
+      DeployedProfile
+      (q sds-editor-v1)
+      (call DeployedPanelsV1)
+      (call DeployedEditorsV1)
+      (call DeployedActionsV1)))
+  (judgment
+    DeployedProfileV2
+    []
+    (call
+      DeployedProfile
+      (q sds-editor-v2)
+      (call DeployedPanelsV2)
+      (call DeployedEditorsV2)
+      (call DeployedActionsV2)))
+  (judgment
+    ProfilePanelNames
+    [profile]
+    (call
+      PanelNamesOf
+      (call
+        StudioProfile'panels
+        (v profile))))
+  (judgment
+    PanelNamesOf
+    [panels]
+    (match
+      (v panels)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            PanelSchema'name
+            (v head))
+          (call
+            PanelNamesOf
+            (v rest))))))
+  (judgment
+    LanguageDigestUnderProfiles
+    [grammar]
+    (prim
+      eq
+      (prim
+        digest
+        (call
+          DeployedLanguage
+          (v grammar)))
+      (prim
+        digest
+        (call
+          DeployedLanguage
+          (v grammar)))))
+  (judgment
+    ProfileEvolutionIsSurfaceOnly
+    [grammar]
+    (prim
+      eq
+      (prim
+        digest
+        (call
+          DeployedLanguage
+          (v grammar)))
+      (prim
+        digest
+        (call
+          DeployedLanguage
+          (v grammar)))))
+  (judgment
+    Workspace
+    [grammar document]
+    (mp
+      (q language)
+      (v grammar)
+      (q profile)
+      (q sds-editor-v1)
+      (q document)
+      (v document)))
+  (judgment
+    LanguagePatch
+    [before after]
+    (mk
+      AtKey
+      (q language)
+      (mk
+        Replace
+        (v before)
+        (v after))))
+  (judgment
+    ProfilePatch
+    []
+    (mk
+      AtKey
+      (q profile)
+      (mk
+        Replace
+        (q sds-editor-v1)
+        (q sds-editor-v2))))
+  (judgment
+    DocumentPatch
+    [before after]
+    (mk
+      AtKey
+      (q document)
+      (mk
+        Replace
+        (v before)
+        (v after))))
+  (judgment
+    EvolutionRepository
+    [grammarV1 grammarV2 documentV1 documentV2]
+    (let
+      empty
+      (call EmptyRepository)
+      (let
+        withLanguage
+        (call
+          RecordPatch
+          (v empty)
+          (q release)
+          (lst)
+          (lst
+            (call
+              LanguagePatch
+              (v grammarV1)
+              (v grammarV2))))
+        (let
+          withProfile
+          (call
+            RecordPatch
+            (v withLanguage)
+            (q release)
+            (lst)
+            (lst
+              (call ProfilePatch)))
+          (call
+            RecordPatch
+            (v withProfile)
+            (q release)
+            (lst)
+            (lst
+              (call
+                DocumentPatch
+                (v documentV1)
+                (v documentV2))))))))
+  (judgment
+    EvolvedWorkspace
+    [grammarV1 grammarV2 documentV1 documentV2]
+    (call
+      ReplayState
+      (call DescProgram)
+      (call
+        Workspace
+        (v grammarV1)
+        (v documentV1))
+      (call
+        EvolutionRepository
+        (v grammarV1)
+        (v grammarV2)
+        (v documentV1)
+        (v documentV2))
+      (q release)))
+  (judgment
+    WorkspaceLanguage
+    [workspace]
+    (prim
+      mget
+      (v workspace)
+      (q language)
+      (mk absent)))
+  (judgment
+    WorkspaceProfile
+    [workspace]
+    (prim
+      mget
+      (v workspace)
+      (q profile)
+      (mk absent)))
+  (judgment
+    WorkspaceDocument
+    [workspace]
+    (prim
+      mget
+      (v workspace)
+      (q document)
+      (mk absent)))
+  (judgment
+    WorkspaceAdoptedLanguage
+    [grammarV1 grammarV2 documentV1 documentV2]
+    (prim
+      eq
+      (call
+        WorkspaceLanguage
+        (call
+          EvolvedWorkspace
+          (v grammarV1)
+          (v grammarV2)
+          (v documentV1)
+          (v documentV2)))
+      (v grammarV2)))
+  (judgment
+    WorkspaceAdoptedDocument
+    [grammarV1 grammarV2 documentV1 documentV2]
+    (prim
+      eq
+      (call
+        WorkspaceDocument
+        (call
+          EvolvedWorkspace
+          (v grammarV1)
+          (v grammarV2)
+          (v documentV1)
+          (v documentV2)))
+      (v documentV2)))
+  (judgment
+    WorkspaceAdoptedProfile
+    [grammarV1 grammarV2 documentV1 documentV2]
+    (call
+      WorkspaceProfile
+      (call
+        EvolvedWorkspace
+        (v grammarV1)
+        (v grammarV2)
+        (v documentV1)
+        (v documentV2))))
+  (judgment
+    LanguageAndSurfaceCommute
+    [grammarV1 grammarV2]
+    (call
+      Independent
+      (call
+        LanguagePatch
+        (v grammarV1)
+        (v grammarV2))
+      (call ProfilePatch)))
+  (judgment
+    ReleasePatchCount
+    [grammarV1 grammarV2 documentV1 documentV2]
+    (prim
+      len
+      (call
+        Members
+        (call
+          EvolutionRepository
+          (v grammarV1)
+          (v grammarV2)
+          (v documentV1)
+          (v documentV2))
+        (q release))))
+  (judgment
+    DeployerSecret
+    []
+    (q "sds-deployer"))
+  (judgment
+    DeployerScope
+    []
+    (call
+      AuthorityScope
+      (lst
+        (q code)
+        (q meta))
+      (lst
+        (q sds))))
+  (judgment
+    DeployerAuthority
+    []
+    (call
+      Authority
+      (call
+        Signer
+        (call
+          PublicKey
+          (call DeployerSecret)))
+      (call DeployerScope)
+      (q 100)))
+  (judgment
+    ReleaseConstitution
+    []
+    (call
+      AcceptanceConstitution
+      (q sds-release)
+      (lst
+        (q kind)
+        (q authority)
+        (q signature)
+        (q tests))
+      (call DeployerScope)
+      (lst
+        (q roundtrip)
+        (q validate))
+      (call
+        ResourceProfile
+        (q 1000)
+        (q 100))))
+  (judgment
+    ReleaseTests
+    []
+    (lst
+      (call
+        TestEvidence
+        (q roundtrip)
+        (q pass))
+      (call
+        TestEvidence
+        (q validate)
+        (q pass))))
+  (judgment
+    IncompleteTests
+    []
+    (lst
+      (call
+        TestEvidence
+        (q roundtrip)
+        (q pass))))
+  (judgment
+    ReleaseProposal
+    [patch tests]
+    (let
+      unsigned
+      (call
+        Proposal
+        (v patch)
+        (q sds-base)
+        (q meta)
+        (call DeployerAuthority)
+        (q #unit)
+        (lst)
+        (lst)
+        (v tests)
+        (call
+          ResourceProfile
+          (q 1000000)
+          (q 1000)))
+      (call
+        Proposal
+        (v patch)
+        (q sds-base)
+        (q meta)
+        (call DeployerAuthority)
+        (call
+          SignSubject
+          (call DeployerSecret)
+          (call
+            SubjectOf
+            (v unsigned)
+            (call ReleaseConstitution)))
+        (lst)
+        (lst)
+        (v tests)
+        (call
+          ResourceProfile
+          (q 1000000)
+          (q 1000)))))
+  (judgment
+    ReleaseDecision
+    [patch tests]
+    (call
+      DecisionReason
+      (call
+        EvaluateAcceptance
+        (call ReleaseConstitution)
+        (call
+          ReleaseProposal
+          (v patch)
+          (v tests))
+        (q 10))))
+  (judgment
+    AcceptedRelease
+    [grammarV1 grammarV2 documentV1 documentV2]
+    (call
+      ReleaseDecision
+      (prim
+        head
+        (call
+          Members
+          (call
+            EvolutionRepository
+            (v grammarV1)
+            (v grammarV2)
+            (v documentV1)
+            (v documentV2))
+          (q release)))
+      (call ReleaseTests)))
+  (judgment
+    RejectedRelease
+    [grammarV1 grammarV2 documentV1 documentV2]
+    (call
+      ReleaseDecision
+      (prim
+        head
+        (call
+          Members
+          (call
+            EvolutionRepository
+            (v grammarV1)
+            (v grammarV2)
+            (v documentV1)
+            (v documentV2))
+          (q release)))
+      (call IncompleteTests)))
+  (judgment
+    ReleaseChain
+    [grammarV2 documentReference]
+    (call
+      ReplayFromGenesis
+      (call ChainAuthority)
+      (call
+        GoodChain
+        (v grammarV2)
+        (v documentReference))))
+  (judgment
+    ReleaseHeight
+    [grammarV2 documentReference]
+    (call
+      ChainHeight
+      (call
+        ReleaseChain
+        (v grammarV2)
+        (v documentReference))))
+  (judgment
+    PublishedLanguage
+    [grammarV2 documentReference]
+    (call
+      PublishedRoot
+      (call
+        ReleaseChain
+        (v grammarV2)
+        (v documentReference))
+      (q language)))
+  (judgment
+    ReconstructedLanguage
+    [grammarV2 documentReference]
+    (call
+      ReconstructPublished
+      (call
+        ReleaseChain
+        (v grammarV2)
+        (v documentReference))
+      (q language)
+      (q grammar)))
+  (judgment
+    ReleaseIsReconstructible
+    [grammarV2 documentReference committed]
+    (prim
+      eq
+      (call
+        ReconstructedLanguage
+        (v grammarV2)
+        (v documentReference))
+      (mk
+        some
+        (v committed))))
+  (judgment
+    ReconstructedLanguageName
+    [grammarV2 documentReference]
+    (match
+      (call
+        ReconstructedLanguage
+        (v grammarV2)
+        (v documentReference))
+      (case
+        (pm
+          some
+          (pv grammar))
+        (call
+          Require
+          (v grammar)
+          (q name)))
+      (case
+        (pm none)
+        (mk none))))
+  (judgment
+    ReconstructedMatchesPublished
+    [grammarV2 documentReference]
+    (match
+      (call
+        ReconstructedLanguage
+        (v grammarV2)
+        (v documentReference))
+      (case
+        (pm
+          some
+          (pv grammar))
+        (prim
+          eq
+          (prim
+            digest
+            (mk
+              artifact
+              (q grammar)
+              (v grammar)))
+          (v grammarV2)))
+      (case
+        (pm none)
+        (q #f))))
+  (judgment
+    BranchFromRelease
+    [grammarV2 documentReference]
+    (prim
+      tag
+      (call
+        BranchFromCheckpoint
+        (call
+          ReleaseChain
+          (v grammarV2)
+          (v documentReference))
+        (q language)
+        (call EmptyRepository)
+        (q local))))
+  (judgment
+    ReleaseSettled
+    [first second third]
+    (call
+      SettledHeight
+      (call
+        SettleTwo
+        (v first)
+        (v second)
+        (v third))))
+  (judgment
+    ReleaseState
+    [grammar source]
+    (mp
+      (q sections)
+      (call
+        DocumentSections
+        (call
+          ParseDocument
+          (v grammar)
+          (v source)))
+      (q entries)
+      (call
+        DocumentEntries
+        (call
+          ParseDocument
+          (v grammar)
+          (v source)))
+      (q findings)
+      (call
+        ValidateSource
+        (v grammar)
+        (v source))
+      (q hazards)
+      (call
+        Hazards
+        (v grammar)
+        (v source))
+      (q pdf)
+      (mk
+        preview
+        (q page-1))))
+  (judgment
+    ReopenStudio
+    [profile grammar source]
+    (call
+      RenderStudio
+      (v profile)
+      (call
+        ReleaseState
+        (v grammar)
+        (v source))))
+  (judgment
+    ReopenedPanels
+    [profile grammar source]
+    (call
+      StudioPanels
+      (call
+        ReopenStudio
+        (v profile)
+        (v grammar)
+        (v source))))
+  (judgment
+    ReopenedActions
+    [profile grammar source]
+    (call
+      StudioActions
+      (call
+        ReopenStudio
+        (v profile)
+        (v grammar)
+        (v source))))
+  (judgment
+    ReopenedHazards
+    [profile grammar source]
+    (prim
+      mget
+      (call
+        ReleaseState
+        (v grammar)
+        (v source))
+      (q hazards)
+      (lst)))
+  (judgment
+    ServiceDiagnostics
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv document))
+        (call
+          DocumentDiagnostics
+          (v text)
+          (v document)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (call
+          ParseDiagnostics
+          (v reason)))))
+  (judgment
+    DocumentDiagnostics
+    [text document]
+    (match
+      (v document)
+      (case
+        (pm
+          Document
+          (pv title)
+          (pv sections))
+        (call
+          FindingDiagnostics
+          (v text)
+          (call
+            ValidateDocument
+            (v document))))
+      (case _ (lst))))
+  (judgment
+    FindingDiagnostics
+    [text findings]
+    (match
+      (v findings)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (v head)
+          (case
+            (pm
+              finding
+              (pv kind)
+              (pv key))
+            (prim
+              cons
+              (call
+                KeyDiagnostic
+                (v text)
+                (q warning)
+                (call
+                  FindingMessage
+                  (v kind)
+                  (v key))
+                (v key))
+              (call
+                FindingDiagnostics
+                (v text)
+                (v rest))))))))
+  (judgment
+    ServiceSymbols
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv document))
+        (call
+          DocumentSymbols
+          (v text)
+          (v document)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (lst))))
+  (judgment
+    DocumentSymbols
+    [text document]
+    (match
+      (v document)
+      (case
+        (pm
+          Document
+          (pv title)
+          (pv sections))
+        (call
+          SectionSymbols
+          (v text)
+          (call
+            DocumentSections
+            (v document))))
+      (case _ (lst))))
+  (judgment
+    SectionSymbols
+    [text sections]
+    (match
+      (v sections)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          append
+          (prim
+            cons
+            (call
+              TextSymbol
+              (v text)
+              (call
+                SectionHeading
+                (v head))
+              (q namespace)
+              (prim
+                scat
+                (q "section ")
+                (prim
+                  nat->str
+                  (call
+                    SectionNumber
+                    (v head)))))
+            (call
+              EntrySymbols
+              (v text)
+              (call
+                SectionEntries
+                (v head))))
+          (call
+            SectionSymbols
+            (v text)
+            (v rest))))))
+  (judgment
+    EntrySymbols
+    [text entries]
+    (match
+      (v entries)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            EntrySymbol
+            (v text)
+            (v head))
+          (call
+            EntrySymbols
+            (v text)
+            (v rest))))))
+  (judgment
+    EntrySymbol
+    [text entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          Sentence
+          (pv key)
+          (pv body))
+        (call
+          KeySymbol
+          (v text)
+          (v key)
+          (q string)
+          (v body)))
+      (case
+        (pm
+          Field
+          (pv key)
+          (pv amount)
+          (pv units))
+        (call
+          KeySymbol
+          (v text)
+          (v key)
+          (q number)
+          (prim
+            scat
+            (prim
+              scat
+              (prim
+                nat->str
+                (v amount))
+              (q " "))
+            (prim
+              sym->str
+              (v units)))))
+      (case
+        (pm
+          Component
+          (pv key)
+          (pv fraction))
+        (call
+          KeySymbol
+          (v text)
+          (v key)
+          (q number)
+          (prim
+            scat
+            (prim
+              nat->str
+              (v fraction))
+            (q " percent"))))
+      (case
+        (pm
+          Hazard
+          (pv key)
+          (pv statement)
+          (pv severity))
+        (call
+          KeySymbol
+          (v text)
+          (v key)
+          (q event)
+          (v statement)))
+      (case
+        _
+        (call
+          KeySymbol
+          (v text)
+          (q entry)
+          (q object)
+          (q "")))))
+  (judgment
+    ServiceCompletions
+    [grammar text]
+    (prim
+      append
+      (call
+        GrammarCompletions
+        (v grammar))
+      (call
+        SymbolCompletions
+        (call
+          ServiceSymbols
+          (v grammar)
+          (v text)))))
+  (judgment
+    ServiceFormat
+    [grammar text]
+    (call
+      PrintBuffer
+      (v grammar)
+      (v text)))
+  (judgment
+    ValidationSummary
+    [grammar text]
+    (call
+      CountMessage
+      (call
+        ServiceDiagnostics
+        (v grammar)
+        (v text))
+      (q "finding")
+      (q "findings")))
+  (judgment
+    HazardSummary
+    [grammar text]
+    (call
+      CountMessage
+      (call
+        Hazards
+        (v grammar)
+        (v text))
+      (q "hazard")
+      (q "hazards")))
+  (judgment
+    ServiceCommand
+    [grammar text command]
+    (if
+      (prim
+        eq
+        (v command)
+        (q run-validation))
+      (mk
+        ok
+        (call
+          ValidationSummary
+          (v grammar)
+          (v text)))
+      (if
+        (prim
+          eq
+          (v command)
+          (q classify-hazard))
+        (mk
+          ok
+          (call
+            HazardSummary
+            (v grammar)
+            (v text)))
+        (if
+          (prim
+            eq
+            (v command)
+            (q export-document))
+          (match
+            (call
+              ServiceFormat
+              (v grammar)
+              (v text))
+            (case
+              (pm
+                some
+                (pv printed))
+              (mk
+                ok
+                (v printed)))
+            (case
+              (pm none)
+              (mk
+                denied
+                (q "the document does not parse"))))
+          (mk
+            denied
+            (q "unknown command"))))))
+  (judgment
+    ServiceKeywords
+    [grammar]
+    (call
+      GrammarKeywords
+      (v grammar)))
+  (judgment
+    ServiceViews
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv document))
+        (call
+          ViewMap
+          (call
+            ProfilePanelNames
+            (call DeployedProfileV2))
+          (call
+            ReleaseState
+            (v grammar)
+            (v text))))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (prim mnew))))
+  (judgment
+    ViewMap
+    [names state]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (prim mnew))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          mput
+          (call
+            ViewMap
+            (v rest)
+            (v state))
+          (v head)
+          (call
+            ViewItems
+            (prim
+              mget
+              (v state)
+              (v head)
+              (lst)))))))
+  (judgment
+    ViewItems
+    [content]
+    (if
+      (prim
+        is-list
+        (v content))
+      (call
+        ItemTexts
+        (v content))
+      (lst)))
+  (judgment
+    ItemTexts
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            ItemText
+            (v head))
+          (call
+            ItemTexts
+            (v rest))))))
+  (judgment
+    ItemText
+    [item]
+    (if
+      (prim
+        is-node
+        (v item))
+      (prim
+        scat
+        (prim
+          scat
+          (prim
+            sym->str
+            (prim
+              tag
+              (v item)))
+          (q " "))
+        (call
+          ItemHead
+          (prim
+            args
+            (v item))))
+      (call
+        ItemScalar
+        (v item))))
+  (judgment
+    ItemHead
+    [args]
+    (match
+      (v args)
+      (case
+        (pnil)
+        (q ""))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ItemScalar
+          (v head)))))
+  (judgment
+    ItemScalar
+    [value]
+    (if
+      (prim
+        is-str
+        (v value))
+      (v value)
+      (if
+        (prim
+          is-sym
+          (v value))
+        (prim
+          sym->str
+          (v value))
+        (if
+          (prim
+            is-nat
+            (v value))
+          (prim
+            nat->str
+            (v value))
+          (q "")))))
+  (judgment
+    ServiceSemanticTokens
+    [grammar text]
+    (call
+      SemanticTokens
+      (v grammar)
+      (v text)))
+  (judgment
+    ServiceLayout
+    [grammar]
+    (let
+      profile
+      (call DeployedProfileV2)
+      (prim
+        mfrom
+        (lst
+          (mk
+            entry
+            (q name)
+            (call
+              StudioProfile'layout
+              (v profile)))
+          (mk
+            entry
+            (q views)
+            (call
+              ViewDescriptors
+              (call
+                StudioProfile'panels
+                (v profile))))
+          (mk
+            entry
+            (q navigation)
+            (call
+              NavigationDescriptor
+              (call
+                StudioProfile'navigation
+                (v profile))))
+          (mk
+            entry
+            (q workflow)
+            (call
+              WorkflowSchema'stages
+              (call
+                StudioProfile'workflow
+                (v profile))))
+          (mk
+            entry
+            (q actions)
+            (call
+              DeriveActions
+              (v profile)))))))
+  (judgment
+    ViewDescriptors
+    [panels]
+    (match
+      (v panels)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (prim
+            mfrom
+            (lst
+              (mk
+                entry
+                (q name)
+                (call
+                  PanelSchema'name
+                  (v head)))
+              (mk
+                entry
+                (q placement)
+                (call
+                  PanelSchema'placement
+                  (v head)))
+              (mk
+                entry
+                (q primitive)
+                (call
+                  ViewSchema'primitive
+                  (call
+                    PanelSchema'view
+                    (v head))))))
+          (call
+            ViewDescriptors
+            (v rest))))))
+  (judgment
+    NavigationDescriptor
+    [navigation]
+    (prim
+      mfrom
+      (lst
+        (mk
+          entry
+          (q model)
+          (call
+            NavigationSchema'model
+            (v navigation)))
+        (mk
+          entry
+          (q steps)
+          (call
+            NavigationSchema'steps
+            (v navigation))))))
+  (judgment
+    Unquoted
+    [body]
+    (if
+      (prim
+        ge
+        (prim
+          slen
+          (v body))
+        (q 2))
+      (prim
+        ssub
+        (v body)
+        (q 1)
+        (prim
+          sub
+          (prim
+            slen
+            (v body))
+          (q 1)))
+      (v body)))
+  (judgment
+    ProductOf
+    [entries]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (v head)
+          (case
+            (pm
+              Sentence
+              (pv key)
+              (pv body))
+            (if
+              (prim
+                eq
+                (v key)
+                (q product))
+              (mk
+                some
+                (v body))
+              (call
+                ProductOf
+                (v rest))))
+          (case
+            _
+            (call
+              ProductOf
+              (v rest)))))))
+  (judgment
+    ChemicalOf
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv document))
+        (call
+          ChemicalName
+          (v document)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (q "unreadable"))))
+  (judgment
+    ChemicalName
+    [document]
+    (match
+      (v document)
+      (case
+        (pm
+          Document
+          (pv title)
+          (pv sections))
+        (match
+          (call
+            ProductOf
+            (call
+              DocumentEntries
+              (v document)))
+          (case
+            (pm
+              some
+              (pv body))
+            (call
+              Unquoted
+              (v body)))
+          (case
+            (pm none)
+            (call
+              Unquoted
+              (v title)))))
+      (case
+        _
+        (q "unknown"))))
+  (judgment
+    ReportRecord
+    [grammar entry]
+    (let
+      reference
+      (prim
+        mget
+        (v entry)
+        (q source)
+        (q none))
+      (let
+        text
+        (call
+          SourceText
+          (v reference))
+        (prim
+          mfrom
+          (lst
+            (mk
+              entry
+              (q chemical)
+              (call
+                ChemicalOf
+                (v grammar)
+                (v text)))
+            (mk
+              entry
+              (q findings)
+              (prim
+                len
+                (call
+                  ServiceDiagnostics
+                  (v grammar)
+                  (v text))))
+            (mk
+              entry
+              (q hazards)
+              (prim
+                len
+                (call
+                  Hazards
+                  (v grammar)
+                  (v text))))
+            (mk
+              entry
+              (q name)
+              (prim
+                sym->str
+                (prim
+                  mget
+                  (v entry)
+                  (q name)
+                  (q unknown))))
+            (mk
+              entry
+              (q path)
+              (call
+                SourcePath
+                (v reference))))))))
+  (judgment
+    ReportRecords
+    [grammar entries]
+    (match
+      (v entries)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            ReportRecord
+            (v grammar)
+            (v head))
+          (call
+            ReportRecords
+            (v grammar)
+            (v rest))))))
+  (judgment
+    ChemicalNames
+    [reports]
+    (match
+      (v reports)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (prim
+            mget
+            (v head)
+            (q chemical)
+            (q ""))
+          (call
+            ChemicalNames
+            (v rest))))))
+  (judgment
+    ReportsFor
+    [reports chemical]
+    (match
+      (v reports)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              mget
+              (v head)
+              (q chemical)
+              (q ""))
+            (v chemical))
+          (prim
+            cons
+            (v head)
+            (call
+              ReportsFor
+              (v rest)
+              (v chemical)))
+          (call
+            ReportsFor
+            (v rest)
+            (v chemical))))))
+  (judgment
+    CatalogueOf
+    [reports names]
+    (match
+      (v names)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (prim
+            mfrom
+            (lst
+              (mk
+                entry
+                (q name)
+                (v head))
+              (mk
+                entry
+                (q reports)
+                (call
+                  ReportsFor
+                  (v reports)
+                  (v head)))))
+          (call
+            CatalogueOf
+            (v reports)
+            (v rest))))))
+  (judgment
+    ServiceCatalogue
+    [grammar entries]
+    (let
+      reports
+      (call
+        ReportRecords
+        (v grammar)
+        (v entries))
+      (call
+        CatalogueOf
+        (v reports)
+        (prim
+          sort
+          (prim
+            distinct
+            (call
+              ChemicalNames
+              (v reports)))))))
+  (judgment
+    PreviewBlock
+    [kind body]
+    (prim
+      mfrom
+      (lst
+        (mk
+          entry
+          (q kind)
+          (v kind))
+        (mk
+          entry
+          (q text)
+          (v body)))))
+  (judgment
+    ServicePreview
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv document))
+        (call
+          PreviewBlocks
+          (v document)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (lst))))
+  (judgment
+    PreviewBlocks
+    [document]
+    (match
+      (v document)
+      (case
+        (pm
+          Document
+          (pv title)
+          (pv sections))
+        (prim
+          cons
+          (call
+            PreviewBlock
+            (q title)
+            (call
+              Unquoted
+              (v title)))
+          (call
+            PreviewSections
+            (call
+              DocumentSections
+              (v document)))))
+      (case _ (lst))))
+  (judgment
+    PreviewSections
+    [sections]
+    (match
+      (v sections)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          append
+          (prim
+            cons
+            (call
+              PreviewBlock
+              (q section)
+              (prim
+                scat
+                (prim
+                  scat
+                  (prim
+                    nat->str
+                    (call
+                      SectionNumber
+                      (v head)))
+                  (q ". "))
+                (call
+                  Unquoted
+                  (call
+                    SectionHeading
+                    (v head)))))
+            (call
+              PreviewEntries
+              (call
+                SectionEntries
+                (v head))))
+          (call
+            PreviewSections
+            (v rest))))))
+  (judgment
+    PreviewEntries
+    [entries]
+    (match
+      (v entries)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            PreviewEntry
+            (v head))
+          (call
+            PreviewEntries
+            (v rest))))))
+  (judgment
+    PreviewEntry
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          Sentence
+          (pv key)
+          (pv body))
+        (call
+          PreviewBlock
+          (q entry)
+          (prim
+            scat
+            (prim
+              scat
+              (prim
+                sym->str
+                (v key))
+              (q ": "))
+            (call
+              Unquoted
+              (v body)))))
+      (case
+        (pm
+          Field
+          (pv key)
+          (pv amount)
+          (pv units))
+        (call
+          PreviewBlock
+          (q entry)
+          (prim
+            scat
+            (prim
+              scat
+              (prim
+                sym->str
+                (v key))
+              (q ": "))
+            (prim
+              scat
+              (prim
+                nat->str
+                (v amount))
+              (prim
+                scat
+                (q " ")
+                (prim
+                  sym->str
+                  (v units)))))))
+      (case
+        (pm
+          Component
+          (pv key)
+          (pv fraction))
+        (call
+          PreviewBlock
+          (q entry)
+          (prim
+            scat
+            (prim
+              scat
+              (prim
+                sym->str
+                (v key))
+              (q ": "))
+            (prim
+              scat
+              (prim
+                nat->str
+                (v fraction))
+              (q " percent")))))
+      (case
+        (pm
+          Hazard
+          (pv key)
+          (pv statement)
+          (pv severity))
+        (call
+          PreviewBlock
+          (q hazard)
+          (prim
+            scat
+            (prim
+              scat
+              (prim
+                sym->str
+                (v key))
+              (q " "))
+            (call
+              Unquoted
+              (v statement)))))
+      (case
+        _
+        (call
+          PreviewBlock
+          (q entry)
+          (q "")))))
+  (judgment
+    PdfSizeFor
+    [kind]
+    (if
+      (prim
+        eq
+        (v kind)
+        (q title))
+      (q 20)
+      (if
+        (prim
+          eq
+          (v kind)
+          (q section))
+        (q 14)
+        (q 11))))
+  (judgment
+    PdfBlocks
+    [blocks]
+    (match
+      (v blocks)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (prim
+            mfrom
+            (lst
+              (mk
+                entry
+                (q size)
+                (call
+                  PdfSizeFor
+                  (prim
+                    mget
+                    (v head)
+                    (q kind)
+                    (q entry))))
+              (mk
+                entry
+                (q text)
+                (prim
+                  mget
+                  (v head)
+                  (q text)
+                  (q "")))))
+          (call
+            PdfBlocks
+            (v rest))))))
+  (judgment
+    ServicePdf
+    [grammar text]
+    (call
+      PdfFile
+      (call
+        PdfBlocks
+        (call
+          ServicePreview
+          (v grammar)
+          (v text))))))

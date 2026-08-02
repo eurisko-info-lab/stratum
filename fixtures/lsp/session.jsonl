@@ -1,0 +1,50 @@
+# A scripted editing session, replayed against the generic server.
+#
+# Two buffers are opened: an application document with a real fault, and one of
+# the platform's own Meta sources with a syntax error. Neither file exists on
+# disk: an editor holds unsaved text, and the server derives over the buffer.
+
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}
+{"jsonrpc":"2.0","method":"initialized","params":{}}
+
+# An SDS document whose boiling point is recorded in an unknown unit.
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///work/acetone.sds","languageId":"sds","version":1,"text":"document \"Acetone\"\n\nsection 1 \"Identification\"\n  sentence product \"Acetone\"\n  field boiling-point 65 fahrenheit\n"}}}
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///work/acetone.sds"}}}
+
+# Hover lands on the field key, and reports the value the parser read.
+{"jsonrpc":"2.0","id":3,"method":"textDocument/hover","params":{"textDocument":{"uri":"file:///work/acetone.sds"},"position":{"line":4,"character":12}}}
+
+{"jsonrpc":"2.0","id":4,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///work/acetone.sds"}}}
+
+{"jsonrpc":"2.0","id":5,"method":"workspace/executeCommand","params":{"command":"stratum.run-validation","arguments":["file:///work/acetone.sds"]}}
+
+{"jsonrpc":"2.0","id":6,"method":"stratum/views","params":{"uri":"file:///work/acetone.sds"}}
+
+# Correcting the unit clears the diagnostic.
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///work/acetone.sds","version":2},"contentChanges":[{"text":"document \"Acetone\"\n\nsection 1 \"Identification\"\n  sentence product \"Acetone\"\n  field boiling-point 56 celsius\n"}]}}
+
+# The platform's own language, served by the same server with no extra code.
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///work/broken.meta","languageId":"meta","version":1,"text":"module broken\n\njudgment Bad [x] = prim #add [x\n"}}}
+
+{"jsonrpc":"2.0","id":7,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///work/broken.meta"}}}
+
+{"jsonrpc":"2.0","id":8,"method":"shutdown","params":{}}
+
+# Highlighting arrives as semantic tokens over the grammar's own classes.
+{"jsonrpc":"2.0","id":9,"method":"textDocument/semanticTokens/full","params":{"textDocument":{"uri":"file:///work/acetone.sds"}}}
+
+# The client configures comments and brackets from the world, not from files.
+{"jsonrpc":"2.0","id":10,"method":"stratum/languages","params":{}}
+
+# The arrangement is the deployed profile's, not the client's.
+{"jsonrpc":"2.0","id":11,"method":"stratum/layout","params":{}}
+
+# The world's catalogue: chemicals, and the reports about them.
+{"jsonrpc":"2.0","id":12,"method":"stratum/documents","params":{}}
+
+# The rendered report, for a preview beside the source.
+{"jsonrpc":"2.0","id":13,"method":"stratum/preview","params":{"uri":"file:///work/acetone.sds"}}
+
+# The foreign surface the profile declares, produced by the world itself.
+{"jsonrpc":"2.0","id":14,"method":"stratum/pdf","params":{"uri":"file:///work/acetone.sds"}}

@@ -88,8 +88,8 @@ this legal without touching the core's identity.
 ## Binding a language
 
 A world publishes a descriptor - a map, so the host dispatches on nothing - and
-defines the fixed entry points. A branch that carries an application carries
-its descriptor with it, in `applications/<name>/service.canon`.
+defines the fixed entry points. This branch carries one in
+[applications/sds/service.canon](../applications/sds/service.canon).
 
 ```text
 ServiceDiagnostics [grammar text]        ServiceFormat [grammar text]

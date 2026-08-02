@@ -1,7 +1,11 @@
 {
   "name": "stratum-studio",
   "displayName": "Stratum Studio",
+<<<<<<< HEAD
   "description": "Editor client for any Stratum world. Run `lsp package` to bind it to one.",
+=======
+  "description": "Editor support for every language a Stratum world publishes.",
+>>>>>>> be83f02 (the Safety Data Sheet application)
   "version": "0.1.0",
   "license": "Apache-2.0",
   "publisher": "eurisko",
@@ -11,6 +15,7 @@
   "categories": [
     "Programming Languages"
   ],
+<<<<<<< HEAD
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
@@ -18,6 +23,130 @@
     "commands": [],
     "viewsContainers": {},
     "views": {},
+=======
+  "activationEvents": [
+    "onLanguage:sds",
+    "onLanguage:meta",
+    "onLanguage:grammar",
+    "onLanguage:lambda"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "sds",
+        "aliases": [
+          "SDS"
+        ],
+        "extensions": [
+          ".sds"
+        ]
+      },
+      {
+        "id": "meta",
+        "aliases": [
+          "Meta"
+        ],
+        "extensions": [
+          ".meta"
+        ]
+      },
+      {
+        "id": "grammar",
+        "aliases": [
+          "Grammar"
+        ],
+        "extensions": [
+          ".grammar"
+        ]
+      },
+      {
+        "id": "lambda",
+        "aliases": [
+          "Lambda"
+        ],
+        "extensions": [
+          ".lambda"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "stratum.evaluate",
+        "title": "Stratum: evaluate selection",
+        "category": "Stratum"
+      },
+      {
+        "command": "stratum.run-validation",
+        "title": "SDS: run validation",
+        "category": "Stratum"
+      },
+      {
+        "command": "stratum.classify-hazard",
+        "title": "SDS: classify hazards",
+        "category": "Stratum"
+      },
+      {
+        "command": "stratum.export-document",
+        "title": "SDS: export canonical form",
+        "category": "Stratum"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "stratum.evaluate",
+        "key": "ctrl+shift+d",
+        "when": "editorTextFocus"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "stratum-activitybar",
+          "title": "Stratum Studio",
+          "icon": "$(symbol-structure)"
+        }
+      ],
+      "panel": [
+        {
+          "id": "stratum-panel",
+          "title": "Stratum Studio",
+          "icon": "$(symbol-structure)"
+        }
+      ]
+    },
+    "views": {
+      "stratum-activitybar": [
+        {
+          "id": "stratum.view.catalogue",
+          "name": "Chemicals and reports",
+          "contextualTitle": "catalogue (tree, left)"
+        },
+        {
+          "id": "stratum.view.sections",
+          "name": "sections",
+          "contextualTitle": "sections (tree, left)"
+        }
+      ],
+      "stratum-panel": [
+        {
+          "id": "stratum.view.entries",
+          "name": "entries",
+          "contextualTitle": "entries (table, centre)"
+        },
+        {
+          "id": "stratum.view.findings",
+          "name": "findings",
+          "contextualTitle": "findings (list, bottom)"
+        },
+        {
+          "id": "stratum.view.hazards",
+          "name": "hazards",
+          "contextualTitle": "hazards (table, centre-lower)"
+        }
+      ]
+    },
+>>>>>>> be83f02 (the Safety Data Sheet application)
     "configuration": {
       "title": "Stratum",
       "properties": {

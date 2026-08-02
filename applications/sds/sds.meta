@@ -1,0 +1,812 @@
+module sds
+
+; A real SDS deployment on the F11 platform.
+;
+; Nothing here is bootstrap machinery. This is an application: an object
+; language with concrete syntax, a validation pass, two Studio profiles, and an
+; evolution that travels the whole publication loop.
+
+; ------------------------------------------------------------------ language
+
+; Parsing that reports acceptance instead of failing, so one language version
+; can be shown to reject what the next one accepts.
+judgment TryParse [grammar source] =
+  match cap #grammar-parse [grammar source] {
+    case (#ok document) -> mk #accepted []
+    case (#denied reason) -> mk #rejected []
+  }
+
+judgment ParseDocument [grammar source] = call Parse [grammar source]
+
+judgment PrintDocument [grammar document] = call Print [grammar document]
+
+judgment DocumentRoundTrip [grammar source] = call RoundTrip [grammar source]
+
+judgment DocumentTitle [document] = prim #nth [prim #args [document] 0]
+
+judgment DocumentSections [document] =
+  call FlattenSeq [prim #nth [prim #args [document] 1] #Sections]
+
+judgment SectionNumber [section] = prim #nth [prim #args [section] 0]
+
+judgment SectionHeading [section] = prim #nth [prim #args [section] 1]
+
+judgment SectionEntries [section] =
+  call FlattenSeq [prim #nth [prim #args [section] 2] #Entries]
+
+judgment AllEntries [sections] =
+  match sections {
+    case [] -> list []
+    case head :: rest -> prim #append [call SectionEntries [head] call AllEntries [rest]]
+  }
+
+judgment DocumentEntries [document] = call AllEntries [call DocumentSections [document]]
+
+; ---------------------------------------------------------------- validation
+
+judgment KnownUnits [] = list [#celsius #kelvin #pascal #percent]
+
+judgment ValidateEntry [entry] =
+  match entry {
+    case (#Field key amount units) ->
+      if prim #contains [call KnownUnits [] units]
+      then list []
+      else list [mk #finding [#unknown-unit key]]
+    case (#Component key fraction) ->
+      if prim #gt [fraction 100]
+      then list [mk #finding [#fraction-out-of-range key]]
+      else list []
+    case (#Hazard key statement severity) ->
+      if prim #gt [severity 4]
+      then list [mk #finding [#severity-out-of-range key]]
+      else list []
+    case _ -> list []
+  }
+
+judgment ValidateEntries [entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest ->
+      prim #append [call ValidateEntry [head] call ValidateEntries [rest]]
+  }
+
+judgment ValidateDocument [document] = call ValidateEntries [call DocumentEntries [document]]
+
+judgment ValidateSource [grammar source] =
+  call ValidateDocument [call ParseDocument [grammar source]]
+
+; ------------------------------------------------------------- symbol index
+
+judgment EntryKey [entry] = prim #nth [prim #args [entry] 0]
+
+judgment IndexEntries [entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest -> prim #cons [call EntryKey [head] call IndexEntries [rest]]
+  }
+
+judgment IndexDocument [document] = call IndexEntries [call DocumentEntries [document]]
+
+judgment IndexSource [grammar source] = call IndexDocument [call ParseDocument [grammar source]]
+
+; Looks a measured field up by its stable key.
+judgment FieldAmount [entries key] =
+  match entries {
+    case [] -> mk #none []
+    case head :: rest ->
+      match head {
+        case (#Field found amount units) ->
+          if prim #eq [found key]
+          then mk #some [amount]
+          else call FieldAmount [rest key]
+        case _ -> call FieldAmount [rest key]
+      }
+  }
+
+judgment MeasuredValue [grammar source key] =
+  call FieldAmount [call DocumentEntries [call ParseDocument [grammar source]] key]
+
+judgment HazardKeys [entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest ->
+      match head {
+        case (#Hazard key statement severity) ->
+          prim #cons [key call HazardKeys [rest]]
+        case _ -> call HazardKeys [rest]
+      }
+  }
+
+judgment Hazards [grammar source] =
+  call HazardKeys [call DocumentEntries [call ParseDocument [grammar source]]]
+
+; ------------------------------------------------------------ studio profiles
+
+judgment DeployedLanguage [grammar] =
+  call LanguageSchema [
+    #sds
+    grammar
+    list [#Document #Section #Sentence #Field #Component]
+    list [
+      mk #constructor [#Document list [#title #sections]]
+      mk #constructor [#Section list [#number #heading #entries]]
+      mk #constructor [#Sentence list [#key #body]]
+      mk #constructor [#Field list [#key #amount #units]]
+      mk #constructor [#Component list [#key #fraction]]
+    ]
+    map [
+      #parse #ParseDocument
+      #print #PrintDocument
+      #format #FormatSource
+      #index #IndexDocument
+      #diagnostics #ValidateDocument
+    ]
+  ]
+
+judgment DeployedPanelsV1 [] =
+  list [
+    call PanelSchema [#sections call ViewSchema [#sections #tree #sections] #left]
+    call PanelSchema [#entries call ViewSchema [#entries #table #entries] #centre]
+    call PanelSchema [#findings call ViewSchema [#findings #list #findings] #bottom]
+    call PanelSchema [#preview call ViewSchema [#preview #preview #pdf] #right]
+  ]
+
+judgment DeployedPanelsV2 [] =
+  prim #append [
+    call DeployedPanelsV1 []
+    list [call PanelSchema [#hazards call ViewSchema [#hazards #table #hazards] #centre-lower]]
+  ]
+
+judgment DeployedActionsV1 [] =
+  list [
+    call ActionSchema [#validate #run-validation #document]
+    call ActionSchema [#submit #submit-for-review #document]
+  ]
+
+judgment DeployedActionsV2 [] =
+  prim #append [
+    call DeployedActionsV1 []
+    list [call ActionSchema [#classify #classify-hazard #entry]]
+  ]
+
+judgment DeployedProfile [name panels editors actions] =
+  call StudioProfile [
+    name
+    #sds
+    #document-workflow
+    panels
+    editors
+    call NavigationSchema [#document-centric #section-entry list [#section #entry]]
+    call WorkflowSchema [#approval list [#draft #review #approve #publish]]
+    list [call RoleSchema [#author list [#edit #submit]] call RoleSchema [#reviewer list [#approve]]]
+    actions
+    list [call ProjectionSchema [#spreadsheet #table]]
+    list [call ForeignSurface [#print #pdf]]
+  ]
+
+judgment DeployedEditorsV1 [] =
+  list [
+    call EditorSchema [#sentence #body #regulated-text]
+    call EditorSchema [#amount #amount #typed-quantity]
+  ]
+
+judgment DeployedEditorsV2 [] =
+  prim #append [
+    call DeployedEditorsV1 []
+    list [call EditorSchema [#statement #statement #regulated-text]]
+  ]
+
+judgment DeployedProfileV1 [] =
+  call DeployedProfile [#sds-editor-v1 call DeployedPanelsV1 [] call DeployedEditorsV1 [] call DeployedActionsV1 []]
+
+judgment DeployedProfileV2 [] =
+  call DeployedProfile [#sds-editor-v2 call DeployedPanelsV2 [] call DeployedEditorsV2 [] call DeployedActionsV2 []]
+
+judgment ProfilePanelNames [profile] = call PanelNamesOf [call StudioProfile'panels [profile]]
+
+judgment PanelNamesOf [panels] =
+  match panels {
+    case [] -> list []
+    case head :: rest -> prim #cons [call PanelSchema'name [head] call PanelNamesOf [rest]]
+  }
+
+; A profile change must not change what the language means.
+judgment LanguageDigestUnderProfiles [grammar] =
+  prim #eq [
+    prim #digest [call DeployedLanguage [grammar]]
+    prim #digest [call DeployedLanguage [grammar]]
+  ]
+
+judgment ProfileEvolutionIsSurfaceOnly [grammar] =
+  prim #eq [
+    prim #digest [call DeployedLanguage [grammar]]
+    prim #digest [call DeployedLanguage [grammar]]
+  ]
+
+; -------------------------------------------------------- local development
+
+; The branch state is a keyed workspace: the selected language, the selected
+; Studio profile and the document under edit.
+judgment Workspace [grammar document] =
+  map [#language grammar #profile #sds-editor-v1 #document document]
+
+judgment LanguagePatch [before after] = mk #AtKey [#language mk #Replace [before after]]
+
+judgment ProfilePatch [] =
+  mk #AtKey [#profile mk #Replace [#sds-editor-v1 #sds-editor-v2]]
+
+judgment DocumentPatch [before after] = mk #AtKey [#document mk #Replace [before after]]
+
+; Three patches recorded on one branch: language, surface and data.
+judgment EvolutionRepository [grammarV1 grammarV2 documentV1 documentV2] =
+  let empty = call EmptyRepository [] in
+  let withLanguage = call RecordPatch [empty #release list [] list [call LanguagePatch [grammarV1 grammarV2]]] in
+  let withProfile = call RecordPatch [withLanguage #release list [] list [call ProfilePatch []]] in
+  call RecordPatch [withProfile #release list [] list [call DocumentPatch [documentV1 documentV2]]]
+
+judgment EvolvedWorkspace [grammarV1 grammarV2 documentV1 documentV2] =
+  call ReplayState [
+    call DescProgram []
+    call Workspace [grammarV1 documentV1]
+    call EvolutionRepository [grammarV1 grammarV2 documentV1 documentV2]
+    #release
+  ]
+
+judgment WorkspaceLanguage [workspace] = prim #mget [workspace #language mk #absent []]
+judgment WorkspaceProfile [workspace] = prim #mget [workspace #profile mk #absent []]
+judgment WorkspaceDocument [workspace] = prim #mget [workspace #document mk #absent []]
+
+judgment WorkspaceAdoptedLanguage [grammarV1 grammarV2 documentV1 documentV2] =
+  prim #eq [
+    call WorkspaceLanguage [call EvolvedWorkspace [grammarV1 grammarV2 documentV1 documentV2]]
+    grammarV2
+  ]
+
+judgment WorkspaceAdoptedDocument [grammarV1 grammarV2 documentV1 documentV2] =
+  prim #eq [
+    call WorkspaceDocument [call EvolvedWorkspace [grammarV1 grammarV2 documentV1 documentV2]]
+    documentV2
+  ]
+
+judgment WorkspaceAdoptedProfile [grammarV1 grammarV2 documentV1 documentV2] =
+  call WorkspaceProfile [call EvolvedWorkspace [grammarV1 grammarV2 documentV1 documentV2]]
+
+; The language patch and the surface patch touch disjoint identities.
+judgment LanguageAndSurfaceCommute [grammarV1 grammarV2] =
+  call Independent [call LanguagePatch [grammarV1 grammarV2] call ProfilePatch []]
+
+judgment ReleasePatchCount [grammarV1 grammarV2 documentV1 documentV2] =
+  prim #len [
+    call Members [call EvolutionRepository [grammarV1 grammarV2 documentV1 documentV2] #release]
+  ]
+
+; ------------------------------------------------------------- acceptance
+
+judgment DeployerSecret [] = "sds-deployer"
+
+judgment DeployerScope [] = call AuthorityScope [list [#code #meta] list [#sds]]
+
+judgment DeployerAuthority [] =
+  call Authority [call Signer [call PublicKey [call DeployerSecret []]] call DeployerScope [] 100]
+
+judgment ReleaseConstitution [] =
+  call AcceptanceConstitution [
+    #sds-release
+    list [#kind #authority #signature #tests]
+    call DeployerScope []
+    list [#roundtrip #validate]
+    call ResourceProfile [1000 100]
+  ]
+
+judgment ReleaseTests [] =
+  list [
+    call TestEvidence [#roundtrip #pass]
+    call TestEvidence [#validate #pass]
+  ]
+
+judgment IncompleteTests [] = list [call TestEvidence [#roundtrip #pass]]
+
+judgment ReleaseProposal [patch tests] =
+  let unsigned =
+    call Proposal [patch #sds-base #meta call DeployerAuthority [] unit list [] list [] tests
+      call ResourceProfile [1000000 1000]] in
+  call Proposal [
+    patch #sds-base #meta call DeployerAuthority []
+    call SignSubject [call DeployerSecret [] call SubjectOf [unsigned call ReleaseConstitution []]]
+    list [] list [] tests
+    call ResourceProfile [1000000 1000]
+  ]
+
+judgment ReleaseDecision [patch tests] =
+  call DecisionReason [
+    call EvaluateAcceptance [call ReleaseConstitution [] call ReleaseProposal [patch tests] 10]
+  ]
+
+judgment AcceptedRelease [grammarV1 grammarV2 documentV1 documentV2] =
+  call ReleaseDecision [
+    prim #head [call Members [call EvolutionRepository [grammarV1 grammarV2 documentV1 documentV2] #release]]
+    call ReleaseTests []
+  ]
+
+judgment RejectedRelease [grammarV1 grammarV2 documentV1 documentV2] =
+  call ReleaseDecision [
+    prim #head [call Members [call EvolutionRepository [grammarV1 grammarV2 documentV1 documentV2] #release]]
+    call IncompleteTests []
+  ]
+
+; --------------------------------------------------------------- publication
+
+judgment ReleaseChain [grammarV2 documentReference] =
+  call ReplayFromGenesis [call ChainAuthority [] call GoodChain [grammarV2 documentReference]]
+
+judgment ReleaseHeight [grammarV2 documentReference] =
+  call ChainHeight [call ReleaseChain [grammarV2 documentReference]]
+
+judgment PublishedLanguage [grammarV2 documentReference] =
+  call PublishedRoot [call ReleaseChain [grammarV2 documentReference] #language]
+
+; The published language is reconstructed from the chain plus the closure.
+judgment ReconstructedLanguage [grammarV2 documentReference] =
+  call ReconstructPublished [call ReleaseChain [grammarV2 documentReference] #language #grammar]
+
+judgment ReleaseIsReconstructible [grammarV2 documentReference committed] =
+  prim #eq [call ReconstructedLanguage [grammarV2 documentReference] mk #some [committed]]
+
+judgment ReconstructedLanguageName [grammarV2 documentReference] =
+  match call ReconstructedLanguage [grammarV2 documentReference] {
+    case (#some grammar) -> call Require [grammar #name]
+    case (#none) -> mk #none []
+  }
+
+; The reconstructed language is the very artifact that was published.
+judgment ReconstructedMatchesPublished [grammarV2 documentReference] =
+  match call ReconstructedLanguage [grammarV2 documentReference] {
+    case (#some grammar) -> prim #eq [prim #digest [mk #artifact [#grammar grammar]] grammarV2]
+    case (#none) -> false
+  }
+
+; A developer branches from the finalized publication rather than from a copy.
+judgment BranchFromRelease [grammarV2 documentReference] =
+  prim #tag [
+    call BranchFromCheckpoint [
+      call ReleaseChain [grammarV2 documentReference]
+      #language
+      call EmptyRepository []
+      #local
+    ]
+  ]
+
+; --------------------------------------------------------------- settlement
+
+judgment ReleaseSettled [first second third] =
+  call SettledHeight [call SettleTwo [first second third]]
+
+; ------------------------------------------------------ reopening the studio
+
+judgment ReleaseState [grammar source] =
+  map [
+    #sections call DocumentSections [call ParseDocument [grammar source]]
+    #entries call DocumentEntries [call ParseDocument [grammar source]]
+    #findings call ValidateSource [grammar source]
+    #hazards call Hazards [grammar source]
+    #pdf mk #preview [#page-1]
+  ]
+
+judgment ReopenStudio [profile grammar source] =
+  call RenderStudio [profile call ReleaseState [grammar source]]
+
+judgment ReopenedPanels [profile grammar source] =
+  call StudioPanels [call ReopenStudio [profile grammar source]]
+
+judgment ReopenedActions [profile grammar source] =
+  call StudioActions [call ReopenStudio [profile grammar source]]
+
+; The reopened studio shows the hazard the evolution introduced.
+judgment ReopenedHazards [profile grammar source] =
+  prim #mget [call ReleaseState [grammar source] #hazards list []]
+
+; ------------------------------------------------------- the language service
+
+; The fixed entry points the editor adapter calls. Binding a language to the
+; editor is this file and nothing else: the adapter has no language knowledge,
+; and the generic half lives in languages/service.
+;
+; Every judgment here is total over foreign documents. The same world serves
+; five languages, so a Lambda or Grammar buffer reaches these judgments too
+; and must fall through cleanly rather than fail.
+
+judgment ServiceDiagnostics [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok document) -> call DocumentDiagnostics [text document]
+    case (#denied reason) -> call ParseDiagnostics [reason]
+  }
+
+judgment DocumentDiagnostics [text document] =
+  match document {
+    case (#Document title sections) ->
+      call FindingDiagnostics [text call ValidateDocument [document]]
+    case _ -> list []
+  }
+
+judgment FindingDiagnostics [text findings] =
+  match findings {
+    case [] -> list []
+    case head :: rest ->
+      match head {
+        case (#finding kind key) ->
+          prim #cons [
+            call KeyDiagnostic [text #warning call FindingMessage [kind key] key]
+            call FindingDiagnostics [text rest]
+          ]
+      }
+  }
+
+judgment ServiceSymbols [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok document) -> call DocumentSymbols [text document]
+    case (#denied reason) -> list []
+  }
+
+judgment DocumentSymbols [text document] =
+  match document {
+    case (#Document title sections) ->
+      call SectionSymbols [text call DocumentSections [document]]
+    case _ -> list []
+  }
+
+judgment SectionSymbols [text sections] =
+  match sections {
+    case [] -> list []
+    case head :: rest ->
+      prim #append [
+        prim #cons [
+          call TextSymbol [
+            text
+            call SectionHeading [head]
+            #namespace
+            prim #scat ["section " prim #nat->str [call SectionNumber [head]]]
+          ]
+          call EntrySymbols [text call SectionEntries [head]]
+        ]
+        call SectionSymbols [text rest]
+      ]
+  }
+
+judgment EntrySymbols [text entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [call EntrySymbol [text head] call EntrySymbols [text rest]]
+  }
+
+judgment EntrySymbol [text entry] =
+  match entry {
+    case (#Sentence key body) -> call KeySymbol [text key #string body]
+    case (#Field key amount units) ->
+      call KeySymbol [
+        text key #number
+        prim #scat [prim #scat [prim #nat->str [amount] " "] prim #sym->str [units]]
+      ]
+    case (#Component key fraction) ->
+      call KeySymbol [text key #number prim #scat [prim #nat->str [fraction] " percent"]]
+    case (#Hazard key statement severity) -> call KeySymbol [text key #event statement]
+    case _ -> call KeySymbol [text #entry #object ""]
+  }
+
+judgment ServiceCompletions [grammar text] =
+  prim #append [
+    call GrammarCompletions [grammar]
+    call SymbolCompletions [call ServiceSymbols [grammar text]]
+  ]
+
+judgment ServiceFormat [grammar text] = call PrintBuffer [grammar text]
+
+judgment ValidationSummary [grammar text] =
+  call CountMessage [call ServiceDiagnostics [grammar text] "finding" "findings"]
+
+judgment HazardSummary [grammar text] =
+  call CountMessage [call Hazards [grammar text] "hazard" "hazards"]
+
+judgment ServiceCommand [grammar text command] =
+  if prim #eq [command #run-validation]
+  then mk #ok [call ValidationSummary [grammar text]]
+  else
+    if prim #eq [command #classify-hazard]
+    then mk #ok [call HazardSummary [grammar text]]
+    else
+      if prim #eq [command #export-document]
+      then
+        match call ServiceFormat [grammar text] {
+          case (#some printed) -> mk #ok [printed]
+          case (#none) -> mk #denied ["the document does not parse"]
+        }
+      else mk #denied ["unknown command"]
+
+judgment ServiceKeywords [grammar] = call GrammarKeywords [grammar]
+
+; The editor's views are the deployed Studio profile's panels, rendered by
+; F11's generic runtime and keyed by panel name. The adapter reads the keys; it
+; never learns that a panel is a panel.
+judgment ServiceViews [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok document) ->
+      call ViewMap [
+        call ProfilePanelNames [call DeployedProfileV2 []]
+        call ReleaseState [grammar text]
+      ]
+    case (#denied reason) -> prim #mnew []
+  }
+
+judgment ViewMap [names state] =
+  match names {
+    case [] -> prim #mnew []
+    case head :: rest ->
+      prim #mput [
+        call ViewMap [rest state]
+        head
+        call ViewItems [prim #mget [state head list []]]
+      ]
+  }
+
+judgment ViewItems [content] =
+  if prim #is-list [content]
+  then call ItemTexts [content]
+  else list []
+
+judgment ItemTexts [items] =
+  match items {
+    case [] -> list []
+    case head :: rest -> prim #cons [call ItemText [head] call ItemTexts [rest]]
+  }
+
+judgment ItemText [item] =
+  if prim #is-node [item]
+  then
+    prim #scat [
+      prim #scat [prim #sym->str [prim #tag [item]] " "]
+      call ItemHead [prim #args [item]]
+    ]
+  else call ItemScalar [item]
+
+judgment ItemHead [args] =
+  match args {
+    case [] -> ""
+    case head :: rest -> call ItemScalar [head]
+  }
+
+judgment ItemScalar [value] =
+  if prim #is-str [value]
+  then value
+  else
+    if prim #is-sym [value]
+    then prim #sym->str [value]
+    else
+      if prim #is-nat [value]
+      then prim #nat->str [value]
+      else ""
+
+judgment ServiceSemanticTokens [grammar text] = call SemanticTokens [grammar text]
+
+; The layout the profile describes, keyed for the adapter. Panels carry the
+; region the profile puts them in, so the editor arranges itself the way the
+; deployment says rather than the way the client happens to feel like.
+judgment ServiceLayout [grammar] =
+  let profile = call DeployedProfileV2 [] in
+  prim #mfrom [list [
+    mk #entry [#name call StudioProfile'layout [profile]]
+    mk #entry [#views call ViewDescriptors [call StudioProfile'panels [profile]]]
+    mk #entry [#navigation call NavigationDescriptor [call StudioProfile'navigation [profile]]]
+    mk #entry [#workflow call WorkflowSchema'stages [call StudioProfile'workflow [profile]]]
+    mk #entry [#actions call DeriveActions [profile]]
+  ]]
+
+judgment ViewDescriptors [panels] =
+  match panels {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        prim #mfrom [list [
+          mk #entry [#name call PanelSchema'name [head]]
+          mk #entry [#placement call PanelSchema'placement [head]]
+          mk #entry [#primitive call ViewSchema'primitive [call PanelSchema'view [head]]]
+        ]]
+        call ViewDescriptors [rest]
+      ]
+  }
+
+judgment NavigationDescriptor [navigation] =
+  prim #mfrom [list [
+    mk #entry [#model call NavigationSchema'model [navigation]]
+    mk #entry [#steps call NavigationSchema'steps [navigation]]
+  ]]
+
+; ------------------------------------------------------------- the catalogue
+
+; What the world contains, rather than what one buffer contains. A profile
+; describes editing a document; this describes the documents there are.
+
+judgment Unquoted [body] =
+  if prim #ge [prim #slen [body] 2]
+  then prim #ssub [body 1 prim #sub [prim #slen [body] 1]]
+  else body
+
+judgment ProductOf [entries] =
+  match entries {
+    case [] -> mk #none []
+    case head :: rest ->
+      match head {
+        case (#Sentence key body) ->
+          if prim #eq [key #product]
+          then mk #some [body]
+          else call ProductOf [rest]
+        case _ -> call ProductOf [rest]
+      }
+  }
+
+judgment ChemicalOf [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok document) -> call ChemicalName [document]
+    case (#denied reason) -> "unreadable"
+  }
+
+judgment ChemicalName [document] =
+  match document {
+    case (#Document title sections) ->
+      match call ProductOf [call DocumentEntries [document]] {
+        case (#some body) -> call Unquoted [body]
+        case (#none) -> call Unquoted [title]
+      }
+    case _ -> "unknown"
+  }
+
+judgment ReportRecord [grammar entry] =
+  let reference = prim #mget [entry #source #none] in
+  let text = call SourceText [reference] in
+  prim #mfrom [list [
+    mk #entry [#chemical call ChemicalOf [grammar text]]
+    mk #entry [#findings prim #len [call ServiceDiagnostics [grammar text]]]
+    mk #entry [#hazards prim #len [call Hazards [grammar text]]]
+    mk #entry [#name prim #sym->str [prim #mget [entry #name #unknown]]]
+    mk #entry [#path call SourcePath [reference]]
+  ]]
+
+judgment ReportRecords [grammar entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [call ReportRecord [grammar head] call ReportRecords [grammar rest]]
+  }
+
+judgment ChemicalNames [reports] =
+  match reports {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [prim #mget [head #chemical ""] call ChemicalNames [rest]]
+  }
+
+judgment ReportsFor [reports chemical] =
+  match reports {
+    case [] -> list []
+    case head :: rest ->
+      if prim #eq [prim #mget [head #chemical ""] chemical]
+      then prim #cons [head call ReportsFor [rest chemical]]
+      else call ReportsFor [rest chemical]
+  }
+
+judgment CatalogueOf [reports names] =
+  match names {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        prim #mfrom [list [
+          mk #entry [#name head]
+          mk #entry [#reports call ReportsFor [reports head]]
+        ]]
+        call CatalogueOf [reports rest]
+      ]
+  }
+
+judgment ServiceCatalogue [grammar entries] =
+  let reports = call ReportRecords [grammar entries] in
+  call CatalogueOf [reports prim #sort [prim #distinct [call ChemicalNames [reports]]]]
+
+; ---------------------------------------------------------------- the report
+
+; The rendered document, for a preview beside the source it came from.
+
+judgment PreviewBlock [kind body] =
+  prim #mfrom [list [mk #entry [#kind kind] mk #entry [#text body]]]
+
+judgment ServicePreview [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok document) -> call PreviewBlocks [document]
+    case (#denied reason) -> list []
+  }
+
+judgment PreviewBlocks [document] =
+  match document {
+    case (#Document title sections) ->
+      prim #cons [
+        call PreviewBlock [#title call Unquoted [title]]
+        call PreviewSections [call DocumentSections [document]]
+      ]
+    case _ -> list []
+  }
+
+judgment PreviewSections [sections] =
+  match sections {
+    case [] -> list []
+    case head :: rest ->
+      prim #append [
+        prim #cons [
+          call PreviewBlock [
+            #section
+            prim #scat [
+              prim #scat [prim #nat->str [call SectionNumber [head]] ". "]
+              call Unquoted [call SectionHeading [head]]
+            ]
+          ]
+          call PreviewEntries [call SectionEntries [head]]
+        ]
+        call PreviewSections [rest]
+      ]
+  }
+
+judgment PreviewEntries [entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [call PreviewEntry [head] call PreviewEntries [rest]]
+  }
+
+judgment PreviewEntry [entry] =
+  match entry {
+    case (#Sentence key body) ->
+      call PreviewBlock [#entry prim #scat [prim #scat [prim #sym->str [key] ": "] call Unquoted [body]]]
+    case (#Field key amount units) ->
+      call PreviewBlock [
+        #entry
+        prim #scat [
+          prim #scat [prim #sym->str [key] ": "]
+          prim #scat [prim #nat->str [amount] prim #scat [" " prim #sym->str [units]]]
+        ]
+      ]
+    case (#Component key fraction) ->
+      call PreviewBlock [
+        #entry
+        prim #scat [prim #scat [prim #sym->str [key] ": "] prim #scat [prim #nat->str [fraction] " percent"]]
+      ]
+    case (#Hazard key statement severity) ->
+      call PreviewBlock [
+        #hazard
+        prim #scat [prim #scat [prim #sym->str [key] " "] call Unquoted [statement]]
+      ]
+    case _ -> call PreviewBlock [#entry ""]
+  }
+
+; The report as an actual PDF, through the projection language the profile
+; has always declared as a foreign surface.
+
+judgment PdfSizeFor [kind] =
+  if prim #eq [kind #title]
+  then 20
+  else
+    if prim #eq [kind #section]
+    then 14
+    else 11
+
+judgment PdfBlocks [blocks] =
+  match blocks {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        prim #mfrom [list [
+          mk #entry [#size call PdfSizeFor [prim #mget [head #kind #entry]]]
+          mk #entry [#text prim #mget [head #text ""]]
+        ]]
+        call PdfBlocks [rest]
+      ]
+  }
+
+judgment ServicePdf [grammar text] =
+  call PdfFile [call PdfBlocks [call ServicePreview [grammar text]]]

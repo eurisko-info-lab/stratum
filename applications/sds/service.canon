@@ -1,0 +1,80 @@
+; What the editor is allowed to know.
+;
+; The adapter reads this and nothing else. It is a map, not a tagged structure,
+; because the host must not dispatch on any vocabulary of the system built
+; above it: it looks fields up by name and copies them through.
+;
+; Every displayed name in the generated client comes from here, so the host
+; names nothing, and adding a language is a change to this file plus the fixed
+; entry points in the deployment's own program.
+;
+; One world serves five languages. Four of them are the platform's own: opening
+; a .meta or .grammar source of this repository gets the same diagnostics,
+; symbols, completion and formatting as the application language, from the same
+; generic service.
+{
+  name "sds"
+
+  editor {
+    identifier "stratum-studio"
+    display "Stratum Studio"
+    description "Editor support for every language a Stratum world publishes."
+    publisher "eurisko"
+    version "0.1.0"
+    category "Stratum"
+    view "Stratum Studio"
+    license "Apache-2.0"
+  }
+
+  ; Where the profile's regions land in this particular editor. The profile
+  ; says left, centre, right and bottom; only a client knows what those are
+  ; called here, so the translation is declared rather than assumed.
+  placements {
+    bottom "panel"
+    centre "panel"
+    centre-lower "panel"
+    left "activitybar"
+    right "beside"
+  }
+
+  ; The world's own navigator. A profile describes editing one document; this
+  ; is the catalogue of the documents there are, so it belongs to the editor
+  ; rather than to the document profile.
+  navigator {
+    name "catalogue"
+    title "Chemicals and reports"
+    placement left
+    reveal #t
+  }
+
+  languages [
+    {
+      name sds2
+      label "SDS"
+      extensions [".sds"]
+      comment ";"
+    }
+    {
+      name meta
+      label "Meta"
+      extensions [".meta"]
+      comment ";"
+    }
+    {
+      name grammar
+      label "Grammar"
+      extensions [".grammar"]
+    }
+    {
+      name lambda
+      label "Lambda"
+      extensions [".lambda"]
+    }
+  ]
+
+  commands [
+    { name run-validation title "SDS: run validation" }
+    { name classify-hazard title "SDS: classify hazards" }
+    { name export-document title "SDS: export canonical form" }
+  ]
+}

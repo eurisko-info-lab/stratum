@@ -1,0 +1,17 @@
+
+artifactprofile
+profile
+
+name
+sds-editor
+languagesds
+layoutdocument-workflow
+
+navigationdocument-centric
+panels	sections	paragraphvariantsfieldsmixturefindingsapproval
+provenancepreview
+commandsrun-validationsubmit-for-reviewapprove-documentexport-document
+workflowdraftreviewapprovepublish
+rolesauthorreviewer
+projectionsspreadsheet
+foreignjsonxmlpdf

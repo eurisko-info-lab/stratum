@@ -1,0 +1,14 @@
+; The evolved SDS studio profile, recorded as a canonical artifact.
+; The authoritative definition is `DeployedProfileV2` in
+; applications/sds/sds.meta; this artifact records the selection.
+(profile
+  (name "sds-editor-v2")
+  (language sds)
+  (layout document-workflow)
+  (navigation document-centric)
+  (panels [sections entries findings preview hazards])
+  (commands [run-validation submit-for-review classify-hazard])
+  (workflow [draft review approve publish])
+  (roles [author reviewer])
+  (projections [spreadsheet])
+  (foreign [pdf]))

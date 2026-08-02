@@ -1,0 +1,9 @@
+
+artifactdata	commands	namerun-validationtitleSDS: run validation	nameclassify-hazardtitleSDS: classify hazards	nameexport-documenttitleSDS: export canonical formeditor	categoryStratumdescription<Editor support for every language a Stratum world publishes.displayStratum Studio
+identifierstratum-studiolicense
+Apache-2.0	publishereuriskoversion0.1.0viewStratum Studio	languages	comment;
+extensions.sdslabelSDSnamesds2	comment;
+extensions.metalabelMetanamemeta	
+extensions.grammarlabelGrammarnamegrammar	
+extensions.lambdalabelLambdanamelambdanamesds	navigator	name	catalogue	placementleftrevealtitleChemicals and reports
+placements	bottompanelcentrepanelcentre-lowerpanelleftactivitybarrightbeside

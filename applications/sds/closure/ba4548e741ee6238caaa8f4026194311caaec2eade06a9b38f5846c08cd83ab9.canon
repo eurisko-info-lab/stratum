@@ -1,0 +1,12 @@
+
+artifactsource
+source
+path)applications/sds/documents/acetone-v1.sds
+textˆ; Acetone, revision 1.
+; The boiling point is wrong and there is no hazard statement yet.
+document "Acetone technical data"
+section 1 "Identification"
+  sentence product "Acetone"
+  field boiling-point 65 celsius
+section 3 "Composition"
+  component cas-67-64-1 99

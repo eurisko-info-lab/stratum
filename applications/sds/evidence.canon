@@ -1,0 +1,33 @@
+
+artifactevidence
+evidence
+checkdocument-round-tripsok
+checkdocument-index-is-generatedok
+check a-clean-document-has-no-findingsok
+check%validation-reports-regulated-findingsok
+check*the-old-language-rejects-the-new-constructok
+checkthe-evolved-language-accepts-itok
+check,the-evolved-language-is-backwards-compatibleok
+check the-evolved-language-round-tripsok
+checkthe-measured-value-was-wrongok
+checkthe-measured-value-is-correctedok
+checkthe-hazard-statement-appearsok
+check%the-first-profile-has-no-hazard-panelok
+check'the-evolved-profile-adds-a-hazard-panelok
+check"the-evolved-profile-adds-a-commandok
+check-a-surface-change-does-not-change-the-languageok
+check&the-release-branch-holds-three-patchesok
+check,language-and-surface-patches-are-independentok
+check&the-branch-adopts-the-evolved-languageok
+check%the-branch-adopts-the-evolved-profileok
+check(the-branch-adopts-the-corrected-documentok
+check*the-release-is-accepted-with-full-evidenceok
+check2the-release-is-blocked-without-validation-evidenceok
+check%the-release-is-published-to-the-chainok
+check?the-published-language-is-reconstructed-from-chain-plus-closureok
+check.the-reconstructed-language-is-the-sds-languageok
+check.a-peer-branches-from-the-finalized-publicationok
+check!the-release-transition-is-settledok
+check2the-studio-reopens-over-the-reconstructed-documentok
+check(the-reopened-studio-shows-the-new-hazardok
+check*the-reopened-studio-offers-the-new-commandok
