@@ -53,6 +53,50 @@ object Json:
     print(j, sb)
     sb.toString
 
+  /**
+   * The same value, laid out over lines. A manifest generated into the tree is
+   * read by people and reviewed in diffs, so it is written the way it would be
+   * written by hand: two spaces a level, one member or element to a line, and
+   * an empty array or object kept on its own line rather than split.
+   */
+  def pretty(j: Json): String =
+    val sb = StringBuilder()
+    prettyPrint(j, 0, sb)
+    sb.toString
+
+  private def prettyPrint(j: Json, depth: Int, sb: StringBuilder): Unit =
+    def pad(n: Int): Unit = sb.append("  " * n)
+    j match
+      case Arr(items) if items.isEmpty => sb.append("[]")
+      case Obj(fields) if fields.isEmpty => sb.append("{}")
+      case Arr(items) =>
+        sb.append("[\n")
+        var first = true
+        items.foreach { i =>
+          if !first then sb.append(",\n")
+          first = false
+          pad(depth + 1)
+          prettyPrint(i, depth + 1, sb)
+        }
+        sb.append('\n')
+        pad(depth)
+        sb.append(']')
+      case Obj(fields) =>
+        sb.append("{\n")
+        var first = true
+        fields.foreach { (k, v) =>
+          if !first then sb.append(",\n")
+          first = false
+          pad(depth + 1)
+          quote(k, sb)
+          sb.append(": ")
+          prettyPrint(v, depth + 1, sb)
+        }
+        sb.append('\n')
+        pad(depth)
+        sb.append('}')
+      case scalar => print(scalar, sb)
+
   private def print(j: Json, sb: StringBuilder): Unit = j match
     case Null       => sb.append("null")
     case Bool(b)    => sb.append(if b then "true" else "false")

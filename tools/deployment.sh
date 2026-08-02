@@ -74,6 +74,13 @@ deploy() {
       exit 1
     fi
     echo "   $name language server answers"
+
+    # The client is checked out here, so it is regenerated from the world and
+    # the drift gate catches a client left behind by the languages it edits.
+    if [ -d studio/vscode ]; then
+      run lsp package --world "$dir" --out studio/vscode
+      echo "   $name editor regenerated"
+    fi
   fi
 
   echo "   $predecessor_name |- $name"

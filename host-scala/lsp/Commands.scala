@@ -22,6 +22,7 @@ object Commands:
       case Some("serve")     => serve(root, opts)
       case Some("languages") => languages(root, opts)
       case Some("replay")    => replay(root, opts)
+      case Some("package")   => generate(root, opts)
       case other             => CommandResult.fail(s"unknown lsp command ${other.getOrElse("")}")
 
   private def options(args: Vector[String]): Map[String, String] =
@@ -121,3 +122,151 @@ object Commands:
       while j < pattern.length && data(i + j) == pattern(j) do j += 1
       if j == pattern.length then found = i else i += 1
     found
+
+
+  // -------------------------------------------------------------- packaging
+
+  private def generate(root: Path, opts: Map[String, String]): CommandResult =
+    world(root, opts) match
+      case Left(m) => CommandResult.fail(m)
+      case Right(service) =>
+        opts.get("out") match
+          case None => CommandResult.fail("usage: lsp package --world <dir> --out <dir>")
+          case Some(outName) =>
+            val out = root.resolve(outName)
+            Files.createDirectories(out)
+            val ids = Service.identifiers(service.descriptor)
+            val written = service.descriptor.bindings.map { binding =>
+              s"  ${ids(binding.name)} ${binding.extensions.mkString(" ")}"
+            }
+            write(out.resolve("package.json"), Json.pretty(manifest(service, ids, opts.getOrElse("world", ""))))
+            CommandResult.okLines(
+              (s"packaged ${service.descriptor.name} into $outName" +: written) :+
+                s"  ${service.descriptor.actions.length} commands"
+            )
+
+  private def write(path: Path, text: String): Unit =
+    Files.write(path, (text + "\n").getBytes(UTF_8))
+
+  /** One view for each the profile declares, in the region it declares. */
+  private def viewsFor(service: Service): (Json, Json) =
+    val declared = service.descriptor.bindings.headOption
+      .flatMap(b => service.layout(b.name))
+      .map(l => Service.get(l, "views").map(Service.list).getOrElse(Vector.empty))
+      .getOrElse(Vector.empty)
+    val fromProfile = declared.map { view =>
+      val region = Service.string(view, "placement")
+      val location = service.descriptor.placements.getOrElse(region, "activitybar")
+      (location, Service.string(view, "name"), Service.string(view, "primitive"), region)
+    }
+    // A region the client renders beside the document is not a tree, so it
+    // contributes no view; the client opens it as a document of its own.
+    val navigator = service.descriptor.navigator.toVector.map { n =>
+      val location = service.descriptor.placements.getOrElse(n.placement, "activitybar")
+      (location, n.name, "tree", n.placement)
+    }
+    val located = (navigator ++ fromProfile).filterNot(_._1 == "beside")
+    val title = service.descriptor.editor.getOrElse("view", "Stratum")
+    val containers = located.map(_._1).distinct.sorted
+    val viewsContainers = Json.Obj(containers.map { location =>
+      location -> Json.arr(
+        Vector(
+          Json.obj(
+            "id" -> Str(s"stratum-$location"),
+            "title" -> Str(title),
+            "icon" -> Str("$(symbol-structure)")
+          )
+        )
+      )
+    })
+    val views = Json.Obj(containers.map { location =>
+      s"stratum-$location" -> Json.arr(located.filter(_._1 == location).map { (_, name, primitive, region) =>
+        val title = service.descriptor.navigator.filter(_.name == name).map(_.title).getOrElse(name)
+        Json.obj(
+          "id" -> Str(s"stratum.view.$name"),
+          "name" -> Str(title),
+          "contextualTitle" -> Str(s"$name ($primitive, $region)")
+        )
+      })
+    })
+    (viewsContainers, views)
+
+  /** The client manifest, generated from the descriptor the world publishes. */
+  private def manifest(service: Service, ids: Map[String, String], worldDir: String): Json =
+    val editor = service.descriptor.editor
+    def declared(key: String, fallback: String): String = editor.getOrElse(key, fallback)
+
+    val languages = service.descriptor.bindings.map { b =>
+      val id = ids(b.name)
+      Json.obj(
+        "id" -> Str(id),
+        "aliases" -> Json.arr(Vector(Str(b.label))),
+        "extensions" -> Json.arr(b.extensions.map(Str.apply))
+      )
+    }
+    val evaluate = Json.obj(
+      "command" -> Str("stratum.evaluate"),
+      "title" -> Str("Stratum: evaluate selection"),
+      "category" -> Str(declared("category", "Stratum"))
+    )
+    val commands = evaluate +: service.descriptor.actions.map { a =>
+      Json.obj(
+        "command" -> Str(s"stratum.${a.name}"),
+        "title" -> Str(a.title),
+        "category" -> Str(declared("category", "Stratum"))
+      )
+    }
+    val (viewsContainers, views) = viewsFor(service)
+    Json.obj(
+      "name" -> Str(declared("identifier", "stratum-client")),
+      "displayName" -> Str(declared("display", "Stratum")),
+      "description" -> Str(declared("description", "")),
+      "version" -> Str(declared("version", "0.1.0")),
+      "license" -> Str(declared("license", "UNLICENSED")),
+      "publisher" -> Str(declared("publisher", "stratum")),
+      "engines" -> Json.obj("vscode" -> Str("^1.85.0")),
+      "categories" -> Json.arr(Vector(Str("Programming Languages"))),
+      "activationEvents" -> Json.arr(service.descriptor.bindings.map(b => Str(s"onLanguage:${ids(b.name)}"))),
+      "main" -> Str("./out/extension.js"),
+      "contributes" -> Json.obj(
+        "languages" -> Json.arr(languages),
+        "commands" -> Json.arr(commands),
+        "keybindings" -> Json.arr(
+          Vector(
+            Json.obj(
+              "command" -> Str("stratum.evaluate"),
+              "key" -> Str("ctrl+shift+d"),
+              "when" -> Str("editorTextFocus")
+            )
+          )
+        ),
+        "viewsContainers" -> viewsContainers,
+        "views" -> views,
+        "configuration" -> Json.obj(
+          "title" -> Str(declared("category", "Stratum")),
+          "properties" -> Json.obj(
+            "stratum.world" -> Json.obj(
+              "type" -> Str("string"),
+              "default" -> Str(worldDir),
+              "description" -> Str("The world directory whose service answers editor requests.")
+            ),
+            "stratum.server" -> Json.obj(
+              "type" -> Str("string"),
+              "default" -> Str("./tools/lsp.sh"),
+              "description" -> Str("The command that starts the language server.")
+            )
+          )
+        )
+      ),
+      "scripts" -> Json.obj(
+        "compile" -> Str("tsc -p ."),
+        "watch" -> Str("tsc -watch -p ."),
+        "package" -> Str("vsce package")
+      ),
+      "dependencies" -> Json.obj("vscode-languageclient" -> Str("^9.0.1")),
+      "devDependencies" -> Json.obj(
+        "@types/node" -> Str("^20.11.0"),
+        "@types/vscode" -> Str("^1.85.0"),
+        "typescript" -> Str("^5.4.0")
+      )
+    )
