@@ -1,0 +1,13 @@
+{
+  "name": "stratum-studio-test",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The replay harness for the generated studio client. It lives beside the client rather than inside it because studio/vscode/package.json is generated from the world by `stratum lsp package`, and a generated file cannot carry a hand-written dependency.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "test": "npm --prefix .. run compile && node ./run.cjs"
+  },
+  "devDependencies": {
+    "@vscode/test-electron": "^2.5.2"
+  }
+}

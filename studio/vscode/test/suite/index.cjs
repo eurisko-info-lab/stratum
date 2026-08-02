@@ -147,9 +147,9 @@ exports.run = async function run() {
   fs.rmSync(scratch, { recursive: true, force: true });
   fs.mkdirSync(scratch, { recursive: true });
 
-  const extension = vscode.extensions.all.find(candidate => candidate.packageJSON?.name === 'stratum-studio');
+  const extension = vscode.extensions.all.find(candidate => candidate.packageJSON?.name === 'stratum-studio' || candidate.packageJSON?.name === 'stratum-smalltalk');
   if (!extension) {
-    throw new Error('stratum-studio extension is not installed in the test host');
+    throw new Error('stratum studio extension is not installed in the test host');
   }
   await extension.activate();
   await vscode.commands.executeCommand('stratum.test.clearTrace');
