@@ -22,6 +22,7 @@ object Commands:
       case Some("serve")     => serve(root, opts)
       case Some("languages") => languages(root, opts)
       case Some("replay")    => replay(root, opts)
+      case Some("script")    => script(root, opts)
       case Some("package")   => generate(root, opts)
       case other             => CommandResult.fail(s"unknown lsp command ${other.getOrElse("")}")
 
@@ -92,6 +93,17 @@ object Commands:
                   case Left(m) => s"unreadable response: $m"
               }
               CommandResult(if failures.isEmpty then 0 else 1, lines ++ failures.toVector)
+
+  private def script(root: Path, opts: Map[String, String]): CommandResult =
+    opts.get("script") match
+      case None => CommandResult.fail("usage: lsp script --script <file> [--out <file>]")
+      case Some(name) =>
+        StudioScript.compile(root, root.resolve(name)) match
+          case Left(error) => CommandResult.fail(error)
+          case Right(value) =>
+            val text = Json.write(value)
+            opts.get("out").foreach(out => write(root.resolve(out), text))
+            CommandResult.ok(text)
 
   /** Content-Length framing is counted in bytes, so it is split on bytes. */
   private def frames(data: Array[Byte]): Vector[String] =

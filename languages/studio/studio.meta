@@ -1,0 +1,60 @@
+module studio
+
+record StudioScript [steps]
+record StudioWorld [value]
+record StudioWriteFile [value]
+record StudioOpenFile [value]
+record StudioReplaceFile [value]
+record StudioSelect [value]
+record StudioCommand [value]
+record StudioAssertViews [value]
+record StudioAssertViewContains [value]
+record StudioAssertDocuments [value]
+record StudioAssertDocumentsContain [value]
+record StudioAssertTraceContains [value]
+record StudioAssertOutputContains [value]
+record StudioAssertDiagnostics [value]
+record StudioClearTrace []
+
+data StudioValue =
+  | #StudioEmptyObject []
+  | #StudioObject [members]
+  | #StudioEmptyArray []
+  | #StudioArray [elements]
+  | #StudioString [value]
+  | #StudioNumber [value]
+  | #StudioTrue []
+  | #StudioFalse []
+  | #StudioNull []
+
+record StudioMember [key value]
+record StudioKeyString [value]
+record StudioKeyWord [value]
+
+judgment ParseStudio [grammar source] = call Parse [grammar source]
+judgment PrintStudio [grammar syntax] = call Print [grammar syntax]
+
+judgment StudioWellFormed [grammar source] =
+  match call ParseStudio [grammar source] {
+    case (#StudioScript steps) -> mk #valid [steps]
+    case (#StudioWorld value) -> mk #valid [value]
+    case (#StudioWriteFile value) -> mk #valid [value]
+    case (#StudioOpenFile value) -> mk #valid [value]
+    case (#StudioReplaceFile value) -> mk #valid [value]
+    case (#StudioSelect value) -> mk #valid [value]
+    case (#StudioCommand value) -> mk #valid [value]
+    case (#StudioAssertViews value) -> mk #valid [value]
+    case (#StudioAssertViewContains value) -> mk #valid [value]
+    case (#StudioAssertDocuments value) -> mk #valid [value]
+    case (#StudioAssertDocumentsContain value) -> mk #valid [value]
+    case (#StudioAssertTraceContains value) -> mk #valid [value]
+    case (#StudioAssertOutputContains value) -> mk #valid [value]
+    case (#StudioAssertDiagnostics value) -> mk #valid [value]
+    case (#StudioClearTrace) -> mk #valid []
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment InferStudio [grammar source] =
+  list [mk #type [#root #studio-script #declared #studio-script]]
+
+judgment TypeCheckStudio [grammar source] = list []

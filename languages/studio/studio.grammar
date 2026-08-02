@@ -1,0 +1,53 @@
+grammar "studio"
+start script
+
+skip "#[^\n]*"
+
+token string str "\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'"
+token number nat "[0-9]+"
+token word sym "[A-Za-z_][A-Za-z0-9_-]*"
+
+category script
+  fold StudioScript statement
+
+category statement
+  prod StudioWorld "world" value : value ";"
+  prod StudioWriteFile "writeFile" value : value ";"
+  prod StudioOpenFile "openFile" value : value ";"
+  prod StudioReplaceFile "replaceFile" value : value ";"
+  prod StudioSelect "select" value : value ";"
+  prod StudioCommand "command" value : value ";"
+  prod StudioAssertViews "assertViews" value : value ";"
+  prod StudioAssertViewContains "assertViewContains" value : value ";"
+  prod StudioAssertDocuments "assertDocuments" value : value ";"
+  prod StudioAssertDocumentsContain "assertDocumentsContain" value : value ";"
+  prod StudioAssertTraceContains "assertTraceContains" value : value ";"
+  prod StudioAssertOutputContains "assertOutputContains" value : value ";"
+  prod StudioAssertDiagnostics "assertDiagnostics" value : value ";"
+  prod StudioClearTrace "clearTrace" ";"
+
+category value
+  prod StudioEmptyObject "{" "}"
+  prod StudioObject "{" members : members "}"
+  prod StudioEmptyArray "[" "]"
+  prod StudioArray "[" elements : elements "]"
+  prod StudioString value : string
+  prod StudioNumber value : number
+  prod StudioTrue "true"
+  prod StudioFalse "false"
+  prod StudioNull "null"
+
+category members
+  prod StudioMoreMembers value : member "," rest : members
+  prod StudioLastMember value : member
+
+category member
+  prod StudioMember key : key ":" value : value
+
+category key
+  prod StudioKeyString value : string
+  prod StudioKeyWord value : word
+
+category elements
+  prod StudioMoreElements value : value "," rest : elements
+  prod StudioLastElement value : value

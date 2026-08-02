@@ -4,6 +4,11 @@ const path = require('path');
 const vscode = require('vscode');
 
 function parseTranscript(filePath) {
+  const compiledPath = process.env.STRATUM_STUDIO_TRANSCRIPT_JSON;
+  if (compiledPath) {
+    const compiled = JSON.parse(fs.readFileSync(compiledPath, 'utf8'));
+    return (compiled.steps ?? []).map(normalizeStep);
+  }
   return fs.readFileSync(filePath, 'utf8')
     .split(/\r?\n/)
     .map((line, index) => ({ line, index: index + 1 }))
@@ -19,6 +24,35 @@ function parseTranscript(filePath) {
       }
     })
     .filter(step => !step.meta);
+}
+
+function normalizeText(value) {
+  if (Array.isArray(value)) {
+    return `${value.join('\n')}\n`;
+  }
+  return value;
+}
+
+function normalizeStep(step) {
+  if (step.writeFile?.text !== undefined) {
+    return {
+      ...step,
+      writeFile: {
+        ...step.writeFile,
+        text: normalizeText(step.writeFile.text)
+      }
+    };
+  }
+  if (step.replaceFile?.text !== undefined) {
+    return {
+      ...step,
+      replaceFile: {
+        ...step.replaceFile,
+        text: normalizeText(step.replaceFile.text)
+      }
+    };
+  }
+  return step;
 }
 
 function fullRange(document) {
