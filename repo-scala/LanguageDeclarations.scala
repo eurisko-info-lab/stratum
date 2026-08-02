@@ -162,6 +162,7 @@ object LanguageDeclarations:
       extensions: Vector[String],
       exactPaths: Vector[String],
       properties: Set[String],
+      relativeRoot: String,
       testRoots: Vector[String]
   )
 
@@ -235,30 +236,25 @@ object LanguageDeclarations:
   )
 
   def load(source: Path): Either[String, Vector[DeclaredLanguage]] =
-    sourceLanguageDirectories(source).map { descriptors =>
-      val sourceDeclarations = descriptors.map { descriptor =>
-        val name = descriptor.name
-        val grammar = name match
-          case "meta"    => "languages/meta/meta.generated.grammar"
-          case "grammar" => "languages/grammar/grammar.generated.grammar"
-          case _          => s"languages/$name/$name.generated.grammar"
-        val meta = name match
-          case "meta"    => "languages/meta/elaborate.meta"
-          case "grammar" => "languages/grammar/elaborate.meta"
-          case _          => s"languages/$name/$name.generated.meta"
-        declaredLanguage(
-          name,
-          descriptor.extensions,
-          descriptor.exactPaths,
-          descriptor.properties,
-          Some(Canon.S(grammar)),
-          Some(Canon.S(meta)),
-          descriptor.testRoots,
-          "grammar"
-        )
-      }
-      SpecialDeclarations ++ sourceDeclarations
-    }
+    (sourceLanguageDirectories(source), applicationLanguageDirectories(source)) match
+      case (Right(languageDescriptors), Right(applicationDescriptors)) =>
+        val descriptors = languageDescriptors ++ applicationDescriptors
+        val sourceDeclarations = descriptors.map { descriptor =>
+          val (grammar, meta) = declarationArtifactsFor(descriptor)
+          declaredLanguage(
+            descriptor.name,
+            descriptor.extensions,
+            descriptor.exactPaths,
+            descriptor.properties,
+            Some(Canon.S(grammar)),
+            Some(Canon.S(meta)),
+            descriptor.testRoots,
+            "grammar"
+          )
+        }
+        Right(SpecialDeclarations ++ sourceDeclarations)
+      case (Left(error), _) => Left(error)
+      case (_, Left(error)) => Left(error)
 
   private def sourceLanguageDirectories(source: Path): Either[String, Vector[SourceLanguageDescriptor]] =
     val root = source.resolve("languages")
@@ -266,25 +262,56 @@ object LanguageDeclarations:
     else
       val stream = Files.list(root)
       try
-        Right(
-          stream.iterator().asScala
+        val names = stream.iterator().asScala
             .filter(Files.isDirectory(_))
             .map(_.getFileName.toString)
             .filter(isDeclarableLanguageDirectory(root, _))
             .toVector
             .sorted
-            .map { name =>
-              sourceLanguageDeclaration(root, name).fold(error => throw IllegalArgumentException(error), declaration =>
-                SourceLanguageDescriptor(
-                  name,
-                  declaration.extensions.getOrElse(Vector(s".$name")),
-                  declaration.exactPaths,
-                  declaration.properties,
-                  declaration.testRoots
-                )
-              )
-            }
-        )
+        val descriptors = names.map { name =>
+          sourceLanguageDeclaration(root, name).map { declared =>
+            SourceLanguageDescriptor(
+              name,
+              declared.extensions.getOrElse(Vector(s".$name")),
+              declared.exactPaths,
+              declared.properties,
+              "languages",
+              declared.testRoots
+            )
+          }
+        }
+        descriptors.collectFirst { case Left(error) => error } match
+          case Some(error) => Left(error)
+          case None        => Right(descriptors.collect { case Right(descriptor) => descriptor })
+      finally stream.close()
+
+  private def applicationLanguageDirectories(source: Path): Either[String, Vector[SourceLanguageDescriptor]] =
+    val root = source.resolve("applications")
+    if !Files.isDirectory(root) then Right(Vector.empty)
+    else
+      val stream = Files.list(root)
+      try
+        val names = stream.iterator().asScala
+          .filter(Files.isDirectory(_))
+          .map(_.getFileName.toString)
+          .filter(isDeclarableApplicationDirectory(root, _))
+          .toVector
+          .sorted
+        val descriptors = names.map { name =>
+          sourceLanguageDeclaration(root, name).map { declaration =>
+            SourceLanguageDescriptor(
+              name,
+              declaration.extensions.getOrElse(Vector(s".$name")),
+              declaration.exactPaths,
+              declaration.properties,
+              "applications",
+              declaration.testRoots
+            )
+          }
+        }
+        descriptors.collectFirst { case Left(error) => error } match
+          case Some(error) => Left(error)
+          case None        => Right(descriptors.collect { case Right(descriptor) => descriptor })
       finally stream.close()
 
   private def sourceLanguageDeclaration(root: Path, name: String): Either[String, SourceLanguageDeclaration] =
@@ -346,6 +373,22 @@ object LanguageDeclarations:
       case _ =>
         val dir = root.resolve(name)
         Files.isRegularFile(dir.resolve(s"$name.grammar")) && Files.isRegularFile(dir.resolve(s"$name.meta"))
+
+  private def isDeclarableApplicationDirectory(root: Path, name: String): Boolean =
+    val dir = root.resolve(name)
+    Files.isRegularFile(dir.resolve(s"$name.grammar")) && Files.isRegularFile(dir.resolve(s"$name.meta"))
+
+  private def declarationArtifactsFor(descriptor: SourceLanguageDescriptor): (String, String) =
+    descriptor.name match
+      case "meta" =>
+        ("languages/meta/meta.generated.grammar", "languages/meta/elaborate.meta")
+      case "grammar" =>
+        ("languages/grammar/grammar.generated.grammar", "languages/grammar/elaborate.meta")
+      case _ =>
+        (
+          s"${descriptor.relativeRoot}/${descriptor.name}/${descriptor.name}.generated.grammar",
+          s"${descriptor.relativeRoot}/${descriptor.name}/${descriptor.name}.generated.meta"
+        )
 
   def structure(
       source: Path,
@@ -442,6 +485,27 @@ object LanguageDeclarations:
           extensions.collect { case Canon.S(value) => value },
           exactPaths.collect { case Canon.S(value) => value },
           properties.collect { case Canon.Sym(value) => value }.toSet,
+          optionalPath(grammarPath),
+          optionalPath(metaPath),
+          Vector.empty,
+          reader
+        )
+      )
+    case declaration @ Canon.Node(_, Vector(
+          Canon.Sym(name),
+          Canon.L(extensions),
+          Canon.L(exactPaths),
+          grammarPath,
+          metaPath,
+          Canon.Sym(reader)
+        )) =>
+      Right(
+        DeclaredLanguage(
+          declaration,
+          name,
+          extensions.collect { case Canon.S(value) => value },
+          exactPaths.collect { case Canon.S(value) => value },
+          Set.empty,
           optionalPath(grammarPath),
           optionalPath(metaPath),
           Vector.empty,

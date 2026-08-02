@@ -147,8 +147,7 @@
           "description": "The command that starts the language server."
         }
       }
-    },
-    "grammars": []
+    }
   },
   "scripts": {
     "compile": "tsc -p .",
