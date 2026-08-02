@@ -1,11 +1,7 @@
 {
   "name": "stratum-studio",
   "displayName": "Stratum Studio",
-<<<<<<< HEAD
-  "description": "Editor client for any Stratum world. Run `lsp package` to bind it to one.",
-=======
   "description": "Editor support for every language a Stratum world publishes.",
->>>>>>> be83f02 (the Safety Data Sheet application)
   "version": "0.1.0",
   "license": "Apache-2.0",
   "publisher": "eurisko",
@@ -15,15 +11,6 @@
   "categories": [
     "Programming Languages"
   ],
-<<<<<<< HEAD
-  "activationEvents": [],
-  "main": "./out/extension.js",
-  "contributes": {
-    "languages": [],
-    "commands": [],
-    "viewsContainers": {},
-    "views": {},
-=======
   "activationEvents": [
     "onLanguage:sds",
     "onLanguage:meta",
@@ -146,7 +133,6 @@
         }
       ]
     },
->>>>>>> be83f02 (the Safety Data Sheet application)
     "configuration": {
       "title": "Stratum",
       "properties": {
