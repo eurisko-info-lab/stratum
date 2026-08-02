@@ -19,7 +19,7 @@ function transcriptFiles() {
 function compileTranscript(filePath, outPath) {
   const result = spawnSync(
     'sbt',
-    ['-batch', `runMain stratum.cli.Stratum lsp script --script ${path.relative(repoRoot, filePath)} --out ${path.relative(repoRoot, outPath)}`],
+    ['-batch', `repoTool/runMain stratum.repo.StudioTranscriptTool --script ${path.relative(repoRoot, filePath)} --out ${path.relative(repoRoot, outPath)}`],
     { cwd: repoRoot, stdio: 'inherit' }
   );
   if (result.status !== 0) {
