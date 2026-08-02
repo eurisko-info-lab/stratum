@@ -1,0 +1,42 @@
+# A guided Smalltalk browser session.
+#
+# Run it from the repository root with:
+#   cd studio/vscode
+#   npm run compile
+#   node ./test/run.cjs ../../docs/smalltalk-browser.studio
+#
+# The same source format drives the automated replay fixtures, so this tutorial
+# is executable rather than illustrative only.
+
+world "applications/smalltalk";
+
+# Open the sample program the world ships.
+openFile { path: "applications/smalltalk/documents/counter.st" };
+
+# Confirm the world loaded with no diagnostics and published the expected panes.
+assertDiagnostics {
+  path: "applications/smalltalk/documents/counter.st",
+  messages: []
+};
+
+assertViewContains {
+  classes: ["Stack - 6 methods", "StackNode - 4 methods"],
+  selectors: ["Stack >> pop", "StackNode >> value:"],
+  method: ["Stack >> initialize [top := nil. size := 0. ^ self]"],
+  inspector: ["it = 4"],
+  transcript: ["4"]
+};
+
+# Evaluate the prepared expression inside the workspace.
+select {
+  start: { line: 58, character: 0 },
+  end: { line: 58, character: 46 }
+};
+
+command { id: "stratum.evaluate" };
+assertOutputContains ["4"];
+
+# Then ask the world to run the workspace and refresh its panels.
+clearTrace;
+command { id: "stratum.run-workspace" };
+assertTraceContains ["workspace/executeCommand", "stratum/views", "stratum/documents", "stratum/pdf"];

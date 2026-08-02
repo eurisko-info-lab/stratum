@@ -121,3 +121,18 @@ An editing session is a transcript like any other derivation. A branch that
 carries an application carries one in `fixtures/lsp`: it opens buffers that
 exist on no disk, including one of the platform's own Meta sources with a
 syntax error, and records every byte the server sent back.
+
+The VS Code replay harness now uses the `studio` language as well, so a replay
+script is readable source rather than ad hoc JSON. That means the same file can
+serve as both a regression test and a worked tutorial. For example,
+[docs/smalltalk-browser.studio](/home/patrick/stratum/docs/smalltalk-browser.studio)
+opens the Smalltalk sample world, checks the panes it publishes, evaluates a
+workspace selection, and runs the workspace.
+
+Replay a specific tutorial script with:
+
+```bash
+cd studio/vscode
+npm run compile
+node ./test/run.cjs ../../docs/smalltalk-browser.studio
+```
