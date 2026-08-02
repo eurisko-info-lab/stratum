@@ -51,14 +51,14 @@ strings.
 
 | Feature | Where it comes from |
 | --- | --- |
-| syntax errors | the grammar machine, positioned by the service |
-| highlighting | semantic tokens over the grammar's own `token` classes, on every keystroke |
-| comments and brackets | the descriptor, applied with `setLanguageConfiguration` at activation |
-| completion | every keyword read out of the grammar artifact |
-| formatting | the round trip the platform already guarantees: parse, then print |
-| outline and hover | the deployment's `ServiceSymbols` |
-| views | the deployed Studio profile's panels, rendered by F11's runtime |
-| commands | the profile's commands, answered by the foundation |
+syntax errors | the grammar machine, positioned by the service |
+highlighting | semantic tokens over the grammar's own `token` classes, on every keystroke |
+comments and brackets | the descriptor, applied with `setLanguageConfiguration` at activation |
+completion | every keyword read out of the grammar artifact |
+formatting | the round trip the platform already guarantees: parse, then print |
+outline and hover | the deployment's `ServiceSymbols` |
+views | the deployed Studio profile's panels, rendered by F11's runtime |
+commands | the profile's commands, answered by the foundation |
 
 The first five need no code at all: a grammar is enough.
 
@@ -75,8 +75,8 @@ live instead:
 
 | Usually a generated file | Here |
 | --- | --- |
-| a syntax highlighting grammar | `textDocument/semanticTokens/full` |
-| a language configuration file | `stratum/languages`, applied at activation |
+a syntax highlighting grammar | `textDocument/semanticTokens/full` |
+a language configuration file | `stratum/languages`, applied at activation |
 
 That is not only tidier, it is the difference between colours that agree with
 the parser and colours that are a copy of a grammar and can fall behind it.
@@ -123,3 +123,18 @@ An editing session is a transcript like any other derivation. A branch that
 carries an application carries one in `fixtures/lsp`: it opens buffers that
 exist on no disk, including one of the platform's own Meta sources with a
 syntax error, and records every byte the server sent back.
+
+The VS Code replay harness now uses the `studio` language as well, so a replay
+script is readable source rather than ad hoc JSON. That means the same file can
+serve as both a regression test and a worked tutorial. On this branch,
+[docs/sds-browser.studio](../docs/sds-browser.studio)
+writes a draft SDS, shows the invalid-unit diagnostic and finding it produces,
+then fixes the unit and watches those derived views clear.
+
+Replay a specific tutorial script with:
+
+```bash
+cd studio/vscode
+npm run compile
+node ./test/run.cjs ../../docs/sds-browser.studio
+```

@@ -1,0 +1,69 @@
+# A guided SDS studio session.
+#
+# Run it from the repository root with:
+#   cd studio/vscode
+#   npm run compile
+#   node ./test/run.cjs ../../docs/sds-browser.studio
+#
+# The same source format drives the automated replay fixtures, so this tutorial
+# is executable rather than illustrative only.
+
+world "applications/sds";
+
+# Write a draft document with an invalid unit so the service has something to diagnose.
+writeFile {
+  path: ".studio-test/acetone.sds",
+  text: [
+    'document "Acetone"',
+    '',
+    'section 1 "Identification"',
+    '  sentence product "Acetone"',
+    '  field boiling-point 65 fahrenheit'
+  ]
+};
+
+openFile { path: ".studio-test/acetone.sds" };
+
+# The world should flag the invalid unit and surface it in the findings view.
+assertDiagnostics {
+  path: ".studio-test/acetone.sds",
+  messages: ["unknown-unit: boiling-point"]
+};
+
+assertViews {
+  entries: ["Sentence product", "Field boiling-point"],
+  findings: ["finding unknown-unit"],
+  hazards: [],
+  preview: [],
+  sections: ["Section 1"]
+};
+
+# Running validation causes the world to refresh its derived views.
+clearTrace;
+command { id: "stratum.run-validation" };
+assertTraceContains ["workspace/executeCommand", "stratum/views", "stratum/documents", "stratum/pdf"];
+
+# Fix the unit and confirm the diagnostic and finding disappear.
+replaceFile {
+  path: ".studio-test/acetone.sds",
+  text: [
+    'document "Acetone"',
+    '',
+    'section 1 "Identification"',
+    '  sentence product "Acetone"',
+    '  field boiling-point 56 celsius'
+  ]
+};
+
+assertDiagnostics {
+  path: ".studio-test/acetone.sds",
+  messages: []
+};
+
+assertViews {
+  entries: ["Sentence product", "Field boiling-point"],
+  findings: [],
+  hazards: [],
+  preview: [],
+  sections: ["Section 1"]
+};
