@@ -1,9 +1,10 @@
 # Stratum Studio
 
 ```text
-host-scala/lsp      the protocol adapter
-languages/service   the generic language service
-languages/pdf       the pdf projection
+host-scala/lsp      the protocol adapter          (main)
+languages/service   the generic language service  (main)
+languages/pdf       the pdf projection            (main)
+studio/vscode       the generated client          (featured/vscode)
 ```
 
 A client for a particular editor, and the manifest generator that binds it to a
@@ -108,6 +109,7 @@ cleanly rather than fail.
 
 ```bash
 sbt "runMain stratum.cli.Stratum lsp languages --world <world>"
+sbt "runMain stratum.cli.Stratum lsp package   --world <world> --out studio/vscode"
 sbt "runMain stratum.cli.Stratum lsp replay    --world <world> --script <script>"
 ```
 

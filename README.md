@@ -1,4 +1,46 @@
-# Stratum
+# Stratum on VS Code
+
+> **Branch `featured/vscode`** — branched from `main`.
+> Adds an editor client. Adds no language, and no application.
+
+```text
+main ──▶ featured/vscode ──┬──▶ featured/sds
+  platform      this branch └──▶ featured/smalltalk
+```
+
+## What this branch adds
+
+| | |
+| --- | --- |
+| [studio/vscode](studio/vscode) | a VS Code client that contains no language knowledge |
+| `lsp package` | generates the client's manifest from a world, so it cannot drift from the languages it edits |
+
+The platform provides the language server; this branch provides something for a
+person to look at. The split is deliberate: `main` must not know what a view
+container or a syntax highlighting grammar is, because those are one editor's
+vocabulary, and the platform serves any editor that speaks the protocol.
+
+## What it does not do on its own
+
+Nothing useful. A client contributes languages to an editor through a static
+manifest, and that manifest is generated from a world. There is no world here,
+so the manifest is empty and the client is inert.
+
+To see it work, use a branch that carries a world - `featured/sds` is the
+worked example - or merge one into this branch and regenerate:
+
+```bash
+git merge featured/sds
+sbt "runMain stratum.cli.Stratum lsp package --world applications/sds --out studio/vscode"
+cd studio/vscode && npm install && npm run compile
+```
+
+## Everything below
+
+The rest of this README describes the platform, which this branch inherits
+unchanged.
+
+---
 
 [![staircase](https://github.com/eurisko-info-lab/stratum/actions/workflows/staircase.yml/badge.svg)](https://github.com/eurisko-info-lab/stratum/actions/workflows/staircase.yml)
 
@@ -221,24 +263,37 @@ apart:
 | `main` | the platform: F0..F11 plus the revised F12/F13/F14 candidate sequence, both hosts, the Lean model, the shared languages, and the generic language service |
 | `featured/*` | one branch per application, and one per editor client |
 
-Everything shareable stays here, including
+Everything shareable stays on `main`, including
 [languages/pdf](languages/pdf), the projection that turns a document into an
 actual PDF, and [languages/service](languages/service), the generic language
 service every world can bind to. What a branch adds is a world of its own: a
 language, its documents and its profiles, built on the finished platform.
 
-## Editing
+## Editing upstairs
 
-[host-scala/lsp](host-scala/lsp) is a language server for **every language a
-world publishes**, and it knows no language. The host core is frozen, so the
-server may not learn what a diagnostic means: it converts JSON, framing and
-offsets, and everything displayed is derived by a judgment of the world.
+[studio/vscode](studio/vscode) is an editor client, and
+[host-scala/lsp](host-scala/lsp) is a language server, for **every language a
+world publishes**. Neither knows any language. The client contributes nothing
+until it is bound to a world.
+
+The host core is frozen, so the server may not learn what a diagnostic means.
+It is a courier: JSON, framing, and offsets to line and character. Everything
+displayed is derived by a judgment of the world, under its step budget, and the
+independent Rust host agrees on all of it.
 
 | A language provides | It gets |
 | --- | --- |
 | a grammar, and nothing else | syntax errors, highlighting, completion, formatting |
 | `ServiceSymbols` | outline, hover, breadcrumbs |
 | a Studio profile | views and commands |
+
+Merge a branch that carries a world, then bind the client to it:
+
+```bash
+git merge featured/sds
+sbt "runMain stratum.cli.Stratum lsp package --world applications/sds --out studio/vscode"
+cd studio/vscode && npm install && npm run compile
+```
 
 See [docs/studio.md](docs/studio.md).
 

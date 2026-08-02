@@ -1,0 +1,51 @@
+{
+  "name": "stratum-studio",
+  "displayName": "Stratum Studio",
+  "description": "Editor client for any Stratum world. Run `lsp package` to bind it to one.",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "publisher": "eurisko",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [],
+    "commands": [],
+    "viewsContainers": {},
+    "views": {},
+    "configuration": {
+      "title": "Stratum",
+      "properties": {
+        "stratum.world": {
+          "type": "string",
+          "default": "applications/sds",
+          "description": "The world directory whose service answers editor requests."
+        },
+        "stratum.server": {
+          "type": "string",
+          "default": "./tools/lsp.sh",
+          "description": "The command that starts the language server."
+        }
+      }
+    },
+    "grammars": []
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "name": "stratum-repository-studio",
+  "displayName": "Stratum Repository",
+  "description": "Time-travelling navigation for a Stratum repository.",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "publisher": "eurisko",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {"id": "meta", "aliases": ["Meta"], "extensions": [".meta"]},
+      {"id": "grammar", "aliases": ["Grammar"], "extensions": [".grammar"]}
+    ],
+    "commands": [
+      {"command": "stratumRepo.select", "title": "Stratum: Select Stored Path"},
+      {"command": "stratumRepo.openRevision", "title": "Stratum: Open Historical Revision"},
+      {"command": "stratumRepo.refresh", "title": "Stratum: Refresh Repository"}
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {"id": "stratum-repository", "title": "Stratum Repository", "icon": "media/repository.svg"}
+      ]
+    },
+    "views": {
+      "stratum-repository": [
+        {"id": "stratumRepo.files", "name": "Stored Files", "visibility": "visible"},
+        {"id": "stratumRepo.history", "name": "Causal History", "visibility": "visible"}
+      ]
+    },
+    "configuration": {
+      "title": "Stratum Repository",
+      "properties": {
+        "stratumRepo.world": {
+          "type": "string",
+          "default": "/tmp/stratum-studio-sds/applications/sds",
+          "description": "World providing the generic Meta and Grammar language service."
+        },
+        "stratumRepo.server": {
+          "type": "string",
+          "default": "/tmp/stratum-studio-sds/tools/lsp.sh",
+          "description": "Stratum language-server launcher."
+        },
+        "stratumRepo.javaHome": {
+          "type": "string",
+          "default": "/home/patrick/.cache/coursier/arc/https/github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.18%252B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.18_8.tar.gz/jdk-17.0.18+8",
+          "description": "Java home used by the Stratum language-server launcher."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}
