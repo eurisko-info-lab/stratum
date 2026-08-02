@@ -438,6 +438,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // answered by the foundation rather than by this extension.
   for (const entry of contributes.commands ?? []) {
     const id: string = entry.command;
+    if (id === 'stratum.evaluate') {
+      continue;
+    }
     context.subscriptions.push(
       vscode.commands.registerCommand(id, async () => {
         const editor = vscode.window.activeTextEditor;
