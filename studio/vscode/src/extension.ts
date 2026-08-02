@@ -22,6 +22,12 @@ interface View {
   items: string[];
 }
 
+interface LspTraceEntry {
+  kind: 'request' | 'response' | 'error';
+  method: string;
+  body: unknown;
+}
+
 interface ViewPlacement {
   name: string;
   placement: string;
@@ -57,6 +63,17 @@ interface LanguageConfiguration {
   lineComment: string | null;
 }
 
+interface StudioSnapshot {
+  activeDocument: string | null;
+  languages: string[];
+  layout: Layout | null;
+  views: Record<string, string[]>;
+  documents: Subject[];
+  output: string[];
+  previewOpen: boolean;
+  trace: LspTraceEntry[];
+}
+
 
 /** One view of the profile, shown wherever the profile places it. */
 class RegionView implements vscode.TreeDataProvider<string> {
@@ -79,6 +96,10 @@ class RegionView implements vscode.TreeDataProvider<string> {
 
   getChildren(item?: string): string[] {
     return item ? [] : this.items;
+  }
+
+  snapshot(): string[] {
+    return [...this.items];
   }
 }
 
@@ -132,6 +153,13 @@ class CatalogueView implements vscode.TreeDataProvider<CatalogueNode> {
       return node.subject.reports.map(report => ({ kind: 'report', report }));
     }
     return [];
+  }
+
+  snapshot(): Subject[] {
+    return this.subjects.map(subject => ({
+      name: subject.name,
+      reports: subject.reports.map(report => ({ ...report }))
+    }));
   }
 }
 
@@ -189,8 +217,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   const settings = vscode.workspace.getConfiguration('stratum');
-  const world = settings.get<string>('world') ?? 'applications/sds';
-  const server = settings.get<string>('server') ?? './tools/lsp.sh';
+  const world = process.env.STRATUM_STUDIO_WORLD ?? settings.get<string>('world') ?? 'applications/sds';
+  const server = process.env.STRATUM_STUDIO_SERVER ?? settings.get<string>('server') ?? './tools/lsp.sh';
   const command = path.isAbsolute(server) ? server : path.join(folder.uri.fsPath, server);
 
   const contributes = context.extension.packageJSON.contributes ?? {};
@@ -207,16 +235,40 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     outputChannelName: 'Stratum'
   };
 
+  const trace: LspTraceEntry[] = [];
+  const outputLines: string[] = [];
+  let declaredLanguages: LanguageConfiguration[] = [];
+  let currentLayout: Layout | null = null;
+  let lastRefresh: Promise<void> = Promise.resolve();
+
+  const request = async <T>(method: string, body: unknown): Promise<T> => {
+    if (!client) {
+      throw new Error(`Stratum client is not available for ${method}`);
+    }
+    trace.push({ kind: 'request', method, body });
+    try {
+      const result = await client.sendRequest<T>(method, body);
+      trace.push({ kind: 'response', method, body: result });
+      return result;
+    } catch (error) {
+      trace.push({
+        kind: 'error',
+        method,
+        body: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  };
+
   client = new LanguageClient('stratum', 'Stratum', serverOptions, clientOptions);
   await client.start();
 
   // Comment tokens and brackets are the world's to declare, so they are asked
   // for at activation rather than shipped as generated files. Highlighting
   // arrives the same way, as semantic tokens over the grammar's own classes.
-  const declared = await client
-    .sendRequest<LanguageConfiguration[]>('stratum/languages', {})
+  declaredLanguages = await request<LanguageConfiguration[]>('stratum/languages', {})
     .catch(() => [] as LanguageConfiguration[]);
-  for (const language of declared) {
+  for (const language of declaredLanguages) {
     context.subscriptions.push(
       vscode.languages.setLanguageConfiguration(language.id, {
         comments: language.lineComment ? { lineComment: language.lineComment } : undefined,
@@ -230,11 +282,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   // The layout is the profile's, not the client's.
-  const layout = await client
-    .sendRequest<Layout | null>('stratum/layout', {})
+  currentLayout = await request<Layout | null>('stratum/layout', {})
     .catch(() => null);
   const panels = new Map<string, RegionView>();
-  for (const placed of layout?.views ?? []) {
+  for (const placed of currentLayout?.views ?? []) {
     const view = new RegionView(placed.primitive);
     panels.set(placed.name, view);
     context.subscriptions.push(
@@ -244,22 +295,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // The workflow the profile declares, shown as the document's stages.
   const stages = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  if (layout && layout.workflow.length > 0) {
-    stages.text = `$(git-merge) ${layout.workflow.join(' \u2192 ')}`;
-    stages.tooltip = `${layout.name} \u00b7 ${layout.navigation}`;
+  if (currentLayout && currentLayout.workflow.length > 0) {
+    stages.text = `$(git-merge) ${currentLayout.workflow.join(' \u2192 ')}`;
+    stages.tooltip = `${currentLayout.name} \u00b7 ${currentLayout.navigation}`;
     stages.show();
   }
   context.subscriptions.push(stages);
 
   const catalogue = new CatalogueView(folder.uri);
-  if (layout?.navigator) {
+  if (currentLayout?.navigator) {
     context.subscriptions.push(
-      vscode.window.registerTreeDataProvider(`stratum.view.${layout.navigator.name}`, catalogue)
+      vscode.window.registerTreeDataProvider(`stratum.view.${currentLayout.navigator.name}`, catalogue)
     );
     // Which view the editor opens on is the world's decision, not the client's.
-    if (layout.navigator.reveal) {
+    if (currentLayout.navigator.reveal) {
       await vscode.commands
-        .executeCommand(`stratum.view.${layout.navigator.name}.focus`)
+        .executeCommand(`stratum.view.${currentLayout.navigator.name}.focus`)
         .then(undefined, () => undefined);
     }
   }
@@ -285,7 +336,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         previewClosed = true;
       });
     }
-    const produced = await client.sendRequest<string>('stratum/pdf', {
+    const produced = await request<string>('stratum/pdf', {
       uri: document.uri.toString()
     });
     const bytes = Buffer.from(produced, 'latin1');
@@ -305,28 +356,59 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
     try {
-      const result = await client.sendRequest<View[]>('stratum/views', {
+      const result = await request<View[]>('stratum/views', {
         uri: editor.document.uri.toString()
       });
       const byName = new Map<string, string[]>(result.map(view => [view.name, view.items]));
       panels.forEach((view, name) => view.refresh(byName.get(name) ?? []));
-      catalogue.refresh(await client.sendRequest<Subject[]>('stratum/documents', {}));
+      catalogue.refresh(await request<Subject[]>('stratum/documents', {}));
       await showPreview(editor.document);
     } catch {
       panels.forEach(view => view.refresh([]));
     }
   };
 
+  const scheduleRefresh = (): void => {
+    lastRefresh = refresh();
+    void lastRefresh;
+  };
+
   context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(() => void refresh()),
-    vscode.workspace.onDidSaveTextDocument(() => void refresh()),
-    vscode.workspace.onDidChangeTextDocument(() => void refresh())
+    vscode.window.onDidChangeActiveTextEditor(() => scheduleRefresh()),
+    vscode.workspace.onDidSaveTextDocument(() => scheduleRefresh()),
+    vscode.workspace.onDidChangeTextDocument(() => scheduleRefresh())
   );
 
   // Evaluating a selection: the editor knows where the cursor is, the world
   // knows what the text means. Nothing here interprets the answer.
   const output = vscode.window.createOutputChannel('Stratum');
   context.subscriptions.push(output);
+
+  const appendOutput = (line: string): void => {
+    outputLines.push(line);
+    output.appendLine(line);
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('stratum.test.snapshot', async (): Promise<StudioSnapshot> => {
+      await lastRefresh;
+      return {
+        activeDocument: vscode.window.activeTextEditor?.document.uri.toString() ?? null,
+        languages: declaredLanguages.map(language => language.id),
+        layout: currentLayout,
+        views: Object.fromEntries([...panels.entries()].map(([name, view]) => [name, view.snapshot()])),
+        documents: catalogue.snapshot(),
+        output: [...outputLines],
+        previewOpen: preview !== undefined,
+        trace: trace.map(entry => ({ ...entry }))
+      };
+    }),
+    vscode.commands.registerCommand('stratum.test.clearTrace', (): void => {
+      trace.length = 0;
+      outputLines.length = 0;
+      output.clear();
+    })
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('stratum.evaluate', async () => {
@@ -338,7 +420,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const selection = editor.selection;
       const offset = document.offsetAt(selection.start);
       const length = document.offsetAt(selection.end) - offset;
-      const answer = await client.sendRequest<string>('stratum/evaluate', {
+      const answer = await request<string>('stratum/evaluate', {
         uri: document.uri.toString(),
         offset,
         length
@@ -346,7 +428,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (!answer) {
         return;
       }
-      output.appendLine(answer);
+      appendOutput(answer);
       output.show(true);
       void vscode.window.setStatusBarMessage(answer.split('\n')[0], 5000);
     })
@@ -362,7 +444,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (!editor || !client) {
           return;
         }
-        const answer = await client.sendRequest<string>('workspace/executeCommand', {
+        const answer = await request<string>('workspace/executeCommand', {
           command: id,
           arguments: [editor.document.uri.toString()]
         });
@@ -372,7 +454,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     );
   }
 
-  await refresh();
+  lastRefresh = refresh();
+  await lastRefresh;
 }
 
 export async function deactivate(): Promise<void> {
