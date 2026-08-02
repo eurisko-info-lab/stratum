@@ -1,11 +1,37 @@
-package stratum.lsp
+package stratum.repo
 
 import stratum.canon.{Canon, CanonText}
+import stratum.cli.Cli
 import stratum.grammar.GrammarMachine0
+import stratum.lsp.Json
 
 import java.nio.file.{Files, Path}
 
-object StudioScript:
+object StudioTranscriptTool:
+
+  def main(args: Array[String]): Unit =
+    val root = Path.of(System.getProperty("user.dir")).toAbsolutePath.normalize()
+    run(root, args.toVector) match
+      case Left(error) =>
+        System.err.println(s"error: $error")
+        sys.exit(1)
+      case Right(text) =>
+        println(text)
+
+  def run(root: Path, args: Vector[String]): Either[String, String] =
+    val opts = Cli.options(args)
+    opts.get("script") match
+      case None => Left("usage: --script <file> [--out <file>]")
+      case Some(name) =>
+        compile(root, root.resolve(name)).map { value =>
+          val text = Json.write(value)
+          opts.get("out").foreach { out =>
+            val target = root.resolve(out)
+            Option(target.getParent).foreach(Files.createDirectories(_))
+            Files.writeString(target, text + "\n")
+          }
+          text
+        }
 
   def compile(root: Path, script: Path): Either[String, Json] =
     for
@@ -48,7 +74,7 @@ object StudioScript:
     case Canon.Node("StudioWorld", Vector(world)) =>
       decodeValue(world).flatMap {
         case Json.Str(name) => Right(Json.obj("meta" -> Json.obj("world" -> Json.Str(name))))
-        case other          => Left(s"world must be a string, found ${CanonText.write(world)}")
+        case _              => Left(s"world must be a string, found ${CanonText.write(world)}")
       }
     case Canon.Node("StudioClearTrace", Vector()) => Right(Json.obj("clearTrace" -> Json.obj()))
     case Canon.Node(tag, Vector(payload)) if tag.startsWith("Studio") =>
@@ -68,9 +94,8 @@ object StudioScript:
 
   private def decodeValue(value: Canon): Either[String, Json] = value match
     case Canon.Node("StudioEmptyObject", Vector()) => Right(Json.obj())
-    case Canon.Node("StudioObject", Vector(members)) => decodeMembers(members).map(Json.Arr.apply).map { items =>
-      Json.Obj(items.items.collect { case Json.Obj(Vector(("key", Json.Str(key)), ("value", actual))) => key -> actual })
-    }
+    case Canon.Node("StudioObject", Vector(members)) =>
+      decodeMembers(members).map(fields => Json.Obj(fields))
     case Canon.Node("StudioEmptyArray", Vector()) => Right(Json.arr(Vector.empty))
     case Canon.Node("StudioArray", Vector(elements)) => decodeElements(elements).map(Json.arr)
     case Canon.Node("StudioString", Vector(Canon.S(raw))) => decodeString(raw).map(Json.Str.apply)
@@ -80,7 +105,7 @@ object StudioScript:
     case Canon.Node("StudioNull", Vector()) => Right(Json.Null)
     case other => Left(s"unsupported studio value ${CanonText.write(other)}")
 
-  private def decodeMembers(value: Canon): Either[String, Vector[Json]] = value match
+  private def decodeMembers(value: Canon): Either[String, Vector[(String, Json)]] = value match
     case Canon.Node("StudioMoreMembers", Vector(member, rest)) =>
       for
         head <- decodeMember(member)
@@ -89,12 +114,12 @@ object StudioScript:
     case Canon.Node("StudioLastMember", Vector(member)) => decodeMember(member).map(Vector(_))
     case other => Left(s"unsupported studio member list ${CanonText.write(other)}")
 
-  private def decodeMember(value: Canon): Either[String, Json] = value match
+  private def decodeMember(value: Canon): Either[String, (String, Json)] = value match
     case Canon.Node("StudioMember", Vector(key, actual)) =>
       for
         decodedKey <- decodeKey(key)
         decodedValue <- decodeValue(actual)
-      yield Json.obj("key" -> Json.Str(decodedKey), "value" -> decodedValue)
+      yield decodedKey -> decodedValue
     case other => Left(s"unsupported studio member ${CanonText.write(other)}")
 
   private def decodeKey(value: Canon): Either[String, String] = value match
