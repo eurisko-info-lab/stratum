@@ -40,6 +40,18 @@ async function snapshot() {
   return vscode.commands.executeCommand('stratum.test.snapshot');
 }
 
+async function waitForDiagnostics(uri, expectedMessages) {
+  const wanted = [...expectedMessages].sort();
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const messages = vscode.languages.getDiagnostics(uri).map(diagnostic => diagnostic.message).sort();
+    if (JSON.stringify(messages) === JSON.stringify(wanted)) {
+      return messages;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  return vscode.languages.getDiagnostics(uri).map(diagnostic => diagnostic.message).sort();
+}
+
 async function openFile(workspaceRoot, relativePath) {
   const document = await vscode.workspace.openTextDocument(fileUri(workspaceRoot, relativePath));
   await vscode.window.showTextDocument(document, { preview: false });
@@ -115,7 +127,7 @@ async function runStep(step, workspaceRoot) {
   }
   if (step.assertDiagnostics) {
     const uri = fileUri(workspaceRoot, step.assertDiagnostics.path);
-    const messages = vscode.languages.getDiagnostics(uri).map(diagnostic => diagnostic.message).sort();
+    const messages = await waitForDiagnostics(uri, step.assertDiagnostics.messages);
     assert.deepStrictEqual(messages, [...step.assertDiagnostics.messages].sort());
     return;
   }
