@@ -16,6 +16,10 @@ function transcriptFiles() {
     .map(name => path.join(fixturesRoot, name));
 }
 
+function explicitTranscriptFiles(args) {
+  return args.map(filePath => path.resolve(process.cwd(), filePath));
+}
+
 function compileTranscript(filePath, outPath) {
   const result = spawnSync(
     'sbt',
@@ -82,7 +86,10 @@ async function runTranscript(filePath) {
 }
 
 async function main() {
-  for (const filePath of transcriptFiles()) {
+  const targets = process.argv.length > 2
+    ? explicitTranscriptFiles(process.argv.slice(2))
+    : transcriptFiles();
+  for (const filePath of targets) {
     process.stdout.write(`running ${path.basename(filePath)}\n`);
     await runTranscript(filePath);
   }
