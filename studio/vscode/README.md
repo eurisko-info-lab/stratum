@@ -22,7 +22,15 @@ code --extensionDevelopmentPath="$PWD/studio/vscode" --new-window .
 
 ## Transcript Testing
 
-`npm run test:studio` packages the client for each transcript world into a
+```bash
+cd studio/vscode/test && npm install && npm test
+```
+
+The harness has its own `package.json` because this directory's one is
+generated from the world by `stratum lsp package`, and a generated file cannot
+carry a hand-written test dependency.
+
+It packages the client for each transcript world into a
 temporary extension copy, launches a real VS Code extension host, replays the
 transcript's editor actions, and asserts both UI state and the LSP requests the
 plugin made.

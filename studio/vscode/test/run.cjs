@@ -6,7 +6,7 @@ const { runTests } = require('@vscode/test-electron');
 
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
 const sourceExtensionPath = path.resolve(repoRoot, 'studio', 'vscode');
-const extensionTestsPath = path.resolve(__dirname, 'suite', 'index.js');
+const extensionTestsPath = path.resolve(__dirname, 'suite', 'index.cjs');
 const fixturesRoot = path.resolve(__dirname, 'fixtures');
 
 function transcriptFiles() {
@@ -46,8 +46,10 @@ async function runTranscript(filePath) {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'stratum-studio-test-'));
   const extensionCopy = path.join(scratch, 'extension');
   fs.cpSync(sourceExtensionPath, extensionCopy, { recursive: true });
+  const previousCwd = process.cwd();
   try {
     packageWorld(world, extensionCopy);
+    process.chdir(scratch);
     await runTests({
       extensionDevelopmentPath: extensionCopy,
       extensionTestsPath,
@@ -64,6 +66,7 @@ async function runTranscript(filePath) {
       ]
     });
   } finally {
+    process.chdir(previousCwd);
     fs.rmSync(scratch, { recursive: true, force: true });
   }
 }
