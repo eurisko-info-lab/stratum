@@ -136,9 +136,33 @@ async function runStep(step, workspaceRoot) {
     assert.deepStrictEqual(state.views, step.assertViews);
     return;
   }
+  if (step.assertViewContains) {
+    const state = await snapshot();
+    for (const [name, expectedItems] of Object.entries(step.assertViewContains)) {
+      const actual = state.views[name] ?? [];
+      for (const item of expectedItems) {
+        assert(actual.includes(item), `expected view ${name} to include ${item}; saw ${actual.join(' | ')}`);
+      }
+    }
+    return;
+  }
   if (step.assertDocuments) {
     const state = await snapshot();
     assert.deepStrictEqual(state.documents, step.assertDocuments);
+    return;
+  }
+  if (step.assertDocumentsContain) {
+    const state = await snapshot();
+    for (const expected of step.assertDocumentsContain) {
+      const subject = state.documents.find(entry => entry.name === expected.name);
+      assert(subject, `expected documents to include subject ${expected.name}`);
+      for (const reportName of expected.reports ?? []) {
+        assert(
+          subject.reports.some(report => report.name === reportName),
+          `expected subject ${expected.name} to include report ${reportName}`
+        );
+      }
+    }
     return;
   }
   if (step.assertTraceContains) {
