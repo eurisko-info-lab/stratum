@@ -1,0 +1,917 @@
+; The Smalltalk evaluator.
+;
+; Everything in Smalltalk is a message send, so nearly everything here is one
+; judgment: find the class of the receiver, look the selector up along the
+; superclass chain, and run the method that was found. What is not found falls
+; through to the primitives, which is exactly the arrangement a real image
+; uses, minus the compiler.
+;
+; State is threaded rather than mutated: an object is an identity into a heap,
+; and every judgment that can change an object returns the heap it produced.
+; Assignment to an instance variable therefore works the way a programmer
+; expects it to, without the evaluator itself being impure.
+
+; ------------------------------------------------------------------ flatten
+
+; The grammar folds repetition to the left, so a sequence arrives as a nested
+; pair. These put it back into a list.
+
+judgment FlattenStatements [node] =
+  match node {
+    case (#Statements left right) ->
+      prim #append [call FlattenStatements [left] call FlattenStatements [right]]
+    case _ -> list [node]
+  }
+
+judgment FlattenSteps [node] =
+  match node {
+    case (#BinarySteps left right) ->
+      prim #append [call FlattenSteps [left] call FlattenSteps [right]]
+    case _ -> list [node]
+  }
+
+judgment FlattenArguments [node] =
+  match node {
+    case (#KeywordArguments left right) ->
+      prim #append [call FlattenArguments [left] call FlattenArguments [right]]
+    case _ -> list [node]
+  }
+
+judgment FlattenParameters [node] =
+  match node {
+    case (#BlockParameters left right) ->
+      prim #append [call FlattenParameters [left] call FlattenParameters [right]]
+    case _ -> list [node]
+  }
+
+judgment FlattenPatternParts [node] =
+  match node {
+    case (#PatternParts left right) ->
+      prim #append [call FlattenPatternParts [left] call FlattenPatternParts [right]]
+    case _ -> list [node]
+  }
+
+judgment FlattenNames [node] =
+  match node {
+    case (#Names left right) ->
+      prim #append [call FlattenNames [left] call FlattenNames [right]]
+    case _ -> list [node]
+  }
+
+judgment FlattenChunks [node] =
+  match node {
+    case (#Chunks left right) ->
+      prim #append [call FlattenChunks [left] call FlattenChunks [right]]
+    case _ -> list [node]
+  }
+
+; ------------------------------------------------------------------- values
+
+; A literal string arrives with its quotes, because the printer has to put
+; them back. The value behind it does not have them.
+
+judgment Unquoted [text] =
+  if prim #lt [prim #slen [text] 2]
+  then text
+  else prim #ssub [text 1 prim #sub [prim #slen [text] 1]]
+
+; A symbol literal arrives as #foo, one symbol whose name starts with a hash.
+
+judgment SymbolName [symbol] =
+  let name = prim #sym->str [symbol] in
+  if prim #lt [prim #slen [name] 1]
+  then symbol
+  else prim #str->sym [prim #ssub [name 1 prim #slen [name]]]
+
+judgment Nil [] = mk #nil []
+
+; A temporary is a name that starts as nil and belongs to the activation, so
+; it is bound exactly like a parameter that was never passed one.
+
+judgment NameList [nodes accumulated] =
+  match nodes {
+    case [] -> accumulated
+    case head :: rest ->
+      match head {
+        case (#Name value) -> call NameList [rest prim #snoc [accumulated value]]
+        case _ -> call NameList [rest accumulated]
+      }
+  }
+
+judgment TemporaryNames [temporaries] =
+  match temporaries {
+    case (#Temporaries names) -> call NameList [call FlattenNames [names] list []]
+    case _ -> list []
+  }
+
+; ------------------------------------------------------------------- images
+
+; A class is a name, a superclass, its instance variables and its methods. An
+; image is the map of them, keyed by name.
+
+judgment EmptyImage [] =
+  mk #image [
+    prim #mput [
+      prim #mnew []
+      #Object
+      mk #class [#Object #nil list [] prim #mnew []]
+    ]
+  ]
+
+judgment ImageClasses [image] =
+  match image { case (#image classes) -> classes }
+
+judgment ClassNamed [image name] =
+  prim #mget [call ImageClasses [image] name mk #missing []]
+
+judgment WithClass [image class] =
+  match class {
+    case (#class name superclass slots methods) ->
+      mk #image [prim #mput [call ImageClasses [image] name class]]
+  }
+
+judgment DefineClass [image name superclass slots] =
+  match call ClassNamed [image name] {
+    case (#class existing parent existingSlots methods) ->
+      call WithClass [image mk #class [name superclass slots methods]]
+    case _ ->
+      call WithClass [image mk #class [name superclass slots prim #mnew []]]
+  }
+
+judgment DefineMethod [image name selector method] =
+  match call ClassNamed [image name] {
+    case (#class className superclass slots methods) ->
+      call WithClass [
+        image
+        mk #class [className superclass slots prim #mput [methods selector method]]
+      ]
+    case _ ->
+      call DefineMethod [
+        call DefineClass [image name #Object list []]
+        name selector method
+      ]
+  }
+
+; Lookup walks the superclass chain, which is what makes inheritance mean
+; anything at all.
+
+judgment LookupMethod [image class selector] =
+  match call ClassNamed [image class] {
+    case (#class name superclass slots methods) ->
+      if prim #mhas [methods selector]
+      then mk #found [name prim #mget [methods selector mk #missing []]]
+      else
+        match superclass {
+          case (#nil) -> mk #missing []
+          case _ -> call LookupMethod [image superclass selector]
+        }
+    case _ -> mk #missing []
+  }
+
+judgment AllSlots [image class] =
+  match call ClassNamed [image class] {
+    case (#class name superclass slots methods) ->
+      match superclass {
+        case (#nil) -> slots
+        case _ -> prim #append [call AllSlots [image superclass] slots]
+      }
+    case _ -> list []
+  }
+
+; -------------------------------------------------------------------- heaps
+
+judgment EmptyHeap [] = mk #heap [prim #mnew [] 0]
+
+judgment FreshObjectName [heap] =
+  match heap {
+    case (#heap objects next) ->
+      prim #str->sym [prim #scat ["object" prim #nat->str [next]]]
+  }
+
+judgment WithObject [heap name contents] =
+  match heap {
+    case (#heap objects next) ->
+      mk #heap [prim #mput [objects name contents] prim #add [next 1]]
+  }
+
+judgment ContentsOf [heap name] =
+  match heap {
+    case (#heap objects next) -> prim #mget [objects name mk #missing []]
+  }
+
+judgment Allocate [image heap class] =
+  let slots = call InitialSlots [call AllSlots [image class] prim #mnew []] in
+  let name = call FreshObjectName [heap] in
+  mk #allocated [mk #instance [class name] call WithObject [heap name slots]]
+
+judgment InitialSlots [names accumulated] =
+  match names {
+    case [] -> accumulated
+    case _ ->
+      call InitialSlots [
+        prim #tail [names]
+        prim #mput [accumulated prim #head [names] call Nil []]
+      ]
+  }
+
+judgment SlotsOf [heap object] =
+  match object {
+    case (#instance class name) -> call ContentsOf [heap name]
+    case _ -> prim #mnew []
+  }
+
+judgment WithSlot [heap object slot value] =
+  match object {
+    case (#instance class name) ->
+      match heap {
+        case (#heap objects next) ->
+          mk #heap [
+            prim #mput [
+              objects name
+              prim #mput [prim #mget [objects name prim #mnew []] slot value]
+            ]
+            next
+          ]
+      }
+    case _ -> heap
+  }
+
+; A frame is where temporaries live. It is an object in the heap rather than a
+; value carried around, because a block that increments a loop counter has to
+; increment the one the loop is reading, not a copy of it.
+
+judgment NewFrame [heap bindings parent] =
+  let name = call FreshObjectName [heap] in
+  mk #framed [name call WithObject [heap name mk #frame [bindings parent]]]
+
+judgment FrameBindings [heap frame] =
+  match call ContentsOf [heap frame] {
+    case (#frame bindings parent) -> bindings
+    case _ -> prim #mnew []
+  }
+
+judgment FrameParent [heap frame] =
+  match call ContentsOf [heap frame] {
+    case (#frame bindings parent) -> parent
+    case _ -> call Nil []
+  }
+
+judgment FrameHolding [heap frame name] =
+  match call ContentsOf [heap frame] {
+    case (#frame bindings parent) ->
+      if prim #mhas [bindings name]
+      then mk #found [frame]
+      else
+        match parent {
+          case (#nil) -> mk #missing []
+          case _ -> call FrameHolding [heap parent name]
+        }
+    case _ -> mk #missing []
+  }
+
+judgment FrameBind [heap frame name value] =
+  match heap {
+    case (#heap objects next) ->
+      match call ContentsOf [heap frame] {
+        case (#frame bindings parent) ->
+          mk #heap [
+            prim #mput [objects frame mk #frame [prim #mput [bindings name value] parent]]
+            next
+          ]
+        case _ -> heap
+      }
+  }
+
+; ------------------------------------------------------------------ classes
+
+judgment ClassOf [value] =
+  if prim #is-nat [value] then #Integer
+  else if prim #is-str [value] then #String
+  else if prim #is-bool [value] then #Boolean
+  else
+    match value {
+      case (#instance class name) -> class
+      case (#block parameters body environment) -> #Block
+      case (#class-reference name) -> #Class
+      case (#nil) -> #UndefinedObject
+      case _ -> if prim #is-sym [value] then #Symbol else #Object
+    }
+
+; ------------------------------------------------------------------ printing
+
+judgment PrintBoolean [flag] =
+  if flag then "true" else "false"
+
+judgment PrintValue [value] =
+  if prim #is-nat [value] then prim #nat->str [value]
+  else if prim #is-str [value] then value
+  else if prim #is-bool [value] then call PrintBoolean [value]
+  else
+    match value {
+      case (#nil) -> "nil"
+      case (#instance class name) -> prim #scat ["a " prim #sym->str [class]]
+      case (#block parameters body environment) -> "a Block"
+      case (#class-reference name) -> prim #sym->str [name]
+      case _ ->
+        if prim #is-sym [value]
+        then prim #scat ["#" prim #sym->str [value]]
+        else "an Object"
+    }
+
+; -------------------------------------------------------------- expressions
+
+; An expression returns its value and the heap it left behind. It does not
+; return an environment, because assignment writes into a frame that already
+; lives in the heap.
+
+judgment EvalExpression [image heap frame expression] =
+  match expression {
+    case (#Number value) -> mk #done [value heap]
+    case (#Text value) -> mk #done [call Unquoted [value] heap]
+    case (#Symbol value) -> mk #done [call SymbolName [value] heap]
+    case (#Variable name) -> mk #done [call LookupVariable [image heap frame name] heap]
+    case (#Block body) -> mk #done [mk #block [list [] body frame] heap]
+    case (#BlockWithTemporaries temporaries body) ->
+      mk #done [mk #block [call TemporaryNames [temporaries] body frame] heap]
+    case (#BlockWithBoth parameters temporaries body) ->
+      mk #done [
+        mk #block [
+          prim #append [
+            call ParameterNames [call FlattenParameters [parameters]]
+            call TemporaryNames [temporaries]
+          ]
+          body frame
+        ]
+        heap
+      ]
+    case (#BlockWith parameters body) ->
+      mk #done [
+        mk #block [call ParameterNames [call FlattenParameters [parameters]] body frame]
+        heap
+      ]
+    case (#Assign target value) ->
+      match call EvalExpression [image heap frame value] {
+        case (#done result nextHeap) ->
+          mk #done [result call AssignTo [image nextHeap frame target result]]
+      }
+    case (#Send receiver selector) ->
+      match call EvalExpression [image heap frame receiver] {
+        case (#done value nextHeap) ->
+          match call SendMessage [image nextHeap value call SelectorOf [selector] list []] {
+            case (#sent answer finalHeap) -> mk #done [answer finalHeap]
+          }
+      }
+    case (#BinarySend receiver steps) ->
+      match call EvalExpression [image heap frame receiver] {
+        case (#done value nextHeap) ->
+          call EvalSteps [image nextHeap frame value call FlattenSteps [steps]]
+      }
+    case (#KeywordSend receiver arguments) ->
+      match call EvalExpression [image heap frame receiver] {
+        case (#done value nextHeap) ->
+          call EvalKeyword [image nextHeap frame value call FlattenArguments [arguments]]
+      }
+    case _ -> mk #done [call Nil [] heap]
+  }
+
+judgment SelectorOf [node] =
+  match node { case (#Variable name) -> name case _ -> #yourself }
+
+judgment ParameterNames [parameters] =
+  match parameters {
+    case [] -> list []
+    case _ ->
+      match prim #head [parameters] {
+        case (#BlockParameter name) ->
+          prim #cons [name call ParameterNames [prim #tail [parameters]]]
+        case _ -> call ParameterNames [prim #tail [parameters]]
+      }
+  }
+
+; A binary send is a receiver and a run of steps applied from left to right,
+; which is what "no precedence among binary operators" means.
+
+judgment EvalSteps [image heap frame receiver steps] =
+  match steps {
+    case [] -> mk #done [receiver heap]
+    case _ ->
+      match prim #head [steps] {
+        case (#BinaryStep selector argument) ->
+          match call EvalExpression [image heap frame argument] {
+            case (#done value nextHeap) ->
+              match call SendMessage [image nextHeap receiver selector list [value]] {
+                case (#sent answer finalHeap) ->
+                  call EvalSteps [image finalHeap frame answer prim #tail [steps]]
+              }
+          }
+        case _ -> mk #done [receiver heap]
+      }
+  }
+
+; A keyword send is one message however many parts it has, so the parts are
+; joined into a single selector before anything is sent.
+
+judgment SelectorName [selector] = prim #sym->str [selector]
+
+judgment KeywordSelector [arguments accumulated] =
+  match arguments {
+    case [] -> prim #str->sym [accumulated]
+    case _ ->
+      match prim #head [arguments] {
+        case (#KeywordArgument selector argument) ->
+          call KeywordSelector [
+            prim #tail [arguments]
+            prim #scat [accumulated prim #sym->str [selector]]
+          ]
+        case _ -> call KeywordSelector [prim #tail [arguments] accumulated]
+      }
+  }
+
+judgment EvalKeywordArguments [image heap frame arguments accumulated] =
+  match arguments {
+    case [] -> mk #arguments [accumulated heap]
+    case _ ->
+      match prim #head [arguments] {
+        case (#KeywordArgument selector argument) ->
+          match call EvalExpression [image heap frame argument] {
+            case (#done value nextHeap) ->
+              call EvalKeywordArguments [
+                image nextHeap frame prim #tail [arguments]
+                prim #snoc [accumulated value]
+              ]
+          }
+        case _ ->
+          call EvalKeywordArguments [image heap frame prim #tail [arguments] accumulated]
+      }
+  }
+
+; The conditionals are the one place where the arguments must not be evaluated
+; first: a Smalltalk conditional is a message whose arguments are blocks, and
+; running both branches would be wrong.
+
+judgment IsConditional [selector] =
+  prim #contains [
+    list ["ifTrue:" "ifFalse:" "ifTrue:ifFalse:" "ifFalse:ifTrue:" "and:" "or:"]
+    call SelectorName [selector]
+  ]
+
+judgment EvalKeyword [image heap frame receiver arguments] =
+  let selector = call KeywordSelector [arguments ""] in
+  if prim #and [prim #is-bool [receiver] call IsConditional [selector]]
+  then call EvalConditional [image heap frame receiver selector arguments]
+  else
+    match call EvalKeywordArguments [image heap frame arguments list []] {
+      case (#arguments values nextHeap) ->
+        match call SendMessage [image nextHeap receiver selector values] {
+          case (#sent answer finalHeap) -> mk #done [answer finalHeap]
+        }
+    }
+
+judgment ArgumentAt [arguments index] =
+  match prim #nth [arguments index] {
+    case (#KeywordArgument selector argument) -> argument
+    case _ -> mk #Variable [#nil]
+  }
+
+judgment EvalConditional [image heap frame receiver selector arguments] =
+  let inverted =
+    prim #contains [list ["ifFalse:" "ifFalse:ifTrue:" "or:"] call SelectorName [selector]]
+  in
+  if (if inverted then prim #not [receiver] else receiver)
+  then call EvalBranch [image heap frame call ArgumentAt [arguments 0]]
+  else call EvalAlternative [image heap frame selector arguments]
+
+judgment EvalBranch [image heap frame expression] =
+  match call EvalExpression [image heap frame expression] {
+    case (#done value nextHeap) -> call RunBlockValue [image nextHeap value]
+  }
+
+judgment RunBlockValue [image heap value] =
+  match call RunBlock [image heap value list []] {
+    case (#sent answer finalHeap) -> mk #done [answer finalHeap]
+  }
+
+judgment EvalAlternative [image heap frame selector arguments] =
+  if prim #lt [prim #len [arguments] 2]
+  then
+    if prim #eq [call SelectorName [selector] "and:"]
+    then mk #done [false heap]
+    else
+      if prim #eq [call SelectorName [selector] "or:"]
+      then mk #done [true heap]
+      else mk #done [call Nil [] heap]
+  else call EvalBranch [image heap frame call ArgumentAt [arguments 1]]
+
+; ----------------------------------------------------------------- variables
+
+; A name is a temporary in some enclosing frame, then an instance variable of
+; the receiver, then a class, then nil.
+
+judgment SelfOf [heap frame] =
+  match call FrameHolding [heap frame #self] {
+    case (#found holder) -> prim #mget [call FrameBindings [heap holder] #self call Nil []]
+    case _ -> call Nil []
+  }
+
+judgment LookupVariable [image heap frame name] =
+  if prim #eq [name #nil] then call Nil []
+  else if prim #eq [name #true] then true
+  else if prim #eq [name #false] then false
+  else
+    match call FrameHolding [heap frame name] {
+      case (#found holder) -> prim #mget [call FrameBindings [heap holder] name call Nil []]
+      case _ ->
+        let slots = call SlotsOf [heap call SelfOf [heap frame]] in
+        if prim #mhas [slots name]
+        then prim #mget [slots name call Nil []]
+        else
+          match call ClassNamed [image name] {
+            case (#class className superclass classSlots methods) ->
+              mk #class-reference [className]
+            case _ -> call Nil []
+          }
+    }
+
+judgment AssignTo [image heap frame name value] =
+  match call FrameHolding [heap frame name] {
+    case (#found holder) -> call FrameBind [heap holder name value]
+    case _ ->
+      let self = call SelfOf [heap frame] in
+      if prim #mhas [call SlotsOf [heap self] name]
+      then call WithSlot [heap self name value]
+      else call FrameBind [heap frame name value]
+  }
+
+; ------------------------------------------------------------------- sending
+
+; The one rule of the language: look the selector up from the receiver's class
+; upwards, run what is found, and fall through to the primitives otherwise.
+
+judgment SendMessage [image heap receiver selector arguments] =
+  match call LookupMethod [image call ClassOf [receiver] selector] {
+    case (#found holder method) ->
+      call InvokeMethod [image heap receiver method arguments]
+    case _ -> call PrimitiveSend [image heap receiver selector arguments]
+  }
+
+judgment BindParameters [bindings names values] =
+  match names {
+    case [] -> bindings
+    case _ ->
+      call BindParameters [
+        prim #mput [
+          bindings prim #head [names]
+          if prim #eq [prim #len [values] 0] then call Nil [] else prim #head [values]
+        ]
+        prim #tail [names]
+        if prim #eq [prim #len [values] 0] then values else prim #tail [values]
+      ]
+  }
+
+judgment InvokeMethod [image heap receiver method arguments] =
+  match method {
+    case (#method parameters body chunk) ->
+      let bindings =
+        call BindParameters [prim #mput [prim #mnew [] #self receiver] parameters arguments]
+      in
+      match call NewFrame [heap bindings call Nil []] {
+        case (#framed frame nextHeap) ->
+          match call EvalStatements [image nextHeap frame call FlattenStatements [body]] {
+            case (#returned value finalHeap) ->
+              mk #sent [call NonLocalValue [value] finalHeap]
+            case (#normal value finalHeap) -> mk #sent [receiver finalHeap]
+          }
+      }
+  }
+
+; A caret inside a block leaves the method the block was written in, not just
+; the block. The block therefore hands back a value that says so, and the
+; statement sequence that receives it stops.
+
+judgment IsNonLocal [value] =
+  match value { case (#non-local inner) -> true case _ -> false }
+
+judgment NonLocalValue [value] =
+  match value { case (#non-local inner) -> inner case _ -> value }
+
+; A block is a method whose frame's parent is where it was written, which is
+; the whole reason a block is worth having.
+
+judgment RunBlock [image heap block arguments] =
+  match block {
+    case (#block parameters body environment) ->
+      match call NewFrame [heap call BindParameters [prim #mnew [] parameters arguments] environment] {
+        case (#framed frame nextHeap) ->
+          match call EvalStatements [image nextHeap frame call FlattenStatements [body]] {
+            case (#returned value finalHeap) ->
+              mk #sent [mk #non-local [call NonLocalValue [value]] finalHeap]
+            case (#normal value finalHeap) -> mk #sent [value finalHeap]
+          }
+      }
+    case _ -> mk #sent [block heap]
+  }
+
+; ---------------------------------------------------------------- statements
+
+judgment EvalStatements [image heap frame statements] =
+  match statements {
+    case [] -> mk #normal [call Nil [] heap]
+    case _ ->
+      match prim #head [statements] {
+        case (#Return value) -> call EvalReturn [image heap frame value]
+        case (#ReturnFinal value) -> call EvalReturn [image heap frame value]
+        case (#Evaluate value) ->
+          call EvalNext [image heap frame value prim #tail [statements]]
+        case (#EvaluateFinal value) ->
+          call EvalNext [image heap frame value prim #tail [statements]]
+        case _ -> mk #normal [call Nil [] heap]
+      }
+  }
+
+judgment EvalReturn [image heap frame expression] =
+  match call EvalExpression [image heap frame expression] {
+    case (#done value nextHeap) -> mk #returned [call NonLocalValue [value] nextHeap]
+  }
+
+judgment EvalNext [image heap frame expression rest] =
+  match call EvalExpression [image heap frame expression] {
+    case (#done value nextHeap) ->
+      if call IsNonLocal [value]
+      then mk #returned [call NonLocalValue [value] nextHeap]
+      else
+        match rest {
+          case [] -> mk #normal [value nextHeap]
+          case _ -> call EvalStatements [image nextHeap frame rest]
+        }
+  }
+
+; ---------------------------------------------------------------- primitives
+
+; What the image does not define, the machine does. These are the messages a
+; Smalltalk cannot be written without, because they are the ones its own
+; source would need in order to define anything else.
+
+judgment ArgumentOne [arguments] =
+  if prim #eq [prim #len [arguments] 0] then call Nil [] else prim #nth [arguments 0]
+
+judgment ArgumentTwo [arguments] =
+  if prim #lt [prim #len [arguments] 2] then call Nil [] else prim #nth [arguments 1]
+
+judgment PrimitiveSend [image heap receiver selector arguments] =
+  let name = call SelectorName [selector] in
+  let argument = call ArgumentOne [arguments] in
+  if prim #eq [name "printString"] then mk #sent [call PrintValue [receiver] heap]
+  else if prim #eq [name "class"] then mk #sent [mk #class-reference [call ClassOf [receiver]] heap]
+  else if prim #eq [name "yourself"] then mk #sent [receiver heap]
+  else if prim #eq [name "isNil"] then mk #sent [prim #eq [receiver call Nil []] heap]
+  else if prim #eq [name "notNil"] then mk #sent [prim #not [prim #eq [receiver call Nil []]] heap]
+  else if prim #eq [name "="] then mk #sent [prim #eq [receiver argument] heap]
+  else if prim #eq [name "=="] then mk #sent [prim #eq [receiver argument] heap]
+  else if prim #eq [name "~="] then mk #sent [prim #ne [receiver argument] heap]
+  else if prim #eq [name "not"] then mk #sent [prim #not [receiver] heap]
+  else if prim #is-nat [receiver] then call IntegerPrimitive [image heap receiver name argument arguments]
+  else if prim #is-str [receiver] then call StringPrimitive [image heap receiver name argument]
+  else call ObjectPrimitive [image heap receiver name argument arguments]
+
+judgment IntegerPrimitive [image heap receiver name argument arguments] =
+  if prim #eq [name "+"] then mk #sent [prim #add [receiver argument] heap]
+  else if prim #eq [name "-"] then mk #sent [prim #sub [receiver argument] heap]
+  else if prim #eq [name "*"] then mk #sent [prim #mul [receiver argument] heap]
+  else if prim #eq [name "//"] then mk #sent [prim #div [receiver argument] heap]
+  else if prim #eq [name "\\\\"] then mk #sent [prim #mod [receiver argument] heap]
+  else if prim #eq [name "<"] then mk #sent [prim #lt [receiver argument] heap]
+  else if prim #eq [name ">"] then mk #sent [prim #gt [receiver argument] heap]
+  else if prim #eq [name "<="] then mk #sent [prim #le [receiver argument] heap]
+  else if prim #eq [name ">="] then mk #sent [prim #ge [receiver argument] heap]
+  else if prim #eq [name "max:"] then mk #sent [prim #max [receiver argument] heap]
+  else if prim #eq [name "min:"] then mk #sent [prim #min [receiver argument] heap]
+  else if prim #eq [name "timesRepeat:"] then call TimesRepeat [image heap receiver argument]
+  else if prim #eq [name "to:do:"]
+  then call ToDo [image heap receiver argument call ArgumentTwo [arguments]]
+  else mk #sent [call DoesNotUnderstand [receiver name] heap]
+
+judgment TimesRepeat [image heap count block] =
+  if prim #eq [count 0]
+  then mk #sent [count heap]
+  else
+    match call RunBlock [image heap block list []] {
+      case (#sent value nextHeap) ->
+        call TimesRepeat [image nextHeap prim #sub [count 1] block]
+    }
+
+judgment ToDo [image heap from to block] =
+  if prim #gt [from to]
+  then mk #sent [from heap]
+  else
+    match call RunBlock [image heap block list [from]] {
+      case (#sent value nextHeap) ->
+        call ToDo [image nextHeap prim #add [from 1] to block]
+    }
+
+judgment StringPrimitive [image heap receiver name argument] =
+  if prim #eq [name ","] then mk #sent [prim #scat [receiver call PrintValue [argument]] heap]
+  else if prim #eq [name "size"] then mk #sent [prim #slen [receiver] heap]
+  else if prim #eq [name "asSymbol"] then mk #sent [prim #str->sym [receiver] heap]
+  else mk #sent [call DoesNotUnderstand [receiver name] heap]
+
+judgment ObjectPrimitive [image heap receiver name argument arguments] =
+  match receiver {
+    case (#class-reference class) ->
+      if prim #eq [name "new"] then call NewInstance [image heap class]
+      else mk #sent [call DoesNotUnderstand [receiver name] heap]
+    case (#block parameters body environment) ->
+      if prim #eq [name "value"] then call RunBlock [image heap receiver list []]
+      else if prim #eq [name "value:"] then call RunBlock [image heap receiver list [argument]]
+      else if prim #eq [name "value:value:"] then call RunBlock [image heap receiver arguments]
+      else if prim #eq [name "whileTrue:"] then call WhileTrue [image heap receiver argument]
+      else mk #sent [call DoesNotUnderstand [receiver name] heap]
+    case _ -> mk #sent [call DoesNotUnderstand [receiver name] heap]
+  }
+
+judgment WhileTrue [image heap condition body] =
+  match call RunBlock [image heap condition list []] {
+    case (#sent flag nextHeap) ->
+      if flag
+      then
+        match call RunBlock [image nextHeap body list []] {
+          case (#sent value finalHeap) -> call WhileTrue [image finalHeap condition body]
+        }
+      else mk #sent [call Nil [] nextHeap]
+  }
+
+judgment NewInstance [image heap class] =
+  match call Allocate [image heap class] {
+    case (#allocated object nextHeap) -> mk #sent [object nextHeap]
+  }
+
+judgment DoesNotUnderstand [receiver name] =
+  mk #does-not-understand [call ClassOf [receiver] name]
+
+; ------------------------------------------------------------------- loading
+
+; Reading a program is not the same as running it. A method chunk and a class
+; definition change the image; everything else is a statement that runs once
+; the image is complete. This is what a file-in does.
+
+judgment SplitNames [text] = call SplitFrom [text 0 0 list []]
+
+judgment PushName [text start stop accumulated] =
+  if prim #ge [start stop]
+  then accumulated
+  else prim #snoc [accumulated prim #str->sym [prim #ssub [text start stop]]]
+
+judgment SplitFrom [text index start accumulated] =
+  if prim #ge [index prim #slen [text]]
+  then call PushName [text start index accumulated]
+  else
+    if prim #eq [prim #ssub [text index prim #add [index 1]] " "]
+    then
+      call SplitFrom [
+        text prim #add [index 1] prim #add [index 1]
+        call PushName [text start index accumulated]
+      ]
+    else call SplitFrom [text prim #add [index 1] start accumulated]
+
+judgment KeywordSignature [parts name parameters] =
+  match parts {
+    case [] -> mk #signature [prim #str->sym [name] parameters]
+    case _ ->
+      match prim #head [parts] {
+        case (#PatternPart selector parameter) ->
+          call KeywordSignature [
+            prim #tail [parts]
+            prim #scat [name prim #sym->str [selector]]
+            prim #snoc [parameters parameter]
+          ]
+        case _ -> call KeywordSignature [prim #tail [parts] name parameters]
+      }
+  }
+
+judgment PatternSignature [pattern] =
+  match pattern {
+    case (#UnaryPattern selector) -> mk #signature [selector list []]
+    case (#BinaryPattern selector parameter) -> mk #signature [selector list [parameter]]
+    case (#KeywordPattern parts) ->
+      call KeywordSignature [call FlattenPatternParts [parts] "" list []]
+    case _ -> mk #signature [#yourself list []]
+  }
+
+; A class definition is written the way Smalltalk writes it: as a message to
+; the superclass. It is recognised here rather than sent, because a class has
+; to exist before the methods that belong to it are read.
+
+judgment ClassDefinition [statement] =
+  match statement {
+    case (#Evaluate expression) -> call ClassDefinitionOf [expression]
+    case (#EvaluateFinal expression) -> call ClassDefinitionOf [expression]
+    case _ -> mk #no []
+  }
+
+judgment ClassDefinitionOf [expression] =
+  match expression {
+    case (#KeywordSend receiver arguments) ->
+      let parts = call FlattenArguments [arguments] in
+      if prim #eq [call KeywordSelector [parts ""] prim #str->sym ["subclass:instanceVariableNames:"]]
+      then call ClassDefinitionParts [receiver parts]
+      else mk #no []
+    case _ -> mk #no []
+  }
+
+judgment ClassDefinitionParts [receiver parts] =
+  match receiver {
+    case (#Variable superclass) ->
+      match prim #nth [parts 0] {
+        case (#KeywordArgument selector argument) ->
+          match argument {
+            case (#Symbol name) ->
+              match prim #nth [parts 1] {
+                case (#KeywordArgument other slots) ->
+                  match slots {
+                    case (#Text text) ->
+                      mk #class-definition [
+                        call SymbolName [name] superclass
+                        call SplitNames [call Unquoted [text]]
+                      ]
+                    case _ -> mk #no []
+                  }
+                case _ -> mk #no []
+              }
+            case _ -> mk #no []
+          }
+        case _ -> mk #no []
+      }
+    case _ -> mk #no []
+  }
+
+judgment LoadChunks [image chunks statements] =
+  match chunks {
+    case [] -> mk #loaded [image statements]
+    case _ -> call LoadChunk [image prim #head [chunks] prim #tail [chunks] statements]
+  }
+
+judgment LoadChunk [image chunk rest statements] =
+  match chunk {
+    case (#MethodWithTemporaries holder pattern temporaries body) ->
+      match call PatternSignature [pattern] {
+        case (#signature selector parameters) ->
+          call LoadChunks [
+            call DefineMethod [
+              image holder selector
+              mk #method [
+                prim #append [parameters call TemporaryNames [temporaries]]
+                body chunk
+              ]
+            ]
+            rest statements
+          ]
+      }
+    case (#Method holder pattern body) ->
+      match call PatternSignature [pattern] {
+        case (#signature selector parameters) ->
+          call LoadChunks [
+            call DefineMethod [image holder selector mk #method [parameters body chunk]]
+            rest statements
+          ]
+      }
+    case _ ->
+      match call ClassDefinition [chunk] {
+        case (#class-definition name superclass slots) ->
+          call LoadChunks [call DefineClass [image name superclass slots] rest statements]
+        case _ -> call LoadChunks [image rest prim #snoc [statements chunk]]
+      }
+  }
+
+; ------------------------------------------------------------------ entry
+
+judgment RunUnit [tree] = call RunWithImage [call EmptyImage [] tree]
+
+; Running something in a browser means running it in the image that is open,
+; so the classes already there are the ones the code can see.
+
+judgment RunWithImage [base tree] =
+  match call LoadChunks [base call FlattenChunks [tree] list []] {
+    case (#loaded image statements) ->
+      match call NewFrame [
+        call EmptyHeap [] prim #mput [prim #mnew [] #self call Nil []] call Nil []
+      ] {
+        case (#framed frame heap) ->
+          match call EvalStatements [image heap frame statements] {
+            case (#normal value finalHeap) ->
+              mk #value [call PrintValue [call NonLocalValue [value]]]
+            case (#returned value finalHeap) ->
+              mk #value [call PrintValue [call NonLocalValue [value]]]
+          }
+      }
+  }
+
+judgment EvalSource [grammar source] =
+  match cap #grammar-parse [grammar source] {
+    case (#ok tree) -> call RunUnit [tree]
+    case (#denied reason) -> mk #rejected [reason]
+  }
+
+judgment EvalInImage [grammar base source] =
+  match cap #grammar-parse [grammar source] {
+    case (#ok tree) -> call RunWithImage [base tree]
+    case (#denied reason) -> mk #rejected [reason]
+  }

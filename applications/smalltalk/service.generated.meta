@@ -1,0 +1,927 @@
+; Generated from applications/smalltalk/service.meta by ElaborateSource. Do not edit by hand.
+(program
+  (judgment
+    ServiceDiagnostics
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv tree))
+        (lst))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (call
+          ParseDiagnostics
+          (v reason)))))
+  (judgment
+    ChunkSymbols
+    [text chunks accumulated]
+    (match
+      (v chunks)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        _
+        (call
+          ChunkSymbols
+          (v text)
+          (prim
+            tail
+            (v chunks))
+          (call
+            ChunkSymbol
+            (v text)
+            (prim
+              head
+              (v chunks))
+            (v accumulated))))))
+  (judgment
+    ChunkSymbol
+    [text chunk accumulated]
+    (match
+      (v chunk)
+      (case
+        (pm
+          MethodWithTemporaries
+          (pv holder)
+          (pv pattern)
+          (pv temporaries)
+          (pv body))
+        (call
+          MethodSymbol
+          (v text)
+          (v holder)
+          (v pattern)
+          (v accumulated)))
+      (case
+        (pm
+          Method
+          (pv holder)
+          (pv pattern)
+          (pv body))
+        (call
+          MethodSymbol
+          (v text)
+          (v holder)
+          (v pattern)
+          (v accumulated)))
+      (case
+        _
+        (v accumulated))))
+  (judgment
+    MethodSymbol
+    [text holder pattern accumulated]
+    (match
+      (call
+        PatternSignature
+        (v pattern))
+      (case
+        (pm
+          signature
+          (pv selector)
+          (pv parameters))
+        (let
+          label
+          (prim
+            scat
+            (prim
+              sym->str
+              (v holder))
+            (prim
+              scat
+              (q " >> ")
+              (prim
+                sym->str
+                (v selector))))
+          (match
+            (call
+              TextFind
+              (v text)
+              (prim
+                sym->str
+                (v holder)))
+            (case
+              (pm
+                some
+                (pv at))
+              (prim
+                snoc
+                (v accumulated)
+                (call
+                  SymbolRecord
+                  (v label)
+                  (q method)
+                  (v at)
+                  (prim
+                    slen
+                    (prim
+                      sym->str
+                      (v holder)))
+                  (prim
+                    sym->str
+                    (v selector)))))
+            (case
+              _
+              (v accumulated)))))))
+  (judgment
+    ServiceSymbols
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv tree))
+        (call
+          ChunkSymbols
+          (v text)
+          (call
+            FlattenChunks
+            (v tree))
+          (lst)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (lst))))
+  (judgment
+    SelectorCompletions
+    [selectors accumulated]
+    (match
+      (v selectors)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        _
+        (call
+          SelectorCompletions
+          (prim
+            tail
+            (v selectors))
+          (prim
+            snoc
+            (v accumulated)
+            (call
+              CompletionRecord
+              (prim
+                sym->str
+                (prim
+                  head
+                  (v selectors)))
+              (q method)
+              (q "image")))))))
+  (judgment
+    ImageSelectors
+    [image classes accumulated]
+    (match
+      (v classes)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        _
+        (call
+          ImageSelectors
+          (v image)
+          (prim
+            tail
+            (v classes))
+          (prim
+            append
+            (v accumulated)
+            (call
+              ClassSelectors
+              (v image)
+              (prim
+                head
+                (v classes))))))))
+  (judgment
+    ServiceCompletions
+    [grammar text]
+    (let
+      image
+      (call
+        BuildImage
+        (v grammar))
+      (let
+        selectors
+        (prim
+          distinct
+          (prim
+            append
+            (call
+              ImageSelectors
+              (v image)
+              (call
+                ImageClassNames
+                (v image))
+              (lst))
+            (call
+              ImageClassNames
+              (v image))))
+        (call
+          SelectorCompletions
+          (prim
+            sort
+            (v selectors))
+          (lst)))))
+  (judgment
+    ServiceFormat
+    [grammar text]
+    (call
+      PrintBuffer
+      (v grammar)
+      (v text)))
+  (judgment
+    ServiceSemanticTokens
+    [grammar text]
+    (call
+      SemanticTokens
+      (v grammar)
+      (v text)))
+  (judgment
+    PanelView
+    [panel]
+    (mp
+      (q name)
+      (prim
+        sym->str
+        (call
+          PanelSchema'name
+          (v panel)))
+      (q placement)
+      (prim
+        sym->str
+        (call
+          PanelSchema'placement
+          (v panel)))
+      (q primitive)
+      (prim
+        sym->str
+        (call
+          ViewSchema'primitive
+          (call
+            PanelSchema'view
+            (v panel))))))
+  (judgment
+    LayoutViews
+    [panels accumulated]
+    (match
+      (v panels)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LayoutViews
+          (v rest)
+          (prim
+            snoc
+            (v accumulated)
+            (call
+              PanelView
+              (v head)))))))
+  (judgment
+    WorkflowStepNames
+    [steps accumulated]
+    (match
+      (v steps)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          WorkflowStepNames
+          (v rest)
+          (prim
+            snoc
+            (v accumulated)
+            (prim
+              sym->str
+              (v head)))))))
+  (judgment
+    ServiceLayout
+    [grammar]
+    (let
+      profile
+      (call SmalltalkProfile)
+      (mp
+        (q name)
+        (prim
+          sym->str
+          (call
+            StudioProfile'name
+            (v profile)))
+        (q navigation)
+        (mp
+          (q model)
+          (prim
+            sym->str
+            (call
+              NavigationSchema'model
+              (call
+                StudioProfile'navigation
+                (v profile)))))
+        (q workflow)
+        (call
+          WorkflowStepNames
+          (call
+            WorkflowSchema'stages
+            (call
+              StudioProfile'workflow
+              (v profile)))
+          (lst))
+        (q views)
+        (call
+          LayoutViews
+          (call
+            StudioProfile'panels
+            (v profile))
+          (lst)))))
+  (judgment
+    ServiceEvaluate
+    [grammar text selection]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv tree))
+        (match
+          (call
+            EvalInImage
+            (v grammar)
+            (call
+              ImageWithChunks
+              (v grammar)
+              (v tree))
+            (call
+              SelectionText
+              (v text)
+              (v selection)))
+          (case
+            (pm
+              value
+              (pv answer))
+            (v answer))
+          (case
+            (pm
+              rejected
+              (pv reason))
+            (prim
+              scat
+              (q "cannot read that: ")
+              (v reason)))
+          (case
+            _
+            (q ""))))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (prim
+          scat
+          (q "the buffer does not parse, so there is nothing to run it in: ")
+          (v reason)))))
+  (judgment
+    ServiceCommand
+    [grammar text command]
+    (if
+      (prim
+        eq
+        (v command)
+        (q run-workspace))
+      (mp
+        (q message)
+        (call
+          EvaluatedText
+          (v grammar)
+          (v text)))
+      (if
+        (prim
+          eq
+          (v command)
+          (q browse-image))
+        (mp
+          (q message)
+          (call
+            CountMessage
+            (call
+              ImageClassNames
+              (call
+                BuildImage
+                (v grammar)))
+            (q "class in the image")
+            (q "classes in the image")))
+        (mp
+          (q message)
+          (q "unknown command")))))
+  (judgment
+    ImageWithChunks
+    [grammar tree]
+    (match
+      (call
+        LoadChunks
+        (call
+          BuildImage
+          (v grammar))
+        (call
+          FlattenChunks
+          (v tree))
+        (lst))
+      (case
+        (pm
+          loaded
+          (pv image)
+          (pv statements))
+        (v image))))
+  (judgment
+    BufferImage
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv tree))
+        (call
+          ImageWithChunks
+          (v grammar)
+          (v tree)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (call
+          BuildImage
+          (v grammar)))))
+  (judgment
+    ClassLine
+    [image class]
+    (prim
+      scat
+      (prim
+        sym->str
+        (v class))
+      (prim
+        scat
+        (q " - ")
+        (call
+          CountMessage
+          (call
+            ClassSelectors
+            (v image)
+            (v class))
+          (q "method")
+          (q "methods")))))
+  (judgment
+    ClassLines
+    [image classes accumulated]
+    (match
+      (v classes)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ClassLines
+          (v image)
+          (v rest)
+          (prim
+            snoc
+            (v accumulated)
+            (call
+              ClassLine
+              (v image)
+              (v head)))))))
+  (judgment
+    SelectorLines
+    [image class selectors accumulated]
+    (match
+      (v selectors)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          SelectorLines
+          (v image)
+          (v class)
+          (v rest)
+          (prim
+            snoc
+            (v accumulated)
+            (prim
+              scat
+              (prim
+                sym->str
+                (v class))
+              (prim
+                scat
+                (q " >> ")
+                (prim
+                  sym->str
+                  (v head)))))))))
+  (judgment
+    AllSelectorLines
+    [image classes accumulated]
+    (match
+      (v classes)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          AllSelectorLines
+          (v image)
+          (v rest)
+          (call
+            SelectorLines
+            (v image)
+            (v head)
+            (call
+              ClassSelectors
+              (v image)
+              (v head))
+            (v accumulated))))))
+  (judgment
+    BufferClassNames
+    [grammar text]
+    (let
+      base
+      (call
+        ImageClassNames
+        (call
+          BuildImage
+          (v grammar)))
+      (call
+        NamesNotIn
+        (call
+          ImageClassNames
+          (call
+            BufferImage
+            (v grammar)
+            (v text)))
+        (v base)
+        (lst))))
+  (judgment
+    NamesNotIn
+    [names excluded accumulated]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v excluded)
+            (v head))
+          (call
+            NamesNotIn
+            (v rest)
+            (v excluded)
+            (v accumulated))
+          (call
+            NamesNotIn
+            (v rest)
+            (v excluded)
+            (prim
+              snoc
+              (v accumulated)
+              (v head)))))))
+  (judgment
+    NonEmptyLine
+    [text]
+    (if
+      (prim
+        eq
+        (prim
+          slen
+          (v text))
+        (q 0))
+      (lst)
+      (lst
+        (v text))))
+  (judgment
+    ServiceViews
+    [grammar text]
+    (let
+      image
+      (call
+        BufferImage
+        (v grammar)
+        (v text))
+      (let
+        defined
+        (call
+          BufferClassNames
+          (v grammar)
+          (v text))
+        (let
+          browsed
+          (if
+            (prim
+              eq
+              (prim
+                len
+                (v defined))
+              (q 0))
+            (call BrowsedClass)
+            (prim
+              head
+              (v defined)))
+          (mp
+            (q image)
+            (call
+              ClassLines
+              (v image)
+              (call
+                ImageClassNames
+                (call
+                  BuildImage
+                  (v grammar)))
+              (lst))
+            (q classes)
+            (call
+              ClassLines
+              (v image)
+              (call
+                ImageClassNames
+                (v image))
+              (lst))
+            (q selectors)
+            (call
+              AllSelectorLines
+              (v image)
+              (call
+                ImageClassNames
+                (v image))
+              (lst))
+            (q method)
+            (call
+              NonEmptyLine
+              (call
+                MethodSource
+                (v grammar)
+                (v image)
+                (v browsed)
+                (prim
+                  nth
+                  (prim
+                    append
+                    (call
+                      ClassSelectors
+                      (v image)
+                      (v browsed))
+                    (lst
+                      (q yourself)))
+                  (q 0))))
+            (q workspace)
+            (call
+              NonEmptyLine
+              (v text))
+            (q transcript)
+            (call
+              NonEmptyLine
+              (call
+                EvaluatedText
+                (v grammar)
+                (v text)))
+            (q inspector)
+            (call
+              NonEmptyLine
+              (prim
+                scat
+                (q "it = ")
+                (call
+                  EvaluatedText
+                  (v grammar)
+                  (v text)))))))))
+  (judgment
+    ServiceKeywords
+    [grammar]
+    (call
+      GrammarKeywords
+      (v grammar)))
+  (judgment
+    ImageSourcePath
+    []
+    (q "applications/smalltalk/image.meta"))
+  (judgment
+    SelectorReports
+    [selectors path accumulated]
+    (match
+      (v selectors)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          SelectorReports
+          (v rest)
+          (v path)
+          (prim
+            snoc
+            (v accumulated)
+            (mp
+              (q name)
+              (prim
+                sym->str
+                (v head))
+              (q path)
+              (v path)
+              (q findings)
+              (q 0)
+              (q hazards)
+              (q 0)))))))
+  (judgment
+    ClassSubjects
+    [image classes path accumulated]
+    (match
+      (v classes)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ClassSubjects
+          (v image)
+          (v rest)
+          (v path)
+          (prim
+            snoc
+            (v accumulated)
+            (mp
+              (q name)
+              (prim
+                sym->str
+                (v head))
+              (q reports)
+              (call
+                SelectorReports
+                (call
+                  ClassSelectors
+                  (v image)
+                  (v head))
+                (v path)
+                (lst))))))))
+  (judgment
+    DocumentPath
+    [name]
+    (prim
+      scat
+      (q "applications/smalltalk/documents/")
+      (prim
+        scat
+        (prim
+          sym->str
+          (v name))
+        (q ".st"))))
+  (judgment
+    DocumentSubjects
+    [documents accumulated]
+    (match
+      (v documents)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (let
+          name
+          (prim
+            mget
+            (v head)
+            (q name)
+            (q unknown))
+          (call
+            DocumentSubjects
+            (v rest)
+            (prim
+              snoc
+              (v accumulated)
+              (mp
+                (q name)
+                (prim
+                  sym->str
+                  (v name))
+                (q reports)
+                (lst
+                  (mp
+                    (q name)
+                    (prim
+                      scat
+                      (prim
+                        sym->str
+                        (v name))
+                      (q ".st"))
+                    (q path)
+                    (call
+                      DocumentPath
+                      (v name))
+                    (q findings)
+                    (q 0)
+                    (q hazards)
+                    (q 0))))))))))
+  (judgment
+    ServiceCatalogue
+    [grammar documents]
+    (let
+      image
+      (call
+        BuildImage
+        (v grammar))
+      (prim
+        append
+        (call
+          ClassSubjects
+          (v image)
+          (call
+            ImageClassNames
+            (v image))
+          (call ImageSourcePath)
+          (lst))
+        (call
+          DocumentSubjects
+          (v documents)
+          (lst)))))
+  (judgment
+    PaneNames
+    [views]
+    (prim
+      mkeys
+      (v views)))
+  (judgment
+    PaneLines
+    [views name]
+    (prim
+      mget
+      (v views)
+      (v name)
+      (lst)))
+  (judgment
+    SubjectNames
+    [subjects]
+    (match
+      (v subjects)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (prim
+            mget
+            (v head)
+            (q name)
+            (q ""))
+          (call
+            SubjectNames
+            (v rest)))))))

@@ -1,39 +1,59 @@
-# Stratum on VS Code
+# Stratum with a Smalltalk
 
-> **Branch `featured/vscode`** — branched from `main`.
-> Adds an editor client. Adds no language, and no application.
+> **Branch `featured/smalltalk`** — branched from `featured/vscode`, which branched from `main`.
+> Adds a Smalltalk: a grammar, an evaluator, an image, and a browser onto it.
 
 ```text
-main ──▶ featured/vscode ──┬──▶ featured/sds
-  platform      this branch └──▶ featured/smalltalk
+main ──▶ featured/vscode ──▶ featured/smalltalk
+platform      editor              this branch
 ```
 
 ## What this branch adds
 
 | | |
 | --- | --- |
-| [studio/vscode](studio/vscode) | a VS Code client that contains no language knowledge |
-| `lsp package` | generates the client's manifest from a world, so it cannot drift from the languages it edits |
+| [applications/smalltalk/smalltalk.grammar](applications/smalltalk/smalltalk.grammar) | the concrete syntax, with unary, binary and keyword precedence |
+| [applications/smalltalk/evaluator.meta](applications/smalltalk/evaluator.meta) | message lookup, activations, blocks, non-local return, primitives |
+| [applications/smalltalk/image.meta](applications/smalltalk/image.meta) | the base image, written in Smalltalk and loaded like any other program |
+| [applications/smalltalk/service.meta](applications/smalltalk/service.meta) | what the editor asks and the image answers |
+| [changes/F11-smalltalk](changes/F11-smalltalk) | the single canonical change by which F11 constructs it |
 
-The platform provides the language server; this branch provides something for a
-person to look at. The split is deliberate: `main` must not know what a view
-container or a syntax highlighting grammar is, because those are one editor's
-vocabulary, and the platform serves any editor that speaks the protocol.
-
-## What it does not do on its own
-
-Nothing useful. A client contributes languages to an editor through a static
-manifest, and that manifest is generated from a world. There is no world here,
-so the manifest is empty and the client is inert.
-
-To see it work, use a branch that carries a world - `featured/sds` is the
-worked example - or merge one into this branch and regenerate:
-
-```bash
-git merge featured/sds
-sbt "runMain stratum.cli.Stratum lsp package --world applications/sds --out studio/vscode"
-cd studio/vscode && npm install && npm run compile
+```text
+F11 |- smalltalk
 ```
+
+## It runs
+
+The build runs Smalltalk programs and checks their answers. `3 + 4 * 2` is 14,
+because binary messages have no precedence among them. `3 factorial + 4 squared`
+is 22, because the image says what `factorial` and `squared` mean. A `Counter`
+keeps its count across sends, a subclass overrides what it inherits, a block
+that increments a loop counter increments the one the loop is reading, and a
+caret inside a block returns from the method the block was written in.
+
+## The browser reads the image
+
+The panes are not a list of names someone typed. Classes, selectors and source
+are read out of the image, and the source pane prints the tree that will run
+rather than text kept beside it. Delete a method from the image and the pane
+loses a row.
+
+The workspace evaluates inside the open image, and the buffer you are editing
+is loaded on top of it, because the code being edited is part of the image
+while you are editing it.
+
+## The editor binds
+
+Unlike the branch this one came from, the client here is bound: three
+languages, a browser in the activity bar, method, workspace, inspector and
+transcript in the panel, and `Ctrl+Shift+D` to evaluate a selection.
+
+## What it is not
+
+There are no cascades, no class-side methods, no metaclasses, no collections
+beyond what the image defines, and no become:. A statement may end with a
+period or be the last one without. Assigning to a name that was never declared
+creates it in the current activation rather than failing.
 
 ## Everything below
 
@@ -261,7 +281,8 @@ apart:
 | Branch | Carries |
 | --- | --- |
 | `main` | the platform: F0..F11 plus the revised F12/F13/F14 candidate sequence, both hosts, the Lean model, the shared languages, and the generic language service |
-| `featured/*` | one branch per application, and one per editor client |
+| `featured/vscode` | everything a VS Code plugin needs, and nothing about any language |
+| `featured/smalltalk` | **this branch**: a Smalltalk development environment, deployed on the finished platform |
 
 Everything shareable stays on `main`, including
 [languages/pdf](languages/pdf), the projection that turns a document into an
@@ -273,8 +294,8 @@ language, its documents and its profiles, built on the finished platform.
 
 [studio/vscode](studio/vscode) is an editor client, and
 [host-scala/lsp](host-scala/lsp) is a language server, for **every language a
-world publishes**. Neither knows any language. The client contributes nothing
-until it is bound to a world.
+world publishes**. Neither knows any language. The client is inert until it is
+bound to a world, and on this branch it is bound to this one.
 
 The host core is frozen, so the server may not learn what a diagnostic means.
 It is a courier: JSON, framing, and offsets to line and character. Everything
@@ -287,11 +308,10 @@ independent Rust host agrees on all of it.
 | `ServiceSymbols` | outline, hover, breadcrumbs |
 | a Studio profile | views and commands |
 
-Merge a branch that carries a world, then bind the client to it:
+Rebind the client after changing what this world publishes:
 
 ```bash
-git merge featured/sds
-sbt "runMain stratum.cli.Stratum lsp package --world applications/sds --out studio/vscode"
+sbt "runMain stratum.cli.Stratum lsp package --world applications/smalltalk --out studio/vscode"
 cd studio/vscode && npm install && npm run compile
 ```
 

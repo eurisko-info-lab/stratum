@@ -1,0 +1,136 @@
+; Executable acceptance checks for the Smalltalk deployment.
+[
+  (check the-studio-is-code-centric
+    (call SmalltalkNavigation (grammar smalltalk))
+    (value (navigation class-selector-method [class selector method])))
+
+  (check the-studio-browses-code
+    (call SmalltalkPanels (grammar smalltalk))
+    (value [classes selectors method workspace inspector transcript]))
+
+  (check the-commands-are-code-commands
+    (call SmalltalkActions (grammar smalltalk))
+    (value [accept-method evaluate-selection inspect-result browse-senders]))
+
+  (check the-workflow-is-edit-and-evaluate
+    (call SmalltalkWorkflow (grammar smalltalk))
+    (value [edit evaluate inspect record]))
+
+  (check the-field-editors-are-code-editors
+    (call DeriveEditor (call SmalltalkProfile))
+    (value [code code]))
+
+  ; The platform's own fixture and this application compose the same runtime
+  ; and still present different interfaces.
+  (check it-shares-the-platform-runtime
+    (call SharesRuntimeWithPlatform)
+    (value #t))
+
+  (check it-does-not-collapse-into-the-platform-fixture
+    (call DiffersFromPlatformFixture (grammar smalltalk))
+    (value #f))
+
+  (check binary-messages-have-no-precedence-among-them
+    (call EvalSource (grammar smalltalk) (q "3 + 4 * 2."))
+    (value (value "14")))
+
+  (check a-block-can-change-what-encloses-it
+    (call EvalSource (grammar smalltalk) (q "total := 0. i := 1. [ i <= 10 ] whileTrue: [ total := total + i. i := i + 1 ]. ^total printString , ' from a loop'."))
+    (value (value "55 from a loop")))
+
+  (check an-object-keeps-what-was-assigned-to-it
+    (call EvalSource (grammar smalltalk) (q "Object subclass: #Counter instanceVariableNames: 'count'. Counter >> initialize [ count := 0 ] Counter >> bump [ count := count + 1. ^count ] c := Counter new. c initialize. c bump. ^c bump."))
+    (value (value "2")))
+
+  (check a-method-can-call-itself
+    (call EvalSource (grammar smalltalk) (q "Object subclass: #Math instanceVariableNames: ''. Math >> factorial: n [ n < 2 ifTrue: [ ^1 ]. ^n * (Math new factorial: n - 1) ] ^Math new factorial: 6."))
+    (value (value "720")))
+
+  (check a-subclass-overrides-what-it-inherits
+    (call EvalSource (grammar smalltalk) (q "Object subclass: #Animal instanceVariableNames: ''. Animal >> speak [ ^'...' ] Animal subclass: #Dog instanceVariableNames: ''. Dog >> speak [ ^'woof' ] ^Dog new speak , ' and ' , Animal new speak."))
+    (value (value "woof and ...")))
+
+  (check a-conditional-runs-one-branch-only
+    (call EvalSource (grammar smalltalk) (q "Object subclass: #Trace instanceVariableNames: 'log'. Trace >> run [ log := 0. false ifTrue: [ log := 1 ] ifFalse: [ log := 2 ]. ^log ] ^Trace new run."))
+    (value (value "2")))
+
+  ; The browser reads the image, and the image is Smalltalk source that was
+  ; loaded the same way any other program is.
+  (check the-classes-come-from-the-image
+    (call ImageClassNames (call BuildImage (grammar smalltalk)))
+    (value [Counter Integer Object Point String]))
+
+  (check the-selectors-come-from-the-class
+    (call ClassSelectors (call BuildImage (grammar smalltalk)) (q Point))
+    (value [+ printString setX:y: x y]))
+
+  (check the-source-pane-prints-the-tree-that-runs
+    (call MethodSource (grammar smalltalk) (call BuildImage (grammar smalltalk)) (q Counter) (q increment))
+    (value "Counter >> increment [count := count + 1. ^ self]"))
+
+  (check the-image-defines-its-own-arithmetic
+    (call EvaluatedText (grammar smalltalk) (q "^3 factorial + 4 squared."))
+    (value "22"))
+
+  (check a-class-in-the-image-can-override-printing
+    (call EvaluatedText (grammar smalltalk) (q "^((Point new setX: 1 y: 2) + (Point new setX: 10 y: 20)) printString."))
+    (value "11@22"))
+
+  (check the-workspace-runs-inside-the-image
+    (call EvaluatedText (grammar smalltalk) (q "^Counter new initialize increment increment count."))
+    (value "2"))
+
+  ; The example that ships with the world is the example that runs.
+  (check the-example-document-runs
+    (call EvaluatedText (grammar smalltalk) (q "\"A worked example. Select any expression and evaluate it.\" Object subclass: #StackNode instanceVariableNames: 'value next'. StackNode >> value [ ^value ] StackNode >> value: v [ value := v ] StackNode >> next [ ^next ] StackNode >> next: n [ next := n ] Object subclass: #Stack instanceVariableNames: 'top size'. Stack >> initialize [ top := nil. size := 0. ^self ] Stack >> size [ ^size ] Stack >> push: value [ | node | node := StackNode new. node value: value. node next: top. top := node. size := size + 1. ^self ] Stack >> top [ ^top value ] Stack >> pop [ | value | value := top value. top := top next. size := size - 1. ^value ] Stack >> isEmpty [ ^size = 0 ] ^((Stack new initialize push: 3) push: 4) pop."))
+    (value "4"))
+
+  ; Every pane the layout declares is answered, because a pane with no answer
+  ; is a pane the editor reports as broken.
+  ; The adapter reads panes out of a map keyed by pane name. A list of records
+  ; parses and elaborates and shows nothing, which is how it shipped once.
+  (check every-declared-pane-is-answered-under-its-own-name
+    (call PaneNames (call ServiceViews (grammar smalltalk) (q "")))
+    (value [classes image inspector method selectors transcript workspace]))
+
+  (check a-pane-is-a-list-of-lines
+    (call PaneLines (call ServiceViews (grammar smalltalk) (q "")) (q classes))
+    (value ["Counter - 3 methods" "Integer - 4 methods" "Object - 0 methods" "Point - 5 methods" "String - 1 method"]))
+
+  ; The navigator is subjects with reports under them, and nothing else is read.
+  (check the-navigator-lists-the-image
+    (call SubjectNames (call ServiceCatalogue (grammar smalltalk) (q [])))
+    (value ["Counter" "Integer" "Object" "Point" "String"]))
+
+  ; Evaluating a selection sees the classes the buffer defines, because they
+  ; are part of the image while the buffer is being edited.
+  (check do-it-sees-what-the-buffer-defines
+    (call ServiceEvaluate (grammar smalltalk)
+      (q "Object subclass: #Box instanceVariableNames: 'it'. Box >> hold: v [ it := v. ^self ] Box >> it [ ^it ] ^(Box new hold: 7) it.")
+      (q {offset 0 length 0}))
+    (value "7"))
+
+  ; A temporary is a name that starts as nil and belongs to the activation.
+  (check a-method-can-declare-temporaries
+    (call EvaluatedText (grammar smalltalk)
+      (q "Object subclass: #Swap instanceVariableNames: 'a b'. Swap >> set [ a := 1. b := 2. ^self ] Swap >> swap [ | t | t := a. a := b. b := t. ^self ] Swap >> show [ ^a printString , b printString ] ^Swap new set swap show."))
+    (value "21"))
+
+  (check a-block-can-declare-temporaries
+    (call EvaluatedText (grammar smalltalk)
+      (q "total := 0. 1 to: 3 do: [ :i | | double | double := i * 2. total := total + double ]. ^total."))
+    (value "12"))
+
+  (check a-temporary-shadows-the-instance-variable-of-the-same-name
+    (call EvaluatedText (grammar smalltalk)
+      (q "Object subclass: #Shadow instanceVariableNames: 'v'. Shadow >> set [ v := 9. ^self ] Shadow >> read [ | v | v := 1. ^v ] Shadow >> field [ ^v ] ^Shadow new set read printString , Shadow new set field printString."))
+    (value "19"))
+
+  ; Answering from an image the buffer never reached is how a broken buffer
+  ; came to report a plausible wrong answer.
+  (check do-it-refuses-to-run-in-an-image-the-buffer-never-reached
+    (call ServiceEvaluate (grammar smalltalk)
+      (q "Object subclass: #Broken instanceVariableNames: 'x'. Broken >> oops [ ^ ]")
+      (q {offset 0 length 0}))
+    (value "the buffer does not parse, so there is nothing to run it in: unconsumed input at offset 60"))
+]

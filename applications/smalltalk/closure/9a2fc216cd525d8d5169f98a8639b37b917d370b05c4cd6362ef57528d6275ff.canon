@@ -1,0 +1,9 @@
+
+artifactdata	commands	namerun-workspacetitleSmalltalk: run the workspace	namebrowse-imagetitleSmalltalk: browse the imageeditor	category	SmalltalkdescriptionPBrowse, edit and run a Smalltalk image whose every class was loaded from source.displayStratum Smalltalk
+identifierstratum-smalltalklicense
+Apache-2.0	publishereuriskoversion0.1.0view	Smalltalk	languages	
+extensions.stlabel	Smalltalkname	smalltalk	comment;
+extensions.metalabelMetanamemeta	comment;
+extensions.grammarlabelGrammarnamegrammarname	smalltalk	navigator	nameimage	placementleftrevealtitleImage
+placements	bottompanelbottom-leftpanelbottom-rightpanelcentrepanelleftactivitybarrightbeside
+top-centreactivitybartop-leftactivitybar

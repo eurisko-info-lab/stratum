@@ -1,0 +1,21 @@
+
+artifactchange
+change
+kind
+foundation
+nameF9->F10
+predecessor
+foundation-offoundations/F9
+
+delta-meta
+filechanges/F9-F10/delta-meta.canon
+delta-grammar
+file"changes/F9-F10/delta-grammar.canon
+feature
+feature
+name+constituted semantic retention and archives
+programs
+file+features/retention/retention.generated.meta
+sources
+	text-file!features/retention/retention.meta
+modesCurrentStateOnlyTransitionMetadataReplayableFoundationFullSemanticHistoryCheckpointedHistory

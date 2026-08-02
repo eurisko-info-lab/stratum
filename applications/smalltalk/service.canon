@@ -1,0 +1,73 @@
+; What the editor is allowed to know about this world.
+;
+; A map, not a tagged structure, because the host must not dispatch on any
+; vocabulary of the system built above it: it looks fields up by name and
+; copies them through. Every displayed name in the generated client comes
+; from here.
+{
+  name "smalltalk"
+
+  editor {
+    identifier "stratum-smalltalk"
+    display "Stratum Smalltalk"
+    description "Browse, edit and run a Smalltalk image whose every class was loaded from source."
+    publisher "eurisko"
+    version "0.1.0"
+    category "Smalltalk"
+    view "Smalltalk"
+    license "Apache-2.0"
+  }
+
+  ; The profile says where a pane belongs; only a client knows what those
+  ; places are called here, so the translation is declared rather than assumed.
+  placements {
+    bottom "panel"
+    centre "panel"
+    top-left "activitybar"
+    top-centre "activitybar"
+    bottom-left "panel"
+    bottom-right "panel"
+    left "activitybar"
+    right "beside"
+  }
+
+  ; The image is the world's navigator: a browser opens on what is loaded,
+  ; not on the file that happens to be in front of you.
+  navigator {
+    name "image"
+    title "Image"
+    placement left
+    reveal #t
+  }
+
+  languages [
+    {
+      name smalltalk
+      label "Smalltalk"
+      extensions [".st"]
+    }
+    {
+      name meta
+      label "Meta"
+      extensions [".meta"]
+      comment ";"
+    }
+    {
+      name grammar
+      label "Grammar"
+      extensions [".grammar"]
+      comment ";"
+    }
+  ]
+
+  commands [
+    {
+      name run-workspace
+      title "Smalltalk: run the workspace"
+    }
+    {
+      name browse-image
+      title "Smalltalk: browse the image"
+    }
+  ]
+}

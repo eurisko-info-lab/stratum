@@ -1,0 +1,14 @@
+; The Smalltalk studio profile, recorded as a canonical artifact.
+; The authoritative definition is `SmalltalkProfile` in
+; features/studio/studio.meta; this artifact records the selection.
+(profile
+  (name "smalltalk-browser")
+  (language smalltalk)
+  (layout four-pane-browser)
+  (navigation code-centric)
+  (panels [categories classes protocols method workspace inspector transcript changes])
+  (commands [accept-method evaluate-selection inspect-result browse-senders])
+  (workflow [edit evaluate inspect record])
+  (roles [developer])
+  (projections [senders])
+  (foreign []))

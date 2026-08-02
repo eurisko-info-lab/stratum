@@ -1,7 +1,7 @@
 {
-  "name": "stratum-studio",
-  "displayName": "Stratum Studio",
-  "description": "Editor client for any Stratum world. Run `lsp package` to bind it to one.",
+  "name": "stratum-smalltalk",
+  "displayName": "Stratum Smalltalk",
+  "description": "Browse, edit and run a Smalltalk image whose every class was loaded from source.",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "publisher": "eurisko",
@@ -11,19 +11,129 @@
   "categories": [
     "Programming Languages"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:smalltalk",
+    "onLanguage:meta",
+    "onLanguage:grammar"
+  ],
   "main": "./out/extension.js",
   "contributes": {
-    "languages": [],
-    "commands": [],
-    "viewsContainers": {},
-    "views": {},
+    "languages": [
+      {
+        "id": "smalltalk",
+        "aliases": [
+          "Smalltalk"
+        ],
+        "extensions": [
+          ".st"
+        ]
+      },
+      {
+        "id": "meta",
+        "aliases": [
+          "Meta"
+        ],
+        "extensions": [
+          ".meta"
+        ]
+      },
+      {
+        "id": "grammar",
+        "aliases": [
+          "Grammar"
+        ],
+        "extensions": [
+          ".grammar"
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "stratum.evaluate",
+        "title": "Stratum: evaluate selection",
+        "category": "Smalltalk"
+      },
+      {
+        "command": "stratum.run-workspace",
+        "title": "Smalltalk: run the workspace",
+        "category": "Smalltalk"
+      },
+      {
+        "command": "stratum.browse-image",
+        "title": "Smalltalk: browse the image",
+        "category": "Smalltalk"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "stratum.evaluate",
+        "key": "ctrl+shift+d",
+        "when": "editorTextFocus"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "stratum-activitybar",
+          "title": "Smalltalk",
+          "icon": "$(symbol-structure)"
+        }
+      ],
+      "panel": [
+        {
+          "id": "stratum-panel",
+          "title": "Smalltalk",
+          "icon": "$(symbol-structure)"
+        }
+      ]
+    },
+    "views": {
+      "stratum-activitybar": [
+        {
+          "id": "stratum.view.image",
+          "name": "Image",
+          "contextualTitle": "image (tree, left)"
+        },
+        {
+          "id": "stratum.view.classes",
+          "name": "classes",
+          "contextualTitle": "classes (list, top-left)"
+        },
+        {
+          "id": "stratum.view.selectors",
+          "name": "selectors",
+          "contextualTitle": "selectors (list, top-centre)"
+        }
+      ],
+      "stratum-panel": [
+        {
+          "id": "stratum.view.method",
+          "name": "method",
+          "contextualTitle": "method (text, centre)"
+        },
+        {
+          "id": "stratum.view.workspace",
+          "name": "workspace",
+          "contextualTitle": "workspace (text, bottom-left)"
+        },
+        {
+          "id": "stratum.view.inspector",
+          "name": "inspector",
+          "contextualTitle": "inspector (inspector, bottom-right)"
+        },
+        {
+          "id": "stratum.view.transcript",
+          "name": "transcript",
+          "contextualTitle": "transcript (list, bottom)"
+        }
+      ]
+    },
     "configuration": {
-      "title": "Stratum",
+      "title": "Smalltalk",
       "properties": {
         "stratum.world": {
           "type": "string",
-          "default": "applications/sds",
+          "default": "applications/smalltalk",
           "description": "The world directory whose service answers editor requests."
         },
         "stratum.server": {
@@ -32,8 +142,7 @@
           "description": "The command that starts the language server."
         }
       }
-    },
-    "grammars": []
+    }
   },
   "scripts": {
     "compile": "tsc -p .",

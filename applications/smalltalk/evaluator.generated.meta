@@ -1,0 +1,3181 @@
+; Generated from applications/smalltalk/evaluator.meta by ElaborateSource. Do not edit by hand.
+(program
+  (judgment
+    FlattenStatements
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Statements
+          (pv left)
+          (pv right))
+        (prim
+          append
+          (call
+            FlattenStatements
+            (v left))
+          (call
+            FlattenStatements
+            (v right))))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    FlattenSteps
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          BinarySteps
+          (pv left)
+          (pv right))
+        (prim
+          append
+          (call
+            FlattenSteps
+            (v left))
+          (call
+            FlattenSteps
+            (v right))))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    FlattenArguments
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          KeywordArguments
+          (pv left)
+          (pv right))
+        (prim
+          append
+          (call
+            FlattenArguments
+            (v left))
+          (call
+            FlattenArguments
+            (v right))))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    FlattenParameters
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          BlockParameters
+          (pv left)
+          (pv right))
+        (prim
+          append
+          (call
+            FlattenParameters
+            (v left))
+          (call
+            FlattenParameters
+            (v right))))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    FlattenPatternParts
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          PatternParts
+          (pv left)
+          (pv right))
+        (prim
+          append
+          (call
+            FlattenPatternParts
+            (v left))
+          (call
+            FlattenPatternParts
+            (v right))))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    FlattenNames
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Names
+          (pv left)
+          (pv right))
+        (prim
+          append
+          (call
+            FlattenNames
+            (v left))
+          (call
+            FlattenNames
+            (v right))))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    FlattenChunks
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Chunks
+          (pv left)
+          (pv right))
+        (prim
+          append
+          (call
+            FlattenChunks
+            (v left))
+          (call
+            FlattenChunks
+            (v right))))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    Unquoted
+    [text]
+    (if
+      (prim
+        lt
+        (prim
+          slen
+          (v text))
+        (q 2))
+      (v text)
+      (prim
+        ssub
+        (v text)
+        (q 1)
+        (prim
+          sub
+          (prim
+            slen
+            (v text))
+          (q 1)))))
+  (judgment
+    SymbolName
+    [symbol]
+    (let
+      name
+      (prim
+        sym->str
+        (v symbol))
+      (if
+        (prim
+          lt
+          (prim
+            slen
+            (v name))
+          (q 1))
+        (v symbol)
+        (prim
+          str->sym
+          (prim
+            ssub
+            (v name)
+            (q 1)
+            (prim
+              slen
+              (v name)))))))
+  (judgment
+    Nil
+    []
+    (mk nil))
+  (judgment
+    NameList
+    [nodes accumulated]
+    (match
+      (v nodes)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (match
+          (v head)
+          (case
+            (pm
+              Name
+              (pv value))
+            (call
+              NameList
+              (v rest)
+              (prim
+                snoc
+                (v accumulated)
+                (v value))))
+          (case
+            _
+            (call
+              NameList
+              (v rest)
+              (v accumulated)))))))
+  (judgment
+    TemporaryNames
+    [temporaries]
+    (match
+      (v temporaries)
+      (case
+        (pm
+          Temporaries
+          (pv names))
+        (call
+          NameList
+          (call
+            FlattenNames
+            (v names))
+          (lst)))
+      (case _ (lst))))
+  (judgment
+    EmptyImage
+    []
+    (mk
+      image
+      (prim
+        mput
+        (prim mnew)
+        (q Object)
+        (mk
+          class
+          (q Object)
+          (q nil)
+          (lst)
+          (prim mnew)))))
+  (judgment
+    ImageClasses
+    [image]
+    (match
+      (v image)
+      (case
+        (pm
+          image
+          (pv classes))
+        (v classes))))
+  (judgment
+    ClassNamed
+    [image name]
+    (prim
+      mget
+      (call
+        ImageClasses
+        (v image))
+      (v name)
+      (mk missing)))
+  (judgment
+    WithClass
+    [image class]
+    (match
+      (v class)
+      (case
+        (pm
+          class
+          (pv name)
+          (pv superclass)
+          (pv slots)
+          (pv methods))
+        (mk
+          image
+          (prim
+            mput
+            (call
+              ImageClasses
+              (v image))
+            (v name)
+            (v class))))))
+  (judgment
+    DefineClass
+    [image name superclass slots]
+    (match
+      (call
+        ClassNamed
+        (v image)
+        (v name))
+      (case
+        (pm
+          class
+          (pv existing)
+          (pv parent)
+          (pv existingSlots)
+          (pv methods))
+        (call
+          WithClass
+          (v image)
+          (mk
+            class
+            (v name)
+            (v superclass)
+            (v slots)
+            (v methods))))
+      (case
+        _
+        (call
+          WithClass
+          (v image)
+          (mk
+            class
+            (v name)
+            (v superclass)
+            (v slots)
+            (prim mnew))))))
+  (judgment
+    DefineMethod
+    [image name selector method]
+    (match
+      (call
+        ClassNamed
+        (v image)
+        (v name))
+      (case
+        (pm
+          class
+          (pv className)
+          (pv superclass)
+          (pv slots)
+          (pv methods))
+        (call
+          WithClass
+          (v image)
+          (mk
+            class
+            (v className)
+            (v superclass)
+            (v slots)
+            (prim
+              mput
+              (v methods)
+              (v selector)
+              (v method)))))
+      (case
+        _
+        (call
+          DefineMethod
+          (call
+            DefineClass
+            (v image)
+            (v name)
+            (q Object)
+            (lst))
+          (v name)
+          (v selector)
+          (v method)))))
+  (judgment
+    LookupMethod
+    [image class selector]
+    (match
+      (call
+        ClassNamed
+        (v image)
+        (v class))
+      (case
+        (pm
+          class
+          (pv name)
+          (pv superclass)
+          (pv slots)
+          (pv methods))
+        (if
+          (prim
+            mhas
+            (v methods)
+            (v selector))
+          (mk
+            found
+            (v name)
+            (prim
+              mget
+              (v methods)
+              (v selector)
+              (mk missing)))
+          (match
+            (v superclass)
+            (case
+              (pm nil)
+              (mk missing))
+            (case
+              _
+              (call
+                LookupMethod
+                (v image)
+                (v superclass)
+                (v selector))))))
+      (case
+        _
+        (mk missing))))
+  (judgment
+    AllSlots
+    [image class]
+    (match
+      (call
+        ClassNamed
+        (v image)
+        (v class))
+      (case
+        (pm
+          class
+          (pv name)
+          (pv superclass)
+          (pv slots)
+          (pv methods))
+        (match
+          (v superclass)
+          (case
+            (pm nil)
+            (v slots))
+          (case
+            _
+            (prim
+              append
+              (call
+                AllSlots
+                (v image)
+                (v superclass))
+              (v slots)))))
+      (case _ (lst))))
+  (judgment
+    EmptyHeap
+    []
+    (mk
+      heap
+      (prim mnew)
+      (q 0)))
+  (judgment
+    FreshObjectName
+    [heap]
+    (match
+      (v heap)
+      (case
+        (pm
+          heap
+          (pv objects)
+          (pv next))
+        (prim
+          str->sym
+          (prim
+            scat
+            (q "object")
+            (prim
+              nat->str
+              (v next)))))))
+  (judgment
+    WithObject
+    [heap name contents]
+    (match
+      (v heap)
+      (case
+        (pm
+          heap
+          (pv objects)
+          (pv next))
+        (mk
+          heap
+          (prim
+            mput
+            (v objects)
+            (v name)
+            (v contents))
+          (prim
+            add
+            (v next)
+            (q 1))))))
+  (judgment
+    ContentsOf
+    [heap name]
+    (match
+      (v heap)
+      (case
+        (pm
+          heap
+          (pv objects)
+          (pv next))
+        (prim
+          mget
+          (v objects)
+          (v name)
+          (mk missing)))))
+  (judgment
+    Allocate
+    [image heap class]
+    (let
+      slots
+      (call
+        InitialSlots
+        (call
+          AllSlots
+          (v image)
+          (v class))
+        (prim mnew))
+      (let
+        name
+        (call
+          FreshObjectName
+          (v heap))
+        (mk
+          allocated
+          (mk
+            instance
+            (v class)
+            (v name))
+          (call
+            WithObject
+            (v heap)
+            (v name)
+            (v slots))))))
+  (judgment
+    InitialSlots
+    [names accumulated]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        _
+        (call
+          InitialSlots
+          (prim
+            tail
+            (v names))
+          (prim
+            mput
+            (v accumulated)
+            (prim
+              head
+              (v names))
+            (call Nil))))))
+  (judgment
+    SlotsOf
+    [heap object]
+    (match
+      (v object)
+      (case
+        (pm
+          instance
+          (pv class)
+          (pv name))
+        (call
+          ContentsOf
+          (v heap)
+          (v name)))
+      (case
+        _
+        (prim mnew))))
+  (judgment
+    WithSlot
+    [heap object slot value]
+    (match
+      (v object)
+      (case
+        (pm
+          instance
+          (pv class)
+          (pv name))
+        (match
+          (v heap)
+          (case
+            (pm
+              heap
+              (pv objects)
+              (pv next))
+            (mk
+              heap
+              (prim
+                mput
+                (v objects)
+                (v name)
+                (prim
+                  mput
+                  (prim
+                    mget
+                    (v objects)
+                    (v name)
+                    (prim mnew))
+                  (v slot)
+                  (v value)))
+              (v next)))))
+      (case
+        _
+        (v heap))))
+  (judgment
+    NewFrame
+    [heap bindings parent]
+    (let
+      name
+      (call
+        FreshObjectName
+        (v heap))
+      (mk
+        framed
+        (v name)
+        (call
+          WithObject
+          (v heap)
+          (v name)
+          (mk
+            frame
+            (v bindings)
+            (v parent))))))
+  (judgment
+    FrameBindings
+    [heap frame]
+    (match
+      (call
+        ContentsOf
+        (v heap)
+        (v frame))
+      (case
+        (pm
+          frame
+          (pv bindings)
+          (pv parent))
+        (v bindings))
+      (case
+        _
+        (prim mnew))))
+  (judgment
+    FrameParent
+    [heap frame]
+    (match
+      (call
+        ContentsOf
+        (v heap)
+        (v frame))
+      (case
+        (pm
+          frame
+          (pv bindings)
+          (pv parent))
+        (v parent))
+      (case
+        _
+        (call Nil))))
+  (judgment
+    FrameHolding
+    [heap frame name]
+    (match
+      (call
+        ContentsOf
+        (v heap)
+        (v frame))
+      (case
+        (pm
+          frame
+          (pv bindings)
+          (pv parent))
+        (if
+          (prim
+            mhas
+            (v bindings)
+            (v name))
+          (mk
+            found
+            (v frame))
+          (match
+            (v parent)
+            (case
+              (pm nil)
+              (mk missing))
+            (case
+              _
+              (call
+                FrameHolding
+                (v heap)
+                (v parent)
+                (v name))))))
+      (case
+        _
+        (mk missing))))
+  (judgment
+    FrameBind
+    [heap frame name value]
+    (match
+      (v heap)
+      (case
+        (pm
+          heap
+          (pv objects)
+          (pv next))
+        (match
+          (call
+            ContentsOf
+            (v heap)
+            (v frame))
+          (case
+            (pm
+              frame
+              (pv bindings)
+              (pv parent))
+            (mk
+              heap
+              (prim
+                mput
+                (v objects)
+                (v frame)
+                (mk
+                  frame
+                  (prim
+                    mput
+                    (v bindings)
+                    (v name)
+                    (v value))
+                  (v parent)))
+              (v next)))
+          (case
+            _
+            (v heap))))))
+  (judgment
+    ClassOf
+    [value]
+    (if
+      (prim
+        is-nat
+        (v value))
+      (q Integer)
+      (if
+        (prim
+          is-str
+          (v value))
+        (q String)
+        (if
+          (prim
+            is-bool
+            (v value))
+          (q Boolean)
+          (match
+            (v value)
+            (case
+              (pm
+                instance
+                (pv class)
+                (pv name))
+              (v class))
+            (case
+              (pm
+                block
+                (pv parameters)
+                (pv body)
+                (pv environment))
+              (q Block))
+            (case
+              (pm
+                class-reference
+                (pv name))
+              (q Class))
+            (case
+              (pm nil)
+              (q UndefinedObject))
+            (case
+              _
+              (if
+                (prim
+                  is-sym
+                  (v value))
+                (q Symbol)
+                (q Object))))))))
+  (judgment
+    PrintBoolean
+    [flag]
+    (if
+      (v flag)
+      (q "true")
+      (q "false")))
+  (judgment
+    PrintValue
+    [value]
+    (if
+      (prim
+        is-nat
+        (v value))
+      (prim
+        nat->str
+        (v value))
+      (if
+        (prim
+          is-str
+          (v value))
+        (v value)
+        (if
+          (prim
+            is-bool
+            (v value))
+          (call
+            PrintBoolean
+            (v value))
+          (match
+            (v value)
+            (case
+              (pm nil)
+              (q "nil"))
+            (case
+              (pm
+                instance
+                (pv class)
+                (pv name))
+              (prim
+                scat
+                (q "a ")
+                (prim
+                  sym->str
+                  (v class))))
+            (case
+              (pm
+                block
+                (pv parameters)
+                (pv body)
+                (pv environment))
+              (q "a Block"))
+            (case
+              (pm
+                class-reference
+                (pv name))
+              (prim
+                sym->str
+                (v name)))
+            (case
+              _
+              (if
+                (prim
+                  is-sym
+                  (v value))
+                (prim
+                  scat
+                  (q "#")
+                  (prim
+                    sym->str
+                    (v value)))
+                (q "an Object"))))))))
+  (judgment
+    EvalExpression
+    [image heap frame expression]
+    (match
+      (v expression)
+      (case
+        (pm
+          Number
+          (pv value))
+        (mk
+          done
+          (v value)
+          (v heap)))
+      (case
+        (pm
+          Text
+          (pv value))
+        (mk
+          done
+          (call
+            Unquoted
+            (v value))
+          (v heap)))
+      (case
+        (pm
+          Symbol
+          (pv value))
+        (mk
+          done
+          (call
+            SymbolName
+            (v value))
+          (v heap)))
+      (case
+        (pm
+          Variable
+          (pv name))
+        (mk
+          done
+          (call
+            LookupVariable
+            (v image)
+            (v heap)
+            (v frame)
+            (v name))
+          (v heap)))
+      (case
+        (pm
+          Block
+          (pv body))
+        (mk
+          done
+          (mk
+            block
+            (lst)
+            (v body)
+            (v frame))
+          (v heap)))
+      (case
+        (pm
+          BlockWithTemporaries
+          (pv temporaries)
+          (pv body))
+        (mk
+          done
+          (mk
+            block
+            (call
+              TemporaryNames
+              (v temporaries))
+            (v body)
+            (v frame))
+          (v heap)))
+      (case
+        (pm
+          BlockWithBoth
+          (pv parameters)
+          (pv temporaries)
+          (pv body))
+        (mk
+          done
+          (mk
+            block
+            (prim
+              append
+              (call
+                ParameterNames
+                (call
+                  FlattenParameters
+                  (v parameters)))
+              (call
+                TemporaryNames
+                (v temporaries)))
+            (v body)
+            (v frame))
+          (v heap)))
+      (case
+        (pm
+          BlockWith
+          (pv parameters)
+          (pv body))
+        (mk
+          done
+          (mk
+            block
+            (call
+              ParameterNames
+              (call
+                FlattenParameters
+                (v parameters)))
+            (v body)
+            (v frame))
+          (v heap)))
+      (case
+        (pm
+          Assign
+          (pv target)
+          (pv value))
+        (match
+          (call
+            EvalExpression
+            (v image)
+            (v heap)
+            (v frame)
+            (v value))
+          (case
+            (pm
+              done
+              (pv result)
+              (pv nextHeap))
+            (mk
+              done
+              (v result)
+              (call
+                AssignTo
+                (v image)
+                (v nextHeap)
+                (v frame)
+                (v target)
+                (v result))))))
+      (case
+        (pm
+          Send
+          (pv receiver)
+          (pv selector))
+        (match
+          (call
+            EvalExpression
+            (v image)
+            (v heap)
+            (v frame)
+            (v receiver))
+          (case
+            (pm
+              done
+              (pv value)
+              (pv nextHeap))
+            (match
+              (call
+                SendMessage
+                (v image)
+                (v nextHeap)
+                (v value)
+                (call
+                  SelectorOf
+                  (v selector))
+                (lst))
+              (case
+                (pm
+                  sent
+                  (pv answer)
+                  (pv finalHeap))
+                (mk
+                  done
+                  (v answer)
+                  (v finalHeap)))))))
+      (case
+        (pm
+          BinarySend
+          (pv receiver)
+          (pv steps))
+        (match
+          (call
+            EvalExpression
+            (v image)
+            (v heap)
+            (v frame)
+            (v receiver))
+          (case
+            (pm
+              done
+              (pv value)
+              (pv nextHeap))
+            (call
+              EvalSteps
+              (v image)
+              (v nextHeap)
+              (v frame)
+              (v value)
+              (call
+                FlattenSteps
+                (v steps))))))
+      (case
+        (pm
+          KeywordSend
+          (pv receiver)
+          (pv arguments))
+        (match
+          (call
+            EvalExpression
+            (v image)
+            (v heap)
+            (v frame)
+            (v receiver))
+          (case
+            (pm
+              done
+              (pv value)
+              (pv nextHeap))
+            (call
+              EvalKeyword
+              (v image)
+              (v nextHeap)
+              (v frame)
+              (v value)
+              (call
+                FlattenArguments
+                (v arguments))))))
+      (case
+        _
+        (mk
+          done
+          (call Nil)
+          (v heap)))))
+  (judgment
+    SelectorOf
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Variable
+          (pv name))
+        (v name))
+      (case
+        _
+        (q yourself))))
+  (judgment
+    ParameterNames
+    [parameters]
+    (match
+      (v parameters)
+      (case (pnil) (lst))
+      (case
+        _
+        (match
+          (prim
+            head
+            (v parameters))
+          (case
+            (pm
+              BlockParameter
+              (pv name))
+            (prim
+              cons
+              (v name)
+              (call
+                ParameterNames
+                (prim
+                  tail
+                  (v parameters)))))
+          (case
+            _
+            (call
+              ParameterNames
+              (prim
+                tail
+                (v parameters))))))))
+  (judgment
+    EvalSteps
+    [image heap frame receiver steps]
+    (match
+      (v steps)
+      (case
+        (pnil)
+        (mk
+          done
+          (v receiver)
+          (v heap)))
+      (case
+        _
+        (match
+          (prim
+            head
+            (v steps))
+          (case
+            (pm
+              BinaryStep
+              (pv selector)
+              (pv argument))
+            (match
+              (call
+                EvalExpression
+                (v image)
+                (v heap)
+                (v frame)
+                (v argument))
+              (case
+                (pm
+                  done
+                  (pv value)
+                  (pv nextHeap))
+                (match
+                  (call
+                    SendMessage
+                    (v image)
+                    (v nextHeap)
+                    (v receiver)
+                    (v selector)
+                    (lst
+                      (v value)))
+                  (case
+                    (pm
+                      sent
+                      (pv answer)
+                      (pv finalHeap))
+                    (call
+                      EvalSteps
+                      (v image)
+                      (v finalHeap)
+                      (v frame)
+                      (v answer)
+                      (prim
+                        tail
+                        (v steps))))))))
+          (case
+            _
+            (mk
+              done
+              (v receiver)
+              (v heap)))))))
+  (judgment
+    SelectorName
+    [selector]
+    (prim
+      sym->str
+      (v selector)))
+  (judgment
+    KeywordSelector
+    [arguments accumulated]
+    (match
+      (v arguments)
+      (case
+        (pnil)
+        (prim
+          str->sym
+          (v accumulated)))
+      (case
+        _
+        (match
+          (prim
+            head
+            (v arguments))
+          (case
+            (pm
+              KeywordArgument
+              (pv selector)
+              (pv argument))
+            (call
+              KeywordSelector
+              (prim
+                tail
+                (v arguments))
+              (prim
+                scat
+                (v accumulated)
+                (prim
+                  sym->str
+                  (v selector)))))
+          (case
+            _
+            (call
+              KeywordSelector
+              (prim
+                tail
+                (v arguments))
+              (v accumulated)))))))
+  (judgment
+    EvalKeywordArguments
+    [image heap frame arguments accumulated]
+    (match
+      (v arguments)
+      (case
+        (pnil)
+        (mk
+          arguments
+          (v accumulated)
+          (v heap)))
+      (case
+        _
+        (match
+          (prim
+            head
+            (v arguments))
+          (case
+            (pm
+              KeywordArgument
+              (pv selector)
+              (pv argument))
+            (match
+              (call
+                EvalExpression
+                (v image)
+                (v heap)
+                (v frame)
+                (v argument))
+              (case
+                (pm
+                  done
+                  (pv value)
+                  (pv nextHeap))
+                (call
+                  EvalKeywordArguments
+                  (v image)
+                  (v nextHeap)
+                  (v frame)
+                  (prim
+                    tail
+                    (v arguments))
+                  (prim
+                    snoc
+                    (v accumulated)
+                    (v value))))))
+          (case
+            _
+            (call
+              EvalKeywordArguments
+              (v image)
+              (v heap)
+              (v frame)
+              (prim
+                tail
+                (v arguments))
+              (v accumulated)))))))
+  (judgment
+    IsConditional
+    [selector]
+    (prim
+      contains
+      (lst
+        (q "ifTrue:")
+        (q "ifFalse:")
+        (q "ifTrue:ifFalse:")
+        (q "ifFalse:ifTrue:")
+        (q "and:")
+        (q "or:"))
+      (call
+        SelectorName
+        (v selector))))
+  (judgment
+    EvalKeyword
+    [image heap frame receiver arguments]
+    (let
+      selector
+      (call
+        KeywordSelector
+        (v arguments)
+        (q ""))
+      (if
+        (prim
+          and
+          (prim
+            is-bool
+            (v receiver))
+          (call
+            IsConditional
+            (v selector)))
+        (call
+          EvalConditional
+          (v image)
+          (v heap)
+          (v frame)
+          (v receiver)
+          (v selector)
+          (v arguments))
+        (match
+          (call
+            EvalKeywordArguments
+            (v image)
+            (v heap)
+            (v frame)
+            (v arguments)
+            (lst))
+          (case
+            (pm
+              arguments
+              (pv values)
+              (pv nextHeap))
+            (match
+              (call
+                SendMessage
+                (v image)
+                (v nextHeap)
+                (v receiver)
+                (v selector)
+                (v values))
+              (case
+                (pm
+                  sent
+                  (pv answer)
+                  (pv finalHeap))
+                (mk
+                  done
+                  (v answer)
+                  (v finalHeap)))))))))
+  (judgment
+    ArgumentAt
+    [arguments index]
+    (match
+      (prim
+        nth
+        (v arguments)
+        (v index))
+      (case
+        (pm
+          KeywordArgument
+          (pv selector)
+          (pv argument))
+        (v argument))
+      (case
+        _
+        (mk
+          Variable
+          (q nil)))))
+  (judgment
+    EvalConditional
+    [image heap frame receiver selector arguments]
+    (let
+      inverted
+      (prim
+        contains
+        (lst
+          (q "ifFalse:")
+          (q "ifFalse:ifTrue:")
+          (q "or:"))
+        (call
+          SelectorName
+          (v selector)))
+      (if
+        (if
+          (v inverted)
+          (prim
+            not
+            (v receiver))
+          (v receiver))
+        (call
+          EvalBranch
+          (v image)
+          (v heap)
+          (v frame)
+          (call
+            ArgumentAt
+            (v arguments)
+            (q 0)))
+        (call
+          EvalAlternative
+          (v image)
+          (v heap)
+          (v frame)
+          (v selector)
+          (v arguments)))))
+  (judgment
+    EvalBranch
+    [image heap frame expression]
+    (match
+      (call
+        EvalExpression
+        (v image)
+        (v heap)
+        (v frame)
+        (v expression))
+      (case
+        (pm
+          done
+          (pv value)
+          (pv nextHeap))
+        (call
+          RunBlockValue
+          (v image)
+          (v nextHeap)
+          (v value)))))
+  (judgment
+    RunBlockValue
+    [image heap value]
+    (match
+      (call
+        RunBlock
+        (v image)
+        (v heap)
+        (v value)
+        (lst))
+      (case
+        (pm
+          sent
+          (pv answer)
+          (pv finalHeap))
+        (mk
+          done
+          (v answer)
+          (v finalHeap)))))
+  (judgment
+    EvalAlternative
+    [image heap frame selector arguments]
+    (if
+      (prim
+        lt
+        (prim
+          len
+          (v arguments))
+        (q 2))
+      (if
+        (prim
+          eq
+          (call
+            SelectorName
+            (v selector))
+          (q "and:"))
+        (mk
+          done
+          (q #f)
+          (v heap))
+        (if
+          (prim
+            eq
+            (call
+              SelectorName
+              (v selector))
+            (q "or:"))
+          (mk
+            done
+            (q #t)
+            (v heap))
+          (mk
+            done
+            (call Nil)
+            (v heap))))
+      (call
+        EvalBranch
+        (v image)
+        (v heap)
+        (v frame)
+        (call
+          ArgumentAt
+          (v arguments)
+          (q 1)))))
+  (judgment
+    SelfOf
+    [heap frame]
+    (match
+      (call
+        FrameHolding
+        (v heap)
+        (v frame)
+        (q self))
+      (case
+        (pm
+          found
+          (pv holder))
+        (prim
+          mget
+          (call
+            FrameBindings
+            (v heap)
+            (v holder))
+          (q self)
+          (call Nil)))
+      (case
+        _
+        (call Nil))))
+  (judgment
+    LookupVariable
+    [image heap frame name]
+    (if
+      (prim
+        eq
+        (v name)
+        (q nil))
+      (call Nil)
+      (if
+        (prim
+          eq
+          (v name)
+          (q true))
+        (q #t)
+        (if
+          (prim
+            eq
+            (v name)
+            (q false))
+          (q #f)
+          (match
+            (call
+              FrameHolding
+              (v heap)
+              (v frame)
+              (v name))
+            (case
+              (pm
+                found
+                (pv holder))
+              (prim
+                mget
+                (call
+                  FrameBindings
+                  (v heap)
+                  (v holder))
+                (v name)
+                (call Nil)))
+            (case
+              _
+              (let
+                slots
+                (call
+                  SlotsOf
+                  (v heap)
+                  (call
+                    SelfOf
+                    (v heap)
+                    (v frame)))
+                (if
+                  (prim
+                    mhas
+                    (v slots)
+                    (v name))
+                  (prim
+                    mget
+                    (v slots)
+                    (v name)
+                    (call Nil))
+                  (match
+                    (call
+                      ClassNamed
+                      (v image)
+                      (v name))
+                    (case
+                      (pm
+                        class
+                        (pv className)
+                        (pv superclass)
+                        (pv classSlots)
+                        (pv methods))
+                      (mk
+                        class-reference
+                        (v className)))
+                    (case
+                      _
+                      (call Nil)))))))))))
+  (judgment
+    AssignTo
+    [image heap frame name value]
+    (match
+      (call
+        FrameHolding
+        (v heap)
+        (v frame)
+        (v name))
+      (case
+        (pm
+          found
+          (pv holder))
+        (call
+          FrameBind
+          (v heap)
+          (v holder)
+          (v name)
+          (v value)))
+      (case
+        _
+        (let
+          self
+          (call
+            SelfOf
+            (v heap)
+            (v frame))
+          (if
+            (prim
+              mhas
+              (call
+                SlotsOf
+                (v heap)
+                (v self))
+              (v name))
+            (call
+              WithSlot
+              (v heap)
+              (v self)
+              (v name)
+              (v value))
+            (call
+              FrameBind
+              (v heap)
+              (v frame)
+              (v name)
+              (v value)))))))
+  (judgment
+    SendMessage
+    [image heap receiver selector arguments]
+    (match
+      (call
+        LookupMethod
+        (v image)
+        (call
+          ClassOf
+          (v receiver))
+        (v selector))
+      (case
+        (pm
+          found
+          (pv holder)
+          (pv method))
+        (call
+          InvokeMethod
+          (v image)
+          (v heap)
+          (v receiver)
+          (v method)
+          (v arguments)))
+      (case
+        _
+        (call
+          PrimitiveSend
+          (v image)
+          (v heap)
+          (v receiver)
+          (v selector)
+          (v arguments)))))
+  (judgment
+    BindParameters
+    [bindings names values]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (v bindings))
+      (case
+        _
+        (call
+          BindParameters
+          (prim
+            mput
+            (v bindings)
+            (prim
+              head
+              (v names))
+            (if
+              (prim
+                eq
+                (prim
+                  len
+                  (v values))
+                (q 0))
+              (call Nil)
+              (prim
+                head
+                (v values))))
+          (prim
+            tail
+            (v names))
+          (if
+            (prim
+              eq
+              (prim
+                len
+                (v values))
+              (q 0))
+            (v values)
+            (prim
+              tail
+              (v values)))))))
+  (judgment
+    InvokeMethod
+    [image heap receiver method arguments]
+    (match
+      (v method)
+      (case
+        (pm
+          method
+          (pv parameters)
+          (pv body)
+          (pv chunk))
+        (let
+          bindings
+          (call
+            BindParameters
+            (prim
+              mput
+              (prim mnew)
+              (q self)
+              (v receiver))
+            (v parameters)
+            (v arguments))
+          (match
+            (call
+              NewFrame
+              (v heap)
+              (v bindings)
+              (call Nil))
+            (case
+              (pm
+                framed
+                (pv frame)
+                (pv nextHeap))
+              (match
+                (call
+                  EvalStatements
+                  (v image)
+                  (v nextHeap)
+                  (v frame)
+                  (call
+                    FlattenStatements
+                    (v body)))
+                (case
+                  (pm
+                    returned
+                    (pv value)
+                    (pv finalHeap))
+                  (mk
+                    sent
+                    (call
+                      NonLocalValue
+                      (v value))
+                    (v finalHeap)))
+                (case
+                  (pm
+                    normal
+                    (pv value)
+                    (pv finalHeap))
+                  (mk
+                    sent
+                    (v receiver)
+                    (v finalHeap))))))))))
+  (judgment
+    IsNonLocal
+    [value]
+    (match
+      (v value)
+      (case
+        (pm
+          non-local
+          (pv inner))
+        (q #t))
+      (case
+        _
+        (q #f))))
+  (judgment
+    NonLocalValue
+    [value]
+    (match
+      (v value)
+      (case
+        (pm
+          non-local
+          (pv inner))
+        (v inner))
+      (case
+        _
+        (v value))))
+  (judgment
+    RunBlock
+    [image heap block arguments]
+    (match
+      (v block)
+      (case
+        (pm
+          block
+          (pv parameters)
+          (pv body)
+          (pv environment))
+        (match
+          (call
+            NewFrame
+            (v heap)
+            (call
+              BindParameters
+              (prim mnew)
+              (v parameters)
+              (v arguments))
+            (v environment))
+          (case
+            (pm
+              framed
+              (pv frame)
+              (pv nextHeap))
+            (match
+              (call
+                EvalStatements
+                (v image)
+                (v nextHeap)
+                (v frame)
+                (call
+                  FlattenStatements
+                  (v body)))
+              (case
+                (pm
+                  returned
+                  (pv value)
+                  (pv finalHeap))
+                (mk
+                  sent
+                  (mk
+                    non-local
+                    (call
+                      NonLocalValue
+                      (v value)))
+                  (v finalHeap)))
+              (case
+                (pm
+                  normal
+                  (pv value)
+                  (pv finalHeap))
+                (mk
+                  sent
+                  (v value)
+                  (v finalHeap)))))))
+      (case
+        _
+        (mk
+          sent
+          (v block)
+          (v heap)))))
+  (judgment
+    EvalStatements
+    [image heap frame statements]
+    (match
+      (v statements)
+      (case
+        (pnil)
+        (mk
+          normal
+          (call Nil)
+          (v heap)))
+      (case
+        _
+        (match
+          (prim
+            head
+            (v statements))
+          (case
+            (pm
+              Return
+              (pv value))
+            (call
+              EvalReturn
+              (v image)
+              (v heap)
+              (v frame)
+              (v value)))
+          (case
+            (pm
+              ReturnFinal
+              (pv value))
+            (call
+              EvalReturn
+              (v image)
+              (v heap)
+              (v frame)
+              (v value)))
+          (case
+            (pm
+              Evaluate
+              (pv value))
+            (call
+              EvalNext
+              (v image)
+              (v heap)
+              (v frame)
+              (v value)
+              (prim
+                tail
+                (v statements))))
+          (case
+            (pm
+              EvaluateFinal
+              (pv value))
+            (call
+              EvalNext
+              (v image)
+              (v heap)
+              (v frame)
+              (v value)
+              (prim
+                tail
+                (v statements))))
+          (case
+            _
+            (mk
+              normal
+              (call Nil)
+              (v heap)))))))
+  (judgment
+    EvalReturn
+    [image heap frame expression]
+    (match
+      (call
+        EvalExpression
+        (v image)
+        (v heap)
+        (v frame)
+        (v expression))
+      (case
+        (pm
+          done
+          (pv value)
+          (pv nextHeap))
+        (mk
+          returned
+          (call
+            NonLocalValue
+            (v value))
+          (v nextHeap)))))
+  (judgment
+    EvalNext
+    [image heap frame expression rest]
+    (match
+      (call
+        EvalExpression
+        (v image)
+        (v heap)
+        (v frame)
+        (v expression))
+      (case
+        (pm
+          done
+          (pv value)
+          (pv nextHeap))
+        (if
+          (call
+            IsNonLocal
+            (v value))
+          (mk
+            returned
+            (call
+              NonLocalValue
+              (v value))
+            (v nextHeap))
+          (match
+            (v rest)
+            (case
+              (pnil)
+              (mk
+                normal
+                (v value)
+                (v nextHeap)))
+            (case
+              _
+              (call
+                EvalStatements
+                (v image)
+                (v nextHeap)
+                (v frame)
+                (v rest))))))))
+  (judgment
+    ArgumentOne
+    [arguments]
+    (if
+      (prim
+        eq
+        (prim
+          len
+          (v arguments))
+        (q 0))
+      (call Nil)
+      (prim
+        nth
+        (v arguments)
+        (q 0))))
+  (judgment
+    ArgumentTwo
+    [arguments]
+    (if
+      (prim
+        lt
+        (prim
+          len
+          (v arguments))
+        (q 2))
+      (call Nil)
+      (prim
+        nth
+        (v arguments)
+        (q 1))))
+  (judgment
+    PrimitiveSend
+    [image heap receiver selector arguments]
+    (let
+      name
+      (call
+        SelectorName
+        (v selector))
+      (let
+        argument
+        (call
+          ArgumentOne
+          (v arguments))
+        (if
+          (prim
+            eq
+            (v name)
+            (q "printString"))
+          (mk
+            sent
+            (call
+              PrintValue
+              (v receiver))
+            (v heap))
+          (if
+            (prim
+              eq
+              (v name)
+              (q "class"))
+            (mk
+              sent
+              (mk
+                class-reference
+                (call
+                  ClassOf
+                  (v receiver)))
+              (v heap))
+            (if
+              (prim
+                eq
+                (v name)
+                (q "yourself"))
+              (mk
+                sent
+                (v receiver)
+                (v heap))
+              (if
+                (prim
+                  eq
+                  (v name)
+                  (q "isNil"))
+                (mk
+                  sent
+                  (prim
+                    eq
+                    (v receiver)
+                    (call Nil))
+                  (v heap))
+                (if
+                  (prim
+                    eq
+                    (v name)
+                    (q "notNil"))
+                  (mk
+                    sent
+                    (prim
+                      not
+                      (prim
+                        eq
+                        (v receiver)
+                        (call Nil)))
+                    (v heap))
+                  (if
+                    (prim
+                      eq
+                      (v name)
+                      (q "="))
+                    (mk
+                      sent
+                      (prim
+                        eq
+                        (v receiver)
+                        (v argument))
+                      (v heap))
+                    (if
+                      (prim
+                        eq
+                        (v name)
+                        (q "=="))
+                      (mk
+                        sent
+                        (prim
+                          eq
+                          (v receiver)
+                          (v argument))
+                        (v heap))
+                      (if
+                        (prim
+                          eq
+                          (v name)
+                          (q "~="))
+                        (mk
+                          sent
+                          (prim
+                            ne
+                            (v receiver)
+                            (v argument))
+                          (v heap))
+                        (if
+                          (prim
+                            eq
+                            (v name)
+                            (q "not"))
+                          (mk
+                            sent
+                            (prim
+                              not
+                              (v receiver))
+                            (v heap))
+                          (if
+                            (prim
+                              is-nat
+                              (v receiver))
+                            (call
+                              IntegerPrimitive
+                              (v image)
+                              (v heap)
+                              (v receiver)
+                              (v name)
+                              (v argument)
+                              (v arguments))
+                            (if
+                              (prim
+                                is-str
+                                (v receiver))
+                              (call
+                                StringPrimitive
+                                (v image)
+                                (v heap)
+                                (v receiver)
+                                (v name)
+                                (v argument))
+                              (call
+                                ObjectPrimitive
+                                (v image)
+                                (v heap)
+                                (v receiver)
+                                (v name)
+                                (v argument)
+                                (v arguments))))))))))))))))
+  (judgment
+    IntegerPrimitive
+    [image heap receiver name argument arguments]
+    (if
+      (prim
+        eq
+        (v name)
+        (q "+"))
+      (mk
+        sent
+        (prim
+          add
+          (v receiver)
+          (v argument))
+        (v heap))
+      (if
+        (prim
+          eq
+          (v name)
+          (q "-"))
+        (mk
+          sent
+          (prim
+            sub
+            (v receiver)
+            (v argument))
+          (v heap))
+        (if
+          (prim
+            eq
+            (v name)
+            (q "*"))
+          (mk
+            sent
+            (prim
+              mul
+              (v receiver)
+              (v argument))
+            (v heap))
+          (if
+            (prim
+              eq
+              (v name)
+              (q "//"))
+            (mk
+              sent
+              (prim
+                div
+                (v receiver)
+                (v argument))
+              (v heap))
+            (if
+              (prim
+                eq
+                (v name)
+                (q "\\\\\\\\"))
+              (mk
+                sent
+                (prim
+                  mod
+                  (v receiver)
+                  (v argument))
+                (v heap))
+              (if
+                (prim
+                  eq
+                  (v name)
+                  (q "<"))
+                (mk
+                  sent
+                  (prim
+                    lt
+                    (v receiver)
+                    (v argument))
+                  (v heap))
+                (if
+                  (prim
+                    eq
+                    (v name)
+                    (q ">"))
+                  (mk
+                    sent
+                    (prim
+                      gt
+                      (v receiver)
+                      (v argument))
+                    (v heap))
+                  (if
+                    (prim
+                      eq
+                      (v name)
+                      (q "<="))
+                    (mk
+                      sent
+                      (prim
+                        le
+                        (v receiver)
+                        (v argument))
+                      (v heap))
+                    (if
+                      (prim
+                        eq
+                        (v name)
+                        (q ">="))
+                      (mk
+                        sent
+                        (prim
+                          ge
+                          (v receiver)
+                          (v argument))
+                        (v heap))
+                      (if
+                        (prim
+                          eq
+                          (v name)
+                          (q "max:"))
+                        (mk
+                          sent
+                          (prim
+                            max
+                            (v receiver)
+                            (v argument))
+                          (v heap))
+                        (if
+                          (prim
+                            eq
+                            (v name)
+                            (q "min:"))
+                          (mk
+                            sent
+                            (prim
+                              min
+                              (v receiver)
+                              (v argument))
+                            (v heap))
+                          (if
+                            (prim
+                              eq
+                              (v name)
+                              (q "timesRepeat:"))
+                            (call
+                              TimesRepeat
+                              (v image)
+                              (v heap)
+                              (v receiver)
+                              (v argument))
+                            (if
+                              (prim
+                                eq
+                                (v name)
+                                (q "to:do:"))
+                              (call
+                                ToDo
+                                (v image)
+                                (v heap)
+                                (v receiver)
+                                (v argument)
+                                (call
+                                  ArgumentTwo
+                                  (v arguments)))
+                              (mk
+                                sent
+                                (call
+                                  DoesNotUnderstand
+                                  (v receiver)
+                                  (v name))
+                                (v heap))))))))))))))))
+  (judgment
+    TimesRepeat
+    [image heap count block]
+    (if
+      (prim
+        eq
+        (v count)
+        (q 0))
+      (mk
+        sent
+        (v count)
+        (v heap))
+      (match
+        (call
+          RunBlock
+          (v image)
+          (v heap)
+          (v block)
+          (lst))
+        (case
+          (pm
+            sent
+            (pv value)
+            (pv nextHeap))
+          (call
+            TimesRepeat
+            (v image)
+            (v nextHeap)
+            (prim
+              sub
+              (v count)
+              (q 1))
+            (v block))))))
+  (judgment
+    ToDo
+    [image heap from to block]
+    (if
+      (prim
+        gt
+        (v from)
+        (v to))
+      (mk
+        sent
+        (v from)
+        (v heap))
+      (match
+        (call
+          RunBlock
+          (v image)
+          (v heap)
+          (v block)
+          (lst
+            (v from)))
+        (case
+          (pm
+            sent
+            (pv value)
+            (pv nextHeap))
+          (call
+            ToDo
+            (v image)
+            (v nextHeap)
+            (prim
+              add
+              (v from)
+              (q 1))
+            (v to)
+            (v block))))))
+  (judgment
+    StringPrimitive
+    [image heap receiver name argument]
+    (if
+      (prim
+        eq
+        (v name)
+        (q ","))
+      (mk
+        sent
+        (prim
+          scat
+          (v receiver)
+          (call
+            PrintValue
+            (v argument)))
+        (v heap))
+      (if
+        (prim
+          eq
+          (v name)
+          (q "size"))
+        (mk
+          sent
+          (prim
+            slen
+            (v receiver))
+          (v heap))
+        (if
+          (prim
+            eq
+            (v name)
+            (q "asSymbol"))
+          (mk
+            sent
+            (prim
+              str->sym
+              (v receiver))
+            (v heap))
+          (mk
+            sent
+            (call
+              DoesNotUnderstand
+              (v receiver)
+              (v name))
+            (v heap))))))
+  (judgment
+    ObjectPrimitive
+    [image heap receiver name argument arguments]
+    (match
+      (v receiver)
+      (case
+        (pm
+          class-reference
+          (pv class))
+        (if
+          (prim
+            eq
+            (v name)
+            (q "new"))
+          (call
+            NewInstance
+            (v image)
+            (v heap)
+            (v class))
+          (mk
+            sent
+            (call
+              DoesNotUnderstand
+              (v receiver)
+              (v name))
+            (v heap))))
+      (case
+        (pm
+          block
+          (pv parameters)
+          (pv body)
+          (pv environment))
+        (if
+          (prim
+            eq
+            (v name)
+            (q "value"))
+          (call
+            RunBlock
+            (v image)
+            (v heap)
+            (v receiver)
+            (lst))
+          (if
+            (prim
+              eq
+              (v name)
+              (q "value:"))
+            (call
+              RunBlock
+              (v image)
+              (v heap)
+              (v receiver)
+              (lst
+                (v argument)))
+            (if
+              (prim
+                eq
+                (v name)
+                (q "value:value:"))
+              (call
+                RunBlock
+                (v image)
+                (v heap)
+                (v receiver)
+                (v arguments))
+              (if
+                (prim
+                  eq
+                  (v name)
+                  (q "whileTrue:"))
+                (call
+                  WhileTrue
+                  (v image)
+                  (v heap)
+                  (v receiver)
+                  (v argument))
+                (mk
+                  sent
+                  (call
+                    DoesNotUnderstand
+                    (v receiver)
+                    (v name))
+                  (v heap)))))))
+      (case
+        _
+        (mk
+          sent
+          (call
+            DoesNotUnderstand
+            (v receiver)
+            (v name))
+          (v heap)))))
+  (judgment
+    WhileTrue
+    [image heap condition body]
+    (match
+      (call
+        RunBlock
+        (v image)
+        (v heap)
+        (v condition)
+        (lst))
+      (case
+        (pm
+          sent
+          (pv flag)
+          (pv nextHeap))
+        (if
+          (v flag)
+          (match
+            (call
+              RunBlock
+              (v image)
+              (v nextHeap)
+              (v body)
+              (lst))
+            (case
+              (pm
+                sent
+                (pv value)
+                (pv finalHeap))
+              (call
+                WhileTrue
+                (v image)
+                (v finalHeap)
+                (v condition)
+                (v body))))
+          (mk
+            sent
+            (call Nil)
+            (v nextHeap))))))
+  (judgment
+    NewInstance
+    [image heap class]
+    (match
+      (call
+        Allocate
+        (v image)
+        (v heap)
+        (v class))
+      (case
+        (pm
+          allocated
+          (pv object)
+          (pv nextHeap))
+        (mk
+          sent
+          (v object)
+          (v nextHeap)))))
+  (judgment
+    DoesNotUnderstand
+    [receiver name]
+    (mk
+      does-not-understand
+      (call
+        ClassOf
+        (v receiver))
+      (v name)))
+  (judgment
+    SplitNames
+    [text]
+    (call
+      SplitFrom
+      (v text)
+      (q 0)
+      (q 0)
+      (lst)))
+  (judgment
+    PushName
+    [text start stop accumulated]
+    (if
+      (prim
+        ge
+        (v start)
+        (v stop))
+      (v accumulated)
+      (prim
+        snoc
+        (v accumulated)
+        (prim
+          str->sym
+          (prim
+            ssub
+            (v text)
+            (v start)
+            (v stop))))))
+  (judgment
+    SplitFrom
+    [text index start accumulated]
+    (if
+      (prim
+        ge
+        (v index)
+        (prim
+          slen
+          (v text)))
+      (call
+        PushName
+        (v text)
+        (v start)
+        (v index)
+        (v accumulated))
+      (if
+        (prim
+          eq
+          (prim
+            ssub
+            (v text)
+            (v index)
+            (prim
+              add
+              (v index)
+              (q 1)))
+          (q " "))
+        (call
+          SplitFrom
+          (v text)
+          (prim
+            add
+            (v index)
+            (q 1))
+          (prim
+            add
+            (v index)
+            (q 1))
+          (call
+            PushName
+            (v text)
+            (v start)
+            (v index)
+            (v accumulated)))
+        (call
+          SplitFrom
+          (v text)
+          (prim
+            add
+            (v index)
+            (q 1))
+          (v start)
+          (v accumulated)))))
+  (judgment
+    KeywordSignature
+    [parts name parameters]
+    (match
+      (v parts)
+      (case
+        (pnil)
+        (mk
+          signature
+          (prim
+            str->sym
+            (v name))
+          (v parameters)))
+      (case
+        _
+        (match
+          (prim
+            head
+            (v parts))
+          (case
+            (pm
+              PatternPart
+              (pv selector)
+              (pv parameter))
+            (call
+              KeywordSignature
+              (prim
+                tail
+                (v parts))
+              (prim
+                scat
+                (v name)
+                (prim
+                  sym->str
+                  (v selector)))
+              (prim
+                snoc
+                (v parameters)
+                (v parameter))))
+          (case
+            _
+            (call
+              KeywordSignature
+              (prim
+                tail
+                (v parts))
+              (v name)
+              (v parameters)))))))
+  (judgment
+    PatternSignature
+    [pattern]
+    (match
+      (v pattern)
+      (case
+        (pm
+          UnaryPattern
+          (pv selector))
+        (mk
+          signature
+          (v selector)
+          (lst)))
+      (case
+        (pm
+          BinaryPattern
+          (pv selector)
+          (pv parameter))
+        (mk
+          signature
+          (v selector)
+          (lst
+            (v parameter))))
+      (case
+        (pm
+          KeywordPattern
+          (pv parts))
+        (call
+          KeywordSignature
+          (call
+            FlattenPatternParts
+            (v parts))
+          (q "")
+          (lst)))
+      (case
+        _
+        (mk
+          signature
+          (q yourself)
+          (lst)))))
+  (judgment
+    ClassDefinition
+    [statement]
+    (match
+      (v statement)
+      (case
+        (pm
+          Evaluate
+          (pv expression))
+        (call
+          ClassDefinitionOf
+          (v expression)))
+      (case
+        (pm
+          EvaluateFinal
+          (pv expression))
+        (call
+          ClassDefinitionOf
+          (v expression)))
+      (case
+        _
+        (mk no))))
+  (judgment
+    ClassDefinitionOf
+    [expression]
+    (match
+      (v expression)
+      (case
+        (pm
+          KeywordSend
+          (pv receiver)
+          (pv arguments))
+        (let
+          parts
+          (call
+            FlattenArguments
+            (v arguments))
+          (if
+            (prim
+              eq
+              (call
+                KeywordSelector
+                (v parts)
+                (q ""))
+              (prim
+                str->sym
+                (q "subclass:instanceVariableNames:")))
+            (call
+              ClassDefinitionParts
+              (v receiver)
+              (v parts))
+            (mk no))))
+      (case
+        _
+        (mk no))))
+  (judgment
+    ClassDefinitionParts
+    [receiver parts]
+    (match
+      (v receiver)
+      (case
+        (pm
+          Variable
+          (pv superclass))
+        (match
+          (prim
+            nth
+            (v parts)
+            (q 0))
+          (case
+            (pm
+              KeywordArgument
+              (pv selector)
+              (pv argument))
+            (match
+              (v argument)
+              (case
+                (pm
+                  Symbol
+                  (pv name))
+                (match
+                  (prim
+                    nth
+                    (v parts)
+                    (q 1))
+                  (case
+                    (pm
+                      KeywordArgument
+                      (pv other)
+                      (pv slots))
+                    (match
+                      (v slots)
+                      (case
+                        (pm
+                          Text
+                          (pv text))
+                        (mk
+                          class-definition
+                          (call
+                            SymbolName
+                            (v name))
+                          (v superclass)
+                          (call
+                            SplitNames
+                            (call
+                              Unquoted
+                              (v text)))))
+                      (case
+                        _
+                        (mk no))))
+                  (case
+                    _
+                    (mk no))))
+              (case
+                _
+                (mk no))))
+          (case
+            _
+            (mk no))))
+      (case
+        _
+        (mk no))))
+  (judgment
+    LoadChunks
+    [image chunks statements]
+    (match
+      (v chunks)
+      (case
+        (pnil)
+        (mk
+          loaded
+          (v image)
+          (v statements)))
+      (case
+        _
+        (call
+          LoadChunk
+          (v image)
+          (prim
+            head
+            (v chunks))
+          (prim
+            tail
+            (v chunks))
+          (v statements)))))
+  (judgment
+    LoadChunk
+    [image chunk rest statements]
+    (match
+      (v chunk)
+      (case
+        (pm
+          MethodWithTemporaries
+          (pv holder)
+          (pv pattern)
+          (pv temporaries)
+          (pv body))
+        (match
+          (call
+            PatternSignature
+            (v pattern))
+          (case
+            (pm
+              signature
+              (pv selector)
+              (pv parameters))
+            (call
+              LoadChunks
+              (call
+                DefineMethod
+                (v image)
+                (v holder)
+                (v selector)
+                (mk
+                  method
+                  (prim
+                    append
+                    (v parameters)
+                    (call
+                      TemporaryNames
+                      (v temporaries)))
+                  (v body)
+                  (v chunk)))
+              (v rest)
+              (v statements)))))
+      (case
+        (pm
+          Method
+          (pv holder)
+          (pv pattern)
+          (pv body))
+        (match
+          (call
+            PatternSignature
+            (v pattern))
+          (case
+            (pm
+              signature
+              (pv selector)
+              (pv parameters))
+            (call
+              LoadChunks
+              (call
+                DefineMethod
+                (v image)
+                (v holder)
+                (v selector)
+                (mk
+                  method
+                  (v parameters)
+                  (v body)
+                  (v chunk)))
+              (v rest)
+              (v statements)))))
+      (case
+        _
+        (match
+          (call
+            ClassDefinition
+            (v chunk))
+          (case
+            (pm
+              class-definition
+              (pv name)
+              (pv superclass)
+              (pv slots))
+            (call
+              LoadChunks
+              (call
+                DefineClass
+                (v image)
+                (v name)
+                (v superclass)
+                (v slots))
+              (v rest)
+              (v statements)))
+          (case
+            _
+            (call
+              LoadChunks
+              (v image)
+              (v rest)
+              (prim
+                snoc
+                (v statements)
+                (v chunk))))))))
+  (judgment
+    RunUnit
+    [tree]
+    (call
+      RunWithImage
+      (call EmptyImage)
+      (v tree)))
+  (judgment
+    RunWithImage
+    [base tree]
+    (match
+      (call
+        LoadChunks
+        (v base)
+        (call
+          FlattenChunks
+          (v tree))
+        (lst))
+      (case
+        (pm
+          loaded
+          (pv image)
+          (pv statements))
+        (match
+          (call
+            NewFrame
+            (call EmptyHeap)
+            (prim
+              mput
+              (prim mnew)
+              (q self)
+              (call Nil))
+            (call Nil))
+          (case
+            (pm
+              framed
+              (pv frame)
+              (pv heap))
+            (match
+              (call
+                EvalStatements
+                (v image)
+                (v heap)
+                (v frame)
+                (v statements))
+              (case
+                (pm
+                  normal
+                  (pv value)
+                  (pv finalHeap))
+                (mk
+                  value
+                  (call
+                    PrintValue
+                    (call
+                      NonLocalValue
+                      (v value)))))
+              (case
+                (pm
+                  returned
+                  (pv value)
+                  (pv finalHeap))
+                (mk
+                  value
+                  (call
+                    PrintValue
+                    (call
+                      NonLocalValue
+                      (v value)))))))))))
+  (judgment
+    EvalSource
+    [grammar source]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          ok
+          (pv tree))
+        (call
+          RunUnit
+          (v tree)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (mk
+          rejected
+          (v reason)))))
+  (judgment
+    EvalInImage
+    [grammar base source]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          ok
+          (pv tree))
+        (call
+          RunWithImage
+          (v base)
+          (v tree)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (mk
+          rejected
+          (v reason))))))

@@ -1,0 +1,31 @@
+
+artifactevidence
+evidence
+checkthe-studio-is-code-centricok
+checkthe-studio-browses-codeok
+checkthe-commands-are-code-commandsok
+check!the-workflow-is-edit-and-evaluateok
+check"the-field-editors-are-code-editorsok
+checkit-shares-the-platform-runtimeok
+check.it-does-not-collapse-into-the-platform-fixtureok
+check-binary-messages-have-no-precedence-among-themok
+check#a-block-can-change-what-encloses-itok
+check'an-object-keeps-what-was-assigned-to-itok
+checka-method-can-call-itselfok
+check%a-subclass-overrides-what-it-inheritsok
+check"a-conditional-runs-one-branch-onlyok
+checkthe-classes-come-from-the-imageok
+check!the-selectors-come-from-the-classok
+check)the-source-pane-prints-the-tree-that-runsok
+check$the-image-defines-its-own-arithmeticok
+check*a-class-in-the-image-can-override-printingok
+check#the-workspace-runs-inside-the-imageok
+checkthe-example-document-runsok
+check2every-declared-pane-is-answered-under-its-own-nameok
+checka-pane-is-a-list-of-linesok
+checkthe-navigator-lists-the-imageok
+check"do-it-sees-what-the-buffer-definesok
+check a-method-can-declare-temporariesok
+checka-block-can-declare-temporariesok
+check:a-temporary-shadows-the-instance-variable-of-the-same-nameok
+check9do-it-refuses-to-run-in-an-image-the-buffer-never-reachedok

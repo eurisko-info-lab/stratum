@@ -1,0 +1,16 @@
+
+artifactchange
+change
+kindapplication
+nameF11->smalltalk
+predecessor
+foundation-offoundations/F11
+feature
+feature
+namesmalltalk deployment
+programs
+file/applications/smalltalk/smalltalk.generated.meta
+sources
+	text-file%applications/smalltalk/smalltalk.meta
+profiles
+file$applications/smalltalk/profile.canon

@@ -1,0 +1,388 @@
+; The language service.
+;
+; The editor asks a small number of questions and this answers them, using the
+; same grammar and the same evaluator as everything else. A browser that
+; disagreed with the runtime about what a method is would be worse than no
+; browser at all, so there is only one of each.
+
+judgment ServiceDiagnostics [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok tree) -> list []
+    case (#denied reason) -> call ParseDiagnostics [reason]
+  }
+
+; A symbol is a method chunk, located by the text that introduces it.
+
+judgment ChunkSymbols [text chunks accumulated] =
+  match chunks {
+    case [] -> accumulated
+    case _ ->
+      call ChunkSymbols [
+        text prim #tail [chunks]
+        call ChunkSymbol [text prim #head [chunks] accumulated]
+      ]
+  }
+
+judgment ChunkSymbol [text chunk accumulated] =
+  match chunk {
+    case (#MethodWithTemporaries holder pattern temporaries body) ->
+      call MethodSymbol [text holder pattern accumulated]
+    case (#Method holder pattern body) ->
+      call MethodSymbol [text holder pattern accumulated]
+    case _ -> accumulated
+  }
+
+judgment MethodSymbol [text holder pattern accumulated] =
+  match call PatternSignature [pattern] {
+    case (#signature selector parameters) ->
+      let label =
+        prim #scat [prim #sym->str [holder] prim #scat [" >> " prim #sym->str [selector]]]
+      in
+      match call TextFind [text prim #sym->str [holder]] {
+        case (#some at) ->
+          prim #snoc [
+            accumulated
+            call SymbolRecord [
+              label #method at prim #slen [prim #sym->str [holder]]
+              prim #sym->str [selector]
+            ]
+          ]
+        case _ -> accumulated
+      }
+  }
+
+judgment ServiceSymbols [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok tree) -> call ChunkSymbols [text call FlattenChunks [tree] list []]
+    case (#denied reason) -> list []
+  }
+
+; Completion offers what the image understands, which is the only list that is
+; ever right: the selectors it actually has.
+
+judgment SelectorCompletions [selectors accumulated] =
+  match selectors {
+    case [] -> accumulated
+    case _ ->
+      call SelectorCompletions [
+        prim #tail [selectors]
+        prim #snoc [
+          accumulated
+          call CompletionRecord [prim #sym->str [prim #head [selectors]] #method "image"]
+        ]
+      ]
+  }
+
+judgment ImageSelectors [image classes accumulated] =
+  match classes {
+    case [] -> accumulated
+    case _ ->
+      call ImageSelectors [
+        image prim #tail [classes]
+        prim #append [accumulated call ClassSelectors [image prim #head [classes]]]
+      ]
+  }
+
+judgment ServiceCompletions [grammar text] =
+  let image = call BuildImage [grammar] in
+  let selectors =
+    prim #distinct [
+      prim #append [
+        call ImageSelectors [image call ImageClassNames [image] list []]
+        call ImageClassNames [image]
+      ]
+    ]
+  in
+  call SelectorCompletions [prim #sort [selectors] list []]
+
+judgment ServiceFormat [grammar text] = call PrintBuffer [grammar text]
+
+judgment ServiceSemanticTokens [grammar text] = call SemanticTokens [grammar text]
+
+; The arrangement the profile describes, in the keyed form the protocol reads.
+
+judgment PanelView [panel] =
+  map [
+    #name prim #sym->str [call PanelSchema'name [panel]]
+    #placement prim #sym->str [call PanelSchema'placement [panel]]
+    #primitive prim #sym->str [call ViewSchema'primitive [call PanelSchema'view [panel]]]
+  ]
+
+judgment LayoutViews [panels accumulated] =
+  match panels {
+    case [] -> accumulated
+    case head :: rest -> call LayoutViews [rest prim #snoc [accumulated call PanelView [head]]]
+  }
+
+judgment WorkflowStepNames [steps accumulated] =
+  match steps {
+    case [] -> accumulated
+    case head :: rest ->
+      call WorkflowStepNames [rest prim #snoc [accumulated prim #sym->str [head]]]
+  }
+
+judgment ServiceLayout [grammar] =
+  let profile = call SmalltalkProfile [] in
+  map [
+    #name prim #sym->str [call StudioProfile'name [profile]]
+    #navigation
+      map [
+        #model
+        prim #sym->str [call NavigationSchema'model [call StudioProfile'navigation [profile]]]
+      ]
+    #workflow
+      call WorkflowStepNames [
+        call WorkflowSchema'stages [call StudioProfile'workflow [profile]] list []
+      ]
+    #views call LayoutViews [call StudioProfile'panels [profile] list []]
+  ]
+
+; Do it. The selection is a fragment of a method or a line of a workspace, and
+; it is run in the open image, so it can talk to everything the image has.
+
+; Do it. The fragment is evaluated in the image the buffer describes, not in
+; the base image, because the classes being edited are part of the image while
+; they are being edited -- which is what makes a workspace a workspace.
+
+judgment ServiceEvaluate [grammar text selection] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok tree) ->
+      match call EvalInImage [
+        grammar
+        call ImageWithChunks [grammar tree]
+        call SelectionText [text selection]
+      ] {
+        case (#value answer) -> answer
+        case (#rejected reason) -> prim #scat ["cannot read that: " reason]
+        case _ -> ""
+      }
+    case (#denied reason) ->
+      prim #scat ["the buffer does not parse, so there is nothing to run it in: " reason]
+  }
+
+judgment ServiceCommand [grammar text command] =
+  if prim #eq [command #run-workspace]
+  then map [#message call EvaluatedText [grammar text]]
+  else
+    if prim #eq [command #browse-image]
+    then
+      map [
+        #message
+        call CountMessage [
+          call ImageClassNames [call BuildImage [grammar]]
+          "class in the image" "classes in the image"
+        ]
+      ]
+    else map [#message "unknown command"]
+
+; The views are the browser's panes, filled from the buffer that is open
+; rather than from the base image, because that is the code being edited.
+
+judgment ImageWithChunks [grammar tree] =
+  match call LoadChunks [call BuildImage [grammar] call FlattenChunks [tree] list []] {
+    case (#loaded image statements) -> image
+  }
+
+; A buffer that does not parse has no image, so the panes fall back to the one
+; that does. Do it does not: answering from an image the buffer never reached
+; is how a broken buffer came to report a plausible wrong answer.
+
+judgment BufferImage [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok tree) -> call ImageWithChunks [grammar tree]
+    case (#denied reason) -> call BuildImage [grammar]
+  }
+
+; A pane is a list of lines. The adapter reads them out of a map keyed by the
+; pane's name, so that is the shape returned: it dispatches on nothing, and a
+; pane it was not told about simply has no entry.
+
+judgment ClassLine [image class] =
+  prim #scat [
+    prim #sym->str [class]
+    prim #scat [
+      " - "
+      call CountMessage [call ClassSelectors [image class] "method" "methods"]
+    ]
+  ]
+
+judgment ClassLines [image classes accumulated] =
+  match classes {
+    case [] -> accumulated
+    case head :: rest ->
+      call ClassLines [image rest prim #snoc [accumulated call ClassLine [image head]]]
+  }
+
+judgment SelectorLines [image class selectors accumulated] =
+  match selectors {
+    case [] -> accumulated
+    case head :: rest ->
+      call SelectorLines [
+        image class rest
+        prim #snoc [
+          accumulated
+          prim #scat [
+            prim #sym->str [class]
+            prim #scat [" >> " prim #sym->str [head]]
+          ]
+        ]
+      ]
+  }
+
+judgment AllSelectorLines [image classes accumulated] =
+  match classes {
+    case [] -> accumulated
+    case head :: rest ->
+      call AllSelectorLines [
+        image rest
+        call SelectorLines [image head call ClassSelectors [image head] accumulated]
+      ]
+  }
+
+; What the buffer adds to the image, which is what the developer is working on.
+
+judgment BufferClassNames [grammar text] =
+  let base = call ImageClassNames [call BuildImage [grammar]] in
+  call NamesNotIn [call ImageClassNames [call BufferImage [grammar text]] base list []]
+
+judgment NamesNotIn [names excluded accumulated] =
+  match names {
+    case [] -> accumulated
+    case head :: rest ->
+      if prim #contains [excluded head]
+      then call NamesNotIn [rest excluded accumulated]
+      else call NamesNotIn [rest excluded prim #snoc [accumulated head]]
+  }
+
+judgment NonEmptyLine [text] =
+  if prim #eq [prim #slen [text] 0] then list [] else list [text]
+
+; Every pane the layout declares is answered, because a pane with no answer is
+; a pane the editor reports as broken.
+
+judgment ServiceViews [grammar text] =
+  let image = call BufferImage [grammar text] in
+  let defined = call BufferClassNames [grammar text] in
+  let browsed =
+    if prim #eq [prim #len [defined] 0] then call BrowsedClass [] else prim #head [defined]
+  in
+  map [
+    #image call ClassLines [image call ImageClassNames [call BuildImage [grammar]] list []]
+    #classes call ClassLines [image call ImageClassNames [image] list []]
+    #selectors call AllSelectorLines [image call ImageClassNames [image] list []]
+    #method
+      call NonEmptyLine [
+        call MethodSource [
+          grammar image browsed
+          prim #nth [
+            prim #append [call ClassSelectors [image browsed] list [#yourself]]
+            0
+          ]
+        ]
+      ]
+    #workspace call NonEmptyLine [text]
+    #transcript call NonEmptyLine [call EvaluatedText [grammar text]]
+    #inspector
+      call NonEmptyLine [
+        prim #scat [
+          "it = "
+          call EvaluatedText [grammar text]
+        ]
+      ]
+  ]
+
+; The words the editor highlights are the ones the grammar declares, so they
+; cannot drift from the language.
+
+judgment ServiceKeywords [grammar] = call GrammarKeywords [grammar]
+
+; The navigator is the image: classes, and under each of them the messages it
+; answers. Selecting one opens the source it was loaded from.
+
+judgment ImageSourcePath [] = "applications/smalltalk/image.meta"
+
+judgment SelectorReports [selectors path accumulated] =
+  match selectors {
+    case [] -> accumulated
+    case head :: rest ->
+      call SelectorReports [
+        rest path
+        prim #snoc [
+          accumulated
+          map [
+            #name prim #sym->str [head]
+            #path path
+            #findings 0
+            #hazards 0
+          ]
+        ]
+      ]
+  }
+
+judgment ClassSubjects [image classes path accumulated] =
+  match classes {
+    case [] -> accumulated
+    case head :: rest ->
+      call ClassSubjects [
+        image rest path
+        prim #snoc [
+          accumulated
+          map [
+            #name prim #sym->str [head]
+            #reports call SelectorReports [call ClassSelectors [image head] path list []]
+          ]
+        ]
+      ]
+  }
+
+judgment DocumentPath [name] =
+  prim #scat ["applications/smalltalk/documents/" prim #scat [prim #sym->str [name] ".st"]]
+
+judgment DocumentSubjects [documents accumulated] =
+  match documents {
+    case [] -> accumulated
+    case head :: rest ->
+      let name = prim #mget [head #name #unknown] in
+      call DocumentSubjects [
+        rest
+        prim #snoc [
+          accumulated
+          map [
+            #name prim #sym->str [name]
+            #reports
+              list [
+                map [
+                  #name prim #scat [prim #sym->str [name] ".st"]
+                  #path call DocumentPath [name]
+                  #findings 0
+                  #hazards 0
+                ]
+              ]
+          ]
+        ]
+      ]
+  }
+
+judgment ServiceCatalogue [grammar documents] =
+  let image = call BuildImage [grammar] in
+  prim #append [
+    call ClassSubjects [
+      image call ImageClassNames [image] call ImageSourcePath [] list []
+    ]
+    call DocumentSubjects [documents list []]
+  ]
+
+
+; Read back out of the two shapes above, so a check can hold them to what the
+; adapter actually reads rather than to what they happen to be.
+
+judgment PaneNames [views] = prim #mkeys [views]
+
+judgment PaneLines [views name] = prim #mget [views name list []]
+
+judgment SubjectNames [subjects] =
+  match subjects {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [prim #mget [head #name ""] call SubjectNames [rest]]
+  }

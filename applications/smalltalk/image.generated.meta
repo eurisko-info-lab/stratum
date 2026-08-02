@@ -1,0 +1,224 @@
+; Generated from applications/smalltalk/image.meta by ElaborateSource. Do not edit by hand.
+(program
+  (judgment
+    JoinLines
+    [lines accumulated]
+    (match
+      (v lines)
+      (case
+        (pnil)
+        (v accumulated))
+      (case
+        _
+        (call
+          JoinLines
+          (prim
+            tail
+            (v lines))
+          (prim
+            scat
+            (v accumulated)
+            (prim
+              scat
+              (prim
+                head
+                (v lines))
+              (q " ")))))))
+  (judgment
+    ImageLines
+    []
+    (lst
+      (q "Object subclass: #Integer instanceVariableNames: ''.")
+      (q "Integer >> squared [ ^self * self ]")
+      (q "Integer >> even [ ^self // 2 * 2 = self ]")
+      (q "Integer >> odd [ ^self even not ]")
+      (q "Integer >> factorial [ self < 2 ifTrue: [ ^1 ]. ^self * (self - 1) factorial ]")
+      (q "Object subclass: #String instanceVariableNames: ''.")
+      (q "String >> isEmpty [ ^self size = 0 ]")
+      (q "Object subclass: #Counter instanceVariableNames: 'count'.")
+      (q "Counter >> initialize [ count := 0. ^self ]")
+      (q "Counter >> count [ ^count ]")
+      (q "Counter >> increment [ count := count + 1. ^self ]")
+      (q "Object subclass: #Point instanceVariableNames: 'x y'.")
+      (q "Point >> setX: ax y: ay [ x := ax. y := ay. ^self ]")
+      (q "Point >> x [ ^x ]")
+      (q "Point >> y [ ^y ]")
+      (q "Point >> + other [ ^Point new setX: x + other x y: y + other y ]")
+      (q "Point >> printString [ ^x printString , '@' , y printString ]")))
+  (judgment
+    ImageSource
+    []
+    (call
+      JoinLines
+      (call ImageLines)
+      (q "")))
+  (judgment
+    BuildImage
+    [grammar]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (call ImageSource))
+      (case
+        (pm
+          ok
+          (pv tree))
+        (match
+          (call
+            LoadChunks
+            (call EmptyImage)
+            (call
+              FlattenChunks
+              (v tree))
+            (lst))
+          (case
+            (pm
+              loaded
+              (pv image)
+              (pv statements))
+            (v image))))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (call EmptyImage))))
+  (judgment
+    ImageClassNames
+    [image]
+    (prim
+      sort
+      (prim
+        mkeys
+        (call
+          ImageClasses
+          (v image)))))
+  (judgment
+    ClassSelectors
+    [image class]
+    (match
+      (call
+        ClassNamed
+        (v image)
+        (v class))
+      (case
+        (pm
+          class
+          (pv name)
+          (pv superclass)
+          (pv slots)
+          (pv methods))
+        (prim
+          sort
+          (prim
+            mkeys
+            (v methods))))
+      (case _ (lst))))
+  (judgment
+    ClassSlots
+    [image class]
+    (match
+      (call
+        ClassNamed
+        (v image)
+        (v class))
+      (case
+        (pm
+          class
+          (pv name)
+          (pv superclass)
+          (pv slots)
+          (pv methods))
+        (v slots))
+      (case _ (lst))))
+  (judgment
+    MethodChunk
+    [image class selector]
+    (match
+      (call
+        ClassNamed
+        (v image)
+        (v class))
+      (case
+        (pm
+          class
+          (pv name)
+          (pv superclass)
+          (pv slots)
+          (pv methods))
+        (match
+          (prim
+            mget
+            (v methods)
+            (v selector)
+            (mk missing))
+          (case
+            (pm
+              method
+              (pv parameters)
+              (pv body)
+              (pv chunk))
+            (mk
+              chunk
+              (v chunk)))
+          (case
+            _
+            (mk missing))))
+      (case
+        _
+        (mk missing))))
+  (judgment
+    MethodSource
+    [grammar image class selector]
+    (match
+      (call
+        MethodChunk
+        (v image)
+        (v class)
+        (v selector))
+      (case
+        (pm
+          chunk
+          (pv chunk))
+        (match
+          (cap
+            grammar-print
+            (v grammar)
+            (v chunk))
+          (case
+            (pm
+              ok
+              (pv printed))
+            (v printed))
+          (case
+            (pm
+              denied
+              (pv reason))
+            (q ""))))
+      (case
+        _
+        (q ""))))
+  (judgment
+    EvaluatedText
+    [grammar source]
+    (match
+      (call
+        EvalInImage
+        (v grammar)
+        (call
+          BuildImage
+          (v grammar))
+        (v source))
+      (case
+        (pm
+          value
+          (pv text))
+        (v text))
+      (case
+        (pm
+          rejected
+          (pv reason))
+        (v reason))
+      (case
+        _
+        (q "")))))

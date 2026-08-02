@@ -1,0 +1,383 @@
+; Generated from applications/smalltalk/smalltalk.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module smalltalk)
+  (judgment
+    SmalltalkLanguage
+    []
+    (call
+      LanguageSchema
+      (q smalltalk)
+      (mk none)
+      (lst
+        (q Class)
+        (q Method)
+        (q Statement))
+      (lst
+        (mk
+          constructor
+          (q Class)
+          (lst
+            (q name)
+            (q superclass)
+            (q slots)))
+        (mk
+          constructor
+          (q Method)
+          (lst
+            (q holder)
+            (q pattern)
+            (q body)))
+        (mk
+          constructor
+          (q Statement)
+          (lst
+            (q expression))))
+      (mp
+        (q parse)
+        (q Parse)
+        (q print)
+        (q Print)
+        (q evaluate)
+        (q EvalSource))))
+  (judgment
+    SmalltalkProfile
+    []
+    (call
+      StudioProfile
+      (q smalltalk-browser)
+      (q smalltalk)
+      (q four-pane-browser)
+      (lst
+        (call
+          PanelSchema
+          (q classes)
+          (call
+            ViewSchema
+            (q classes)
+            (q list)
+            (q classes))
+          (q top-left))
+        (call
+          PanelSchema
+          (q selectors)
+          (call
+            ViewSchema
+            (q selectors)
+            (q list)
+            (q selectors))
+          (q top-centre))
+        (call
+          PanelSchema
+          (q method)
+          (call
+            ViewSchema
+            (q method)
+            (q text)
+            (q source))
+          (q centre))
+        (call
+          PanelSchema
+          (q workspace)
+          (call
+            ViewSchema
+            (q workspace)
+            (q text)
+            (q scratch))
+          (q bottom-left))
+        (call
+          PanelSchema
+          (q inspector)
+          (call
+            ViewSchema
+            (q inspector)
+            (q inspector)
+            (q object))
+          (q bottom-right))
+        (call
+          PanelSchema
+          (q transcript)
+          (call
+            ViewSchema
+            (q transcript)
+            (q list)
+            (q log))
+          (q bottom)))
+      (lst
+        (call
+          EditorSchema
+          (q method)
+          (q source)
+          (q code))
+        (call
+          EditorSchema
+          (q workspace)
+          (q scratch)
+          (q code)))
+      (call
+        NavigationSchema
+        (q code-centric)
+        (q class-selector-method)
+        (lst
+          (q class)
+          (q selector)
+          (q method)))
+      (call
+        WorkflowSchema
+        (q edit-evaluate)
+        (lst
+          (q edit)
+          (q evaluate)
+          (q inspect)
+          (q record)))
+      (lst
+        (call
+          RoleSchema
+          (q developer)
+          (lst
+            (q edit)
+            (q evaluate)
+            (q record))))
+      (lst
+        (call
+          ActionSchema
+          (q accept)
+          (q accept-method)
+          (q method))
+        (call
+          ActionSchema
+          (q doit)
+          (q evaluate-selection)
+          (q workspace))
+        (call
+          ActionSchema
+          (q inspect)
+          (q inspect-result)
+          (q workspace))
+        (call
+          ActionSchema
+          (q browse)
+          (q browse-senders)
+          (q class)))
+      (lst
+        (call
+          ProjectionSchema
+          (q senders)
+          (q graph)))
+      (lst)))
+  (judgment
+    BrowsedClass
+    []
+    (q Counter))
+  (judgment
+    BrowsedSelector
+    []
+    (q increment))
+  (judgment
+    SmalltalkState
+    [grammar]
+    (let
+      image
+      (call
+        BuildImage
+        (v grammar))
+      (let
+        scratch
+        (q "Counter new initialize increment increment count.")
+        (mp
+          (q classes)
+          (call
+            ImageClassNames
+            (v image))
+          (q selectors)
+          (call
+            ClassSelectors
+            (v image)
+            (call BrowsedClass))
+          (q source)
+          (call
+            MethodSource
+            (v grammar)
+            (v image)
+            (call BrowsedClass)
+            (call BrowsedSelector))
+          (q scratch)
+          (v scratch)
+          (q object)
+          (call
+            EvaluatedText
+            (v grammar)
+            (q "Point new setX: 1 y: 2."))
+          (q log)
+          (lst
+            (call
+              EvaluatedText
+              (v grammar)
+              (v scratch)))))))
+  (judgment
+    SmalltalkStudio
+    [grammar]
+    (call
+      RenderStudio
+      (call SmalltalkProfile)
+      (call
+        SmalltalkState
+        (v grammar))))
+  (judgment
+    SmalltalkPanels
+    [grammar]
+    (call
+      StudioPanels
+      (call
+        SmalltalkStudio
+        (v grammar))))
+  (judgment
+    SmalltalkNavigation
+    [grammar]
+    (call
+      StudioNavigation
+      (call
+        SmalltalkStudio
+        (v grammar))))
+  (judgment
+    SmalltalkActions
+    [grammar]
+    (call
+      StudioActions
+      (call
+        SmalltalkStudio
+        (v grammar))))
+  (judgment
+    SmalltalkWorkflow
+    [grammar]
+    (call
+      StudioWorkflow
+      (call
+        SmalltalkStudio
+        (v grammar))))
+  (judgment
+    SharesRuntimeWithPlatform
+    []
+    (call
+      SharesRuntime
+      (call AlphaProfile)
+      (call SmalltalkProfile)))
+  (judgment
+    DiffersFromPlatformFixture
+    [grammar]
+    (prim
+      eq
+      (call
+        StudioPanels
+        (call AlphaStudio))
+      (call
+        SmalltalkPanels
+        (v grammar))))
+  (judgment
+    ParseSmalltalk
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv tree))
+        (mk
+          parsed
+          (v tree)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (mk
+          rejected
+          (v reason)))))
+  (judgment
+    PrintSmalltalk
+    [grammar tree]
+    (match
+      (cap
+        grammar-print
+        (v grammar)
+        (v tree))
+      (case
+        (pm
+          ok
+          (pv text))
+        (mk
+          printed
+          (v text)))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (mk
+          rejected
+          (v reason)))))
+  (judgment
+    ParsedMethodShape
+    [grammar text]
+    (match
+      (call
+        ParseSmalltalk
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          parsed
+          (pm
+            Method
+            (pv holder)
+            (pv pattern)
+            (pv body)))
+        (mk
+          method
+          (v holder)))
+      (case
+        _
+        (mk not-a-method))))
+  (judgment
+    SmalltalkRoundTrips
+    [grammar text]
+    (match
+      (call
+        ParseSmalltalk
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          parsed
+          (pv tree))
+        (match
+          (call
+            PrintSmalltalk
+            (v grammar)
+            (v tree))
+          (case
+            (pm
+              printed
+              (pv printed))
+            (match
+              (call
+                ParseSmalltalk
+                (v grammar)
+                (v printed))
+              (case
+                (pm
+                  parsed
+                  (pv again))
+                (prim
+                  eq
+                  (v tree)
+                  (v again)))
+              (case
+                _
+                (q #f))))
+          (case
+            _
+            (q #f))))
+      (case
+        _
+        (q #f)))))

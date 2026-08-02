@@ -1,0 +1,130 @@
+module smalltalk
+
+; A Smalltalk development environment, deployed on the finished platform.
+;
+; This used to live inside F11, where it demonstrated that one studio runtime
+; can present very different interfaces. It demonstrates the same thing here,
+; and the platform no longer has to know what a Smalltalk is to say it.
+
+judgment SmalltalkLanguage [] =
+  call LanguageSchema [
+    #smalltalk
+    mk #none []
+    list [#Class #Method #Statement]
+    list [
+      mk #constructor [#Class list [#name #superclass #slots]]
+      mk #constructor [#Method list [#holder #pattern #body]]
+      mk #constructor [#Statement list [#expression]]
+    ]
+    map [#parse #Parse #print #Print #evaluate #EvalSource]
+  ]
+
+judgment SmalltalkProfile [] =
+  call StudioProfile [
+    #smalltalk-browser
+    #smalltalk
+    #four-pane-browser
+    list [
+      call PanelSchema [#classes call ViewSchema [#classes #list #classes] #top-left]
+      call PanelSchema [#selectors call ViewSchema [#selectors #list #selectors] #top-centre]
+      call PanelSchema [#method call ViewSchema [#method #text #source] #centre]
+      call PanelSchema [#workspace call ViewSchema [#workspace #text #scratch] #bottom-left]
+      call PanelSchema [#inspector call ViewSchema [#inspector #inspector #object] #bottom-right]
+      call PanelSchema [#transcript call ViewSchema [#transcript #list #log] #bottom]
+    ]
+    list [
+      call EditorSchema [#method #source #code]
+      call EditorSchema [#workspace #scratch #code]
+    ]
+    call NavigationSchema [#code-centric #class-selector-method list [#class #selector #method]]
+    call WorkflowSchema [#edit-evaluate list [#edit #evaluate #inspect #record]]
+    list [call RoleSchema [#developer list [#edit #evaluate #record]]]
+    list [
+      call ActionSchema [#accept #accept-method #method]
+      call ActionSchema [#doit #evaluate-selection #workspace]
+      call ActionSchema [#inspect #inspect-result #workspace]
+      call ActionSchema [#browse #browse-senders #class]
+    ]
+    list [call ProjectionSchema [#senders #graph]]
+    list []
+  ]
+
+; The browser shows the image, and nothing but the image. Every list below is
+; read out of the classes that were loaded, and the source pane is printed
+; from the tree that will actually run.
+
+judgment BrowsedClass [] = #Counter
+
+judgment BrowsedSelector [] = #increment
+
+judgment SmalltalkState [grammar] =
+  let image = call BuildImage [grammar] in
+  let scratch = "Counter new initialize increment increment count." in
+  map [
+    #classes call ImageClassNames [image]
+    #selectors call ClassSelectors [image call BrowsedClass []]
+    #source call MethodSource [grammar image call BrowsedClass [] call BrowsedSelector []]
+    #scratch scratch
+    #object call EvaluatedText [grammar "Point new setX: 1 y: 2."]
+    #log list [call EvaluatedText [grammar scratch]]
+  ]
+
+judgment SmalltalkStudio [grammar] =
+  call RenderStudio [call SmalltalkProfile [] call SmalltalkState [grammar]]
+
+judgment SmalltalkPanels [grammar] = call StudioPanels [call SmalltalkStudio [grammar]]
+
+judgment SmalltalkNavigation [grammar] = call StudioNavigation [call SmalltalkStudio [grammar]]
+
+judgment SmalltalkActions [grammar] = call StudioActions [call SmalltalkStudio [grammar]]
+
+judgment SmalltalkWorkflow [grammar] = call StudioWorkflow [call SmalltalkStudio [grammar]]
+
+; The platform's own fixtures and this application share the runtime, and
+; still present different interfaces.
+judgment SharesRuntimeWithPlatform [] =
+  call SharesRuntime [call AlphaProfile [] call SmalltalkProfile []]
+
+judgment DiffersFromPlatformFixture [grammar] =
+  prim #eq [call StudioPanels [call AlphaStudio []] call SmalltalkPanels [grammar]]
+
+; --------------------------------------------------------------------- syntax
+
+; Smalltalk source is read through the deployment's own grammar. Everything
+; below is expressed against the resulting tree, so the syntax is not an
+; illustration: it is the only way into the browser.
+
+judgment ParseSmalltalk [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok tree) -> mk #parsed [tree]
+    case (#denied reason) -> mk #rejected [reason]
+  }
+
+judgment PrintSmalltalk [grammar tree] =
+  match cap #grammar-print [grammar tree] {
+    case (#ok text) -> mk #printed [text]
+    case (#denied reason) -> mk #rejected [reason]
+  }
+
+; A method chunk is the unit the browser edits, so it is the unit the checks
+; pin down: class, selector pattern, body.
+
+judgment ParsedMethodShape [grammar text] =
+  match call ParseSmalltalk [grammar text] {
+    case (#parsed (#Method holder pattern body)) -> mk #method [holder]
+    case _ -> mk #not-a-method []
+  }
+
+judgment SmalltalkRoundTrips [grammar text] =
+  match call ParseSmalltalk [grammar text] {
+    case (#parsed tree) ->
+      match call PrintSmalltalk [grammar tree] {
+        case (#printed printed) ->
+          match call ParseSmalltalk [grammar printed] {
+            case (#parsed again) -> prim #eq [tree again]
+            case _ -> false
+          }
+        case _ -> false
+      }
+    case _ -> false
+  }

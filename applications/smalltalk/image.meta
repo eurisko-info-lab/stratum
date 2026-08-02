@@ -1,0 +1,98 @@
+; The image.
+;
+; A Smalltalk image is not a description of a system, it is the system: the
+; classes exist because their source was read, and the browser has nothing to
+; show except what is in there. So the base image is written in Smalltalk,
+; read by the deployment's own grammar, and run by the deployment's own
+; evaluator. Nothing below is a fixture.
+
+judgment JoinLines [lines accumulated] =
+  match lines {
+    case [] -> accumulated
+    case _ ->
+      call JoinLines [
+        prim #tail [lines]
+        prim #scat [accumulated prim #scat [prim #head [lines] " "]]
+      ]
+  }
+
+judgment ImageLines [] =
+  list [
+    "Object subclass: #Integer instanceVariableNames: ''."
+    "Integer >> squared [ ^self * self ]"
+    "Integer >> even [ ^self // 2 * 2 = self ]"
+    "Integer >> odd [ ^self even not ]"
+    "Integer >> factorial [ self < 2 ifTrue: [ ^1 ]. ^self * (self - 1) factorial ]"
+    "Object subclass: #String instanceVariableNames: ''."
+    "String >> isEmpty [ ^self size = 0 ]"
+    "Object subclass: #Counter instanceVariableNames: 'count'."
+    "Counter >> initialize [ count := 0. ^self ]"
+    "Counter >> count [ ^count ]"
+    "Counter >> increment [ count := count + 1. ^self ]"
+    "Object subclass: #Point instanceVariableNames: 'x y'."
+    "Point >> setX: ax y: ay [ x := ax. y := ay. ^self ]"
+    "Point >> x [ ^x ]"
+    "Point >> y [ ^y ]"
+    "Point >> + other [ ^Point new setX: x + other x y: y + other y ]"
+    "Point >> printString [ ^x printString , '@' , y printString ]"
+  ]
+
+judgment ImageSource [] = call JoinLines [call ImageLines [] ""]
+
+judgment BuildImage [grammar] =
+  match cap #grammar-parse [grammar call ImageSource []] {
+    case (#ok tree) ->
+      match call LoadChunks [call EmptyImage [] call FlattenChunks [tree] list []] {
+        case (#loaded image statements) -> image
+      }
+    case (#denied reason) -> call EmptyImage []
+  }
+
+; ------------------------------------------------------------------ browsing
+
+judgment ImageClassNames [image] =
+  prim #sort [prim #mkeys [call ImageClasses [image]]]
+
+judgment ClassSelectors [image class] =
+  match call ClassNamed [image class] {
+    case (#class name superclass slots methods) -> prim #sort [prim #mkeys [methods]]
+    case _ -> list []
+  }
+
+judgment ClassSlots [image class] =
+  match call ClassNamed [image class] {
+    case (#class name superclass slots methods) -> slots
+    case _ -> list []
+  }
+
+judgment MethodChunk [image class selector] =
+  match call ClassNamed [image class] {
+    case (#class name superclass slots methods) ->
+      match prim #mget [methods selector mk #missing []] {
+        case (#method parameters body chunk) -> mk #chunk [chunk]
+        case _ -> mk #missing []
+      }
+    case _ -> mk #missing []
+  }
+
+; The source shown in the browser is printed from the tree that was stored,
+; not kept as text beside it, so what is displayed is what will be run.
+
+judgment MethodSource [grammar image class selector] =
+  match call MethodChunk [image class selector] {
+    case (#chunk chunk) ->
+      match cap #grammar-print [grammar chunk] {
+        case (#ok printed) -> printed
+        case (#denied reason) -> ""
+      }
+    case _ -> ""
+  }
+
+; The transcript and the inspector show results, so they need one.
+
+judgment EvaluatedText [grammar source] =
+  match call EvalInImage [grammar call BuildImage [grammar] source] {
+    case (#value text) -> text
+    case (#rejected reason) -> reason
+    case _ -> ""
+  }

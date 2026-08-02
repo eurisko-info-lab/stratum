@@ -1,0 +1,63 @@
+
+artifactsource
+source
+path+applications/smalltalk/documents/counter.st
+textƒ"A worked example. Select any expression and evaluate it."
+
+Object subclass: #StackNode instanceVariableNames: 'value next'.
+
+StackNode >> value [
+  ^value
+]
+
+StackNode >> value: v [
+  value := v
+]
+
+StackNode >> next [
+  ^next
+]
+
+StackNode >> next: n [
+  next := n
+]
+
+Object subclass: #Stack instanceVariableNames: 'top size'.
+
+Stack >> initialize [
+  top := nil.
+  size := 0.
+  ^self
+]
+
+Stack >> size [
+  ^size
+]
+
+Stack >> push: value [
+  | node |
+  node := StackNode new.
+  node value: value.
+  node next: top.
+  top := node.
+  size := size + 1.
+  ^self
+]
+
+Stack >> top [
+  ^top value
+]
+
+Stack >> pop [
+  | value |
+  value := top value.
+  top := top next.
+  size := size - 1.
+  ^value
+]
+
+Stack >> isEmpty [
+  ^size = 0
+]
+
+^((Stack new initialize push: 3) push: 4) pop.
