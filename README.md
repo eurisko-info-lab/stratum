@@ -1,4 +1,66 @@
-# Stratum
+# Stratum with a Smalltalk
+
+> **Branch `featured/smalltalk`** — branched from `featured/android`, which branched from `main`.
+> Adds a Smalltalk: a grammar, an evaluator, an image, and a browser onto it.
+
+```text
+main ──▶ featured/android ──▶ featured/smalltalk
+platform       editor                 this branch
+```
+
+## What this branch adds
+
+| | |
+| --- | --- |
+| [applications/smalltalk/smalltalk.grammar](applications/smalltalk/smalltalk.grammar) | the concrete syntax, with unary, binary and keyword precedence |
+| [applications/smalltalk/evaluator.meta](applications/smalltalk/evaluator.meta) | message lookup, activations, blocks, non-local return, primitives |
+| [applications/smalltalk/image.meta](applications/smalltalk/image.meta) | the base image, written in Smalltalk and loaded like any other program |
+| [applications/smalltalk/service.meta](applications/smalltalk/service.meta) | what the editor asks and the image answers |
+| [changes/F11-smalltalk](changes/F11-smalltalk) | the single canonical change by which F11 constructs it |
+
+```text
+F11 |- smalltalk
+```
+
+## It runs
+
+The build runs Smalltalk programs and checks their answers. `3 + 4 * 2` is 14,
+because binary messages have no precedence among them. `3 factorial + 4 squared`
+is 22, because the image says what `factorial` and `squared` mean. A `Counter`
+keeps its count across sends, a subclass overrides what it inherits, a block
+that increments a loop counter increments the one the loop is reading, and a
+caret inside a block returns from the method the block was written in.
+
+## The browser reads the image
+
+The panes are not a list of names someone typed. Classes, selectors and source
+are read out of the image, and the source pane prints the tree that will run
+rather than text kept beside it. Delete a method from the image and the pane
+loses a row.
+
+The workspace evaluates inside the open image, and the buffer you are editing
+is loaded on top of it, because the code being edited is part of the image
+while you are editing it.
+
+## The editor binds
+
+The Android client remains generic and discovers this world's languages,
+catalogue, workflow, and views at runtime. Selecting a catalogue document opens
+its source in the editor, where a selected expression can be evaluated.
+
+## What it is not
+
+There are no cascades, no class-side methods, no metaclasses, no collections
+beyond what the image defines, and no become:. A statement may end with a
+period or be the last one without. Assigning to a name that was never declared
+creates it in the current activation rather than failing.
+
+## Everything below
+
+The rest of this README describes the platform, which this branch inherits
+unchanged.
+
+---
 
 [![staircase](https://github.com/eurisko-info-lab/stratum/actions/workflows/staircase.yml/badge.svg)](https://github.com/eurisko-info-lab/stratum/actions/workflows/staircase.yml)
 
@@ -246,7 +308,8 @@ apart:
 | Branch | Carries |
 | --- | --- |
 | `main` | the platform: F0..F11 plus the revised F12/F13/F14 candidate sequence, both hosts, the Lean model, the shared languages, and the generic language service |
-| `featured/*` | one branch per application, and one per editor client |
+| `featured/android` | everything the Android repository client needs, and nothing about any language |
+| `featured/smalltalk` | **this branch**: a Smalltalk development environment, deployed on the finished platform |
 
 Everything shareable stays here, including
 [languages/pdf](languages/pdf), the projection that turns a document into an
@@ -256,10 +319,15 @@ language, its documents and its profiles, built on the finished platform.
 
 ## Editing
 
+[studio/android](studio/android) is an editor client, and
 [host-scala/lsp](host-scala/lsp) is a language server for **every language a
-world publishes**, and it knows no language. The host core is frozen, so the
-server may not learn what a diagnostic means: it converts JSON, framing and
-offsets, and everything displayed is derived by a judgment of the world.
+world publishes**. Neither knows any language. The client is inert until it is
+bound to a world, and on this branch it is bound to this one.
+
+The host core is frozen, so the server may not learn what a diagnostic means.
+It is a courier: JSON, framing, and offsets to line and character. Everything
+displayed is derived by a judgment of the world, under its step budget, and the
+independent Rust host agrees on all of it.
 
 | A language provides | It gets |
 | --- | --- |

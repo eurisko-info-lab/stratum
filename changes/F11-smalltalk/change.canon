@@ -1,0 +1,15 @@
+; Branching a development environment from the finished platform.
+;
+; F11 demonstrates profile-guided studios with two profiles that have no domain
+; between them. This change adds one that does: a Smalltalk browser, deployed
+; the same way any application is.
+(change
+  (kind application)
+  (name "F11->smalltalk")
+  (predecessor (foundation-of "foundations/F11"))
+  (feature
+    (feature
+      (name "smalltalk deployment")
+      (programs [(file "applications/smalltalk/smalltalk.generated.meta")])
+      (sources [(text-file "applications/smalltalk/smalltalk.meta")])
+      (profiles [(file "applications/smalltalk/profile.canon")]))))

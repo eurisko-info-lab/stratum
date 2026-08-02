@@ -1,0 +1,92 @@
+grammar "smalltalk"
+start unit
+
+token keyword sym "[A-Za-z_][A-Za-z0-9_]*:"
+token symbol sym "#[A-Za-z_][A-Za-z0-9_:]*"
+token ident sym "[A-Za-z_][A-Za-z0-9_]*"
+token binop sym "[+*/<>=~@%,&-]+"
+token number nat "[0-9]+"
+token text str "'[^']*'"
+
+skip "\"[^\"]*\""
+
+category unit
+  fold Chunks chunk
+
+category chunk
+  prod MethodWithTemporaries class : ident ">>" pattern : pattern "[" temporaries : temporaries body : statements "]"
+  prod Method class : ident ">>" pattern : pattern "[" body : statements "]"
+  pass statement
+
+category temporaries
+  prod Temporaries "|" names : names "|"
+
+category names
+  fold Names name
+
+category name
+  prod Name value : ident
+
+category pattern
+  prod KeywordPattern parts : patternParts
+  prod BinaryPattern selector : binop parameter : ident
+  prod UnaryPattern selector : ident
+
+category patternParts
+  fold PatternParts patternPart
+
+category patternPart
+  prod PatternPart selector : keyword parameter : ident
+
+category statements
+  fold Statements statement
+
+category statement
+  prod Return "^" value : expression "."
+  prod ReturnFinal "^" value : expression
+  prod Evaluate value : expression "."
+  prod EvaluateFinal value : expression
+
+category expression
+  prod Assign target : ident ":=" value : expression
+  pass keywordSend
+
+category keywordSend
+  prod KeywordSend receiver : binarySend arguments : keywordArguments
+  pass binarySend
+
+category keywordArguments
+  fold KeywordArguments keywordArgument
+
+category keywordArgument
+  prod KeywordArgument selector : keyword argument : binarySend
+
+category binarySend
+  prod BinarySend receiver : unarySend steps : binarySteps
+  pass unarySend
+
+category binarySteps
+  fold BinarySteps binaryStep
+
+category binaryStep
+  prod BinaryStep selector : binop argument : unarySend
+
+category unarySend
+  fold Send primary
+
+category primary
+  prod Number value : number
+  prod Text value : text
+  prod Symbol value : symbol
+  prod BlockWithBoth "[" parameters : blockParameters "|" temporaries : temporaries body : statements "]"
+  prod BlockWith "[" parameters : blockParameters "|" body : statements "]"
+  prod BlockWithTemporaries "[" temporaries : temporaries body : statements "]"
+  prod Block "[" body : statements "]"
+  prod Variable name : ident
+  paren "(" expression ")"
+
+category blockParameters
+  fold BlockParameters blockParameter
+
+category blockParameter
+  prod BlockParameter ":" name : ident
