@@ -1,0 +1,182 @@
+; Generated from languages/studio/studio.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "studio")
+  (start script)
+  (skip "#[^\n]*")
+  (token string str "\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'")
+  (token number nat "[0-9]+")
+  (token word sym "[A-Za-z_][A-Za-z0-9_-]*")
+  (category
+    script
+    (fold StudioScript statement))
+  (category
+    statement
+    (prod
+      StudioWorld
+      [
+        (kw "world")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioWriteFile
+      [
+        (kw "writeFile")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioOpenFile
+      [
+        (kw "openFile")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioReplaceFile
+      [
+        (kw "replaceFile")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioSelect
+      [
+        (kw "select")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioCommand
+      [
+        (kw "command")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioAssertViews
+      [
+        (kw "assertViews")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioAssertViewContains
+      [
+        (kw "assertViewContains")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioAssertDocuments
+      [
+        (kw "assertDocuments")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioAssertDocumentsContain
+      [
+        (kw "assertDocumentsContain")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioAssertTraceContains
+      [
+        (kw "assertTraceContains")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioAssertOutputContains
+      [
+        (kw "assertOutputContains")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioAssertDiagnostics
+      [
+        (kw "assertDiagnostics")
+        (bind value value)
+        (kw ";")])
+    (prod
+      StudioClearTrace
+      [
+        (kw "clearTrace")
+        (kw ";")]))
+  (category
+    value
+    (prod
+      StudioEmptyObject
+      [
+        (kw "{")
+        (kw "}")])
+    (prod
+      StudioObject
+      [
+        (kw "{")
+        (bind members members)
+        (kw "}")])
+    (prod
+      StudioEmptyArray
+      [
+        (kw "[")
+        (kw "]")])
+    (prod
+      StudioArray
+      [
+        (kw "[")
+        (bind elements elements)
+        (kw "]")])
+    (prod
+      StudioString
+      [
+        (bind value string)])
+    (prod
+      StudioNumber
+      [
+        (bind value number)])
+    (prod
+      StudioTrue
+      [
+        (kw "true")])
+    (prod
+      StudioFalse
+      [
+        (kw "false")])
+    (prod
+      StudioNull
+      [
+        (kw "null")]))
+  (category
+    members
+    (prod
+      StudioMoreMembers
+      [
+        (bind value member)
+        (kw ",")
+        (bind rest members)])
+    (prod
+      StudioLastMember
+      [
+        (bind value member)]))
+  (category
+    member
+    (prod
+      StudioMember
+      [
+        (bind key key)
+        (kw ":")
+        (bind value value)]))
+  (category
+    key
+    (prod
+      StudioKeyString
+      [
+        (bind value string)])
+    (prod
+      StudioKeyWord
+      [
+        (bind value word)]))
+  (category
+    elements
+    (prod
+      StudioMoreElements
+      [
+        (bind value value)
+        (kw ",")
+        (bind rest elements)])
+    (prod
+      StudioLastElement
+      [
+        (bind value value)])))

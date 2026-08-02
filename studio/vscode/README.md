@@ -35,17 +35,31 @@ temporary extension copy, launches a real VS Code extension host, replays the
 transcript's editor actions, and asserts both UI state and the LSP requests the
 plugin made.
 
-The fixtures live under `test/fixtures/*.jsonl`. The first non-comment line may
-declare metadata such as the world to package:
+The fixtures live under `test/fixtures/*.studio`. They are real Stratum source
+files rather than ad hoc JSONL, so the same script can serve as both an
+executable replay test and readable tutorial material. A minimal example:
 
-```json
-{"meta":{"world":"applications/sds"}}
+```text
+world "applications/sds";
+
+writeFile {
+	path: ".studio-test/acetone.sds",
+	text: [
+		'document "Acetone"',
+		'',
+		'section 1 "Identification"'
+	]
+};
+
+openFile { path: ".studio-test/acetone.sds" };
+assertTraceContains ["stratum/views", "stratum/documents"];
 ```
 
-Subsequent lines are actions or assertions such as writing a file, opening it,
-replacing its contents, invoking a command, checking views, checking
-diagnostics, or asserting that requests such as `stratum/views`,
-`stratum/documents`, and `workspace/executeCommand` were sent.
+The runner compiles that source through the checked-in `studio` grammar, then
+replays actions and assertions such as writing a file, opening it, replacing
+its contents, invoking a command, checking views, checking diagnostics, or
+asserting that requests such as `stratum/views`, `stratum/documents`, and
+`workspace/executeCommand` were sent.
 
 `stratum.world` selects the world the server answers from, and
 `stratum.server` the command that starts it. The client is a plain LSP client,

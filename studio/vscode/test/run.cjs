@@ -11,22 +11,20 @@ const fixturesRoot = path.resolve(__dirname, 'fixtures');
 
 function transcriptFiles() {
   return fs.readdirSync(fixturesRoot)
-    .filter(name => name.endsWith('.jsonl'))
+    .filter(name => name.endsWith('.studio'))
     .sort()
     .map(name => path.join(fixturesRoot, name));
 }
 
-function parseMeta(filePath) {
-  const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
-      continue;
-    }
-    const parsed = JSON.parse(trimmed);
-    return parsed.meta ?? {};
+function compileTranscript(filePath, outPath) {
+  const result = spawnSync(
+    'sbt',
+    ['-batch', `runMain stratum.cli.Stratum lsp script --script ${path.relative(repoRoot, filePath)} --out ${path.relative(repoRoot, outPath)}`],
+    { cwd: repoRoot, stdio: 'inherit' }
+  );
+  if (result.status !== 0) {
+    throw new Error(`failed to compile studio transcript ${filePath}`);
   }
-  return {};
 }
 
 function packageWorld(world, extensionCopy) {
@@ -40,10 +38,21 @@ function packageWorld(world, extensionCopy) {
   }
 }
 
+function worldExists(world) {
+  return fs.existsSync(path.resolve(repoRoot, world, 'service.canon'));
+}
+
 async function runTranscript(filePath) {
-  const meta = parseMeta(filePath);
-  const world = meta.world ?? 'applications/sds';
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'stratum-studio-test-'));
+  const compiledTranscript = path.join(scratch, 'transcript.json');
+  compileTranscript(filePath, compiledTranscript);
+  const meta = JSON.parse(fs.readFileSync(compiledTranscript, 'utf8')).meta ?? {};
+  const world = meta.world ?? 'applications/sds';
+  if (!worldExists(world)) {
+    process.stdout.write(`skipping ${path.basename(filePath)} (missing ${world})\n`);
+    fs.rmSync(scratch, { recursive: true, force: true });
+    return;
+  }
   const extensionCopy = path.join(scratch, 'extension');
   fs.cpSync(sourceExtensionPath, extensionCopy, { recursive: true });
   const previousCwd = process.cwd();
@@ -55,6 +64,7 @@ async function runTranscript(filePath) {
       extensionTestsPath,
       extensionTestsEnv: {
         STRATUM_STUDIO_TRANSCRIPT: filePath,
+        STRATUM_STUDIO_TRANSCRIPT_JSON: compiledTranscript,
         STRATUM_STUDIO_WORLD: world
       },
       launchArgs: [

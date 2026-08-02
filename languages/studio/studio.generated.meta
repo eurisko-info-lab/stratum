@@ -1,0 +1,468 @@
+; Generated from languages/studio/studio.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module studio)
+  (judgment
+    StudioScript
+    [steps]
+    (mk
+      StudioScript
+      (v steps)))
+  (judgment
+    StudioScript'steps
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioWorld
+    [value]
+    (mk
+      StudioWorld
+      (v value)))
+  (judgment
+    StudioWorld'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioWriteFile
+    [value]
+    (mk
+      StudioWriteFile
+      (v value)))
+  (judgment
+    StudioWriteFile'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioOpenFile
+    [value]
+    (mk
+      StudioOpenFile
+      (v value)))
+  (judgment
+    StudioOpenFile'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioReplaceFile
+    [value]
+    (mk
+      StudioReplaceFile
+      (v value)))
+  (judgment
+    StudioReplaceFile'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioSelect
+    [value]
+    (mk
+      StudioSelect
+      (v value)))
+  (judgment
+    StudioSelect'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioCommand
+    [value]
+    (mk
+      StudioCommand
+      (v value)))
+  (judgment
+    StudioCommand'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioAssertViews
+    [value]
+    (mk
+      StudioAssertViews
+      (v value)))
+  (judgment
+    StudioAssertViews'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioAssertViewContains
+    [value]
+    (mk
+      StudioAssertViewContains
+      (v value)))
+  (judgment
+    StudioAssertViewContains'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioAssertDocuments
+    [value]
+    (mk
+      StudioAssertDocuments
+      (v value)))
+  (judgment
+    StudioAssertDocuments'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioAssertDocumentsContain
+    [value]
+    (mk
+      StudioAssertDocumentsContain
+      (v value)))
+  (judgment
+    StudioAssertDocumentsContain'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioAssertTraceContains
+    [value]
+    (mk
+      StudioAssertTraceContains
+      (v value)))
+  (judgment
+    StudioAssertTraceContains'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioAssertOutputContains
+    [value]
+    (mk
+      StudioAssertOutputContains
+      (v value)))
+  (judgment
+    StudioAssertOutputContains'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioAssertDiagnostics
+    [value]
+    (mk
+      StudioAssertDiagnostics
+      (v value)))
+  (judgment
+    StudioAssertDiagnostics'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioClearTrace
+    []
+    (mk StudioClearTrace))
+  (judgment
+    StudioEmptyObject
+    []
+    (mk StudioEmptyObject))
+  (judgment
+    StudioObject
+    [members]
+    (mk
+      StudioObject
+      (v members)))
+  (judgment
+    StudioEmptyArray
+    []
+    (mk StudioEmptyArray))
+  (judgment
+    StudioArray
+    [elements]
+    (mk
+      StudioArray
+      (v elements)))
+  (judgment
+    StudioString
+    [value]
+    (mk
+      StudioString
+      (v value)))
+  (judgment
+    StudioNumber
+    [value]
+    (mk
+      StudioNumber
+      (v value)))
+  (judgment
+    StudioTrue
+    []
+    (mk StudioTrue))
+  (judgment
+    StudioFalse
+    []
+    (mk StudioFalse))
+  (judgment
+    StudioNull
+    []
+    (mk StudioNull))
+  (judgment
+    IsStudioValue
+    [value]
+    (prim
+      contains
+      (q
+        [StudioEmptyObject StudioObject StudioEmptyArray StudioArray StudioString StudioNumber StudioTrue StudioFalse StudioNull])
+      (prim
+        tag
+        (v value))))
+  (judgment
+    StudioMember
+    [key value]
+    (mk
+      StudioMember
+      (v key)
+      (v value)))
+  (judgment
+    StudioMember'key
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioMember'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 1)))
+  (judgment
+    StudioKeyString
+    [value]
+    (mk
+      StudioKeyString
+      (v value)))
+  (judgment
+    StudioKeyString'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    StudioKeyWord
+    [value]
+    (mk
+      StudioKeyWord
+      (v value)))
+  (judgment
+    StudioKeyWord'value
+    [record]
+    (prim
+      nth
+      (prim
+        args
+        (v record))
+      (q 0)))
+  (judgment
+    ParseStudio
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintStudio
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    StudioWellFormed
+    [grammar source]
+    (match
+      (call
+        ParseStudio
+        (v grammar)
+        (v source))
+      (case
+        (pm
+          StudioScript
+          (pv steps))
+        (mk
+          valid
+          (v steps)))
+      (case
+        (pm
+          StudioWorld
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioWriteFile
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioOpenFile
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioReplaceFile
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioSelect
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioCommand
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioAssertViews
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioAssertViewContains
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioAssertDocuments
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioAssertDocumentsContain
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioAssertTraceContains
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioAssertOutputContains
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm
+          StudioAssertDiagnostics
+          (pv value))
+        (mk
+          valid
+          (v value)))
+      (case
+        (pm StudioClearTrace)
+        (mk valid))
+      (case
+        _
+        (mk
+          invalid
+          (q parse)))))
+  (judgment
+    InferStudio
+    [grammar source]
+    (lst
+      (mk
+        type
+        (q root)
+        (q studio-script)
+        (q declared)
+        (q studio-script))))
+  (judgment
+    TypeCheckStudio
+    [grammar source]
+    (lst)))
