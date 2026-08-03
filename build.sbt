@@ -1,6 +1,6 @@
 import java.nio.file.Files
 
-ThisBuild / scalaVersion := "3.6.3"
+ThisBuild / scalaVersion := "3.6.4"
 ThisBuild / version := sys.env.getOrElse("STRATUM_VERSION", "0.1.0-SNAPSHOT")
 ThisBuild / organization := "info.eurisko"
 ThisBuild / organizationName := "Eurisko Information Lab"

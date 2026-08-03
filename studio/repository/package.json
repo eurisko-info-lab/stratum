@@ -46,7 +46,7 @@
         },
         "stratumRepo.javaHome": {
           "type": "string",
-          "default": "/home/patrick/.cache/coursier/arc/https/github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.18%252B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.18_8.tar.gz/jdk-17.0.18+8",
+          "default": "/home/patrick/.cache/coursier/arc/https/github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.24%252B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.24_8.tar.gz/jdk-17.0.24+8",
           "description": "Java home used by the Stratum language-server launcher."
         }
       }
