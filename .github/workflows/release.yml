@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.0.0
         with:
           distribution: temurin
-          java-version: '17.0.20+8'
+          java-version: '17.0.24+8'
           cache: sbt
 
       - uses: sbt/setup-sbt@bfea3c5f48abd221b04a6df4798aa5eb8b6a2baf # v1

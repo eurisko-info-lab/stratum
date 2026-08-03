@@ -3,6 +3,6 @@
 # digest of what a thing actually is should not resolve its own compiler by
 # floating reference.
 [toolchain]
-channel = "1.91.1"
+channel = "1.92.0"
 components = ["rustfmt"]
 profile = "minimal"
