@@ -1,6 +1,6 @@
 package stratum
 
-import stratum.cli.{Cli, CommandResult}
+import stratum.cli.Cli
 
 import java.nio.file.{Files, Path, Paths}
 import scala.jdk.CollectionConverters.*
