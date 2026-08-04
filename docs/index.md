@@ -28,7 +28,7 @@ can instead be re-derived:
 ```bash
 git clone https://github.com/eurisko-info-lab/stratum
 cd stratum
-./tools/staircase.sh    # rebuild all twelve layers and check every digest
+./tools/staircase.sh    # rebuild the staircase layers and check every digest
 sbt test                # replay every transcript
 ./tools/parity.sh       # make the two hosts agree
 ./tools/cleanroom.sh    # rebuild from executable, digest and closure alone
@@ -73,9 +73,9 @@ to a settled publication.
 | [Invariants](invariants.md) | the properties every layer must hold, and where each is enforced |
 | [The native boundary](native-boundary.md) | what the host is allowed to know, and why it is so little |
 | [Studio](studio.md) | how an editor is derived from a profile rather than written |
-| [Foundations F0–F11](foundations/F0.md) | one page per layer: what it adds and what it proves |
+| [Foundations F0–F14](foundations/F0.md) | one page per layer: what it adds and what it proves |
 
-## The twelve layers
+## The staircase layers
 
 Each foundation is a complete system that can run the one above it. The
 staircase is not a build order — it is a sequence of derivations, each recorded
@@ -95,6 +95,9 @@ as a change that the predecessor validates.
 | [F9](foundations/F9.md) | federation with BFT finality |
 | [F10](foundations/F10.md) | semantic archives and reconstruction |
 | [F11](foundations/F11.md) | profile-guided editors, knowing no domain |
+| [F12](foundations/F12.md) | semantic filesystem authority and governed materialization |
+| [F13](foundations/F13.md) | canonical schema reflection, identities, and structural change law |
+| [F14](foundations/F14.md) | investigation-state agents with compiled context and evidence loops |
 
 Each layer is tagged, and each tag verifies on its own terms. The digest a tag
 records is the digest that layer had when it was built; later layers re-derive
@@ -108,7 +111,7 @@ apart:
 
 | Branch | Carries |
 | --- | --- |
-| `main` | the platform: the twelve foundations, both hosts, the Lean model, the shared languages, and the generic language service |
+| `main` | the platform: F0..F11 plus the revised F12/F13/F14 candidate sequence, both hosts, the Lean model, the shared languages, and the generic language service |
 | `featured/*` | one branch per application, and one per editor client |
 
 The platform names no application and no editor. A branch adds a world of its

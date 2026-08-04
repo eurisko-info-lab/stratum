@@ -30,7 +30,9 @@ $$
 | F9 | `federation` | constituted agreement and settlement |
 | F10 | `retention` | constituted semantic retention and archives |
 | F11 | `studio` | profile-guided studios and the complete publication workflow |
-| F12 | `semantic-fs` | structured-content authority, generated projections, and materialization profiles |
+| F12 | `semantic-fs` | semantic filesystem authority, structured-content governance, and constructive repository patches |
+| F13 | `schema` | canonical schema reflection, schema identities/versions, derived codecs/references, and structural change law |
+| F14 | `agents` | investigation states, context compilation, expandable semantic views, model actions, and evidence-driven iteration |
 
 ## Protocol for step `n`
 

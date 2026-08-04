@@ -40,14 +40,14 @@ core. Clean-room reconstruction shrinks that root to three things; it does not
 abolish it.
 
 ```text
-F0  ->  F1  ->  ...  ->  F12
+F0  ->  F1  ->  ...  ->  F12  ->  F13  ->  F14
   each arrow is one canonical change, and the predecessor validates it
 ```
 
 ### Try it
 
 ```bash
-./tools/staircase.sh    # rebuild all twelve layers and check every digest
+./tools/staircase.sh    # rebuild the staircase layers and check every digest
 sbt test                # replay every transcript
 ./tools/parity.sh       # make the two hosts agree
 ./tools/cleanroom.sh    # rebuild from executable, digest and closure alone
@@ -105,7 +105,9 @@ verdict with evidence.
 | F9 | constituted agreement and settlement | 12 | [F9](docs/foundations/F9.md) |
 | F10 | constituted semantic retention and archives | 14 | [F10](docs/foundations/F10.md) |
 | F11 | profile-guided studios and the publication workflow | 27 | [F11](docs/foundations/F11.md) |
-| F12 | semantic filesystem projections and materialization-profile law | 0 | [F12](docs/foundations/F12.md) |
+| F12 | semantic filesystem authority, structured-content governance, and constructive repository patches | 0 | [F12](docs/foundations/F12.md) |
+| F13 | canonical schema reflection, schema identities/versions, derived codecs/references, and structural change law | 0 | [F13](docs/foundations/F13.md) |
+| F14 | investigation states, context compilation, semantic views, model actions, and evidence-driven iteration | 0 | [F14](docs/foundations/F14.md) |
 
 ## Quick start
 
@@ -216,7 +218,7 @@ apart:
 
 | Branch | Carries |
 | --- | --- |
-| `main` | the platform: the twelve foundations, both hosts, the Lean model, the shared languages, and the generic language service |
+| `main` | the platform: F0..F11 plus the revised F12/F13/F14 candidate sequence, both hosts, the Lean model, the shared languages, and the generic language service |
 | `featured/*` | one branch per application, and one per editor client |
 
 Everything shareable stays here, including
