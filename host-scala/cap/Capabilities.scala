@@ -2,10 +2,10 @@ package stratum.cap
 
 import stratum.artifact.{Artifact, Cas}
 import stratum.journal.Journal
-import stratum.canon.{Canon, CanonText, Digest}
+import stratum.canon.{Canon, Digest}
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Files, Path}
 import java.security.MessageDigest
 import scala.collection.mutable
 
@@ -130,9 +130,6 @@ final class SignatureCapability extends CapabilityHandler:
     md.update(0.toByte)
     md.update(Canon.encode(message))
     md.digest().toVector
-
-  private def publicOf(secret: String): String =
-    Digest.of(("pk:" + secret).getBytes(StandardCharsets.UTF_8)).hex.take(16)
 
   def handle(req: CapabilityRequest): CapabilityResponse = (req.name, req.args) match
     case ("public-key", Vector(Canon.S(secret))) =>

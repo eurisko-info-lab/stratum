@@ -1,6 +1,6 @@
 package stratum
 
-import stratum.cli.{Cli, Transcript}
+import stratum.cli.Transcript
 
 import java.nio.file.{Files, Path, Paths}
 

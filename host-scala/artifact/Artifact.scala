@@ -1,9 +1,9 @@
 package stratum.artifact
 
 import stratum.journal.Journal
-import stratum.canon.{Canon, CanonText, Digest}
+import stratum.canon.{Canon, CanonText, Digest, Schema}
 
-import java.nio.file.{Files, Path, StandardOpenOption}
+import java.nio.file.{Files, Path}
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
@@ -15,6 +15,11 @@ final case class Artifact(kind: String, body: Canon):
   def refs: Vector[Digest] = Canon.refs(body)
 
 object Artifact:
+  given Schema[Artifact] with
+    def encode(value: Artifact): Canon = value.toCanon
+    def decode(value: Canon): Either[String, Artifact] = Artifact.fromCanon(value)
+    def refs(value: Artifact): Vector[Digest] = value.refs
+
   def fromCanon(c: Canon): Either[String, Artifact] = c match
     case Canon.Node("artifact", Vector(Canon.Sym(kind), body)) => Right(Artifact(kind, body))
     case other => Left(s"not an artifact envelope: ${CanonText.write(other)}")

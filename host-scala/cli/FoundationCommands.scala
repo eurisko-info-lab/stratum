@@ -6,7 +6,6 @@ import stratum.canon.{Canon, CanonText, Digest}
 import stratum.meta.*
 
 import java.nio.file.{Files, Path}
-import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 
 /**
@@ -73,7 +72,7 @@ object FoundationCommands:
           val program = Canon.Node("program", uses)
           Right(Canon.R(cas.put(Artifact("meta-program", program))))
     case Canon.Node("foundation-of", Vector(Canon.S(dir))) =>
-      foundationDigest(root, root.resolve(dir)).map(Canon.R.apply)
+      foundationDigest(root.resolve(dir)).map(Canon.R.apply)
     case Canon.Node(tag, args) =>
       val resolved = args.map(resolveTemplate(root, cas, _))
       resolved.collectFirst { case Left(m) => m } match
@@ -96,7 +95,7 @@ object FoundationCommands:
     if !Files.exists(p) then Left(s"no such file: $path")
     else CanonText.read(Files.readString(p))
 
-  private def foundationDigest(root: Path, dir: Path): Either[String, Digest] =
+  private def foundationDigest(dir: Path): Either[String, Digest] =
     val f = dir.resolve("foundation.canon")
     if !Files.exists(f) then Left(s"no foundation at $dir")
     else Artifact.decode(Files.readAllBytes(f)).map(_.digest)
@@ -125,7 +124,7 @@ object FoundationCommands:
               case Some(Canon.Node("none", _)) | None => Right(Canon.Node("none", Vector.empty))
               case Some(Canon.Node("dir", Vector(Canon.S(dir)))) =>
                 val predDir = root.resolve(dir)
-                foundationDigest(root, predDir).flatMap { d =>
+                foundationDigest(predDir).flatMap { d =>
                   val predCas = DirectoryCas(predDir.resolve("closure"))
                   predCas.digests.foreach(pd => predCas.get(pd).foreach(cas.put))
                   Journal.copy(
@@ -360,7 +359,7 @@ object FoundationCommands:
    * Nothing outside the foundation's closure is consulted, so the result is a
    * property of the foundation rather than of the working tree.
    */
-  private def runIn(root: Path, f: LoadedFoundation, judgment: String, arguments: Vector[Canon]): Either[String, Canon] =
+  private def runIn(f: LoadedFoundation, judgment: String, arguments: Vector[Canon]): Either[String, Canon] =
     if !f.program.judgments.contains(judgment) then Left(s"the foundation does not define $judgment")
     else
       val caps = stratum.cap.Capabilities.standard(f.cas, f.dir, f.foundationDigest.hex)
@@ -391,7 +390,6 @@ object FoundationCommands:
             val bootstrap = field(successor.foundation, "bootstrap").getOrElse(Canon.S(""))
             val change = field(successor.foundation, "change").getOrElse(Canon.Node("none", Vector.empty))
             runIn(
-              root,
               predecessor,
               "BuildDerivation",
               Vector(name, bootstrap, change, predecessor.application, successor.application)
@@ -408,6 +406,8 @@ object FoundationCommands:
                   s"derived change ${Canon.digest(derivation).hex}",
                   opts.get("out").map(out => s"wrote $out").getOrElse(CanonText.write(derivation))
                 )
+      case (None, _) => CommandResult.fail("usage: foundation derive-change --predecessor <dir> --successor <dir>")
+      case (_, None) => CommandResult.fail("usage: foundation derive-change --predecessor <dir> --successor <dir>")
 
   /**
    * The predecessor constructs the successor.
@@ -427,7 +427,6 @@ object FoundationCommands:
               case Left(m) => CommandResult.fail(m)
               case Right(derivation) =>
                 runIn(
-                  root,
                   predecessor,
                   "DeriveSuccessor",
                   Vector(Canon.R(predecessor.foundationDigest), derivation)
@@ -541,4 +540,5 @@ object FoundationCommands:
                 if valid then 0 else 1,
                 Vector(s"predecessor $predName", s"successor $succName", s"result $resultLine")
               )
-      case _ => CommandResult.fail("usage: foundation verify-successor --predecessor <dir> --successor <dir>")
+      case (None, _) => CommandResult.fail("usage: foundation verify-successor --predecessor <dir> --successor <dir>")
+      case (_, None) => CommandResult.fail("usage: foundation verify-successor --predecessor <dir> --successor <dir>")

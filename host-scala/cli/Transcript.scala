@@ -324,12 +324,11 @@ object Transcript:
         case (_, Left(faults)) => CommandResult(1, s"refused $rel" +: faults.map("  " + _))
         case (Right(steps), Right(bound)) =>
           val commands = steps.map(s => s -> splitCommand(s.command))
-          run(root, rel, doc, bound, commands, recordTo.map(root.resolve), rehearsing)
+          run(root, rel, bound, commands, recordTo.map(root.resolve), rehearsing)
 
   private def run(
       root: Path,
       rel: String,
-      doc: Doc,
       bound: Map[String, String],
       commands: Vector[(Step, Vector[String])],
       recordTo: Option[Path],

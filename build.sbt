@@ -19,9 +19,11 @@ lazy val root = (project in file("."))
   .settings(
     name := "stratum",
     Compile / scalaSource := baseDirectory.value / "host-scala",
+    Compile / unmanagedSourceDirectories += baseDirectory.value / "repo-scala",
     Test / scalaSource := baseDirectory.value / "test-scala",
+    Test / unmanagedSourceDirectories += baseDirectory.value / "repo-scala",
     libraryDependencies += "org.scalameta" %% "munit" % "1.0.4" % Test,
-    scalacOptions ++= Seq("-deprecation", "-feature"),
+    scalacOptions ++= Seq("-deprecation", "-feature", "-Wunused:all"),
     run / fork := true,
     Test / fork := true,
     // The journal that makes a run undoable is one per process, and a run may
