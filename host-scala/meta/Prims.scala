@@ -1,6 +1,6 @@
 package stratum.meta
 
-import stratum.canon.{Canon, CanonText, Digest}
+import stratum.canon.{Canon, CanonText}
 
 /**
  * The fixed primitive set of MetaMachine0.

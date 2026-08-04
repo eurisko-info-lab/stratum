@@ -1,6 +1,6 @@
 package stratum.cli
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 
 /**
  * StratumHost0 command entry point.
