@@ -35,6 +35,15 @@
         (bind value number)
         (bind eol eol)])
     (prod
+      DataParams
+      [
+        (kw "data")
+        (bind name ident)
+        (bind params params)
+        (kw "=")
+        (bind constructors constructors)
+        (bind eol eol)])
+    (prod
       Data
       [
         (kw "data")
@@ -67,6 +76,14 @@
     (fold Constructors constructor))
   (category
     constructor
+    (prod
+      ConstructorAt
+      [
+        (kw "|")
+        (bind name ident)
+        (bind fields fields)
+        (kw ":")
+        (bind result type)])
     (prod
       Constructor
       [
@@ -142,6 +159,12 @@
         (bind type type)]))
   (category
     type
+    (prod
+      TypeDepend
+      [
+        (bind params params)
+        (kw "->")
+        (bind to type)])
     (prod
       TypeArrow
       [

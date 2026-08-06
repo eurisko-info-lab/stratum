@@ -1,0 +1,225 @@
+; Generated from languages/strata/strata.grammar by ElaborateGrammarSource. Do not edit by hand.
+(grammar
+  (name "strata")
+  (start unit)
+  (token eol sym "\\n")
+  (token comment str ";[^\\n]*")
+  (token fieldnum sym "#[0-9]+")
+  (token ident sym "[A-Za-z_][A-Za-z0-9_']*")
+  (token number nat "[0-9]+")
+  (token text str "\"[^\"]*\"")
+  (category
+    unit
+    (fold Unit line))
+  (category
+    line
+    (prod
+      Blank
+      [
+        (bind value eol)])
+    (prod
+      Comment
+      [
+        (bind value comment)
+        (bind eol eol)])
+    (prod
+      Module
+      [
+        (kw "module")
+        (bind name text)
+        (bind eol eol)])
+    (prod
+      Version
+      [
+        (kw "version")
+        (bind value number)
+        (bind eol eol)])
+    (prod
+      Data
+      [
+        (kw "data")
+        (bind name ident)
+        (kw "=")
+        (bind constructors constructors)
+        (bind eol eol)])
+    (prod
+      Def
+      [
+        (kw "def")
+        (bind name ident)
+        (bind params params)
+        (kw ":")
+        (bind result type)
+        (kw "=")
+        (bind body expr)
+        (bind eol eol)])
+    (prod
+      Law
+      [
+        (kw "law")
+        (bind name ident)
+        (bind params params)
+        (kw "=")
+        (bind body expr)
+        (bind eol eol)]))
+  (category
+    constructors
+    (fold Constructors constructor))
+  (category
+    constructor
+    (prod
+      Constructor
+      [
+        (kw "|")
+        (bind name ident)
+        (bind fields fields)]))
+  (category
+    fields
+    (prod
+      NoFields
+      [
+        (kw "[")
+        (kw "]")])
+    (prod
+      Fields
+      [
+        (kw "[")
+        (bind items fieldseq)
+        (kw "]")]))
+  (category
+    fieldseq
+    (prod
+      FieldMore
+      [
+        (bind head fielddecl)
+        (kw ",")
+        (bind tail fieldseq)])
+    (prod
+      FieldOne
+      [
+        (bind value fielddecl)]))
+  (category
+    fielddecl
+    (prod
+      FieldDecl
+      [
+        (bind name ident)
+        (bind number fieldnum)
+        (kw ":")
+        (bind type type)]))
+  (category
+    params
+    (prod
+      NoParams
+      [
+        (kw "[")
+        (kw "]")])
+    (prod
+      Params
+      [
+        (kw "[")
+        (bind items paramseq)
+        (kw "]")]))
+  (category
+    paramseq
+    (prod
+      ParamMore
+      [
+        (bind head param)
+        (kw ",")
+        (bind tail paramseq)])
+    (prod
+      ParamOne
+      [
+        (bind value param)]))
+  (category
+    param
+    (prod
+      Param
+      [
+        (bind name ident)
+        (kw ":")
+        (bind type type)]))
+  (category
+    type
+    (prod
+      TypeArrow
+      [
+        (bind from typeapp)
+        (kw "->")
+        (bind to type)])
+    (pass typeapp))
+  (category
+    typeapp
+    (fold TypeApply typeatom))
+  (category
+    typeatom
+    (prod
+      TypeRef
+      [
+        (bind name ident)])
+    (paren "(" type ")"))
+  (category
+    expr
+    (prod
+      Match
+      [
+        (kw "match")
+        (bind scrutinee expr)
+        (kw "of")
+        (bind cases cases)
+        (kw "end")])
+    (prod
+      Let
+      [
+        (kw "let")
+        (bind name ident)
+        (kw "=")
+        (bind value expr)
+        (kw "in")
+        (bind body expr)])
+    (pass application))
+  (category
+    cases
+    (fold Cases case))
+  (category
+    case
+    (prod
+      Case
+      [
+        (kw "case")
+        (bind pattern pattern)
+        (kw "->")
+        (bind body expr)]))
+  (category
+    application
+    (fold Apply atom))
+  (category
+    atom
+    (prod
+      Natural
+      [
+        (bind value number)])
+    (prod
+      Text
+      [
+        (bind value text)])
+    (prod
+      Var
+      [
+        (bind name ident)])
+    (paren "(" expr ")"))
+  (category
+    pattern
+    (fold PatApply patatom))
+  (category
+    patatom
+    (prod
+      PatWild
+      [
+        (kw "_")])
+    (prod
+      PatVar
+      [
+        (bind name ident)])
+    (paren "(" pattern ")")))

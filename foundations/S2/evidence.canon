@@ -1,0 +1,18 @@
+
+artifactevidence
+evidence
+checkstrata-checks-an-indexed-familyok
+check+strata-rejects-an-undeclared-parameter-typeok
+check1strata-rejects-a-family-that-parameterises-itselfok
+check1strata-rejects-a-constructor-that-lands-elsewhereok
+check#strata-rejects-an-unsaturated-indexok
+check0strata-requires-an-index-on-a-family-constructorok
+check+strata-normalises-an-index-before-comparingok
+check$strata-separates-indices-that-differok
+check4strata-rejects-an-append-whose-index-does-not-add-upok
+checkstrata-rewrites-along-a-proofok
+check'strata-dependent-surface-prints-exactlyok
+check strata-seed-surface-still-parsesok
+check'strata-an-indexed-vector-is-well-formedok
+check#strata-an-indexed-vector-terminatesok
+check*strata-rejects-a-length-that-is-off-by-oneok

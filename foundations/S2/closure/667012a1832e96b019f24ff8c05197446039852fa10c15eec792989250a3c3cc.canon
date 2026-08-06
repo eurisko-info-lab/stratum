@@ -1,0 +1,15 @@
+
+artifactprofile
+profile
+
+namealpha-editor
+languagealpha
+layoutsingle-pane
+
+navigationflat
+panelsoutlinedetail
+commands	open-item
+workflowopenclosed
+rolesauthor
+projectionstext
+foreigntext

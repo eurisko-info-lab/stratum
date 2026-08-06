@@ -71,6 +71,11 @@ judgment CollectDeclarations [lines] =
         mk #data [name call ConstructorList [constructors]]
         call CollectDeclarations [rest]
       ]
+    case (#DataParams name params constructors eol) :: rest ->
+      prim #cons [
+        mk #family [name call ParameterList [params] call ConstructorList [constructors]]
+        call CollectDeclarations [rest]
+      ]
     case (#Def name params result body eol) :: rest ->
       prim #cons [
         mk #def [name call ParameterList [params] result body]
@@ -161,6 +166,11 @@ judgment FindConstructor [decls name] =
         case (#some found) -> mk #some [found]
         case (#none) -> call FindConstructor [rest name]
       }
+    case (#family owner params constructors) :: rest ->
+      match call FindConstructorIn [constructors name] {
+        case (#some found) -> mk #some [found]
+        case (#none) -> call FindConstructor [rest name]
+      }
     case head :: rest -> call FindConstructor [rest name]
   }
 
@@ -168,6 +178,10 @@ judgment FindConstructorIn [constructors name] =
   match constructors {
     case [] -> mk #none []
     case (#Constructor declared fields) :: rest ->
+      if prim #eq [declared name]
+      then mk #some [mk #constructor [declared prim #len [call FieldList [fields]]]]
+      else call FindConstructorIn [rest name]
+    case (#ConstructorAt declared fields result) :: rest ->
       if prim #eq [declared name]
       then mk #some [mk #constructor [declared prim #len [call FieldList [fields]]]]
       else call FindConstructorIn [rest name]

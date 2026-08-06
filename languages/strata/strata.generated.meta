@@ -179,6 +179,29 @@
       (case
         (pcons
           (pm
+            DataParams
+            (pv name)
+            (pv params)
+            (pv constructors)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            family
+            (v name)
+            (call
+              ParameterList
+              (v params))
+            (call
+              ConstructorList
+              (v constructors)))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pm
             Def
             (pv name)
             (pv params)
@@ -461,6 +484,32 @@
               (v name)))))
       (case
         (pcons
+          (pm
+            family
+            (pv owner)
+            (pv params)
+            (pv constructors))
+          (pv rest))
+        (match
+          (call
+            FindConstructorIn
+            (v constructors)
+            (v name))
+          (case
+            (pm
+              some
+              (pv found))
+            (mk
+              some
+              (v found)))
+          (case
+            (pm none)
+            (call
+              FindConstructor
+              (v rest)
+              (v name)))))
+      (case
+        (pcons
           (pv head)
           (pv rest))
         (call
@@ -481,6 +530,33 @@
             Constructor
             (pv declared)
             (pv fields))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            some
+            (mk
+              constructor
+              (v declared)
+              (prim
+                len
+                (call
+                  FieldList
+                  (v fields)))))
+          (call
+            FindConstructorIn
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pm
+            ConstructorAt
+            (pv declared)
+            (pv fields)
+            (pv result))
           (pv rest))
         (if
           (prim

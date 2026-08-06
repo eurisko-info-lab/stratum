@@ -1,0 +1,40 @@
+; S2: the dependent core, and the third foundation of the second floor.
+;
+; S1 decided whether a module was well formed. S2 decides the same question
+; when a type mentions a value: a family carries a telescope, a constructor
+; declares the index it lands on, and two types are the same when they compute
+; to the same thing.
+;
+; Still described in Meta. The language does not describe itself until S4.
+(build
+  (name "S2")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/S1"))
+  (change (file "changes/S1-S2/change.canon"))
+  (application
+    (application
+      (name "strata-s2")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "languages/strata/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+      ]))
+      (grammars {
+        strata (file "languages/strata/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (checks (include "fixtures/strata/s2-checks.canon"))
+      (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print)))
+      (resources (budget (steps 20000000) (depth 20000))))))
