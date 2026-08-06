@@ -1,0 +1,31 @@
+; The canonical change from S0 to S1.
+;
+; S0 |- S1. The seed could parse a module and run it. S1 decides whether a
+; module is well formed before anything runs it: definitions have the types
+; they declare, matches answer every constructor, and recursion is structural.
+;
+; It also gives a declaration its meaning as data. Every data declaration
+; emits a canonical schema, and the codec is read off that schema rather than
+; written by hand, so `decode (encode v) = ok v` is a law about the
+; declaration.
+(change
+  (kind foundation)
+  (name "S0->S1")
+  (predecessor (foundation-of "foundations/S0"))
+  (delta-meta (file "changes/S0-S1/delta-meta.canon"))
+  (delta-grammar (file "changes/S0-S1/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "typed canonical data")
+      (programs [
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/check.meta")
+        (text-file "features/strata/total.meta")
+        (text-file "features/strata/schema.meta")
+        (text-file "strata/lib/bool.strata")
+        (text-file "strata/lib/nat.strata")
+      ]))))

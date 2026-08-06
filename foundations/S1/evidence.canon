@@ -1,0 +1,19 @@
+
+artifactevidence
+evidence
+check!strata-checks-a-well-typed-moduleok
+check strata-checks-a-recursive-moduleok
+check%strata-rejects-a-result-type-mismatchok
+check6strata-rejects-applying-a-value-that-is-not-a-functionok
+check,strata-rejects-a-foreign-constructor-patternok
+check#strata-requires-an-exhaustive-matchok
+check#strata-accepts-structural-recursionok
+check"strata-rejects-unguarded-recursionok
+check/strata-emits-a-schema-for-each-data-declarationok
+check strata-schema-identity-is-stableok
+checkstrata-codec-round-tripsok
+check.strata-codec-rejects-an-undeclared-constructorok
+check!strata-library-bool-is-well-typedok
+check strata-library-nat-is-well-typedok
+checkstrata-library-nat-terminatesok
+check$strata-library-nat-codec-round-tripsok

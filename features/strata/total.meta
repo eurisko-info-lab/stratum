@@ -1,0 +1,144 @@
+module stratatotal
+
+; Termination for Strata definitions, described in Meta.
+;
+; A definition is total when every call it makes to itself passes an argument
+; that the surrounding match has already taken apart. That is the whole rule:
+; recursion is structural, and a definition that recurses on something it did
+; not destructure is rejected rather than trusted.
+;
+; The seed has no mutual recursion, so self reference is the only cycle a
+; module can build.
+
+judgment TotalModule [grammar source] =
+  call TerminationOfDeclarations [call Declarations [call ParseStrata [grammar source]]]
+
+judgment TerminationOfDeclarations [decls] =
+  match decls {
+    case [] -> mk #total [#ok]
+    case (#def name params result body) :: rest ->
+      call BothOk [
+        call WalkForRecursion [name call ParameterNames [params] list [] body]
+        call TerminationOfDeclarations [rest]
+      ]
+    case head :: rest -> call TerminationOfDeclarations [rest]
+  }
+
+; A failure aborts the derivation, so reaching here means the first verdict
+; held. The second is the one that carries the result.
+judgment BothOk [first second] = second
+
+judgment ParameterNames [params] =
+  match params {
+    case [] -> list []
+    case (#Param pname ptype) :: rest -> prim #cons [pname call ParameterNames [rest]]
+    case head :: rest -> call ParameterNames [rest]
+  }
+
+judgment ApplicationSpine [expr] =
+  match expr {
+    case (#Apply left right) -> prim #snoc [call ApplicationSpine [left] right]
+    case _ -> list [expr]
+  }
+
+; `roots` are the parameters of the definition. `smaller` are the names bound
+; by taking one of those apart, and only those may carry a recursive call.
+judgment WalkForRecursion [fname roots smaller expr] =
+  match expr {
+    case (#Natural value) -> mk #ok []
+    case (#Text value) -> mk #ok []
+    case (#Var name) ->
+      if prim #eq [name fname]
+      then fail #totality-error "a definition refers to itself without an argument"
+      else mk #ok []
+    case (#Let name value body) ->
+      call BothOk [
+        call WalkForRecursion [fname roots smaller value]
+        call WalkForRecursion [fname roots smaller body]
+      ]
+    case (#Match scrutinee cases) ->
+      call BothOk [
+        call WalkForRecursion [fname roots smaller scrutinee]
+        call WalkMatchCases [fname roots smaller scrutinee call CaseList [cases]]
+      ]
+    case (#Apply left right) -> call WalkApplication [fname roots smaller expr]
+    case _ -> mk #ok []
+  }
+
+judgment WalkMatchCases [fname roots smaller scrutinee cases] =
+  match cases {
+    case [] -> mk #ok []
+    case (#Case pattern body) :: rest ->
+      call BothOk [
+        call WalkForRecursion [
+          fname
+          roots
+          call SmallerAfterMatch [roots smaller scrutinee pattern]
+          body
+        ]
+        call WalkMatchCases [fname roots smaller scrutinee rest]
+      ]
+    case _ -> mk #ok []
+  }
+
+; Taking apart a parameter, or something already smaller than one, yields
+; names that are smaller still.
+judgment SmallerAfterMatch [roots smaller scrutinee pattern] =
+  match scrutinee {
+    case (#Var v) ->
+      if prim #or [prim #contains [roots v] prim #contains [smaller v]]
+      then call AddPatternNames [smaller pattern]
+      else smaller
+    case _ -> smaller
+  }
+
+judgment AddPatternNames [smaller pattern] =
+  match pattern {
+    case (#PatApply left right) -> call AddSpineNames [smaller call PatternArguments [pattern]]
+    case _ -> smaller
+  }
+
+judgment PatternArguments [pattern] =
+  match call SpineOfPattern [pattern] {
+    case head :: args -> args
+    case _ -> list []
+  }
+
+judgment AddSpineNames [smaller args] =
+  match args {
+    case [] -> smaller
+    case (#PatVar name) :: rest -> call AddSpineNames [prim #snoc [smaller name] rest]
+    case head :: rest -> call AddSpineNames [smaller rest]
+  }
+
+judgment WalkApplication [fname roots smaller expr] =
+  match call ApplicationSpine [expr] {
+    case (#Var head) :: args ->
+      if prim #eq [head fname]
+      then call BothOk [
+        call RecursiveArgumentDecreases [smaller args]
+        call WalkEachExpr [fname roots smaller args]
+      ]
+      else call WalkEachExpr [fname roots smaller args]
+    case spine -> call WalkEachExpr [fname roots smaller spine]
+  }
+
+judgment RecursiveArgumentDecreases [smaller args] =
+  match args {
+    case [] -> fail #totality-error "a recursive call does not decrease any argument"
+    case (#Var v) :: rest ->
+      if prim #contains [smaller v]
+      then mk #ok []
+      else call RecursiveArgumentDecreases [smaller rest]
+    case head :: rest -> call RecursiveArgumentDecreases [smaller rest]
+  }
+
+judgment WalkEachExpr [fname roots smaller items] =
+  match items {
+    case [] -> mk #ok []
+    case head :: rest ->
+      call BothOk [
+        call WalkForRecursion [fname roots smaller head]
+        call WalkEachExpr [fname roots smaller rest]
+      ]
+  }

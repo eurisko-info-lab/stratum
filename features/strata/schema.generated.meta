@@ -1,0 +1,503 @@
+; Generated from features/strata/schema.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataschema)
+  (judgment
+    ModuleSchema
+    [grammar source]
+    (call
+      SchemaOfDeclarations
+      (call
+        Declarations
+        (call
+          ParseStrata
+          (v grammar)
+          (v source)))))
+  (judgment
+    SchemaOfDeclarations
+    [decls]
+    (match
+      (v decls)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            data
+            (pv name)
+            (pv ctors))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            schema
+            (v name)
+            (call
+              SchemaConstructors
+              (v ctors)))
+          (call
+            SchemaOfDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          SchemaOfDeclarations
+          (v rest)))))
+  (judgment
+    SchemaConstructors
+    [ctors]
+    (match
+      (v ctors)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv cname)
+            (pv fields))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            constructor
+            (v cname)
+            (call
+              SchemaFields
+              (call
+                FieldList
+                (v fields))))
+          (call
+            SchemaConstructors
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          SchemaConstructors
+          (v rest)))))
+  (judgment
+    SchemaFields
+    [fields]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            FieldDecl
+            (pv fname)
+            (pv fnum)
+            (pv ftype))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            field
+            (v fname)
+            (call
+              FieldNumber
+              (v fnum))
+            (call
+              TypeValue
+              (v ftype)))
+          (call
+            SchemaFields
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          SchemaFields
+          (v rest)))))
+  (judgment
+    FieldNumber
+    [token]
+    (let
+      text
+      (prim
+        sym->str
+        (v token))
+      (prim
+        str->nat
+        (prim
+          ssub
+          (v text)
+          (q 1)
+          (prim
+            slen
+            (v text))))))
+  (judgment
+    SchemaDigest
+    [grammar source]
+    (prim
+      ref->str
+      (prim
+        digest
+        (call
+          ModuleSchema
+          (v grammar)
+          (v source)))))
+  (judgment
+    FindSchemaConstructor
+    [schemas cname]
+    (match
+      (v schemas)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            schema
+            (pv tname)
+            (pv ctors))
+          (pv rest))
+        (match
+          (call
+            FindInConstructors
+            (v ctors)
+            (v cname)
+            (v tname))
+          (case
+            (pm
+              some
+              (pv found))
+            (mk
+              some
+              (v found)))
+          (case
+            _
+            (call
+              FindSchemaConstructor
+              (v rest)
+              (v cname)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindSchemaConstructor
+          (v rest)
+          (v cname)))))
+  (judgment
+    FindInConstructors
+    [ctors cname owner]
+    (match
+      (v ctors)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            constructor
+            (pv declared)
+            (pv fields))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v cname))
+          (mk
+            some
+            (mk
+              found
+              (v owner)
+              (v declared)
+              (v fields)))
+          (call
+            FindInConstructors
+            (v rest)
+            (v cname)
+            (v owner))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindInConstructors
+          (v rest)
+          (v cname)
+          (v owner)))))
+  (judgment
+    EncodeValue
+    [schemas value]
+    (match
+      (call
+        FindSchemaConstructor
+        (v schemas)
+        (prim
+          tag
+          (v value)))
+      (case
+        (pm
+          some
+          (pm
+            found
+            (pv owner)
+            (pv cname)
+            (pv fields)))
+        (let
+          args
+          (prim
+            args
+            (v value))
+          (if
+            (prim
+              ne
+              (prim
+                len
+                (v args))
+              (prim
+                len
+                (v fields)))
+            (fail
+              codec-error
+              (q "value does not saturate the fields its constructor declares"))
+            (mk
+              encoded
+              (v owner)
+              (v cname)
+              (call
+                EncodeFields
+                (v schemas)
+                (v args)
+                (v fields))))))
+      (case
+        _
+        (fail
+          codec-error
+          (prim
+            scat
+            (q "no schema declares the constructor ")
+            (prim
+              sym->str
+              (prim
+                tag
+                (v value))))))))
+  (judgment
+    EncodeFields
+    [schemas args fields]
+    (match
+      (v args)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv arg)
+          (pv restArgs))
+        (match
+          (v fields)
+          (case (pnil) (lst))
+          (case
+            (pcons
+              (pm
+                field
+                (pv fname)
+                (pv fnum)
+                (pv ftype))
+              (pv restFields))
+            (prim
+              cons
+              (mk
+                at
+                (v fnum)
+                (call
+                  EncodeValue
+                  (v schemas)
+                  (v arg)))
+              (call
+                EncodeFields
+                (v schemas)
+                (v restArgs)
+                (v restFields))))
+          (case
+            (pcons
+              (pv head)
+              (pv restFields))
+            (call
+              EncodeFields
+              (v schemas)
+              (v restArgs)
+              (v restFields)))))))
+  (judgment
+    DecodeValue
+    [schemas encoded]
+    (match
+      (v encoded)
+      (case
+        (pm
+          encoded
+          (pv owner)
+          (pv cname)
+          (pv fields))
+        (match
+          (call
+            FindSchemaConstructor
+            (v schemas)
+            (v cname))
+          (case
+            (pm
+              some
+              (pm
+                found
+                (pv declaredOwner)
+                (pv declaredName)
+                (pv declaredFields)))
+            (if
+              (prim
+                ne
+                (v declaredOwner)
+                (v owner))
+              (fail
+                codec-error
+                (q "encoded value claims a type its constructor does not belong to"))
+              (if
+                (prim
+                  ne
+                  (prim
+                    len
+                    (v fields))
+                  (prim
+                    len
+                    (v declaredFields)))
+                (fail
+                  codec-error
+                  (q "encoded value does not saturate the fields its constructor declares"))
+                (prim
+                  node
+                  (v cname)
+                  (call
+                    DecodeFields
+                    (v schemas)
+                    (v fields)
+                    (v declaredFields))))))
+          (case
+            _
+            (fail
+              codec-error
+              (prim
+                scat
+                (q "no schema declares the constructor ")
+                (prim
+                  sym->str
+                  (v cname)))))))
+      (case
+        _
+        (fail
+          codec-error
+          (q "not an encoded value")))))
+  (judgment
+    DecodeFields
+    [schemas fields declared]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            at
+            (pv fnum)
+            (pv encoded))
+          (pv restFields))
+        (match
+          (v declared)
+          (case
+            (pnil)
+            (fail
+              codec-error
+              (q "encoded value has more fields than its schema declares")))
+          (case
+            (pcons
+              (pm
+                field
+                (pv dname)
+                (pv dnum)
+                (pv dtype))
+              (pv restDeclared))
+            (if
+              (prim
+                ne
+                (v fnum)
+                (v dnum))
+              (fail
+                codec-error
+                (q "encoded field does not carry its declared number"))
+              (prim
+                cons
+                (call
+                  DecodeValue
+                  (v schemas)
+                  (v encoded))
+                (call
+                  DecodeFields
+                  (v schemas)
+                  (v restFields)
+                  (v restDeclared)))))
+          (case
+            (pcons
+              (pv head)
+              (pv restDeclared))
+            (call
+              DecodeFields
+              (v schemas)
+              (v restFields)
+              (v restDeclared)))))
+      (case
+        (pcons
+          (pv head)
+          (pv restFields))
+        (fail
+          codec-error
+          (q "not an encoded field")))))
+  (judgment
+    CodecRoundTrip
+    [grammar source expr]
+    (let
+      schemas
+      (call
+        ModuleSchema
+        (v grammar)
+        (v source))
+      (let
+        value
+        (call
+          EvalNamed
+          (v grammar)
+          (v source)
+          (v expr))
+        (if
+          (prim
+            eq
+            (call
+              DecodeValue
+              (v schemas)
+              (call
+                EncodeValue
+                (v schemas)
+                (v value)))
+            (v value))
+          (mk
+            roundtrip
+            (q ok))
+          (fail
+            codec-error
+            (q "decoding an encoded value did not return the value"))))))
+  (judgment
+    EvalNamed
+    [grammar source name]
+    (let
+      parsed
+      (call
+        ParseStrata
+        (v grammar)
+        (v source))
+      (call
+        EvalName
+        (call
+          Declarations
+          (v parsed))
+        (lst)
+        (v name)))))

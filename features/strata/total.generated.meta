@@ -1,0 +1,418 @@
+; Generated from features/strata/total.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratatotal)
+  (judgment
+    TotalModule
+    [grammar source]
+    (call
+      TerminationOfDeclarations
+      (call
+        Declarations
+        (call
+          ParseStrata
+          (v grammar)
+          (v source)))))
+  (judgment
+    TerminationOfDeclarations
+    [decls]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk
+          total
+          (q ok)))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (call
+          BothOk
+          (call
+            WalkForRecursion
+            (v name)
+            (call
+              ParameterNames
+              (v params))
+            (lst)
+            (v body))
+          (call
+            TerminationOfDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TerminationOfDeclarations
+          (v rest)))))
+  (judgment
+    BothOk
+    [first second]
+    (v second))
+  (judgment
+    ParameterNames
+    [params]
+    (match
+      (v params)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (v pname)
+          (call
+            ParameterNames
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ParameterNames
+          (v rest)))))
+  (judgment
+    ApplicationSpine
+    [expr]
+    (match
+      (v expr)
+      (case
+        (pm
+          Apply
+          (pv left)
+          (pv right))
+        (prim
+          snoc
+          (call
+            ApplicationSpine
+            (v left))
+          (v right)))
+      (case
+        _
+        (lst
+          (v expr)))))
+  (judgment
+    WalkForRecursion
+    [fname roots smaller expr]
+    (match
+      (v expr)
+      (case
+        (pm
+          Natural
+          (pv value))
+        (mk ok))
+      (case
+        (pm
+          Text
+          (pv value))
+        (mk ok))
+      (case
+        (pm
+          Var
+          (pv name))
+        (if
+          (prim
+            eq
+            (v name)
+            (v fname))
+          (fail
+            totality-error
+            (q "a definition refers to itself without an argument"))
+          (mk ok)))
+      (case
+        (pm
+          Let
+          (pv name)
+          (pv value)
+          (pv body))
+        (call
+          BothOk
+          (call
+            WalkForRecursion
+            (v fname)
+            (v roots)
+            (v smaller)
+            (v value))
+          (call
+            WalkForRecursion
+            (v fname)
+            (v roots)
+            (v smaller)
+            (v body))))
+      (case
+        (pm
+          Match
+          (pv scrutinee)
+          (pv cases))
+        (call
+          BothOk
+          (call
+            WalkForRecursion
+            (v fname)
+            (v roots)
+            (v smaller)
+            (v scrutinee))
+          (call
+            WalkMatchCases
+            (v fname)
+            (v roots)
+            (v smaller)
+            (v scrutinee)
+            (call
+              CaseList
+              (v cases)))))
+      (case
+        (pm
+          Apply
+          (pv left)
+          (pv right))
+        (call
+          WalkApplication
+          (v fname)
+          (v roots)
+          (v smaller)
+          (v expr)))
+      (case
+        _
+        (mk ok))))
+  (judgment
+    WalkMatchCases
+    [fname roots smaller scrutinee cases]
+    (match
+      (v cases)
+      (case
+        (pnil)
+        (mk ok))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (call
+          BothOk
+          (call
+            WalkForRecursion
+            (v fname)
+            (v roots)
+            (call
+              SmallerAfterMatch
+              (v roots)
+              (v smaller)
+              (v scrutinee)
+              (v pattern))
+            (v body))
+          (call
+            WalkMatchCases
+            (v fname)
+            (v roots)
+            (v smaller)
+            (v scrutinee)
+            (v rest))))
+      (case
+        _
+        (mk ok))))
+  (judgment
+    SmallerAfterMatch
+    [roots smaller scrutinee pattern]
+    (match
+      (v scrutinee)
+      (case
+        (pm
+          Var
+          (pv v))
+        (if
+          (prim
+            or
+            (prim
+              contains
+              (v roots)
+              (v v))
+            (prim
+              contains
+              (v smaller)
+              (v v)))
+          (call
+            AddPatternNames
+            (v smaller)
+            (v pattern))
+          (v smaller)))
+      (case
+        _
+        (v smaller))))
+  (judgment
+    AddPatternNames
+    [smaller pattern]
+    (match
+      (v pattern)
+      (case
+        (pm
+          PatApply
+          (pv left)
+          (pv right))
+        (call
+          AddSpineNames
+          (v smaller)
+          (call
+            PatternArguments
+            (v pattern))))
+      (case
+        _
+        (v smaller))))
+  (judgment
+    PatternArguments
+    [pattern]
+    (match
+      (call
+        SpineOfPattern
+        (v pattern))
+      (case
+        (pcons
+          (pv head)
+          (pv args))
+        (v args))
+      (case _ (lst))))
+  (judgment
+    AddSpineNames
+    [smaller args]
+    (match
+      (v args)
+      (case
+        (pnil)
+        (v smaller))
+      (case
+        (pcons
+          (pm
+            PatVar
+            (pv name))
+          (pv rest))
+        (call
+          AddSpineNames
+          (prim
+            snoc
+            (v smaller)
+            (v name))
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          AddSpineNames
+          (v smaller)
+          (v rest)))))
+  (judgment
+    WalkApplication
+    [fname roots smaller expr]
+    (match
+      (call
+        ApplicationSpine
+        (v expr))
+      (case
+        (pcons
+          (pm
+            Var
+            (pv head))
+          (pv args))
+        (if
+          (prim
+            eq
+            (v head)
+            (v fname))
+          (call
+            BothOk
+            (call
+              RecursiveArgumentDecreases
+              (v smaller)
+              (v args))
+            (call
+              WalkEachExpr
+              (v fname)
+              (v roots)
+              (v smaller)
+              (v args)))
+          (call
+            WalkEachExpr
+            (v fname)
+            (v roots)
+            (v smaller)
+            (v args))))
+      (case
+        (pv spine)
+        (call
+          WalkEachExpr
+          (v fname)
+          (v roots)
+          (v smaller)
+          (v spine)))))
+  (judgment
+    RecursiveArgumentDecreases
+    [smaller args]
+    (match
+      (v args)
+      (case
+        (pnil)
+        (fail
+          totality-error
+          (q "a recursive call does not decrease any argument")))
+      (case
+        (pcons
+          (pm
+            Var
+            (pv v))
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v smaller)
+            (v v))
+          (mk ok)
+          (call
+            RecursiveArgumentDecreases
+            (v smaller)
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          RecursiveArgumentDecreases
+          (v smaller)
+          (v rest)))))
+  (judgment
+    WalkEachExpr
+    [fname roots smaller items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (mk ok))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          BothOk
+          (call
+            WalkForRecursion
+            (v fname)
+            (v roots)
+            (v smaller)
+            (v head))
+          (call
+            WalkEachExpr
+            (v fname)
+            (v roots)
+            (v smaller)
+            (v rest)))))))

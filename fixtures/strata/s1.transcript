@@ -1,0 +1,100 @@
+# S1 acceptance transcript: canonical data.
+#
+# S0 |- S1. The seed could parse a module and run it. S1 decides whether a
+# module is well formed before anything runs it, whether its definitions
+# terminate, and what its declarations mean as data.
+
+$ foundation verify --dir foundations/S1
+> foundation S1
+> digest d5e2a08505677ac58b7a14d242b9aa627ee2e8eaccd05ebaa84c005b1316304c
+> closure 95 artifacts
+> check strata-checks-a-well-typed-module ok
+> check strata-checks-a-recursive-module ok
+> check strata-rejects-a-result-type-mismatch ok
+> check strata-rejects-applying-a-value-that-is-not-a-function ok
+> check strata-rejects-a-foreign-constructor-pattern ok
+> check strata-requires-an-exhaustive-match ok
+> check strata-accepts-structural-recursion ok
+> check strata-rejects-unguarded-recursion ok
+> check strata-emits-a-schema-for-each-data-declaration ok
+> check strata-schema-identity-is-stable ok
+> check strata-codec-round-trips ok
+> check strata-codec-rejects-an-undeclared-constructor ok
+> check strata-library-bool-is-well-typed ok
+> check strata-library-nat-is-well-typed ok
+> check strata-library-nat-terminates ok
+> check strata-library-nat-codec-round-trips ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S0 --successor foundations/S1
+> predecessor S0
+> successor S1
+> result (valid #df0ee08dd7a2dc7bda620c75c4f4130e7f0a6e479ffad42ebac9dc1e3a8a41145)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/S1
+> reconstructed S1
+> digest d5e2a08505677ac58b7a14d242b9aa627ee2e8eaccd05ebaa84c005b1316304c
+> stable yes
+> closure 95 artifacts
+> checks 16 ok
+
+# A definition has the type it declares, and a match answers every
+# constructor of the type it scrutinises.
+$ derive --foundation foundations/S1 --goal '(call CheckModule (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> (checked ok)
+
+# A body that does not have its declared result type is rejected.
+$ derive --foundation foundations/S1 --goal '(call CheckModule (grammar strata) (q "module \"strata.bad\"\nversion 1\ndata Bit = | On [] | Off []\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef example []: Bit = Zero\n"))'
+> error type-error "definition example does not have its declared result type"
+> exit 1
+
+# A match that leaves a constructor unanswered is rejected, and says which.
+$ derive --foundation foundations/S1 --goal '(call CheckModule (grammar strata) (q "module \"strata.partial\"\nversion 1\ndata Bit = | On [] | Off []\ndef example []: Bit = match On of case On -> Off end\n"))'
+> error type-error "match does not cover the constructor Off"
+> exit 1
+
+# A pattern may only name constructors of the type being scrutinised.
+$ derive --foundation foundations/S1 --goal '(call CheckModule (grammar strata) (q "module \"strata.foreign\"\nversion 1\ndata Bit = | On [] | Off []\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef example []: Bit = match On of case Zero -> Off case On -> Off case Off -> On end\n"))'
+> error type-error "pattern constructor does not belong to the scrutinised type"
+> exit 1
+
+# Recursion on a field taken out of the scrutinee is structural, and
+# terminates.
+$ derive --foundation foundations/S1 --goal '(call TotalModule (grammar strata) (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n"))'
+> (total ok)
+
+# Recursion that rebuilds its argument does not.
+$ derive --foundation foundations/S1 --goal '(call TotalModule (grammar strata) (q "module \"strata.loop\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef loop [n: Nat]: Nat = match n of case Zero -> Zero case Succ p -> loop (Succ p) end\ndef example []: Nat = loop Zero\n"))'
+> error totality-error "a recursive call does not decrease any argument"
+> exit 1
+
+# Every data declaration emits a canonical schema value.
+$ derive --foundation foundations/S1 --goal '(call ModuleSchema (grammar strata) (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef example []: Nat = Zero\n"))'
+> [(schema Nat [(constructor Zero []) (constructor Succ [(field pred 1 (con Nat))])])]
+
+# A schema is content addressed, so a declaration has a stable identity.
+$ derive --foundation foundations/S1 --goal '(call SchemaDigest (grammar strata) (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n"))'
+> "d6cd93343468ffbafec13883035b9b8f60128bf39796e756a19db6617955be77"
+
+# Encoding is driven by declared field numbers, not by print order.
+$ derive --foundation foundations/S1 --goal '(call EncodeValue (call ModuleSchema (grammar strata) (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef example []: Nat = Zero\n")) (q (Succ (Zero))))'
+> (encoded Nat Succ [(at 1 (encoded Nat Zero []))])
+
+# And decoding an encoded value returns the value.
+$ derive --foundation foundations/S1 --goal '(call CodecRoundTrip (grammar strata) (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n") (q example))'
+> (roundtrip ok)
+
+# A codec is derived from a schema, so it cannot encode what no schema
+# declares.
+$ derive --foundation foundations/S1 --goal '(call EncodeValue (call ModuleSchema (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef example []: Bit = On\n")) (q (Zero)))'
+> error codec-error "no schema declares the constructor Zero"
+> exit 1
+
+# The modules the second floor ships are held to the same rules, and are read
+# from the closure rather than from the working tree.
+$ derive --foundation foundations/S1 --goal '(call CheckModule (grammar strata) (call SourceText (source "strata/lib/bool.strata")))'
+> (checked ok)
+
+$ derive --foundation foundations/S1 --goal '(call TotalModule (grammar strata) (call SourceText (source "strata/lib/nat.strata")))'
+> (total ok)

@@ -1,0 +1,1143 @@
+; Generated from features/strata/check.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratacheck)
+  (judgment
+    TypeValue
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          TypeArrow
+          (pv from)
+          (pv to))
+        (mk
+          arrow
+          (call
+            TypeValue
+            (v from))
+          (call
+            TypeValue
+            (v to))))
+      (case
+        (pm
+          TypeApply
+          (pv left)
+          (pv right))
+        (mk
+          apply
+          (call
+            TypeValue
+            (v left))
+          (call
+            TypeValue
+            (v right))))
+      (case
+        (pm
+          TypeRef
+          (pv name))
+        (mk
+          con
+          (v name)))
+      (case
+        _
+        (fail
+          type-error
+          (q "not a type")))))
+  (judgment
+    ArrowsTo
+    [types result]
+    (match
+      (v types)
+      (case
+        (pnil)
+        (v result))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (mk
+          arrow
+          (v head)
+          (call
+            ArrowsTo
+            (v rest)
+            (v result))))))
+  (judgment
+    ConstructorTable
+    [decls]
+    (call
+      CollectConstructorsInto
+      (v decls)
+      (prim mnew)))
+  (judgment
+    CollectConstructorsInto
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            data
+            (pv name)
+            (pv ctors))
+          (pv rest))
+        (call
+          CollectConstructorsInto
+          (v rest)
+          (call
+            AddConstructorsOf
+            (v name)
+            (v ctors)
+            (v table))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CollectConstructorsInto
+          (v rest)
+          (v table)))))
+  (judgment
+    AddConstructorsOf
+    [owner ctors table]
+    (match
+      (v ctors)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv cname)
+            (pv fields))
+          (pv rest))
+        (call
+          AddConstructorsOf
+          (v owner)
+          (v rest)
+          (prim
+            mput
+            (v table)
+            (v cname)
+            (mk
+              ctor
+              (v owner)
+              (call
+                DeclaredFieldTypes
+                (call
+                  FieldList
+                  (v fields)))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          AddConstructorsOf
+          (v owner)
+          (v rest)
+          (v table)))))
+  (judgment
+    DeclaredFieldTypes
+    [fields]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            FieldDecl
+            (pv fname)
+            (pv fnum)
+            (pv ftype))
+          (pv rest))
+        (prim
+          cons
+          (call
+            TypeValue
+            (v ftype))
+          (call
+            DeclaredFieldTypes
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          DeclaredFieldTypes
+          (v rest)))))
+  (judgment
+    DefinitionTable
+    [decls]
+    (call
+      CollectDefinitionsInto
+      (v decls)
+      (prim mnew)))
+  (judgment
+    CollectDefinitionsInto
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (call
+          CollectDefinitionsInto
+          (v rest)
+          (prim
+            mput
+            (v table)
+            (v name)
+            (mk
+              sig
+              (call
+                DeclaredParamTypes
+                (v params))
+              (call
+                TypeValue
+                (v result))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CollectDefinitionsInto
+          (v rest)
+          (v table)))))
+  (judgment
+    DeclaredParamTypes
+    [params]
+    (match
+      (v params)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (call
+            TypeValue
+            (v ptype))
+          (call
+            DeclaredParamTypes
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          DeclaredParamTypes
+          (v rest)))))
+  (judgment
+    ConstructorTypeOf
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          ctor
+          (pv owner)
+          (pv fields))
+        (call
+          ArrowsTo
+          (v fields)
+          (mk
+            con
+            (v owner))))
+      (case
+        _
+        (fail
+          type-error
+          (q "malformed constructor")))))
+  (judgment
+    DefinitionTypeOf
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          sig
+          (pv params)
+          (pv result))
+        (call
+          ArrowsTo
+          (v params)
+          (v result)))
+      (case
+        _
+        (fail
+          type-error
+          (q "malformed definition signature")))))
+  (judgment
+    CheckModule
+    [grammar source]
+    (let
+      decls
+      (call
+        Declarations
+        (call
+          ParseStrata
+          (v grammar)
+          (v source)))
+      (call
+        CheckDeclarations
+        (v decls)
+        (call
+          ConstructorTable
+          (v decls))
+        (call
+          DefinitionTable
+          (v decls)))))
+  (judgment
+    CheckDeclarations
+    [decls ctors defs]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk
+          checked
+          (q ok)))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (let
+          declared
+          (call
+            TypeValue
+            (v result))
+          (let
+            found
+            (call
+              InferExpr
+              (v ctors)
+              (v defs)
+              (call
+                BindParameterTypes
+                (v params)
+                (prim mnew))
+              (v body))
+            (if
+              (prim
+                eq
+                (v found)
+                (v declared))
+              (call
+                CheckDeclarations
+                (v rest)
+                (v ctors)
+                (v defs))
+              (fail
+                type-error
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (q "definition ")
+                    (prim
+                      sym->str
+                      (v name)))
+                  (q " does not have its declared result type")))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CheckDeclarations
+          (v rest)
+          (v ctors)
+          (v defs)))))
+  (judgment
+    BindParameterTypes
+    [params env]
+    (match
+      (v params)
+      (case
+        (pnil)
+        (v env))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (call
+          BindParameterTypes
+          (v rest)
+          (prim
+            mput
+            (v env)
+            (v pname)
+            (call
+              TypeValue
+              (v ptype)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          BindParameterTypes
+          (v rest)
+          (v env)))))
+  (judgment
+    InferExpr
+    [ctors defs env expr]
+    (match
+      (v expr)
+      (case
+        (pm
+          Natural
+          (pv value))
+        (mk
+          con
+          (q Nat)))
+      (case
+        (pm
+          Text
+          (pv value))
+        (mk
+          con
+          (q Text)))
+      (case
+        (pm
+          Var
+          (pv name))
+        (call
+          InferName
+          (v ctors)
+          (v defs)
+          (v env)
+          (v name)))
+      (case
+        (pm
+          Apply
+          (pv fn)
+          (pv argument))
+        (call
+          ApplyType
+          (call
+            InferExpr
+            (v ctors)
+            (v defs)
+            (v env)
+            (v fn))
+          (call
+            InferExpr
+            (v ctors)
+            (v defs)
+            (v env)
+            (v argument))))
+      (case
+        (pm
+          Let
+          (pv name)
+          (pv value)
+          (pv body))
+        (call
+          InferExpr
+          (v ctors)
+          (v defs)
+          (prim
+            mput
+            (v env)
+            (v name)
+            (call
+              InferExpr
+              (v ctors)
+              (v defs)
+              (v env)
+              (v value)))
+          (v body)))
+      (case
+        (pm
+          Match
+          (pv scrutinee)
+          (pv cases))
+        (call
+          InferMatch
+          (v ctors)
+          (v defs)
+          (v env)
+          (call
+            InferExpr
+            (v ctors)
+            (v defs)
+            (v env)
+            (v scrutinee))
+          (call
+            CaseList
+            (v cases))))
+      (case
+        _
+        (fail
+          type-error
+          (q "unsupported expression")))))
+  (judgment
+    ApplyType
+    [fnType argType]
+    (match
+      (v fnType)
+      (case
+        (pm
+          arrow
+          (pv from)
+          (pv to))
+        (if
+          (prim
+            eq
+            (v from)
+            (v argType))
+          (v to)
+          (fail
+            type-error
+            (q "argument does not have the declared parameter type"))))
+      (case
+        _
+        (fail
+          type-error
+          (q "applied a value that is not a function")))))
+  (judgment
+    InferName
+    [ctors defs env name]
+    (if
+      (prim
+        mhas
+        (v env)
+        (v name))
+      (prim
+        mget
+        (v env)
+        (v name)
+        (q unbound))
+      (if
+        (prim
+          mhas
+          (v ctors)
+          (v name))
+        (call
+          ConstructorTypeOf
+          (prim
+            mget
+            (v ctors)
+            (v name)
+            (q unbound)))
+        (if
+          (prim
+            mhas
+            (v defs)
+            (v name))
+          (call
+            DefinitionTypeOf
+            (prim
+              mget
+              (v defs)
+              (v name)
+              (q unbound)))
+          (fail
+            type-error
+            (prim
+              scat
+              (q "unbound name ")
+              (prim
+                sym->str
+                (v name))))))))
+  (judgment
+    InferMatch
+    [ctors defs env scrutinee cases]
+    (match
+      (v cases)
+      (case
+        (pnil)
+        (fail
+          type-error
+          (q "a match needs at least one case")))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (let
+          first
+          (call
+            InferExpr
+            (v ctors)
+            (v defs)
+            (call
+              BindPattern
+              (v ctors)
+              (v env)
+              (v scrutinee)
+              (v pattern))
+            (v body))
+          (let
+            agreed
+            (call
+              InferRemainingCases
+              (v ctors)
+              (v defs)
+              (v env)
+              (v scrutinee)
+              (v rest)
+              (v first))
+            (call
+              ResultOfExhaustive
+              (call
+                CheckExhaustive
+                (v ctors)
+                (v scrutinee)
+                (v cases))
+              (v agreed)))))
+      (case
+        _
+        (fail
+          type-error
+          (q "malformed case")))))
+  (judgment
+    ResultOfExhaustive
+    [verdict result]
+    (match
+      (v verdict)
+      (case
+        (pm exhaustive)
+        (v result))
+      (case
+        _
+        (fail
+          type-error
+          (q "match is not exhaustive")))))
+  (judgment
+    InferRemainingCases
+    [ctors defs env scrutinee cases expected]
+    (match
+      (v cases)
+      (case
+        (pnil)
+        (v expected))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (let
+          found
+          (call
+            InferExpr
+            (v ctors)
+            (v defs)
+            (call
+              BindPattern
+              (v ctors)
+              (v env)
+              (v scrutinee)
+              (v pattern))
+            (v body))
+          (if
+            (prim
+              eq
+              (v found)
+              (v expected))
+            (call
+              InferRemainingCases
+              (v ctors)
+              (v defs)
+              (v env)
+              (v scrutinee)
+              (v rest)
+              (v expected))
+            (fail
+              type-error
+              (q "match cases do not agree on a result type")))))
+      (case
+        _
+        (fail
+          type-error
+          (q "malformed case")))))
+  (judgment
+    SpineOfPattern
+    [pattern]
+    (match
+      (v pattern)
+      (case
+        (pm
+          PatApply
+          (pv left)
+          (pv right))
+        (prim
+          snoc
+          (call
+            SpineOfPattern
+            (v left))
+          (v right)))
+      (case
+        _
+        (lst
+          (v pattern)))))
+  (judgment
+    BindPattern
+    [ctors env scrutinee pattern]
+    (match
+      (v pattern)
+      (case
+        (pm PatWild)
+        (v env))
+      (case
+        (pm
+          PatVar
+          (pv name))
+        (if
+          (prim
+            mhas
+            (v ctors)
+            (v name))
+          (call
+            BindNullaryConstructor
+            (v ctors)
+            (v env)
+            (v scrutinee)
+            (v name))
+          (prim
+            mput
+            (v env)
+            (v name)
+            (v scrutinee))))
+      (case
+        (pm
+          PatApply
+          (pv left)
+          (pv right))
+        (call
+          BindConstructorPattern
+          (v ctors)
+          (v env)
+          (v scrutinee)
+          (v pattern)))
+      (case
+        _
+        (fail
+          type-error
+          (q "malformed pattern")))))
+  (judgment
+    BindNullaryConstructor
+    [ctors env scrutinee name]
+    (match
+      (prim
+        mget
+        (v ctors)
+        (v name)
+        (q unbound))
+      (case
+        (pm
+          ctor
+          (pv owner)
+          (pv fields))
+        (if
+          (prim
+            ne
+            (mk
+              con
+              (v owner))
+            (v scrutinee))
+          (fail
+            type-error
+            (q "pattern constructor does not belong to the scrutinised type"))
+          (if
+            (prim
+              ne
+              (prim
+                len
+                (v fields))
+              (q 0))
+            (fail
+              type-error
+              (q "constructor pattern is missing its fields"))
+            (v env))))
+      (case
+        _
+        (fail
+          type-error
+          (q "malformed constructor")))))
+  (judgment
+    BindConstructorPattern
+    [ctors env scrutinee pattern]
+    (match
+      (call
+        SpineOfPattern
+        (v pattern))
+      (case
+        (pcons
+          (pm
+            PatVar
+            (pv cname))
+          (pv args))
+        (if
+          (prim
+            mhas
+            (v ctors)
+            (v cname))
+          (call
+            BindPatternFields
+            (v ctors)
+            (v env)
+            (v scrutinee)
+            (v cname)
+            (v args))
+          (fail
+            type-error
+            (q "pattern head is not a declared constructor"))))
+      (case
+        _
+        (fail
+          type-error
+          (q "pattern head is not a declared constructor")))))
+  (judgment
+    BindPatternFields
+    [ctors env scrutinee cname args]
+    (match
+      (prim
+        mget
+        (v ctors)
+        (v cname)
+        (q unbound))
+      (case
+        (pm
+          ctor
+          (pv owner)
+          (pv fields))
+        (if
+          (prim
+            ne
+            (mk
+              con
+              (v owner))
+            (v scrutinee))
+          (fail
+            type-error
+            (q "pattern constructor does not belong to the scrutinised type"))
+          (if
+            (prim
+              ne
+              (prim
+                len
+                (v args))
+              (prim
+                len
+                (v fields)))
+            (fail
+              type-error
+              (q "constructor pattern does not saturate its fields"))
+            (call
+              BindEachField
+              (v env)
+              (v args)
+              (v fields)))))
+      (case
+        _
+        (fail
+          type-error
+          (q "malformed constructor")))))
+  (judgment
+    BindEachField
+    [env args fields]
+    (match
+      (v args)
+      (case
+        (pnil)
+        (v env))
+      (case
+        (pcons
+          (pv arg)
+          (pv restArgs))
+        (match
+          (v fields)
+          (case
+            (pnil)
+            (v env))
+          (case
+            (pcons
+              (pv ftype)
+              (pv restFields))
+            (match
+              (v arg)
+              (case
+                (pm
+                  PatVar
+                  (pv vname))
+                (call
+                  BindEachField
+                  (prim
+                    mput
+                    (v env)
+                    (v vname)
+                    (v ftype))
+                  (v restArgs)
+                  (v restFields)))
+              (case
+                (pm PatWild)
+                (call
+                  BindEachField
+                  (v env)
+                  (v restArgs)
+                  (v restFields)))
+              (case
+                _
+                (fail
+                  type-error
+                  (q "a nested constructor pattern is not part of the seed")))))))))
+  (judgment
+    CheckExhaustive
+    [ctors scrutinee cases]
+    (match
+      (call
+        HasCatchAll
+        (v ctors)
+        (v cases))
+      (case
+        (pm yes)
+        (mk exhaustive))
+      (case
+        _
+        (match
+          (v scrutinee)
+          (case
+            (pm
+              con
+              (pv owner))
+            (call
+              EveryConstructorCovered
+              (call
+                ConstructorsOfType
+                (v ctors)
+                (v owner))
+              (call
+                CoveredConstructors
+                (v ctors)
+                (v cases))))
+          (case
+            _
+            (mk exhaustive))))))
+  (judgment
+    HasCatchAll
+    [ctors cases]
+    (match
+      (v cases)
+      (case
+        (pnil)
+        (mk no))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (match
+          (call
+            PatternHeadName
+            (v ctors)
+            (v pattern))
+          (case
+            (pm none)
+            (mk yes))
+          (case
+            _
+            (call
+              HasCatchAll
+              (v ctors)
+              (v rest)))))
+      (case
+        _
+        (mk no))))
+  (judgment
+    PatternHeadName
+    [ctors pattern]
+    (match
+      (v pattern)
+      (case
+        (pm PatWild)
+        (mk none))
+      (case
+        (pm
+          PatVar
+          (pv name))
+        (if
+          (prim
+            mhas
+            (v ctors)
+            (v name))
+          (mk
+            some
+            (v name))
+          (mk none)))
+      (case
+        (pm
+          PatApply
+          (pv left)
+          (pv right))
+        (match
+          (call
+            SpineOfPattern
+            (v pattern))
+          (case
+            (pcons
+              (pm
+                PatVar
+                (pv cname))
+              (pv args))
+            (mk
+              some
+              (v cname)))
+          (case
+            _
+            (mk none))))
+      (case
+        _
+        (mk none))))
+  (judgment
+    CoveredConstructors
+    [ctors cases]
+    (match
+      (v cases)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (match
+          (call
+            PatternHeadName
+            (v ctors)
+            (v pattern))
+          (case
+            (pm
+              some
+              (pv name))
+            (prim
+              cons
+              (v name)
+              (call
+                CoveredConstructors
+                (v ctors)
+                (v rest))))
+          (case
+            _
+            (call
+              CoveredConstructors
+              (v ctors)
+              (v rest)))))
+      (case _ (lst))))
+  (judgment
+    ConstructorsOfType
+    [ctors owner]
+    (call
+      ConstructorsOwnedBy
+      (prim
+        mkeys
+        (v ctors))
+      (v ctors)
+      (v owner)))
+  (judgment
+    ConstructorsOwnedBy
+    [names ctors owner]
+    (match
+      (v names)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (match
+          (prim
+            mget
+            (v ctors)
+            (v name)
+            (q unbound))
+          (case
+            (pm
+              ctor
+              (pv declared)
+              (pv fields))
+            (if
+              (prim
+                eq
+                (v declared)
+                (v owner))
+              (prim
+                cons
+                (v name)
+                (call
+                  ConstructorsOwnedBy
+                  (v rest)
+                  (v ctors)
+                  (v owner)))
+              (call
+                ConstructorsOwnedBy
+                (v rest)
+                (v ctors)
+                (v owner))))
+          (case
+            _
+            (call
+              ConstructorsOwnedBy
+              (v rest)
+              (v ctors)
+              (v owner)))))))
+  (judgment
+    EveryConstructorCovered
+    [declared covered]
+    (match
+      (v declared)
+      (case
+        (pnil)
+        (mk exhaustive))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v covered)
+            (v name))
+          (call
+            EveryConstructorCovered
+            (v rest)
+            (v covered))
+          (fail
+            type-error
+            (prim
+              scat
+              (q "match does not cover the constructor ")
+              (prim
+                sym->str
+                (v name)))))))))

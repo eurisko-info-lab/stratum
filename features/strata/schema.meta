@@ -1,0 +1,170 @@
+module strataschema
+
+; Schemas and codecs for Strata data, described in Meta.
+;
+; Every data declaration emits a canonical schema value, and the codec is read
+; off that schema rather than written by hand. Encoding is therefore driven by
+; declared field numbers, not by the order a constructor happens to print in,
+; and decoding rejects anything the schema does not describe.
+;
+; This is what makes `decode (encode v) = ok v` a law about a declaration
+; instead of a property of one hand-written pair of functions.
+
+judgment ModuleSchema [grammar source] =
+  call SchemaOfDeclarations [call Declarations [call ParseStrata [grammar source]]]
+
+judgment SchemaOfDeclarations [decls] =
+  match decls {
+    case [] -> list []
+    case (#data name ctors) :: rest ->
+      prim #cons [
+        mk #schema [name call SchemaConstructors [ctors]]
+        call SchemaOfDeclarations [rest]
+      ]
+    case head :: rest -> call SchemaOfDeclarations [rest]
+  }
+
+judgment SchemaConstructors [ctors] =
+  match ctors {
+    case [] -> list []
+    case (#Constructor cname fields) :: rest ->
+      prim #cons [
+        mk #constructor [cname call SchemaFields [call FieldList [fields]]]
+        call SchemaConstructors [rest]
+      ]
+    case head :: rest -> call SchemaConstructors [rest]
+  }
+
+; A field carries the name it was given, the number it was declared with, and
+; its type. The number is what a codec orders by.
+judgment SchemaFields [fields] =
+  match fields {
+    case [] -> list []
+    case (#FieldDecl fname fnum ftype) :: rest ->
+      prim #cons [
+        mk #field [fname call FieldNumber [fnum] call TypeValue [ftype]]
+        call SchemaFields [rest]
+      ]
+    case head :: rest -> call SchemaFields [rest]
+  }
+
+; The `fieldnum` token is a symbol carrying its own `#`; the canonical schema
+; carries the number itself.
+judgment FieldNumber [token] =
+  let text = prim #sym->str [token] in
+  prim #str->nat [prim #ssub [text 1 prim #slen [text]]]
+
+judgment SchemaDigest [grammar source] =
+  prim #ref->str [prim #digest [call ModuleSchema [grammar source]]]
+
+; ---------------------------------------------------------------- lookup
+
+judgment FindSchemaConstructor [schemas cname] =
+  match schemas {
+    case [] -> mk #none []
+    case (#schema tname ctors) :: rest ->
+      match call FindInConstructors [ctors cname tname] {
+        case (#some found) -> mk #some [found]
+        case _ -> call FindSchemaConstructor [rest cname]
+      }
+    case head :: rest -> call FindSchemaConstructor [rest cname]
+  }
+
+judgment FindInConstructors [ctors cname owner] =
+  match ctors {
+    case [] -> mk #none []
+    case (#constructor declared fields) :: rest ->
+      if prim #eq [declared cname]
+      then mk #some [mk #found [owner declared fields]]
+      else call FindInConstructors [rest cname owner]
+    case head :: rest -> call FindInConstructors [rest cname owner]
+  }
+
+; ---------------------------------------------------------------- encoding
+;
+; A Strata value is a constructor node. Encoding names the type it belongs to
+; and pairs every argument with the number its field was declared with, so the
+; encoded form does not depend on how the value was written.
+
+judgment EncodeValue [schemas value] =
+  match call FindSchemaConstructor [schemas prim #tag [value]] {
+    case (#some (#found owner cname fields)) ->
+      let args = prim #args [value] in
+      if prim #ne [prim #len [args] prim #len [fields]]
+      then fail #codec-error "value does not saturate the fields its constructor declares"
+      else mk #encoded [owner cname call EncodeFields [schemas args fields]]
+    case _ ->
+      fail #codec-error prim #scat [
+        "no schema declares the constructor "
+        prim #sym->str [prim #tag [value]]
+      ]
+  }
+
+judgment EncodeFields [schemas args fields] =
+  match args {
+    case [] -> list []
+    case arg :: restArgs ->
+      match fields {
+        case [] -> list []
+        case (#field fname fnum ftype) :: restFields ->
+          prim #cons [
+            mk #at [fnum call EncodeValue [schemas arg]]
+            call EncodeFields [schemas restArgs restFields]
+          ]
+        case head :: restFields -> call EncodeFields [schemas restArgs restFields]
+      }
+  }
+
+; ---------------------------------------------------------------- decoding
+
+judgment DecodeValue [schemas encoded] =
+  match encoded {
+    case (#encoded owner cname fields) ->
+      match call FindSchemaConstructor [schemas cname] {
+        case (#some (#found declaredOwner declaredName declaredFields)) ->
+          if prim #ne [declaredOwner owner]
+          then fail #codec-error "encoded value claims a type its constructor does not belong to"
+          else
+            if prim #ne [prim #len [fields] prim #len [declaredFields]]
+            then fail #codec-error "encoded value does not saturate the fields its constructor declares"
+            else prim #node [cname call DecodeFields [schemas fields declaredFields]]
+        case _ ->
+          fail #codec-error prim #scat [
+            "no schema declares the constructor "
+            prim #sym->str [cname]
+          ]
+      }
+    case _ -> fail #codec-error "not an encoded value"
+  }
+
+judgment DecodeFields [schemas fields declared] =
+  match fields {
+    case [] -> list []
+    case (#at fnum encoded) :: restFields ->
+      match declared {
+        case [] -> fail #codec-error "encoded value has more fields than its schema declares"
+        case (#field dname dnum dtype) :: restDeclared ->
+          if prim #ne [fnum dnum]
+          then fail #codec-error "encoded field does not carry its declared number"
+          else prim #cons [
+            call DecodeValue [schemas encoded]
+            call DecodeFields [schemas restFields restDeclared]
+          ]
+        case head :: restDeclared -> call DecodeFields [schemas restFields restDeclared]
+      }
+    case head :: restFields -> fail #codec-error "not an encoded field"
+  }
+
+; The law every derived codec must satisfy.
+judgment CodecRoundTrip [grammar source expr] =
+  let schemas = call ModuleSchema [grammar source] in
+  let value = call EvalNamed [grammar source expr] in
+  if prim #eq [call DecodeValue [schemas call EncodeValue [schemas value]] value]
+  then mk #roundtrip [#ok]
+  else fail #codec-error "decoding an encoded value did not return the value"
+
+; The seed evaluates the definition named `example`; this names any definition
+; so a module can carry several values worth checking.
+judgment EvalNamed [grammar source name] =
+  let parsed = call ParseStrata [grammar source] in
+  call EvalName [call Declarations [parsed] list [] name]
