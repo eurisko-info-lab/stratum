@@ -1,0 +1,1793 @@
+; Generated from features/strata/resolve.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataresolve)
+  (judgment
+    LoadModule
+    [grammar source]
+    (let
+      parsed
+      (call
+        ParseStrata
+        (v grammar)
+        (v source))
+      (let
+        decls
+        (call
+          Declarations
+          (v parsed))
+        (mk
+          module
+          (call
+            ModuleName
+            (v parsed))
+          (call
+            ModuleVersion
+            (v parsed))
+          (call
+            ImportsOf
+            (v decls))
+          (call
+            ExportedNames
+            (v decls))
+          (call
+            DeclaredNames
+            (v decls))
+          (v decls)))))
+  (judgment
+    LoadModuleSet
+    [grammar sources]
+    (match
+      (v sources)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv source)
+          (pv rest))
+        (prim
+          cons
+          (call
+            LoadModule
+            (v grammar)
+            (v source))
+          (call
+            LoadModuleSet
+            (v grammar)
+            (v rest))))))
+  (judgment
+    ModuleNameOfRecord
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          module
+          (pv name)
+          (pv version)
+          (pv imports)
+          (pv exports)
+          (pv declared)
+          (pv decls))
+        (v name))
+      (case
+        _
+        (fail
+          module-error
+          (q "malformed module")))))
+  (judgment
+    ModuleVersionOfRecord
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          module
+          (pv name)
+          (pv version)
+          (pv imports)
+          (pv exports)
+          (pv declared)
+          (pv decls))
+        (v version))
+      (case
+        _
+        (fail
+          module-error
+          (q "malformed module")))))
+  (judgment
+    ModuleImports
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          module
+          (pv name)
+          (pv version)
+          (pv imports)
+          (pv exports)
+          (pv declared)
+          (pv decls))
+        (v imports))
+      (case
+        _
+        (fail
+          module-error
+          (q "malformed module")))))
+  (judgment
+    ModuleExports
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          module
+          (pv name)
+          (pv version)
+          (pv imports)
+          (pv exports)
+          (pv declared)
+          (pv decls))
+        (v exports))
+      (case
+        _
+        (fail
+          module-error
+          (q "malformed module")))))
+  (judgment
+    ModuleDeclared
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          module
+          (pv name)
+          (pv version)
+          (pv imports)
+          (pv exports)
+          (pv declared)
+          (pv decls))
+        (v declared))
+      (case
+        _
+        (fail
+          module-error
+          (q "malformed module")))))
+  (judgment
+    ModuleDeclarations
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          module
+          (pv name)
+          (pv version)
+          (pv imports)
+          (pv exports)
+          (pv declared)
+          (pv decls))
+        (v decls))
+      (case
+        _
+        (fail
+          module-error
+          (q "malformed module")))))
+  (judgment
+    ImportsOf
+    [decls]
+    (match
+      (v decls)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            import
+            (pv name)
+            (pv version))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            needs
+            (v name)
+            (v version))
+          (call
+            ImportsOf
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ImportsOf
+          (v rest)))))
+  (judgment
+    DeclaredNames
+    [decls]
+    (match
+      (v decls)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            data
+            (pv name)
+            (pv ctors))
+          (pv rest))
+        (prim
+          append
+          (prim
+            cons
+            (v name)
+            (call
+              ConstructorNames
+              (v ctors)))
+          (call
+            DeclaredNames
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            family
+            (pv name)
+            (pv params)
+            (pv ctors))
+          (pv rest))
+        (prim
+          append
+          (prim
+            cons
+            (v name)
+            (call
+              ConstructorNames
+              (v ctors)))
+          (call
+            DeclaredNames
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (v name)
+          (call
+            DeclaredNames
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          DeclaredNames
+          (v rest)))))
+  (judgment
+    ConstructorNames
+    [ctors]
+    (match
+      (v ctors)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv cname)
+            (pv fields))
+          (pv rest))
+        (prim
+          cons
+          (v cname)
+          (call
+            ConstructorNames
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            ConstructorAt
+            (pv cname)
+            (pv fields)
+            (pv result))
+          (pv rest))
+        (prim
+          cons
+          (v cname)
+          (call
+            ConstructorNames
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ConstructorNames
+          (v rest)))))
+  (judgment
+    ExportedNames
+    [decls]
+    (match
+      (call
+        FindExport
+        (v decls))
+      (case
+        (pm
+          some
+          (pv names))
+        (call
+          NarrowedExports
+          (call
+            DeclaredNames
+            (v decls))
+          (v names)))
+      (case
+        _
+        (call
+          DeclaredNames
+          (v decls)))))
+  (judgment
+    FindExport
+    [decls]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            export
+            (pv names))
+          (pv rest))
+        (mk
+          some
+          (v names)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindExport
+          (v rest)))))
+  (judgment
+    NarrowedExports
+    [declared names]
+    (match
+      (v names)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v declared)
+            (v name))
+          (prim
+            cons
+            (v name)
+            (call
+              NarrowedExports
+              (v declared)
+              (v rest)))
+          (fail
+            export-error
+            (prim
+              scat
+              (prim
+                scat
+                (q "a module exports ")
+                (prim
+                  sym->str
+                  (v name)))
+              (q ", which it does not declare")))))))
+  (judgment
+    ModuleIdentity
+    [grammar source]
+    (let
+      parsed
+      (call
+        ParseStrata
+        (v grammar)
+        (v source))
+      (prim
+        ref->str
+        (prim
+          digest
+          (mk
+            canonical
+            (call
+              ModuleName
+              (v parsed))
+            (call
+              ModuleVersion
+              (v parsed))
+            (call
+              Declarations
+              (v parsed)))))))
+  (judgment
+    FindModuleNamed
+    [modules name]
+    (match
+      (v modules)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pv entry)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (call
+              ModuleNameOfRecord
+              (v entry))
+            (v name))
+          (mk
+            some
+            (v entry))
+          (call
+            FindModuleNamed
+            (v rest)
+            (v name))))))
+  (judgment
+    RequiredModule
+    [modules name]
+    (match
+      (call
+        FindModuleNamed
+        (v modules)
+        (v name))
+      (case
+        (pm
+          some
+          (pv entry))
+        (v entry))
+      (case
+        _
+        (fail
+          module-error
+          (prim
+            scat
+            (prim
+              scat
+              (q "the module set has no module named ")
+              (v name))
+            (q ", which another module imports"))))))
+  (judgment
+    ModuleNamesOf
+    [modules]
+    (match
+      (v modules)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv entry)
+          (pv rest))
+        (prim
+          cons
+          (call
+            ModuleNameOfRecord
+            (v entry))
+          (call
+            ModuleNamesOf
+            (v rest))))))
+  (judgment
+    VersionsAgree
+    [modules]
+    (match
+      (call
+        DistinctModules
+        (v modules))
+      (case
+        _
+        (call
+          CheckVersionsOf
+          (v modules)
+          (v modules)))))
+  (judgment
+    DistinctModules
+    [modules]
+    (match
+      (v modules)
+      (case
+        (pnil)
+        (mk
+          distinct
+          (q ok)))
+      (case
+        (pcons
+          (pv entry)
+          (pv rest))
+        (let
+          name
+          (call
+            ModuleNameOfRecord
+            (v entry))
+          (if
+            (prim
+              contains
+              (call
+                ModuleNamesOf
+                (v rest))
+              (v name))
+            (fail
+              module-error
+              (prim
+                scat
+                (prim
+                  scat
+                  (q "the module set has two modules named ")
+                  (v name))
+                (q ", and a set fixes one module per name")))
+            (call
+              DistinctModules
+              (v rest)))))))
+  (judgment
+    CheckVersionsOf
+    [all remaining]
+    (match
+      (v remaining)
+      (case
+        (pnil)
+        (mk
+          agreed
+          (q ok)))
+      (case
+        (pcons
+          (pv entry)
+          (pv rest))
+        (match
+          (call
+            CheckRequirements
+            (v all)
+            (call
+              ModuleNameOfRecord
+              (v entry))
+            (call
+              ModuleImports
+              (v entry)))
+          (case
+            _
+            (call
+              CheckVersionsOf
+              (v all)
+              (v rest)))))))
+  (judgment
+    CheckRequirements
+    [all importer needs]
+    (match
+      (v needs)
+      (case
+        (pnil)
+        (mk
+          agreed
+          (q ok)))
+      (case
+        (pcons
+          (pm
+            needs
+            (pv name)
+            (pv wanted))
+          (pv rest))
+        (let
+          found
+          (call
+            ModuleVersionOfRecord
+            (call
+              RequiredModule
+              (v all)
+              (v name)))
+          (if
+            (prim
+              ne
+              (v found)
+              (v wanted))
+            (fail
+              version-error
+              (prim
+                scat
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (prim
+                      scat
+                      (v importer)
+                      (q " requires version "))
+                    (prim
+                      nat->str
+                      (v wanted)))
+                  (prim
+                    scat
+                    (q " of ")
+                    (v name)))
+                (prim
+                  scat
+                  (q ", but the module set has version ")
+                  (prim
+                    nat->str
+                    (v found)))))
+            (call
+              CheckRequirements
+              (v all)
+              (v importer)
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CheckRequirements
+          (v all)
+          (v importer)
+          (v rest)))))
+  (judgment
+    ImportOrder
+    [modules]
+    (call
+      VisitAll
+      (v modules)
+      (call
+        ModuleNamesOf
+        (v modules))
+      (lst)
+      (lst)))
+  (judgment
+    VisitAll
+    [modules names done order]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (v order))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (match
+          (call
+            Visit
+            (v modules)
+            (v name)
+            (lst)
+            (v done)
+            (v order))
+          (case
+            (pm
+              walked
+              (pv nextDone)
+              (pv nextOrder))
+            (call
+              VisitAll
+              (v modules)
+              (v rest)
+              (v nextDone)
+              (v nextOrder)))
+          (case
+            _
+            (fail
+              cycle-error
+              (q "the import graph could not be walked")))))))
+  (judgment
+    Visit
+    [modules name path done order]
+    (if
+      (prim
+        contains
+        (v done)
+        (v name))
+      (mk
+        walked
+        (v done)
+        (v order))
+      (if
+        (prim
+          contains
+          (v path)
+          (v name))
+        (fail
+          cycle-error
+          (prim
+            scat
+            (q "the module set contains an import cycle: ")
+            (call
+              CycleText
+              (prim
+                snoc
+                (call
+                  CycleFrom
+                  (v path)
+                  (v name))
+                (v name)))))
+        (call
+          VisitImports
+          (v modules)
+          (call
+            ModuleImports
+            (call
+              RequiredModule
+              (v modules)
+              (v name)))
+          (prim
+            snoc
+            (v path)
+            (v name))
+          (v done)
+          (v order)
+          (v name)))))
+  (judgment
+    VisitImports
+    [modules needs path done order name]
+    (match
+      (v needs)
+      (case
+        (pnil)
+        (mk
+          walked
+          (prim
+            snoc
+            (v done)
+            (v name))
+          (prim
+            snoc
+            (v order)
+            (v name))))
+      (case
+        (pcons
+          (pm
+            needs
+            (pv required)
+            (pv version))
+          (pv rest))
+        (match
+          (call
+            Visit
+            (v modules)
+            (v required)
+            (v path)
+            (v done)
+            (v order))
+          (case
+            (pm
+              walked
+              (pv nextDone)
+              (pv nextOrder))
+            (call
+              VisitImports
+              (v modules)
+              (v rest)
+              (v path)
+              (v nextDone)
+              (v nextOrder)
+              (v name)))
+          (case
+            _
+            (fail
+              cycle-error
+              (q "the import graph could not be walked")))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          VisitImports
+          (v modules)
+          (v rest)
+          (v path)
+          (v done)
+          (v order)
+          (v name)))))
+  (judgment
+    CycleFrom
+    [path name]
+    (match
+      (v path)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v head)
+            (v name))
+          (v path)
+          (call
+            CycleFrom
+            (v rest)
+            (v name))))))
+  (judgment
+    CycleText
+    [names]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (q ""))
+      (case
+        (pcons
+          (pv name)
+          (pnil))
+        (v name))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (prim
+          scat
+          (prim
+            scat
+            (v name)
+            (q " -> "))
+          (call
+            CycleText
+            (v rest))))))
+  (judgment
+    ResolveModule
+    [modules name]
+    (match
+      (call
+        VersionsAgree
+        (v modules))
+      (case
+        _
+        (let
+          entry
+          (call
+            RequiredModule
+            (v modules)
+            (v name))
+          (call
+            ResolveNamesOf
+            (v modules)
+            (v entry)
+            (call
+              SortedNames
+              (call
+                FreeNames
+                (call
+                  ModuleDeclarations
+                  (v entry))
+                (call
+                  ModuleDeclared
+                  (v entry)))))))))
+  (judgment
+    ResolveNamesOf
+    [modules entry names]
+    (match
+      (v names)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (prim
+          cons
+          (mk
+            resolved
+            (v name)
+            (call
+              ProviderOf
+              (v modules)
+              (v entry)
+              (v name)))
+          (call
+            ResolveNamesOf
+            (v modules)
+            (v entry)
+            (v rest))))))
+  (judgment
+    ProviderOf
+    [modules entry name]
+    (call
+      SoleProvider
+      (v entry)
+      (v name)
+      (call
+        ProvidersOf
+        (v modules)
+        (call
+          ModuleImports
+          (v entry))
+        (v name))))
+  (judgment
+    ProvidersOf
+    [modules needs name]
+    (match
+      (v needs)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            needs
+            (pv required)
+            (pv version))
+          (pv rest))
+        (let
+          provider
+          (call
+            RequiredModule
+            (v modules)
+            (v required))
+          (if
+            (prim
+              contains
+              (call
+                ModuleExports
+                (v provider))
+              (v name))
+            (prim
+              cons
+              (v required)
+              (call
+                ProvidersOf
+                (v modules)
+                (v rest)
+                (v name)))
+            (call
+              ProvidersOf
+              (v modules)
+              (v rest)
+              (v name)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ProvidersOf
+          (v modules)
+          (v rest)
+          (v name)))))
+  (judgment
+    SoleProvider
+    [entry name providers]
+    (match
+      (v providers)
+      (case
+        (pnil)
+        (fail
+          name-error
+          (prim
+            scat
+            (prim
+              scat
+              (prim
+                scat
+                (prim
+                  scat
+                  (call
+                    ModuleNameOfRecord
+                    (v entry))
+                  (q " uses "))
+                (prim
+                  sym->str
+                  (v name)))
+              (q ", which it does not declare and no module it imports exposes; searched "))
+            (call
+              SearchedText
+              (call
+                ModuleImports
+                (v entry))))))
+      (case
+        (pcons
+          (pv only)
+          (pnil))
+        (v only))
+      (case
+        (pcons
+          (pv first)
+          (pcons
+            (pv second)
+            _))
+        (fail
+          name-error
+          (prim
+            scat
+            (prim
+              scat
+              (prim
+                scat
+                (prim
+                  scat
+                  (call
+                    ModuleNameOfRecord
+                    (v entry))
+                  (q " uses "))
+                (prim
+                  sym->str
+                  (v name)))
+              (q ", which is exposed by both "))
+            (prim
+              scat
+              (prim
+                scat
+                (v first)
+                (q " and "))
+              (v second)))))))
+  (judgment
+    SearchedText
+    [needs]
+    (match
+      (v needs)
+      (case
+        (pnil)
+        (q "nothing"))
+      (case
+        (pcons
+          (pm
+            needs
+            (pv name)
+            (pv version))
+          (pnil))
+        (v name))
+      (case
+        (pcons
+          (pm
+            needs
+            (pv name)
+            (pv version))
+          (pv rest))
+        (prim
+          scat
+          (prim
+            scat
+            (v name)
+            (q ", "))
+          (call
+            SearchedText
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          SearchedText
+          (v rest)))))
+  (judgment
+    SortedNames
+    [names]
+    (prim
+      sort
+      (prim
+        distinct
+        (v names))))
+  (judgment
+    FreeNames
+    [decls declared]
+    (call
+      FreeInDeclarations
+      (v decls)
+      (v declared)
+      (lst)))
+  (judgment
+    FreeInDeclarations
+    [decls declared found]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v found))
+      (case
+        (pcons
+          (pm
+            data
+            (pv name)
+            (pv ctors))
+          (pv rest))
+        (call
+          FreeInDeclarations
+          (v rest)
+          (v declared)
+          (call
+            FreeInConstructors
+            (v ctors)
+            (v declared)
+            (v found))))
+      (case
+        (pcons
+          (pm
+            family
+            (pv name)
+            (pv params)
+            (pv ctors))
+          (pv rest))
+        (call
+          FreeInDeclarations
+          (v rest)
+          (v declared)
+          (call
+            FreeInConstructors
+            (v ctors)
+            (prim
+              append
+              (v declared)
+              (call
+                ParamNamesOf
+                (v params)))
+            (v found))))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (let
+          inner
+          (prim
+            append
+            (v declared)
+            (call
+              ParamNamesOf
+              (v params)))
+          (call
+            FreeInDeclarations
+            (v rest)
+            (v declared)
+            (call
+              FreeInExpr
+              (v body)
+              (v inner)
+              (call
+                FreeInParams
+                (v params)
+                (v declared)
+                (call
+                  FreeInType
+                  (v result)
+                  (v declared)
+                  (v found)))))))
+      (case
+        (pcons
+          (pm
+            law
+            (pv name)
+            (pv params)
+            (pv body))
+          (pv rest))
+        (let
+          inner
+          (prim
+            append
+            (v declared)
+            (call
+              ParamNamesOf
+              (v params)))
+          (call
+            FreeInDeclarations
+            (v rest)
+            (v declared)
+            (call
+              FreeInExpr
+              (v body)
+              (v inner)
+              (call
+                FreeInParams
+                (v params)
+                (v declared)
+                (v found))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FreeInDeclarations
+          (v rest)
+          (v declared)
+          (v found)))))
+  (judgment
+    ParamNamesOf
+    [params]
+    (match
+      (v params)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (v pname)
+          (call
+            ParamNamesOf
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ParamNamesOf
+          (v rest)))))
+  (judgment
+    FreeInParams
+    [params declared found]
+    (match
+      (v params)
+      (case
+        (pnil)
+        (v found))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (call
+          FreeInParams
+          (v rest)
+          (v declared)
+          (call
+            FreeInType
+            (v ptype)
+            (v declared)
+            (v found))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FreeInParams
+          (v rest)
+          (v declared)
+          (v found)))))
+  (judgment
+    FreeInConstructors
+    [ctors declared found]
+    (match
+      (v ctors)
+      (case
+        (pnil)
+        (v found))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv cname)
+            (pv fields))
+          (pv rest))
+        (call
+          FreeInConstructors
+          (v rest)
+          (v declared)
+          (call
+            FreeInFields
+            (call
+              FieldList
+              (v fields))
+            (v declared)
+            (v found))))
+      (case
+        (pcons
+          (pm
+            ConstructorAt
+            (pv cname)
+            (pv fields)
+            (pv result))
+          (pv rest))
+        (call
+          FreeInConstructors
+          (v rest)
+          (v declared)
+          (call
+            FreeInType
+            (v result)
+            (v declared)
+            (call
+              FreeInFields
+              (call
+                FieldList
+                (v fields))
+              (v declared)
+              (v found)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FreeInConstructors
+          (v rest)
+          (v declared)
+          (v found)))))
+  (judgment
+    FreeInFields
+    [fields declared found]
+    (match
+      (v fields)
+      (case
+        (pnil)
+        (v found))
+      (case
+        (pcons
+          (pm
+            FieldDecl
+            (pv fname)
+            (pv fnum)
+            (pv ftype))
+          (pv rest))
+        (call
+          FreeInFields
+          (v rest)
+          (v declared)
+          (call
+            FreeInType
+            (v ftype)
+            (v declared)
+            (v found))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FreeInFields
+          (v rest)
+          (v declared)
+          (v found)))))
+  (judgment
+    FreeInType
+    [node declared found]
+    (match
+      (v node)
+      (case
+        (pm
+          TypeRef
+          (pv name))
+        (call
+          NoteFree
+          (v name)
+          (v declared)
+          (v found)))
+      (case
+        (pm
+          TypeApply
+          (pv left)
+          (pv right))
+        (call
+          FreeInType
+          (v right)
+          (v declared)
+          (call
+            FreeInType
+            (v left)
+            (v declared)
+            (v found))))
+      (case
+        (pm
+          TypeArrow
+          (pv from)
+          (pv to))
+        (call
+          FreeInType
+          (v to)
+          (v declared)
+          (call
+            FreeInType
+            (v from)
+            (v declared)
+            (v found))))
+      (case
+        (pm
+          TypeDepend
+          (pv params)
+          (pv to))
+        (call
+          FreeInType
+          (v to)
+          (prim
+            append
+            (v declared)
+            (call
+              ParamNamesOf
+              (call
+                ParameterList
+                (v params))))
+          (call
+            FreeInParams
+            (call
+              ParameterList
+              (v params))
+            (v declared)
+            (v found))))
+      (case
+        _
+        (v found))))
+  (judgment
+    FreeInExpr
+    [node declared found]
+    (match
+      (v node)
+      (case
+        (pm
+          Var
+          (pv name))
+        (call
+          NoteFree
+          (v name)
+          (v declared)
+          (v found)))
+      (case
+        (pm
+          Apply
+          (pv fn)
+          (pv argument))
+        (call
+          FreeInExpr
+          (v argument)
+          (v declared)
+          (call
+            FreeInExpr
+            (v fn)
+            (v declared)
+            (v found))))
+      (case
+        (pm
+          Let
+          (pv name)
+          (pv value)
+          (pv body))
+        (call
+          FreeInExpr
+          (v body)
+          (prim
+            snoc
+            (v declared)
+            (v name))
+          (call
+            FreeInExpr
+            (v value)
+            (v declared)
+            (v found))))
+      (case
+        (pm
+          Match
+          (pv scrutinee)
+          (pv cases))
+        (call
+          FreeInCases
+          (call
+            CaseList
+            (v cases))
+          (v declared)
+          (call
+            FreeInExpr
+            (v scrutinee)
+            (v declared)
+            (v found))))
+      (case
+        _
+        (v found))))
+  (judgment
+    FreeInCases
+    [cases declared found]
+    (match
+      (v cases)
+      (case
+        (pnil)
+        (v found))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (call
+          FreeInCases
+          (v rest)
+          (v declared)
+          (call
+            FreeInExpr
+            (v body)
+            (prim
+              append
+              (v declared)
+              (call
+                PatternNamesOf
+                (v pattern)))
+            (v found))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FreeInCases
+          (v rest)
+          (v declared)
+          (v found)))))
+  (judgment
+    PatternNamesOf
+    [pattern]
+    (match
+      (v pattern)
+      (case
+        (pm
+          PatVar
+          (pv name))
+        (lst
+          (v name)))
+      (case
+        (pm PatWild)
+        (lst))
+      (case
+        (pm
+          PatApply
+          (pv left)
+          (pv right))
+        (prim
+          append
+          (call
+            PatternNamesOf
+            (v left))
+          (call
+            PatternNamesOf
+            (v right))))
+      (case _ (lst))))
+  (judgment
+    NoteFree
+    [name declared found]
+    (if
+      (prim
+        eq
+        (v name)
+        (q Type))
+      (v found)
+      (if
+        (prim
+          contains
+          (v declared)
+          (v name))
+        (v found)
+        (prim
+          snoc
+          (v found)
+          (v name)))))
+  (judgment
+    LinkModule
+    [modules name]
+    (match
+      (call
+        VersionsAgree
+        (v modules))
+      (case
+        _
+        (match
+          (call
+            ImportOrder
+            (v modules))
+          (case
+            _
+            (call
+              GatherDeclarations
+              (v modules)
+              (call
+                NeededModules
+                (v modules)
+                (v name)
+                (lst))
+              (lst)))))))
+  (judgment
+    NeededModules
+    [modules name found]
+    (if
+      (prim
+        contains
+        (v found)
+        (v name))
+      (v found)
+      (call
+        NeededImports
+        (v modules)
+        (call
+          ModuleImports
+          (call
+            RequiredModule
+            (v modules)
+            (v name)))
+        (prim
+          snoc
+          (v found)
+          (v name)))))
+  (judgment
+    NeededImports
+    [modules needs found]
+    (match
+      (v needs)
+      (case
+        (pnil)
+        (v found))
+      (case
+        (pcons
+          (pm
+            needs
+            (pv required)
+            (pv version))
+          (pv rest))
+        (call
+          NeededImports
+          (v modules)
+          (v rest)
+          (call
+            NeededModules
+            (v modules)
+            (v required)
+            (v found))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          NeededImports
+          (v modules)
+          (v rest)
+          (v found)))))
+  (judgment
+    GatherDeclarations
+    [modules names gathered]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (v gathered))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (call
+          GatherDeclarations
+          (v modules)
+          (v rest)
+          (prim
+            append
+            (call
+              UsableDeclarations
+              (call
+                ModuleDeclarations
+                (call
+                  RequiredModule
+                  (v modules)
+                  (v name))))
+            (v gathered))))))
+  (judgment
+    UsableDeclarations
+    [decls]
+    (match
+      (v decls)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            import
+            (pv name)
+            (pv version))
+          (pv rest))
+        (call
+          UsableDeclarations
+          (v rest)))
+      (case
+        (pcons
+          (pm
+            export
+            (pv names))
+          (pv rest))
+        (call
+          UsableDeclarations
+          (v rest)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (v head)
+          (call
+            UsableDeclarations
+            (v rest))))))
+  (judgment
+    CheckLinkedModule
+    [grammar sources name]
+    (call
+      CheckDeclarations
+      (call
+        LinkModule
+        (call
+          LoadModuleSet
+          (v grammar)
+          (v sources))
+        (v name))
+      (call
+        ConstructorTable
+        (call
+          LinkModule
+          (call
+            LoadModuleSet
+            (v grammar)
+            (v sources))
+          (v name)))
+      (call
+        DefinitionTable
+        (call
+          LinkModule
+          (call
+            LoadModuleSet
+            (v grammar)
+            (v sources))
+          (v name)))))
+  (judgment
+    CheckLinkedDependent
+    [grammar sources name]
+    (call
+      CheckDependentDeclarations
+      (call
+        LinkModule
+        (call
+          LoadModuleSet
+          (v grammar)
+          (v sources))
+        (v name))))
+  (judgment
+    TotalLinkedModule
+    [grammar sources name]
+    (call
+      TerminationOfDeclarations
+      (call
+        LinkModule
+        (call
+          LoadModuleSet
+          (v grammar)
+          (v sources))
+        (v name))))
+  (judgment
+    ResolutionIsConfluent
+    [grammar sources name]
+    (prim
+      eq
+      (call
+        ResolveModule
+        (call
+          LoadModuleSet
+          (v grammar)
+          (v sources))
+        (v name))
+      (call
+        ResolveModule
+        (call
+          LoadModuleSet
+          (v grammar)
+          (prim
+            rev
+            (v sources)))
+        (v name))))
+  (judgment
+    LinkingIsConfluent
+    [grammar sources name]
+    (prim
+      eq
+      (call
+        LinkModule
+        (call
+          LoadModuleSet
+          (v grammar)
+          (v sources))
+        (v name))
+      (call
+        LinkModule
+        (call
+          LoadModuleSet
+          (v grammar)
+          (prim
+            rev
+            (v sources)))
+        (v name)))))

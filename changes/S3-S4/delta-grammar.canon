@@ -1,0 +1,11 @@
+; delta-grammar for S3 -> S4: the Strata surface gains an import line and an
+; export line, so a module can name what it depends on and what it exposes.
+; Everything S3 could write still parses.
+(change
+  (kind delta-grammar)
+  (name "S3->S4 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end telescope index bind])
+      (present [module version data def law match case let end telescope index bind import export]))))

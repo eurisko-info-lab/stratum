@@ -1,0 +1,23 @@
+module "strata.vector"
+version 1
+; Vectors: a family indexed by the length it carries.
+;
+; S2 checks this module written out inside its checks, because it had to
+; declare `Nat` and `add` itself and a module that redeclares what another
+; already says is not a library. Here it imports them and declares neither,
+; which is what makes it worth shipping as a file.
+;
+; Everything the layers below decided about it they still decide, because a
+; module set links into one closed module before anything checks it.
+import "strata.prelude" 1
+export Vec Nil Cons append Eq Refl
+data Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)
+; The length of the result is the sum of the lengths of the arguments, and the
+; checker decides that rather than a comment claiming it.
+def append [a: Type, m: Nat, n: Nat, xs: Vec a m, ys: Vec a n]: Vec a (add m n) = match xs of case Nil b -> ys case Cons b p h t -> Cons b (add p n) h (append b p n t ys) end
+; Equality is not built in. It is a family whose only constructor lands on the
+; index where both sides agree, so a proof that two values are the same is an
+; ordinary value.
+data Eq [a: Type, x: a, y: a] = | Refl []: Eq a x x
+def single [a: Type, x: a]: Vec a (Succ Zero) = Cons a Zero x (Nil a)
+def pair [a: Type, x: a, y: a]: Vec a (Succ (Succ Zero)) = append a (Succ Zero) (Succ Zero) (single a x) (single a y)

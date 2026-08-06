@@ -202,6 +202,42 @@
       (case
         (pcons
           (pm
+            Import
+            (pv name)
+            (pv version)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            import
+            (call
+              StrataUnquote
+              (v name))
+            (v version))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Export
+            (pv names)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            export
+            (call
+              IdentList
+              (v names)))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pm
             Def
             (pv name)
             (pv params)
@@ -264,6 +300,26 @@
           snoc
           (call
             ConstructorList
+            (v left))
+          (v right)))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    IdentList
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Idents
+          (pv left)
+          (pv right))
+        (prim
+          snoc
+          (call
+            IdentList
             (v left))
           (v right)))
       (case

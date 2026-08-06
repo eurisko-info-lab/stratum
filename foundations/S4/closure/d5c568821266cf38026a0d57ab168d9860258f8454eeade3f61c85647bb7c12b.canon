@@ -1,0 +1,24 @@
+
+artifactchange
+change
+kind
+foundation
+nameS2->S3
+predecessor
+foundation-offoundations/S2
+
+delta-meta
+filechanges/S2-S3/delta-meta.canon
+delta-grammar
+file!changes/S2-S3/delta-grammar.canon
+feature
+feature
+namefree changes
+programs
+file%features/strata/change.generated.meta
+file"features/strata/law.generated.meta
+sources
+	text-filefeatures/strata/change.meta
+	text-filefeatures/strata/law.meta
+	text-filestrata/lib/change.strata
+	text-filestrata/lib/law.strata

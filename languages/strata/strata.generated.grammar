@@ -35,6 +35,19 @@
         (bind value number)
         (bind eol eol)])
     (prod
+      Import
+      [
+        (kw "import")
+        (bind name text)
+        (bind version number)
+        (bind eol eol)])
+    (prod
+      Export
+      [
+        (kw "export")
+        (bind names idents)
+        (bind eol eol)])
+    (prod
       DataParams
       [
         (kw "data")
@@ -74,6 +87,9 @@
   (category
     constructors
     (fold Constructors constructor))
+  (category
+    idents
+    (fold Idents ident))
   (category
     constructor
     (prod

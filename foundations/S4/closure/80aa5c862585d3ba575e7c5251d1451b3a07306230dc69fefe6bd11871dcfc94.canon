@@ -1,0 +1,26 @@
+
+artifactchange
+change
+kind
+foundation
+nameS0->S1
+predecessor
+foundation-offoundations/S0
+
+delta-meta
+filechanges/S0-S1/delta-meta.canon
+delta-grammar
+file!changes/S0-S1/delta-grammar.canon
+feature
+feature
+nametyped canonical data
+programs
+file$features/strata/check.generated.meta
+file$features/strata/total.generated.meta
+file%features/strata/schema.generated.meta
+sources
+	text-filefeatures/strata/check.meta
+	text-filefeatures/strata/total.meta
+	text-filefeatures/strata/schema.meta
+	text-filestrata/lib/bool.strata
+	text-filestrata/lib/nat.strata

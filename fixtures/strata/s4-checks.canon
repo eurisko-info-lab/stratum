@@ -1,0 +1,288 @@
+; Executable acceptance checks for S4, modules and names.
+;
+; Below S4 a module is closed: every name it uses, it declares. S4 lets one
+; module refer to another, and everything that can then go wrong is decided
+; here rather than assumed away.
+[
+  ; ------------------------------------------------------------- the surface
+
+  ; The import and export lines print back byte for byte, like everything
+  ; else.
+  (check strata-module-surface-prints-exactly
+    (call PrintsExactly
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.vec\"\nversion 1\nimport \"strata.prelude\" 1\nexport Vec Nil\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero\n"))
+    (value #t))
+
+  ; A module written before there was an import line still parses, because a
+  ; foundation may not take away what its predecessor could say.
+  (check strata-closed-modules-still-parse
+    (call PrintsExactly
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value #t))
+
+  ; --------------------------------------------------------------- identity
+
+  ; A module is named by what it says. Reformatting the text around a
+  ; declaration does not change which module it is.
+  (check strata-identity-survives-reformatting
+    (prim eq
+      (call ModuleIdentity
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off []\n"))
+      (call ModuleIdentity
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"strata.b\"\nversion 1\n; a comment nobody had written before\ndata Bit = | On [] | Off []\n\n")))
+    (value #t))
+
+  ; And a module that says something different is a different module.
+  (check strata-identity-follows-what-is-declared
+    (prim ne
+      (call ModuleIdentity
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off []\n"))
+      (call ModuleIdentity
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off [] | Unset []\n")))
+    (value #t))
+
+  ; -------------------------------------------------------------- exporting
+
+  ; A module exposes what it lists.
+  (check strata-a-module-exposes-what-it-lists
+    (call ModuleExports
+      (call LoadModule
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"strata.b\"\nversion 1\nexport Bit\ndata Bit = | On [] | Off []\n")))
+    (value [Bit]))
+
+  ; And everything it declares when it lists nothing, so a closed module
+  ; keeps working.
+  (check strata-a-silent-module-exposes-everything
+    (call ModuleExports
+      (call LoadModule
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off []\n")))
+    (value [Bit On Off]))
+
+  ; A module may only expose what it declares.
+  (check strata-a-module-cannot-export-what-it-lacks
+    (call ModuleExports
+      (call LoadModule
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"strata.b\"\nversion 1\nexport Bit Missing\ndata Bit = | On [] | Off []\n")))
+    (error export-error))
+
+  ; ------------------------------------------------------------- resolution
+
+  ; For every name a module uses and does not declare, which module declares
+  ; it.
+  (check strata-resolution-says-which-module-declares-each-name
+    (call ResolveModule
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
+          "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
+        ]))
+      (q "lib.uses"))
+    (value [
+      (resolved Bit "lib.bits")
+      (resolved Off "lib.bits")
+      (resolved On "lib.bits")]))
+
+  ; A name no import exposes is rejected, and the rejection says where it
+  ; looked.
+  (check strata-an-unresolvable-name-says-where-it-looked
+    (call ResolveModule
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.bits\"\nversion 1\nexport Bit\ndata Bit = | On [] | Off []\n"
+          "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
+        ]))
+      (q "lib.uses"))
+    (error name-error))
+
+  ; A name two imports expose is ambiguous, and is decided rather than taken
+  ; from whichever module was looked at first.
+  (check strata-an-ambiguous-name-is-rejected
+    (call ResolveModule
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.one\"\nversion 1\ndata Bit = | On [] | Off []\n"
+          "module \"lib.two\"\nversion 1\ndata Bit = | On [] | Off []\n"
+          "module \"lib.uses\"\nversion 1\nimport \"lib.one\" 1\nimport \"lib.two\" 1\ndef example []: Bit = On\n"
+        ]))
+      (q "lib.uses"))
+    (error name-error))
+
+  ; A module the set does not have is a missing module, not an unresolvable
+  ; name.
+  (check strata-a-missing-module-is-reported-as-missing
+    (call ResolveModule
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.uses\"\nversion 1\nimport \"lib.absent\" 1\ndef example []: Bit = On\n"
+        ]))
+      (q "lib.uses"))
+    (error module-error))
+
+  ; Resolution does not depend on the order the modules were given in.
+  (check strata-resolution-is-confluent
+    (call ResolutionIsConfluent
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q [
+        "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
+        "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
+      ])
+      (q "lib.uses"))
+    (value #t))
+
+  ; ------------------------------------------------------------------ order
+
+  ; A module comes after everything it imports.
+  (check strata-imports-come-first
+    (call ImportOrder
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
+          "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
+        ])))
+    (value ["lib.bits" "lib.uses"]))
+
+  ; A cycle is rejected, and named.
+  (check strata-an-import-cycle-is-named
+    (call ImportOrder
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.a\"\nversion 1\nimport \"lib.b\" 1\ndata A = | A []\n"
+          "module \"lib.b\"\nversion 1\nimport \"lib.a\" 1\ndata B = | B []\n"
+        ])))
+    (error cycle-error))
+
+  ; A module that imports itself is the same mistake, however short the way
+  ; round.
+  (check strata-a-module-cannot-import-itself
+    (call ImportOrder
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.a\"\nversion 1\nimport \"lib.a\" 1\ndata A = | A []\n"
+        ])))
+    (error cycle-error))
+
+  ; --------------------------------------------------------------- versions
+
+  ; A module set fixes one version per module name.
+  (check strata-a-module-set-fixes-one-version
+    (call VersionsAgree
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.bits\"\nversion 2\ndata Bit = | On [] | Off []\n"
+          "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef example []: Bit = On\n"
+        ])))
+    (error version-error))
+
+  (check strata-agreeing-versions-are-accepted
+    (call VersionsAgree
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
+          "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef example []: Bit = On\n"
+        ])))
+    (value (agreed ok)))
+
+  ; A set fixes one module per name. Two modules that call themselves the same
+  ; thing are not two versions to choose between; they are a set that does not
+  ; say what it means.
+  (check strata-a-module-set-holds-one-module-per-name
+    (call VersionsAgree
+      (call LoadModuleSet
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q [
+          "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
+          "module \"lib.bits\"\nversion 1\ndata Bit = | Yes [] | No []\n"
+        ])))
+    (error module-error))
+
+  ; ---------------------------------------------------------------- linking
+
+  ; A module set links into one closed module, so importing costs the layers
+  ; below nothing.
+  (check strata-a-linked-module-is-well-typed
+    (call CheckLinkedModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q [
+        "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
+        "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"
+      ])
+      (q "lib.uses"))
+    (value (checked ok)))
+
+  ; And linking does not depend on the order the modules were given in
+  ; either.
+  (check strata-linking-is-confluent
+    (call LinkingIsConfluent
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q [
+        "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
+        "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
+      ])
+      (q "lib.uses"))
+    (value #t))
+
+  ; --------------------------------------------------------------- library
+
+  ; The prelude declares what three modules used to declare separately.
+  (check strata-library-prelude-is-well-typed
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata"))))
+    (value (checked ok)))
+
+  (check strata-library-prelude-terminates
+    (call TotalModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata"))))
+    (value (total ok)))
+
+  ; The acceptance of the layer: the vector library imports `Nat` and `add`,
+  ; declares neither, and checks exactly what it checked before.
+  (check strata-vector-imports-rather-than-redeclares
+    (call CheckLinkedDependent
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/lib/vector.strata")))
+          (q [])))
+      (q "strata.vector"))
+    (value (checked ok)))
+
+  (check strata-the-imported-vector-still-terminates
+    (call TotalLinkedModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/lib/vector.strata")))
+          (q [])))
+      (q "strata.vector"))
+    (value (total ok)))
+
+  ; It declares neither, and this is what says so.
+  (check strata-the-imported-vector-declares-no-nat
+    (call ModuleDeclared
+      (call LoadModule
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/vector.strata")))))
+    (value [Vec Nil Cons append Eq Refl single pair]))
+]
