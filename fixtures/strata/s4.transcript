@@ -1,0 +1,130 @@
+# S4 acceptance transcript: modules and names.
+#
+# S3 |- S4. Until here a module is closed: every name it uses, it declares.
+# S4 lets one module refer to another, and decides what can then go wrong.
+
+$ foundation verify --dir foundations/S4
+> foundation S4
+> digest 8d4ff95207a5988e9f2893ef5f9b24822bf8093858bd996d43f1a4e7032ef348
+> closure 119 artifacts
+> check strata-module-surface-prints-exactly ok
+> check strata-closed-modules-still-parse ok
+> check strata-identity-survives-reformatting ok
+> check strata-identity-follows-what-is-declared ok
+> check strata-a-module-exposes-what-it-lists ok
+> check strata-a-silent-module-exposes-everything ok
+> check strata-a-module-cannot-export-what-it-lacks ok
+> check strata-resolution-says-which-module-declares-each-name ok
+> check strata-an-unresolvable-name-says-where-it-looked ok
+> check strata-an-ambiguous-name-is-rejected ok
+> check strata-a-missing-module-is-reported-as-missing ok
+> check strata-resolution-is-confluent ok
+> check strata-imports-come-first ok
+> check strata-an-import-cycle-is-named ok
+> check strata-a-module-cannot-import-itself ok
+> check strata-a-module-set-fixes-one-version ok
+> check strata-agreeing-versions-are-accepted ok
+> check strata-a-module-set-holds-one-module-per-name ok
+> check strata-a-linked-module-is-well-typed ok
+> check strata-linking-is-confluent ok
+> check strata-library-prelude-is-well-typed ok
+> check strata-library-prelude-terminates ok
+> check strata-vector-imports-rather-than-redeclares ok
+> check strata-the-imported-vector-still-terminates ok
+> check strata-the-imported-vector-declares-no-nat ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S3 --successor foundations/S4
+> predecessor S3
+> successor S4
+> result (valid #d351cfb069d643e6adca09f6decfbe9c7d06278318c21c4ee08a4ac46a4f45727)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/S4
+> reconstructed S4
+> digest 8d4ff95207a5988e9f2893ef5f9b24822bf8093858bd996d43f1a4e7032ef348
+> stable yes
+> closure 119 artifacts
+> checks 25 ok
+
+# A module is named by what it says. Reformatting the text around a
+# declaration does not change which module it is.
+$ derive --foundation foundations/S4 --goal '(call ModuleIdentity (grammar strata) (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off []\n"))'
+> "dc95bfc2d17383a835215593439dac71ac8ddc482bcd0ff9874cf935f5cfca7e"
+
+$ derive --foundation foundations/S4 --goal '(call ModuleIdentity (grammar strata) (q "module \"strata.b\"\nversion 1\n; a comment nobody had written before\ndata Bit = | On [] | Off []\n\n"))'
+> "dc95bfc2d17383a835215593439dac71ac8ddc482bcd0ff9874cf935f5cfca7e"
+
+# A module exposes what it lists, and everything it declares when it lists
+# nothing, so a module written before there was an export line still exposes
+# what it did.
+$ derive --foundation foundations/S4 --goal '(call ModuleExports (call LoadModule (grammar strata) (q "module \"strata.b\"\nversion 1\nexport Bit\ndata Bit = | On [] | Off []\n")))'
+> [Bit]
+
+$ derive --foundation foundations/S4 --goal '(call ModuleExports (call LoadModule (grammar strata) (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off []\n")))'
+> [Bit On Off]
+
+# For every name a module uses and does not declare, which module declares it.
+$ derive --foundation foundations/S4 --goal '(call ResolveModule (call LoadModuleSet (grammar strata) (q ["module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n" "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"])) (q "lib.uses"))'
+> [(resolved Bit "lib.bits") (resolved Off "lib.bits") (resolved On "lib.bits")]
+
+# A name no import exposes is rejected, and the rejection says where it looked.
+$ derive --foundation foundations/S4 --goal '(call ResolveModule (call LoadModuleSet (grammar strata) (q ["module \"lib.bits\"\nversion 1\nexport Bit\ndata Bit = | On [] | Off []\n" "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"])) (q "lib.uses"))'
+> error name-error "lib.uses uses Off, which it does not declare and no module it imports exposes; searched lib.bits"
+> exit 1
+
+# A name two imports expose is ambiguous, and is decided rather than taken
+# from whichever module was looked at first.
+$ derive --foundation foundations/S4 --goal '(call ResolveModule (call LoadModuleSet (grammar strata) (q ["module \"lib.one\"\nversion 1\ndata Bit = | On [] | Off []\n" "module \"lib.two\"\nversion 1\ndata Bit = | On [] | Off []\n" "module \"lib.uses\"\nversion 1\nimport \"lib.one\" 1\nimport \"lib.two\" 1\ndef example []: Bit = On\n"])) (q "lib.uses"))'
+> error name-error "lib.uses uses Bit, which is exposed by both lib.one and lib.two"
+> exit 1
+
+# A module the set does not have is a missing module, not an unresolvable name.
+$ derive --foundation foundations/S4 --goal '(call ResolveModule (call LoadModuleSet (grammar strata) (q ["module \"lib.uses\"\nversion 1\nimport \"lib.absent\" 1\ndef example []: Bit = On\n"])) (q "lib.uses"))'
+> error module-error "the module set has no module named lib.absent, which another module imports"
+> exit 1
+
+# A module comes after everything it imports, whatever order the set was
+# given in.
+$ derive --foundation foundations/S4 --goal '(call ImportOrder (call LoadModuleSet (grammar strata) (q ["module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n" "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"])))'
+> ["lib.bits" "lib.uses"]
+
+# A cycle is rejected, and named.
+$ derive --foundation foundations/S4 --goal '(call ImportOrder (call LoadModuleSet (grammar strata) (q ["module \"lib.a\"\nversion 1\nimport \"lib.b\" 1\ndata A = | A []\n" "module \"lib.b\"\nversion 1\nimport \"lib.a\" 1\ndata B = | B []\n"])))'
+> error cycle-error "the module set contains an import cycle: lib.a -> lib.b -> lib.a"
+> exit 1
+
+# Two modules that require different versions of a third do not describe one
+# system.
+$ derive --foundation foundations/S4 --goal '(call VersionsAgree (call LoadModuleSet (grammar strata) (q ["module \"lib.bits\"\nversion 2\ndata Bit = | On [] | Off []\n" "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef example []: Bit = On\n"])))'
+> error version-error "lib.uses requires version 1 of lib.bits, but the module set has version 2"
+> exit 1
+
+# And a set fixes one module per name, so the two vector modules -- the same
+# name at two versions -- may be held one at a time and not together.
+$ derive --foundation foundations/S4 --goal '(call VersionsAgree (call LoadModuleSet (grammar strata) (q ["module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n" "module \"lib.bits\"\nversion 1\ndata Bit = | Yes [] | No []\n"])))'
+> error module-error "the module set has two modules named lib.bits, and a set fixes one module per name"
+> exit 1
+
+# A module set links into one closed module, so importing costs the layers
+# below nothing.
+$ derive --foundation foundations/S4 --goal '(call CheckLinkedModule (grammar strata) (q ["module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n" "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"]) (q "lib.uses"))'
+> (checked ok)
+
+# The acceptance of the layer: the vector library declares neither Nat nor
+# add, imports both, and still checks what it checked at S2.
+$ derive --foundation foundations/S4 --goal '(call ModuleDeclared (call LoadModule (grammar strata) (call SourceText (source "strata/lib/vector.strata"))))'
+> [Vec Nil Cons append Eq Refl single pair]
+
+$ derive --foundation foundations/S4 --goal '(call CheckLinkedDependent (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/vector.strata")) (q []))) (q "strata.vector"))'
+> (checked ok)
+
+$ derive --foundation foundations/S4 --goal '(call TotalLinkedModule (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/vector.strata")) (q []))) (q "strata.vector"))'
+> (total ok)
+
+# And what the layers below decided, S4 still decides.
+$ derive --foundation foundations/S4 --goal '(call CheckModule (grammar strata) (call SourceText (source "strata/lib/prelude.strata")))'
+> (checked ok)
+
+$ derive --foundation foundations/S4 --goal '(call GeneratedChangesAgree (grammar strata) (call SourceText (source "strata/lib/change.strata")) (q 3))'
+> #t

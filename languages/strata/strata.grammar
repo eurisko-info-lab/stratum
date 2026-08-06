@@ -16,6 +16,8 @@ category line
   prod Comment value : comment eol : eol
   prod Module "module" name : text eol : eol
   prod Version "version" value : number eol : eol
+  prod Import "import" name : text version : number eol : eol
+  prod Export "export" names : idents eol : eol
   prod DataParams "data" name : ident params : params "=" constructors : constructors eol : eol
   prod Data "data" name : ident "=" constructors : constructors eol : eol
   prod Def "def" name : ident params : params ":" result : type "=" body : expr eol : eol
@@ -23,6 +25,9 @@ category line
 
 category constructors
   fold Constructors constructor
+
+category idents
+  fold Idents ident
 
 category constructor
   prod ConstructorAt "|" name : ident fields : fields ":" result : type

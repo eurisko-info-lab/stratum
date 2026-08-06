@@ -1,12 +1,23 @@
 module strata
 
-; The Strata seed, described in Meta.
+; The Strata seed, described in Meta -- third revision of the surface.
 ;
 ; S0 gives Strata three things and nothing more: a surface that parses and
 ; prints back byte for byte, an elaboration from that surface to a canonical
 ; module value, and an evaluator for the core expression forms.
 ;
 ; Types are parsed and carried, but nothing checks them yet. That is S1.
+;
+; This is a separate file rather than an edit to `strata.meta`, and
+; `strata.v3.grammar` is a separate file rather than an edit to
+; `strata.grammar`, because S0 and S2 record the earlier revisions by path and
+; by content. A foundation that has been published names the bytes it was
+; constituted with, so the tree is append-only for anything a foundation
+; records: editing the surface in place would silently re-digest two
+; foundations that are already standing.
+;
+; What v3 adds is the import line and the export line. Everything v2 could
+; write still parses, and still prints back byte for byte.
 
 ; ---------------------------------------------------------------- surface
 
@@ -76,6 +87,16 @@ judgment CollectDeclarations [lines] =
         mk #family [name call ParameterList [params] call ConstructorList [constructors]]
         call CollectDeclarations [rest]
       ]
+    case (#Import name version eol) :: rest ->
+      prim #cons [
+        mk #import [call StrataUnquote [name] version]
+        call CollectDeclarations [rest]
+      ]
+    case (#Export names eol) :: rest ->
+      prim #cons [
+        mk #export [call IdentList [names]]
+        call CollectDeclarations [rest]
+      ]
     case (#Def name params result body eol) :: rest ->
       prim #cons [
         mk #def [name call ParameterList [params] result body]
@@ -92,6 +113,12 @@ judgment CollectDeclarations [lines] =
 judgment ConstructorList [node] =
   match node {
     case (#Constructors left right) -> prim #snoc [call ConstructorList [left] right]
+    case _ -> list [node]
+  }
+
+judgment IdentList [node] =
+  match node {
+    case (#Idents left right) -> prim #snoc [call IdentList [left] right]
     case _ -> list [node]
   }
 

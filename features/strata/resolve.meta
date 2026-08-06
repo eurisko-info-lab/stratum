@@ -1,0 +1,617 @@
+module strataresolve
+
+; Modules and names, described in Meta.
+;
+; Below S4 a module is closed: every name it uses, it declares. That is why
+; `strata/lib/vector.strata` declares `Nat` and `add` a second time even
+; though `strata/lib/nat.strata` already declares exactly those.
+;
+; S4 lets one module refer to another, and that brings a law family with it. A
+; name may fail to resolve. A module may be missing. A name may be exported by
+; two modules at once. A set of modules may contain a cycle. Two modules may
+; disagree about the version of a third. None of those can happen while every
+; module is closed, and all of them can happen once one is not.
+;
+; A module set is resolved, not searched. Resolution answers, for every free
+; name in a module, which module declares it -- and it answers the same way
+; whatever order the modules were given in.
+
+; ---------------------------------------------------------------- loading
+
+judgment LoadModule [grammar source] =
+  let parsed = call ParseStrata [grammar source] in
+  let decls = call Declarations [parsed] in
+  mk #module [
+    call ModuleName [parsed]
+    call ModuleVersion [parsed]
+    call ImportsOf [decls]
+    call ExportedNames [decls]
+    call DeclaredNames [decls]
+    decls
+  ]
+
+judgment LoadModuleSet [grammar sources] =
+  match sources {
+    case [] -> list []
+    case source :: rest ->
+      prim #cons [call LoadModule [grammar source] call LoadModuleSet [grammar rest]]
+  }
+
+judgment ModuleNameOfRecord [entry] =
+  match entry {
+    case (#module name version imports exports declared decls) -> name
+    case _ -> fail #module-error "malformed module"
+  }
+
+judgment ModuleVersionOfRecord [entry] =
+  match entry {
+    case (#module name version imports exports declared decls) -> version
+    case _ -> fail #module-error "malformed module"
+  }
+
+judgment ModuleImports [entry] =
+  match entry {
+    case (#module name version imports exports declared decls) -> imports
+    case _ -> fail #module-error "malformed module"
+  }
+
+judgment ModuleExports [entry] =
+  match entry {
+    case (#module name version imports exports declared decls) -> exports
+    case _ -> fail #module-error "malformed module"
+  }
+
+judgment ModuleDeclared [entry] =
+  match entry {
+    case (#module name version imports exports declared decls) -> declared
+    case _ -> fail #module-error "malformed module"
+  }
+
+judgment ModuleDeclarations [entry] =
+  match entry {
+    case (#module name version imports exports declared decls) -> decls
+    case _ -> fail #module-error "malformed module"
+  }
+
+judgment ImportsOf [decls] =
+  match decls {
+    case [] -> list []
+    case (#import name version) :: rest ->
+      prim #cons [mk #needs [name version] call ImportsOf [rest]]
+    case head :: rest -> call ImportsOf [rest]
+  }
+
+; What a module declares: the types it introduces, the constructors of each,
+; and the definitions. A law is a claim about them, not a name they can use.
+judgment DeclaredNames [decls] =
+  match decls {
+    case [] -> list []
+    case (#data name ctors) :: rest ->
+      prim #append [
+        prim #cons [name call ConstructorNames [ctors]]
+        call DeclaredNames [rest]
+      ]
+    case (#family name params ctors) :: rest ->
+      prim #append [
+        prim #cons [name call ConstructorNames [ctors]]
+        call DeclaredNames [rest]
+      ]
+    case (#def name params result body) :: rest ->
+      prim #cons [name call DeclaredNames [rest]]
+    case head :: rest -> call DeclaredNames [rest]
+  }
+
+judgment ConstructorNames [ctors] =
+  match ctors {
+    case [] -> list []
+    case (#Constructor cname fields) :: rest ->
+      prim #cons [cname call ConstructorNames [rest]]
+    case (#ConstructorAt cname fields result) :: rest ->
+      prim #cons [cname call ConstructorNames [rest]]
+    case head :: rest -> call ConstructorNames [rest]
+  }
+
+; A module exposes everything it declares unless it says otherwise, so a
+; module written before there was an export line still exposes what it did.
+judgment ExportedNames [decls] =
+  match call FindExport [decls] {
+    case (#some names) -> call NarrowedExports [call DeclaredNames [decls] names]
+    case _ -> call DeclaredNames [decls]
+  }
+
+judgment FindExport [decls] =
+  match decls {
+    case [] -> mk #none []
+    case (#export names) :: rest -> mk #some [names]
+    case head :: rest -> call FindExport [rest]
+  }
+
+; A module may only expose what it declares. Exporting a name it does not have
+; is a mistake about itself, and is caught before anything imports it.
+judgment NarrowedExports [declared names] =
+  match names {
+    case [] -> list []
+    case name :: rest ->
+      if prim #contains [declared name]
+      then prim #cons [name call NarrowedExports [declared rest]]
+      else
+        fail #export-error prim #scat [
+          prim #scat ["a module exports " prim #sym->str [name]]
+          ", which it does not declare"
+        ]
+  }
+
+; ---------------------------------------------------------------- identity
+;
+; A module is named by what it says. Its identity is the digest of its
+; canonical form -- its name, its version and its declarations -- so moving
+; the file, renaming it, or reformatting the text around it changes nothing.
+
+judgment ModuleIdentity [grammar source] =
+  let parsed = call ParseStrata [grammar source] in
+  prim #ref->str [prim #digest [mk #canonical [
+    call ModuleName [parsed]
+    call ModuleVersion [parsed]
+    call Declarations [parsed]
+  ]]]
+
+; ------------------------------------------------------------------ lookup
+
+judgment FindModuleNamed [modules name] =
+  match modules {
+    case [] -> mk #none []
+    case entry :: rest ->
+      if prim #eq [call ModuleNameOfRecord [entry] name]
+      then mk #some [entry]
+      else call FindModuleNamed [rest name]
+  }
+
+judgment RequiredModule [modules name] =
+  match call FindModuleNamed [modules name] {
+    case (#some entry) -> entry
+    case _ ->
+      fail #module-error prim #scat [
+        prim #scat ["the module set has no module named " name]
+        ", which another module imports"
+      ]
+  }
+
+judgment ModuleNamesOf [modules] =
+  match modules {
+    case [] -> list []
+    case entry :: rest ->
+      prim #cons [call ModuleNameOfRecord [entry] call ModuleNamesOf [rest]]
+  }
+
+; ---------------------------------------------------------------- versions
+;
+; A module set fixes one version per module name. Two modules that require
+; different versions of a third do not describe one system, and saying so
+; early is cheaper than discovering it in the middle of resolution.
+
+judgment VersionsAgree [modules] =
+  match call DistinctModules [modules] {
+    case _ -> call CheckVersionsOf [modules modules]
+  }
+
+; A set fixes one module per name, so two modules that call themselves the
+; same thing are not two versions to choose between -- they are a set that
+; does not say what it means. Without this, whichever was listed first would
+; win silently.
+judgment DistinctModules [modules] =
+  match modules {
+    case [] -> mk #distinct [#ok]
+    case entry :: rest ->
+      let name = call ModuleNameOfRecord [entry] in
+      if prim #contains [call ModuleNamesOf [rest] name]
+      then
+        fail #module-error prim #scat [
+          prim #scat ["the module set has two modules named " name]
+          ", and a set fixes one module per name"
+        ]
+      else call DistinctModules [rest]
+  }
+
+judgment CheckVersionsOf [all remaining] =
+  match remaining {
+    case [] -> mk #agreed [#ok]
+    case entry :: rest ->
+      match call CheckRequirements [all call ModuleNameOfRecord [entry] call ModuleImports [entry]] {
+        case _ -> call CheckVersionsOf [all rest]
+      }
+  }
+
+judgment CheckRequirements [all importer needs] =
+  match needs {
+    case [] -> mk #agreed [#ok]
+    case (#needs name wanted) :: rest ->
+      let found = call ModuleVersionOfRecord [call RequiredModule [all name]] in
+      if prim #ne [found wanted]
+      then
+        fail #version-error prim #scat [
+          prim #scat [
+            prim #scat [prim #scat [importer " requires version "] prim #nat->str [wanted]]
+            prim #scat [" of " name]
+          ]
+          prim #scat [", but the module set has version " prim #nat->str [found]]
+        ]
+      else call CheckRequirements [all importer rest]
+    case head :: rest -> call CheckRequirements [all importer rest]
+  }
+
+; ------------------------------------------------------------------ order
+;
+; The import graph is walked to a canonical order: a module comes after
+; everything it imports. Walking it is also how a cycle is found, because a
+; module reached while it is still being walked is a module that imports
+; itself, however long the way round.
+
+judgment ImportOrder [modules] =
+  call VisitAll [modules call ModuleNamesOf [modules] list [] list []]
+
+judgment VisitAll [modules names done order] =
+  match names {
+    case [] -> order
+    case name :: rest ->
+      match call Visit [modules name list [] done order] {
+        case (#walked nextDone nextOrder) ->
+          call VisitAll [modules rest nextDone nextOrder]
+        case _ -> fail #cycle-error "the import graph could not be walked"
+      }
+  }
+
+judgment Visit [modules name path done order] =
+  if prim #contains [done name]
+  then mk #walked [done order]
+  else
+    if prim #contains [path name]
+    then
+      fail #cycle-error prim #scat [
+        "the module set contains an import cycle: "
+        call CycleText [prim #snoc [call CycleFrom [path name] name]]
+      ]
+    else
+      call VisitImports [
+        modules
+        call ModuleImports [call RequiredModule [modules name]]
+        prim #snoc [path name]
+        done
+        order
+        name
+      ]
+
+judgment VisitImports [modules needs path done order name] =
+  match needs {
+    case [] -> mk #walked [prim #snoc [done name] prim #snoc [order name]]
+    case (#needs required version) :: rest ->
+      match call Visit [modules required path done order] {
+        case (#walked nextDone nextOrder) ->
+          call VisitImports [modules rest path nextDone nextOrder name]
+        case _ -> fail #cycle-error "the import graph could not be walked"
+      }
+    case head :: rest -> call VisitImports [modules rest path done order name]
+  }
+
+; The cycle is reported from where it closes, not from wherever the walk
+; happened to start.
+judgment CycleFrom [path name] =
+  match path {
+    case [] -> list []
+    case head :: rest ->
+      if prim #eq [head name]
+      then path
+      else call CycleFrom [rest name]
+  }
+
+judgment CycleText [names] =
+  match names {
+    case [] -> ""
+    case name :: [] -> name
+    case name :: rest -> prim #scat [prim #scat [name " -> "] call CycleText [rest]]
+  }
+
+; -------------------------------------------------------------- resolution
+;
+; For every name a module uses and does not declare, which module declares it.
+; A name that no import exposes is unresolvable; a name that two imports
+; expose is ambiguous. Both are decided here rather than left to whichever
+; module happened to be looked at first.
+
+judgment ResolveModule [modules name] =
+  match call VersionsAgree [modules] {
+    case _ ->
+      let entry = call RequiredModule [modules name] in
+      call ResolveNamesOf [
+        modules
+        entry
+        call SortedNames [call FreeNames [call ModuleDeclarations [entry] call ModuleDeclared [entry]]]
+      ]
+  }
+
+judgment ResolveNamesOf [modules entry names] =
+  match names {
+    case [] -> list []
+    case name :: rest ->
+      prim #cons [
+        mk #resolved [name call ProviderOf [modules entry name]]
+        call ResolveNamesOf [modules entry rest]
+      ]
+  }
+
+judgment ProviderOf [modules entry name] =
+  call SoleProvider [
+    entry
+    name
+    call ProvidersOf [modules call ModuleImports [entry] name]
+  ]
+
+judgment ProvidersOf [modules needs name] =
+  match needs {
+    case [] -> list []
+    case (#needs required version) :: rest ->
+      let provider = call RequiredModule [modules required] in
+      if prim #contains [call ModuleExports [provider] name]
+      then prim #cons [required call ProvidersOf [modules rest name]]
+      else call ProvidersOf [modules rest name]
+    case head :: rest -> call ProvidersOf [modules rest name]
+  }
+
+judgment SoleProvider [entry name providers] =
+  match providers {
+    case [] ->
+      fail #name-error prim #scat [
+        prim #scat [
+          prim #scat [prim #scat [call ModuleNameOfRecord [entry] " uses "] prim #sym->str [name]]
+          ", which it does not declare and no module it imports exposes; searched "
+        ]
+        call SearchedText [call ModuleImports [entry]]
+      ]
+    case only :: [] -> only
+    case first :: (second :: _) ->
+      fail #name-error prim #scat [
+        prim #scat [
+          prim #scat [prim #scat [call ModuleNameOfRecord [entry] " uses "] prim #sym->str [name]]
+          ", which is exposed by both "
+        ]
+        prim #scat [prim #scat [first " and "] second]
+      ]
+  }
+
+judgment SearchedText [needs] =
+  match needs {
+    case [] -> "nothing"
+    case (#needs name version) :: [] -> name
+    case (#needs name version) :: rest ->
+      prim #scat [prim #scat [name ", "] call SearchedText [rest]]
+    case head :: rest -> call SearchedText [rest]
+  }
+
+; Resolution is a set, and a set has a canonical order, so the answer does not
+; depend on the order the modules or the names were given in.
+judgment SortedNames [names] = prim #sort [prim #distinct [names]]
+
+; ------------------------------------------------------------- free names
+;
+; Every name a module's declarations mention and do not themselves introduce.
+
+judgment FreeNames [decls declared] =
+  call FreeInDeclarations [decls declared list []]
+
+judgment FreeInDeclarations [decls declared found] =
+  match decls {
+    case [] -> found
+    case (#data name ctors) :: rest ->
+      call FreeInDeclarations [rest declared call FreeInConstructors [ctors declared found]]
+    case (#family name params ctors) :: rest ->
+      call FreeInDeclarations [
+        rest
+        declared
+        call FreeInConstructors [ctors prim #append [declared call ParamNamesOf [params]] found]
+      ]
+    case (#def name params result body) :: rest ->
+      let inner = prim #append [declared call ParamNamesOf [params]] in
+      call FreeInDeclarations [
+        rest
+        declared
+        call FreeInExpr [
+          body
+          inner
+          call FreeInParams [params declared call FreeInType [result declared found]]
+        ]
+      ]
+    case (#law name params body) :: rest ->
+      let inner = prim #append [declared call ParamNamesOf [params]] in
+      call FreeInDeclarations [
+        rest
+        declared
+        call FreeInExpr [body inner call FreeInParams [params declared found]]
+      ]
+    case head :: rest -> call FreeInDeclarations [rest declared found]
+  }
+
+judgment ParamNamesOf [params] =
+  match params {
+    case [] -> list []
+    case (#Param pname ptype) :: rest -> prim #cons [pname call ParamNamesOf [rest]]
+    case head :: rest -> call ParamNamesOf [rest]
+  }
+
+judgment FreeInParams [params declared found] =
+  match params {
+    case [] -> found
+    case (#Param pname ptype) :: rest ->
+      call FreeInParams [rest declared call FreeInType [ptype declared found]]
+    case head :: rest -> call FreeInParams [rest declared found]
+  }
+
+judgment FreeInConstructors [ctors declared found] =
+  match ctors {
+    case [] -> found
+    case (#Constructor cname fields) :: rest ->
+      call FreeInConstructors [rest declared call FreeInFields [call FieldList [fields] declared found]]
+    case (#ConstructorAt cname fields result) :: rest ->
+      call FreeInConstructors [
+        rest
+        declared
+        call FreeInType [result declared call FreeInFields [call FieldList [fields] declared found]]
+      ]
+    case head :: rest -> call FreeInConstructors [rest declared found]
+  }
+
+judgment FreeInFields [fields declared found] =
+  match fields {
+    case [] -> found
+    case (#FieldDecl fname fnum ftype) :: rest ->
+      call FreeInFields [rest declared call FreeInType [ftype declared found]]
+    case head :: rest -> call FreeInFields [rest declared found]
+  }
+
+judgment FreeInType [node declared found] =
+  match node {
+    case (#TypeRef name) -> call NoteFree [name declared found]
+    case (#TypeApply left right) ->
+      call FreeInType [right declared call FreeInType [left declared found]]
+    case (#TypeArrow from to) ->
+      call FreeInType [to declared call FreeInType [from declared found]]
+    case (#TypeDepend params to) ->
+      call FreeInType [to prim #append [declared call ParamNamesOf [call ParameterList [params]]] call FreeInParams [call ParameterList [params] declared found]]
+    case _ -> found
+  }
+
+judgment FreeInExpr [node declared found] =
+  match node {
+    case (#Var name) -> call NoteFree [name declared found]
+    case (#Apply fn argument) ->
+      call FreeInExpr [argument declared call FreeInExpr [fn declared found]]
+    case (#Let name value body) ->
+      call FreeInExpr [body prim #snoc [declared name] call FreeInExpr [value declared found]]
+    case (#Match scrutinee cases) ->
+      call FreeInCases [call CaseList [cases] declared call FreeInExpr [scrutinee declared found]]
+    case _ -> found
+  }
+
+judgment FreeInCases [cases declared found] =
+  match cases {
+    case [] -> found
+    case (#Case pattern body) :: rest ->
+      call FreeInCases [
+        rest
+        declared
+        call FreeInExpr [body prim #append [declared call PatternNamesOf [pattern]] found]
+      ]
+    case head :: rest -> call FreeInCases [rest declared found]
+  }
+
+; A pattern binds every name in it that is not already declared, so a
+; constructor in a pattern stays free and a variable does not.
+judgment PatternNamesOf [pattern] =
+  match pattern {
+    case (#PatVar name) -> list [name]
+    case (#PatWild) -> list []
+    case (#PatApply left right) ->
+      prim #append [call PatternNamesOf [left] call PatternNamesOf [right]]
+    case _ -> list []
+  }
+
+; `Type` is what a type parameter is written with. It belongs to the language
+; rather than to a module, so no module has to export it and no module can
+; shadow it.
+judgment NoteFree [name declared found] =
+  if prim #eq [name #Type]
+  then found
+  else
+    if prim #contains [declared name]
+    then found
+    else prim #snoc [found name]
+
+; ------------------------------------------------------------------ linking
+;
+; A module and everything it uses, gathered into one closed module. The result
+; is what every layer below S4 already knows how to check, so importing costs
+; those layers nothing.
+
+judgment LinkModule [modules name] =
+  match call VersionsAgree [modules] {
+    case _ ->
+      match call ImportOrder [modules] {
+        case _ ->
+          call GatherDeclarations [
+            modules
+            call NeededModules [modules name list []]
+            list []
+          ]
+      }
+  }
+
+judgment NeededModules [modules name found] =
+  if prim #contains [found name]
+  then found
+  else
+    call NeededImports [
+      modules
+      call ModuleImports [call RequiredModule [modules name]]
+      prim #snoc [found name]
+    ]
+
+judgment NeededImports [modules needs found] =
+  match needs {
+    case [] -> found
+    case (#needs required version) :: rest ->
+      call NeededImports [modules rest call NeededModules [modules required found]]
+    case head :: rest -> call NeededImports [modules rest found]
+  }
+
+; Imports come first, so a declaration is always in scope before it is used.
+judgment GatherDeclarations [modules names gathered] =
+  match names {
+    case [] -> gathered
+    case name :: rest ->
+      call GatherDeclarations [
+        modules
+        rest
+        prim #append [
+          call UsableDeclarations [call ModuleDeclarations [call RequiredModule [modules name]]]
+          gathered
+        ]
+      ]
+  }
+
+; An import line and an export line say how a module is joined to others. They
+; are not declarations, and a linked module carries neither.
+judgment UsableDeclarations [decls] =
+  match decls {
+    case [] -> list []
+    case (#import name version) :: rest -> call UsableDeclarations [rest]
+    case (#export names) :: rest -> call UsableDeclarations [rest]
+    case head :: rest -> prim #cons [head call UsableDeclarations [rest]]
+  }
+
+; ---------------------------------------------------------------- checking
+;
+; What S1 and S2 decide about a closed module, they decide about a linked one.
+
+judgment CheckLinkedModule [grammar sources name] =
+  call CheckDeclarations [
+    call LinkModule [call LoadModuleSet [grammar sources] name]
+    call ConstructorTable [call LinkModule [call LoadModuleSet [grammar sources] name]]
+    call DefinitionTable [call LinkModule [call LoadModuleSet [grammar sources] name]]
+  ]
+
+judgment CheckLinkedDependent [grammar sources name] =
+  call CheckDependentDeclarations [call LinkModule [call LoadModuleSet [grammar sources] name]]
+
+judgment TotalLinkedModule [grammar sources name] =
+  call TerminationOfDeclarations [call LinkModule [call LoadModuleSet [grammar sources] name]]
+
+; Resolution does not depend on the order the modules were given in.
+judgment ResolutionIsConfluent [grammar sources name] =
+  prim #eq [
+    call ResolveModule [call LoadModuleSet [grammar sources] name]
+    call ResolveModule [call LoadModuleSet [grammar prim #rev [sources]] name]
+  ]
+
+judgment LinkingIsConfluent [grammar sources name] =
+  prim #eq [
+    call LinkModule [call LoadModuleSet [grammar sources] name]
+    call LinkModule [call LoadModuleSet [grammar prim #rev [sources]] name]
+  ]

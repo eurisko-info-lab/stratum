@@ -9,21 +9,21 @@
   ; index it lands on.
   (check strata-checks-an-indexed-family
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.vec\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef example []: Nat = Zero\n"))
     (value (checked ok)))
 
   ; A parameter declared with a type nothing declares is a kind error.
   (check strata-rejects-an-undeclared-parameter-type
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.bad\"\nversion 1\ndata Vec [a: Type, n: Missing] = | Nil []: Vec a Missing\ndef example []: Nat = Zero\n"))
     (error kind-error))
 
   ; Nothing may be its own type.
   (check strata-rejects-a-family-that-parameterises-itself
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.cyclic\"\nversion 1\ndata Loop [a: Loop] = | Wrap []: Loop a\ndef example []: Nat = Zero\n"))
     (error kind-error))
 
@@ -32,21 +32,21 @@
   ; A constructor must land on the family that declares it.
   (check strata-rejects-a-constructor-that-lands-elsewhere
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.elsewhere\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndata Vec [a: Type, n: Nat] = | Nil []: Nat\ndef example []: Nat = Zero\n"))
     (error index-error))
 
   ; And must saturate the indices of that family.
   (check strata-rejects-an-unsaturated-index
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.short\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a\ndef example []: Nat = Zero\n"))
     (error index-error))
 
   ; A constructor of a family must say where it lands at all.
   (check strata-requires-an-index-on-a-family-constructor
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.silent\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndata Vec [a: Type, n: Nat] = | Nil []\ndef example []: Nat = Zero\n"))
     (error index-error))
 
@@ -59,12 +59,12 @@
       (call DependentConstructors
         (call Declarations
           (call ParseStrata
-            (q (file "languages/strata/strata.generated.grammar"))
+            (q (file "languages/strata/strata.v2.generated.grammar"))
             (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n"))))
       (call DependentDefinitions
         (call Declarations
           (call ParseStrata
-            (q (file "languages/strata/strata.generated.grammar"))
+            (q (file "languages/strata/strata.v2.generated.grammar"))
             (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n"))))
       (q (apply (apply (con add) (con Zero)) (con Zero)))
       (q (con Zero)))
@@ -76,12 +76,12 @@
       (call DependentConstructors
         (call Declarations
           (call ParseStrata
-            (q (file "languages/strata/strata.generated.grammar"))
+            (q (file "languages/strata/strata.v2.generated.grammar"))
             (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n"))))
       (call DependentDefinitions
         (call Declarations
           (call ParseStrata
-            (q (file "languages/strata/strata.generated.grammar"))
+            (q (file "languages/strata/strata.v2.generated.grammar"))
             (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n"))))
       (q (apply (apply (con add) (con Zero)) (con Zero)))
       (q (apply (con Succ) (con Zero))))
@@ -92,7 +92,7 @@
   ; asserted.
   (check strata-rejects-an-append-whose-index-does-not-add-up
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.bad\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef append [a: Type, m: Nat, n: Nat, xs: Vec a m, ys: Vec a n]: Vec a m = match xs of case Nil b -> ys case Cons b p h t -> Cons b (add p n) h (append b p n t ys) end\n"))
     (error type-error))
 
@@ -102,12 +102,12 @@
       (call DependentConstructors
         (call Declarations
           (call ParseStrata
-            (q (file "languages/strata/strata.generated.grammar"))
+            (q (file "languages/strata/strata.v2.generated.grammar"))
             (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n"))))
       (call DependentDefinitions
         (call Declarations
           (call ParseStrata
-            (q (file "languages/strata/strata.generated.grammar"))
+            (q (file "languages/strata/strata.v2.generated.grammar"))
             (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n"))))
       (q (apply (apply (apply (con Eq) (con Nat)) (con m)) (apply (apply (con add) (con Zero)) (con m))))
       (q (apply (apply (con Vec) (con a)) (con m))))
@@ -118,7 +118,7 @@
   ; The dependent surface prints back byte for byte, like the seed's.
   (check strata-dependent-surface-prints-exactly
     (call PrintsExactly
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.vec\"\nversion 1\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef idv [a: Type]: [n: Nat] -> Vec a n = grow\n"))
     (value #t))
 
@@ -126,7 +126,7 @@
   ; its predecessor could say.
   (check strata-seed-surface-still-parses
     (call PrintsExactly
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
     (value #t))
 
@@ -139,14 +139,14 @@
   ; import what it needs instead.
   (check strata-an-indexed-vector-is-well-formed
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.vector\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef append [a: Type, m: Nat, n: Nat, xs: Vec a m, ys: Vec a n]: Vec a (add m n) = match xs of case Nil b -> ys case Cons b p h t -> Cons b (add p n) h (append b p n t ys) end\ndata Eq [a: Type, x: a, y: a] = | Refl []: Eq a x x\ndef zeroAdds [n: Nat]: Eq Nat n n = Refl Nat n\ndef single [a: Type, x: a]: Vec a (Succ Zero) = Cons a Zero x (Nil a)\ndef pair [a: Type, x: a, y: a]: Vec a (Succ (Succ Zero)) = append a (Succ Zero) (Succ Zero) (single a x) (single a y)\n"))
     (value (checked ok)))
 
   ; Its length arithmetic terminates.
   (check strata-an-indexed-vector-terminates
     (call TotalModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.vector\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef append [a: Type, m: Nat, n: Nat, xs: Vec a m, ys: Vec a n]: Vec a (add m n) = match xs of case Nil b -> ys case Cons b p h t -> Cons b (add p n) h (append b p n t ys) end\ndata Eq [a: Type, x: a, y: a] = | Refl []: Eq a x x\ndef zeroAdds [n: Nat]: Eq Nat n n = Refl Nat n\ndef single [a: Type, x: a]: Vec a (Succ Zero) = Cons a Zero x (Nil a)\ndef pair [a: Type, x: a, y: a]: Vec a (Succ (Succ Zero)) = append a (Succ Zero) (Succ Zero) (single a x) (single a y)\n"))
     (value (total ok)))
 
@@ -154,7 +154,7 @@
   ; the same module with a length that is off by one does not check.
   (check strata-rejects-a-length-that-is-off-by-one
     (call CheckDependentModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v2.generated.grammar"))
       (q "module \"strata.off\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef single [a: Type, x: a]: Vec a (Succ Zero) = Cons a Zero x (Nil a)\ndef pair [a: Type, x: a, y: a]: Vec a (Succ Zero) = Cons a (Succ Zero) x (single a y)\n"))
     (error type-error))
 ]

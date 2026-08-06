@@ -244,8 +244,8 @@ hides.
 
 **Acceptance**
 
-- `strata/lib/vector.strata` imports `Nat` and `add` and declares neither, and
-  the resulting foundation checks exactly what it checked before
+- the vector library imports `Nat` and `add` and declares neither, and the
+  resulting foundation checks exactly what it checked before
 - an unresolvable name is rejected, and says which module was searched
 - an import cycle is rejected, and names the cycle
 - two modules that require different versions of a third is rejected
@@ -254,6 +254,17 @@ hides.
 - resolution is confluent: the resolved form does not depend on the order the
   modules were given
 - a module's identity is its content, so renaming a file changes nothing
+
+The surface is `strata.v3.grammar` rather than an edit to `strata.grammar`. A
+foundation records its sources by path and by content, so anything a
+published foundation names is immutable: the tree is append-only for those
+files, and a surface revision is a new file rather than a change to an old
+one. The superseded revision's *generated* artifact is frozen under
+`strata.vN.generated.*` and its consumers re-pointed, which is a rename and
+not an edit — S2 and S3 rebuild to the digests they had. Library modules are
+not versioned this way: a module carries the version it declares, and S2
+checks its vector inline precisely so that only one `vector.strata` ever
+exists.
 
 **Exit condition** — a declaration is written once and used everywhere, and
 the module graph is decided rather than assumed.

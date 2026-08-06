@@ -1,19 +1,21 @@
-; S2: the dependent core, and the third foundation of the second floor.
+; S4: modules and names, and the fifth foundation of the second floor.
 ;
-; S1 decided whether a module was well formed. S2 decides the same question
-; when a type mentions a value: a family carries a telescope, a constructor
-; declares the index it lands on, and two types are the same when they compute
-; to the same thing.
+; Until here a module is closed: every name it uses, it declares. S4 lets one
+; module refer to another, decides what can then go wrong, and links a module
+; set into one closed module so the layers below carry on unchanged.
 ;
-; Still described in Meta. The language does not describe itself until S4.
+; The Strata surface moves to its third revision, which is a new file rather
+; than an edit: S0 and S2 record the earlier revisions by path and by content.
+;
+; Still described in Meta. The language does not describe itself until S5.
 (build
-  (name "S2")
+  (name "S4")
   (bootstrap "StratumHost0/1")
-  (predecessor (dir "foundations/S1"))
-  (change (file "changes/S1-S2/change.canon"))
+  (predecessor (dir "foundations/S3"))
+  (change (file "changes/S3-S4/change.canon"))
   (application
     (application
-      (name "strata-s2")
+      (name "strata-s4")
       (host (file "host/core.canon"))
       (meta (program-of [
         (file "languages/meta/prelude.meta")
@@ -23,18 +25,21 @@
         (file "languages/foundation/foundation.meta")
         (file "languages/foundation/derive.meta")
         (file "languages/foundation/delta.meta")
-        (file "languages/strata/strata.v2.generated.meta")
+        (file "languages/strata/strata.generated.meta")
         (file "features/strata/check.generated.meta")
         (file "features/strata/total.generated.meta")
         (file "features/strata/schema.generated.meta")
         (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
       ]))
       (grammars {
-        strata (file "languages/strata/strata.v2.generated.grammar")
+        strata (file "languages/strata/strata.generated.grammar")
         meta (file "languages/meta/meta.generated.grammar")
         grammar (file "languages/grammar/grammar.generated.grammar")
       })
       (entries {})
-      (checks (include "fixtures/strata/s2-checks.canon"))
+      (checks (include "fixtures/strata/s4-checks.canon"))
       (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print)))
       (resources (budget (steps 20000000) (depth 20000))))))

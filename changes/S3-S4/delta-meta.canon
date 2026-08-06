@@ -1,0 +1,11 @@
+; delta-meta for S3 -> S4: Meta gains name resolution across a module set,
+; import-graph ordering with cycle detection, version agreement, module
+; identity by content, and linking into one closed module.
+(change
+  (kind delta-meta)
+  (name "S3->S4 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (changeable strata)
+      (modular strata))))
