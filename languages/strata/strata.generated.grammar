@@ -65,6 +65,19 @@
         (bind constructors constructors)
         (bind eol eol)])
     (prod
+      DefUses
+      [
+        (kw "def")
+        (bind name ident)
+        (bind params params)
+        (kw "!")
+        (bind uses idents)
+        (kw ":")
+        (bind result type)
+        (kw "=")
+        (bind body expr)
+        (bind eol eol)])
+    (prod
       Def
       [
         (kw "def")
@@ -168,11 +181,36 @@
   (category
     param
     (prod
+      ParamGraded
+      [
+        (bind grade grade)
+        (bind name ident)
+        (kw ":")
+        (bind type type)])
+    (prod
       Param
       [
         (bind name ident)
         (kw ":")
         (bind type type)]))
+  (category
+    grade
+    (prod
+      Erased
+      [
+        (kw "erased")])
+    (prod
+      Once
+      [
+        (kw "once")])
+    (prod
+      Affine
+      [
+        (kw "affine")])
+    (prod
+      Many
+      [
+        (kw "many")]))
   (category
     type
     (prod

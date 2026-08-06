@@ -255,9 +255,57 @@
               (v params))
             (v result)
             (v body))
-          (call
-            CollectDeclarations
-            (v rest))))
+          (prim
+            cons
+            (mk
+              grades
+              (v name)
+              (call
+                ParameterGrades
+                (v params)))
+            (call
+              CollectDeclarations
+              (v rest)))))
+      (case
+        (pcons
+          (pm
+            DefUses
+            (pv name)
+            (pv params)
+            (pv uses)
+            (pv result)
+            (pv body)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            def
+            (v name)
+            (call
+              ParameterList
+              (v params))
+            (v result)
+            (v body))
+          (prim
+            cons
+            (mk
+              grades
+              (v name)
+              (call
+                ParameterGrades
+                (v params)))
+            (prim
+              cons
+              (mk
+                uses
+                (v name)
+                (call
+                  IdentList
+                  (v uses)))
+              (call
+                CollectDeclarations
+                (v rest))))))
       (case
         (pcons
           (pm
@@ -329,19 +377,142 @@
   (judgment
     ParameterList
     [node]
+    (call
+      PlainParameters
+      (match
+        (v node)
+        (case
+          (pm NoParams)
+          (lst))
+        (case
+          (pm
+            Params
+            (pv items))
+          (call
+            ParameterSeq
+            (v items)))
+        (case _ (lst)))))
+  (judgment
+    PlainParameters
+    [params]
     (match
-      (v node)
+      (v params)
+      (case (pnil) (lst))
       (case
-        (pm NoParams)
-        (lst))
+        (pcons
+          (pm
+            ParamGraded
+            (pv grade)
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            Param
+            (v pname)
+            (v ptype))
+          (call
+            PlainParameters
+            (v rest))))
       (case
-        (pm
-          Params
-          (pv items))
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (v head)
+          (call
+            PlainParameters
+            (v rest))))))
+  (judgment
+    ParameterGrades
+    [node]
+    (call
+      GradesOfParameters
+      (match
+        (v node)
+        (case
+          (pm NoParams)
+          (lst))
+        (case
+          (pm
+            Params
+            (pv items))
+          (call
+            ParameterSeq
+            (v items)))
+        (case _ (lst)))))
+  (judgment
+    GradesOfParameters
+    [params]
+    (match
+      (v params)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            ParamGraded
+            (pv grade)
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            graded
+            (v pname)
+            (call
+              GradeName
+              (v grade)))
+          (call
+            GradesOfParameters
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            graded
+            (v pname)
+            (q many))
+          (call
+            GradesOfParameters
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
         (call
-          ParameterSeq
-          (v items)))
-      (case _ (lst))))
+          GradesOfParameters
+          (v rest)))))
+  (judgment
+    GradeName
+    [grade]
+    (match
+      (v grade)
+      (case
+        (pm Erased)
+        (q erased))
+      (case
+        (pm Once)
+        (q once))
+      (case
+        (pm Affine)
+        (q affine))
+      (case
+        (pm Many)
+        (q many))
+      (case
+        _
+        (fail
+          grade-error
+          (q "not a multiplicity")))))
   (judgment
     ParameterSeq
     [node]

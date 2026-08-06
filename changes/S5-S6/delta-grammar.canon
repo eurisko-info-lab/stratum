@@ -1,0 +1,12 @@
+; delta-grammar for S5 -> S6: the Strata surface gains a capability clause on
+; a definition and a multiplicity on a parameter. Everything S5 could write
+; still parses, and means what it meant: no clause is no requirement, and no
+; grade is `many`.
+(change
+  (kind delta-grammar)
+  (name "S5->S6 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end telescope index bind import export])
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many]))))

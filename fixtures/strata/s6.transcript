@@ -1,0 +1,100 @@
+# S6 acceptance transcript: effects and multiplicities.
+#
+# S5 |- S6. A type says what a program may do, not only what it is.
+
+$ foundation verify --dir foundations/S6
+> foundation S6
+> digest fd569812c2b21e8a01f12549bc6ad437e0a8315d5e19d97f0dd37c05aa413d2b
+> closure 134 artifacts
+> check strata-graded-surface-prints-exactly ok
+> check strata-ungraded-modules-still-parse ok
+> check strata-a-grade-is-collected-beside-the-parameter ok
+> check strata-a-capability-does-not-travel ok
+> check strata-declaring-a-capability-permits-the-call ok
+> check strata-library-effects-is-permitted ok
+> check strata-a-once-parameter-used-twice-is-rejected ok
+> check strata-a-once-parameter-unused-on-a-path-is-rejected ok
+> check strata-an-affine-parameter-may-go-unused ok
+> check strata-an-affine-parameter-used-twice-is-rejected ok
+> check strata-an-erased-parameter-that-is-used-is-rejected ok
+> check strata-library-effects-uses-what-it-declares ok
+> check strata-erasure-removes-the-parameter ok
+> check strata-erasure-preserves-meaning ok
+> check strata-erasure-preserves-a-once-parameter ok
+> check strata-erasure-preserves-a-match ok
+> check strata-the-bootstrap-is-still-stable ok
+> check strata-the-vector-still-checks ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S5 --successor foundations/S6
+> predecessor S5
+> successor S6
+> result (valid #d49a325888d172406587213ad55e1b6fa4dbc2bce9ce1a9de21e54c001badbbb9)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/S6
+> reconstructed S6
+> digest fd569812c2b21e8a01f12549bc6ad437e0a8315d5e19d97f0dd37c05aa413d2b
+> stable yes
+> closure 134 artifacts
+> checks 18 ok
+
+# A grade is written on the parameter but is not part of it: the canonical
+# parameter is what it always was, and the grades are collected beside it.
+$ derive --foundation foundations/S6 --goal '(call Declarations (call ParseStrata (grammar strata) (q "module \"probe.g\"\nversion 1\ndata Bool = | True [] | False []\ndef useOnce [once b: Bool] ! io: Bool = b\n")))'
+> [(data Bool [(Constructor True (NoFields)) (Constructor False (NoFields))]) (def useOnce [(Param b (TypeRef Bool))] (TypeRef Bool) (Var b)) (grades useOnce [(graded b once)]) (uses useOnce [io])]
+
+# A capability is not acquired by going one call deeper.
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedCapabilities (grammar strata) (q ["module \"probe.c\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef raw []! io: Nat = Zero\ndef quiet []: Nat = raw\n"]) (q "probe.c"))'
+> error capability-error "quiet calls raw, which needs io, and quiet does not declare it"
+> exit 1
+
+# Declaring it is what makes the call permitted.
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedCapabilities (grammar strata) (q ["module \"probe.c\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef raw []! io: Nat = Zero\ndef loud []! io: Nat = raw\n"]) (q "probe.c"))'
+> (permitted ok)
+
+# A parameter declared `once` is used once on every path, and the rejection
+# names the path it was not.
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedMultiplicities (grammar strata) (q ["module \"probe.m\"\nversion 1\ndata Bool = | True [] | False []\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef maybe [once n: Nat, b: Bool]: Nat = match b of case True -> n case False -> Zero end\n"]) (q "probe.m"))'
+> error multiplicity-error "maybe declares n once, but does not use it on the path through False"
+> exit 1
+
+# Using it twice is the other way of getting it wrong.
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedMultiplicities (grammar strata) (q ["module \"probe.m\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef twice [once n: Nat]: Nat = add n n\n"]) (q "probe.m"))'
+> error multiplicity-error "twice declares n once, but uses it 2 times in its body"
+> exit 1
+
+# `affine` allows the path that does not use it.
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedMultiplicities (grammar strata) (q ["module \"probe.m\"\nversion 1\ndata Bool = | True [] | False []\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef maybe [affine n: Nat, b: Bool]: Nat = match b of case True -> n case False -> Zero end\n"]) (q "probe.m"))'
+> (used ok)
+
+# `erased` means used on no path at all, which is what makes it removable.
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedMultiplicities (grammar strata) (q ["module \"probe.m\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef keep [erased n: Nat]: Nat = n\n"]) (q "probe.m"))'
+> error multiplicity-error "keep declares n erased, but uses it once in its body"
+> exit 1
+
+# And removing it is real: the arity of every definition in the linked module,
+# prelude first. `dropIt` is the tenth, declared with one parameter and
+# compiled with none.
+$ derive --foundation foundations/S6 --goal '(call ErasedArities (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/effects.strata")) (q []))) (q "strata.effects"))'
+> [1 2 2 2 2 1 2 1 1 0 2 0 0 0]
+
+# What the program computes does not change.
+$ derive --foundation foundations/S6 --goal '(call ErasurePreservesMeaning (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/effects.strata")) (q []))) (q "strata.effects") (q erasedExample))'
+> #t
+
+# The library the floor ships declares what it needs and uses what it
+# declares.
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedCapabilities (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/effects.strata")) (q []))) (q "strata.effects"))'
+> (permitted ok)
+
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedMultiplicities (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/effects.strata")) (q []))) (q "strata.effects"))'
+> (used ok)
+
+# What the layers below decided, S6 still decides -- including the bootstrap,
+# against the surface as it now stands.
+$ derive --foundation foundations/S6 --goal '(call BootstrapIsStable (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))))'
+> #t
+
+$ derive --foundation foundations/S6 --goal '(call CheckLinkedDependent (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/vector.strata")) (q []))) (q "strata.vector"))'
+> (checked ok)

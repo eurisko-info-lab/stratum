@@ -1,0 +1,23 @@
+
+artifactchange
+change
+kind
+foundation
+nameS5->S6
+predecessor
+foundation-offoundations/S5
+
+delta-meta
+filechanges/S5-S6/delta-meta.canon
+delta-grammar
+file!changes/S5-S6/delta-grammar.canon
+feature
+feature
+nameeffects and multiplicities
+programs
+file%features/strata/effect.generated.meta
+sources
+	text-filefeatures/strata/effect.meta
+	text-filelanguages/strata/strata.grammar
+	text-filelanguages/strata/strata.meta
+	text-filestrata/lib/effects.strata

@@ -1,0 +1,21 @@
+
+artifactevidence
+evidence
+check$strata-graded-surface-prints-exactlyok
+check#strata-ungraded-modules-still-parseok
+check0strata-a-grade-is-collected-beside-the-parameterok
+check#strata-a-capability-does-not-travelok
+check.strata-declaring-a-capability-permits-the-callok
+check#strata-library-effects-is-permittedok
+check.strata-a-once-parameter-used-twice-is-rejectedok
+check4strata-a-once-parameter-unused-on-a-path-is-rejectedok
+check(strata-an-affine-parameter-may-go-unusedok
+check1strata-an-affine-parameter-used-twice-is-rejectedok
+check3strata-an-erased-parameter-that-is-used-is-rejectedok
+check,strata-library-effects-uses-what-it-declaresok
+check$strata-erasure-removes-the-parameterok
+check strata-erasure-preserves-meaningok
+check)strata-erasure-preserves-a-once-parameterok
+check strata-erasure-preserves-a-matchok
+check$strata-the-bootstrap-is-still-stableok
+checkstrata-the-vector-still-checksok

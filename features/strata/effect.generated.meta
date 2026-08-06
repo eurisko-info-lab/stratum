@@ -1,0 +1,1562 @@
+; Generated from features/strata/effect.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataeffect)
+  (judgment
+    DeclaredCapabilities
+    [decls]
+    (call
+      CapabilitiesFrom
+      (v decls)
+      (prim mnew)))
+  (judgment
+    CapabilitiesFrom
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            uses
+            (pv name)
+            (pv caps))
+          (pv rest))
+        (call
+          CapabilitiesFrom
+          (v rest)
+          (prim
+            mput
+            (v table)
+            (v name)
+            (v caps))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CapabilitiesFrom
+          (v rest)
+          (v table)))))
+  (judgment
+    CapabilitiesOf
+    [table name]
+    (prim
+      mget
+      (v table)
+      (v name)
+      (lst)))
+  (judgment
+    DeclaredGrades
+    [decls]
+    (call
+      GradesFrom
+      (v decls)
+      (prim mnew)))
+  (judgment
+    GradesFrom
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            grades
+            (pv name)
+            (pv graded))
+          (pv rest))
+        (call
+          GradesFrom
+          (v rest)
+          (prim
+            mput
+            (v table)
+            (v name)
+            (v graded))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          GradesFrom
+          (v rest)
+          (v table)))))
+  (judgment
+    CheckCapabilities
+    [decls]
+    (call
+      CheckEachCapability
+      (v decls)
+      (call
+        DeclaredCapabilities
+        (v decls))
+      (v decls)))
+  (judgment
+    CheckEachCapability
+    [all table remaining]
+    (match
+      (v remaining)
+      (case
+        (pnil)
+        (mk
+          permitted
+          (q ok)))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (match
+          (call
+            CheckCalls
+            (v all)
+            (v table)
+            (v name)
+            (call
+              CapabilitiesOf
+              (v table)
+              (v name))
+            (call
+              CalledNames
+              (v body)
+              (lst)))
+          (case
+            _
+            (call
+              CheckEachCapability
+              (v all)
+              (v table)
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CheckEachCapability
+          (v all)
+          (v table)
+          (v rest)))))
+  (judgment
+    CheckCalls
+    [all table caller held called]
+    (match
+      (v called)
+      (case
+        (pnil)
+        (mk
+          permitted
+          (q ok)))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (match
+          (call
+            MissingCapability
+            (v held)
+            (call
+              CapabilitiesOf
+              (v table)
+              (v name)))
+          (case
+            (pm
+              missing
+              (pv lacked))
+            (fail
+              capability-error
+              (prim
+                scat
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (prim
+                      scat
+                      (prim
+                        sym->str
+                        (v caller))
+                      (q " calls "))
+                    (prim
+                      sym->str
+                      (v name)))
+                  (prim
+                    scat
+                    (q ", which needs ")
+                    (prim
+                      sym->str
+                      (v lacked))))
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (q ", and ")
+                    (prim
+                      sym->str
+                      (v caller)))
+                  (q " does not declare it")))))
+          (case
+            _
+            (call
+              CheckCalls
+              (v all)
+              (v table)
+              (v caller)
+              (v held)
+              (v rest)))))))
+  (judgment
+    MissingCapability
+    [held needed]
+    (match
+      (v needed)
+      (case
+        (pnil)
+        (mk permitted))
+      (case
+        (pcons
+          (pv permission)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v held)
+            (v permission))
+          (call
+            MissingCapability
+            (v held)
+            (v rest))
+          (mk
+            missing
+            (v permission))))))
+  (judgment
+    CalledNames
+    [expr found]
+    (match
+      (v expr)
+      (case
+        (pm
+          Var
+          (pv name))
+        (prim
+          snoc
+          (v found)
+          (v name)))
+      (case
+        (pm
+          Apply
+          (pv fn)
+          (pv argument))
+        (call
+          CalledNames
+          (v argument)
+          (call
+            CalledNames
+            (v fn)
+            (v found))))
+      (case
+        (pm
+          Let
+          (pv name)
+          (pv value)
+          (pv body))
+        (call
+          CalledNames
+          (v body)
+          (call
+            CalledNames
+            (v value)
+            (v found))))
+      (case
+        (pm
+          Match
+          (pv scrutinee)
+          (pv cases))
+        (call
+          CalledNamesInCases
+          (call
+            CaseList
+            (v cases))
+          (call
+            CalledNames
+            (v scrutinee)
+            (v found))))
+      (case
+        _
+        (v found))))
+  (judgment
+    CalledNamesInCases
+    [cases found]
+    (match
+      (v cases)
+      (case
+        (pnil)
+        (v found))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (call
+          CalledNamesInCases
+          (v rest)
+          (call
+            CalledNames
+            (v body)
+            (v found))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CalledNamesInCases
+          (v rest)
+          (v found)))))
+  (judgment
+    UsePaths
+    [expr name]
+    (call
+      PathsOf
+      (v expr)
+      (v name)
+      (lst)))
+  (judgment
+    PathsOf
+    [expr name label]
+    (match
+      (v expr)
+      (case
+        (pm
+          Var
+          (pv declared))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (lst
+            (mk
+              path
+              (v label)
+              (q 1)))
+          (lst
+            (mk
+              path
+              (v label)
+              (q 0)))))
+      (case
+        (pm
+          Apply
+          (pv fn)
+          (pv argument))
+        (call
+          CombinePaths
+          (call
+            PathsOf
+            (v fn)
+            (v name)
+            (v label))
+          (call
+            PathsOf
+            (v argument)
+            (v name)
+            (v label))))
+      (case
+        (pm
+          Let
+          (pv bound)
+          (pv value)
+          (pv body))
+        (if
+          (prim
+            eq
+            (v bound)
+            (v name))
+          (call
+            PathsOf
+            (v value)
+            (v name)
+            (v label))
+          (call
+            CombinePaths
+            (call
+              PathsOf
+              (v value)
+              (v name)
+              (v label))
+            (call
+              PathsOf
+              (v body)
+              (v name)
+              (v label)))))
+      (case
+        (pm
+          Match
+          (pv scrutinee)
+          (pv cases))
+        (call
+          CombinePaths
+          (call
+            PathsOf
+            (v scrutinee)
+            (v name)
+            (v label))
+          (call
+            BranchPaths
+            (call
+              CaseList
+              (v cases))
+            (v name)
+            (v label))))
+      (case
+        _
+        (lst
+          (mk
+            path
+            (v label)
+            (q 0))))))
+  (judgment
+    CombinePaths
+    [left right]
+    (match
+      (v left)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            path
+            (pv label)
+            (pv count))
+          (pv restLeft))
+        (prim
+          append
+          (call
+            AddToEach
+            (v label)
+            (v count)
+            (v right))
+          (call
+            CombinePaths
+            (v restLeft)
+            (v right))))
+      (case
+        (pcons
+          (pv head)
+          (pv restLeft))
+        (call
+          CombinePaths
+          (v restLeft)
+          (v right)))))
+  (judgment
+    AddToEach
+    [label count paths]
+    (match
+      (v paths)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            path
+            (pv other)
+            (pv amount))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            path
+            (call
+              JoinLabels
+              (v label)
+              (v other))
+            (prim
+              add
+              (v count)
+              (v amount)))
+          (call
+            AddToEach
+            (v label)
+            (v count)
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          AddToEach
+          (v label)
+          (v count)
+          (v rest)))))
+  (judgment
+    JoinLabels
+    [left right]
+    (prim
+      distinct
+      (prim
+        append
+        (v left)
+        (v right))))
+  (judgment
+    BranchPaths
+    [cases name label]
+    (match
+      (v cases)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (if
+          (prim
+            contains
+            (call
+              BoundInPattern
+              (v pattern))
+            (v name))
+          (call
+            BranchPaths
+            (v rest)
+            (v name)
+            (v label))
+          (prim
+            append
+            (call
+              PathsOf
+              (v body)
+              (v name)
+              (prim
+                snoc
+                (v label)
+                (call
+                  PatternHead
+                  (v pattern))))
+            (call
+              BranchPaths
+              (v rest)
+              (v name)
+              (v label)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          BranchPaths
+          (v rest)
+          (v name)
+          (v label)))))
+  (judgment
+    BoundInPattern
+    [pattern]
+    (match
+      (call
+        PatternSpine
+        (v pattern))
+      (case
+        (pcons
+          (pv head)
+          (pv fields))
+        (call
+          FieldNamesOf
+          (v fields)))
+      (case _ (lst))))
+  (judgment
+    FieldNamesOf
+    [fields]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            PatVar
+            (pv name))
+          (pv rest))
+        (prim
+          cons
+          (v name)
+          (call
+            FieldNamesOf
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FieldNamesOf
+          (v rest)))))
+  (judgment
+    PatternHead
+    [pattern]
+    (match
+      (call
+        PatternSpine
+        (v pattern))
+      (case
+        (pcons
+          (pm
+            PatVar
+            (pv head))
+          (pv args))
+        (v head))
+      (case
+        _
+        (q _))))
+  (judgment
+    CheckMultiplicities
+    [decls]
+    (call
+      CheckEachDefinitionGrades
+      (v decls)
+      (call
+        DeclaredGrades
+        (v decls))))
+  (judgment
+    CheckEachDefinitionGrades
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk
+          used
+          (q ok)))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (match
+          (call
+            CheckGradedParameters
+            (v name)
+            (v body)
+            (prim
+              mget
+              (v table)
+              (v name)
+              (lst)))
+          (case
+            _
+            (call
+              CheckEachDefinitionGrades
+              (v rest)
+              (v table)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CheckEachDefinitionGrades
+          (v rest)
+          (v table)))))
+  (judgment
+    CheckGradedParameters
+    [owner body graded]
+    (match
+      (v graded)
+      (case
+        (pnil)
+        (mk
+          used
+          (q ok)))
+      (case
+        (pcons
+          (pm
+            graded
+            (pv pname)
+            (pv grade))
+          (pv rest))
+        (match
+          (call
+            CheckOneGrade
+            (v owner)
+            (v pname)
+            (v grade)
+            (call
+              UsePaths
+              (v body)
+              (v pname)))
+          (case
+            _
+            (call
+              CheckGradedParameters
+              (v owner)
+              (v body)
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CheckGradedParameters
+          (v owner)
+          (v body)
+          (v rest)))))
+  (judgment
+    CheckOneGrade
+    [owner pname grade paths]
+    (if
+      (prim
+        eq
+        (v grade)
+        (q many))
+      (mk
+        used
+        (q ok))
+      (call
+        CheckPathsAgainst
+        (v owner)
+        (v pname)
+        (v grade)
+        (v paths))))
+  (judgment
+    CheckPathsAgainst
+    [owner pname grade paths]
+    (match
+      (v paths)
+      (case
+        (pnil)
+        (mk
+          used
+          (q ok)))
+      (case
+        (pcons
+          (pm
+            path
+            (pv label)
+            (pv count))
+          (pv rest))
+        (if
+          (call
+            GradeAdmits
+            (v grade)
+            (v count))
+          (call
+            CheckPathsAgainst
+            (v owner)
+            (v pname)
+            (v grade)
+            (v rest))
+          (fail
+            multiplicity-error
+            (prim
+              scat
+              (prim
+                scat
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (prim
+                      sym->str
+                      (v owner))
+                    (q " declares "))
+                  (prim
+                    sym->str
+                    (v pname)))
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (q " ")
+                    (prim
+                      sym->str
+                      (v grade)))
+                  (q ", but ")))
+              (prim
+                scat
+                (prim
+                  scat
+                  (call
+                    UsageText
+                    (v count))
+                  (q " "))
+                (call
+                  WhereText
+                  (v label)))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CheckPathsAgainst
+          (v owner)
+          (v pname)
+          (v grade)
+          (v rest)))))
+  (judgment
+    UsageText
+    [count]
+    (if
+      (prim
+        eq
+        (v count)
+        (q 0))
+      (q "does not use it")
+      (if
+        (prim
+          eq
+          (v count)
+          (q 1))
+        (q "uses it once")
+        (prim
+          scat
+          (prim
+            scat
+            (q "uses it ")
+            (prim
+              nat->str
+              (v count)))
+          (q " times")))))
+  (judgment
+    WhereText
+    [label]
+    (match
+      (v label)
+      (case
+        (pnil)
+        (q "in its body"))
+      (case
+        _
+        (prim
+          scat
+          (q "on the path through ")
+          (call
+            PathTail
+            (v label))))))
+  (judgment
+    GradeAdmits
+    [grade count]
+    (if
+      (prim
+        eq
+        (v grade)
+        (q erased))
+      (prim
+        eq
+        (v count)
+        (q 0))
+      (if
+        (prim
+          eq
+          (v grade)
+          (q once))
+        (prim
+          eq
+          (v count)
+          (q 1))
+        (if
+          (prim
+            eq
+            (v grade)
+            (q affine))
+          (prim
+            le
+            (v count)
+            (q 1))
+          (if
+            (prim
+              eq
+              (v grade)
+              (q many))
+            (q #t)
+            (fail
+              grade-error
+              (q "not a multiplicity")))))))
+  (judgment
+    PathTail
+    [label]
+    (match
+      (v label)
+      (case
+        (pnil)
+        (q ""))
+      (case
+        (pcons
+          (pv name)
+          (pnil))
+        (prim
+          sym->str
+          (v name)))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (prim
+          scat
+          (prim
+            scat
+            (prim
+              sym->str
+              (v name))
+            (q " then "))
+          (call
+            PathTail
+            (v rest))))))
+  (judgment
+    ErasedPositions
+    [decls]
+    (call
+      ErasedFrom
+      (v decls)
+      (call
+        DeclaredGrades
+        (v decls))
+      (q 0)
+      (prim mnew)))
+  (judgment
+    ErasedFrom
+    [decls table next out]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v out))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (call
+          ErasedFrom
+          (v rest)
+          (v table)
+          (prim
+            add
+            (v next)
+            (q 1))
+          (prim
+            mput
+            (v out)
+            (prim
+              nat->str
+              (v next))
+            (call
+              ErasedIndexes
+              (prim
+                mget
+                (v table)
+                (v name)
+                (lst))
+              (q 0)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ErasedFrom
+          (v rest)
+          (v table)
+          (v next)
+          (v out)))))
+  (judgment
+    ErasedIndexes
+    [graded position]
+    (match
+      (v graded)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            graded
+            (pv pname)
+            (pv grade))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v grade)
+            (q erased))
+          (prim
+            cons
+            (v position)
+            (call
+              ErasedIndexes
+              (v rest)
+              (prim
+                add
+                (v position)
+                (q 1))))
+          (call
+            ErasedIndexes
+            (v rest)
+            (prim
+              add
+              (v position)
+              (q 1)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ErasedIndexes
+          (v rest)
+          (prim
+            add
+            (v position)
+            (q 1))))))
+  (judgment
+    ErasedAt
+    [positions index]
+    (prim
+      mget
+      (v positions)
+      (prim
+        nat->str
+        (v index))
+      (lst)))
+  (judgment
+    EraseProgram
+    [positions program]
+    (call
+      EraseDefinitions
+      (v positions)
+      (v program)
+      (q 0)))
+  (judgment
+    EraseDefinitions
+    [positions program index]
+    (match
+      (v program)
+      (case
+        (pm NoDef)
+        (prim
+          node
+          (q NoDef)
+          (lst)))
+      (case
+        (pm
+          Def
+          (pv arity)
+          (pv body)
+          (pv rest))
+        (let
+          dropped
+          (call
+            ErasedAt
+            (v positions)
+            (v index))
+          (prim
+            node
+            (q Def)
+            (lst
+              (call
+                NatValue
+                (prim
+                  sub
+                  (call
+                    NatOf
+                    (v arity))
+                  (prim
+                    len
+                    (v dropped))))
+              (call
+                EraseCore
+                (v positions)
+                (v dropped)
+                (v body)
+                (q 0))
+              (call
+                EraseDefinitions
+                (v positions)
+                (v rest)
+                (prim
+                  add
+                  (v index)
+                  (q 1)))))))
+      (case
+        _
+        (fail
+          erase-error
+          (q "malformed program")))))
+  (judgment
+    EraseCore
+    [positions dropped core depth]
+    (match
+      (v core)
+      (case
+        (pm
+          CLocal
+          (pv index))
+        (let
+          position
+          (call
+            NatOf
+            (v index))
+          (if
+            (prim
+              lt
+              (v position)
+              (v depth))
+            (v core)
+            (prim
+              node
+              (q CLocal)
+              (lst
+                (call
+                  NatValue
+                  (prim
+                    add
+                    (v depth)
+                    (call
+                      ShiftedIndex
+                      (v dropped)
+                      (prim
+                        sub
+                        (v position)
+                        (v depth))))))))))
+      (case
+        (pm
+          CApp
+          (pv fn)
+          (pv argument))
+        (call
+          EraseApplication
+          (v positions)
+          (v dropped)
+          (call
+            EraseSpine
+            (v core))
+          (v depth)))
+      (case
+        (pm
+          CLet
+          (pv value)
+          (pv body))
+        (prim
+          node
+          (q CLet)
+          (lst
+            (call
+              EraseCore
+              (v positions)
+              (v dropped)
+              (v value)
+              (v depth))
+            (call
+              EraseCore
+              (v positions)
+              (v dropped)
+              (v body)
+              (prim
+                add
+                (v depth)
+                (q 1))))))
+      (case
+        (pm
+          CCase
+          (pv scrutinee)
+          (pv branches))
+        (prim
+          node
+          (q CCase)
+          (lst
+            (call
+              EraseCore
+              (v positions)
+              (v dropped)
+              (v scrutinee)
+              (v depth))
+            (call
+              EraseBranches
+              (v positions)
+              (v dropped)
+              (v branches)
+              (v depth)))))
+      (case
+        _
+        (v core))))
+  (judgment
+    ShiftedIndex
+    [dropped index]
+    (prim
+      sub
+      (v index)
+      (prim
+        len
+        (call
+          BelowIndex
+          (v dropped)
+          (v index)))))
+  (judgment
+    BelowIndex
+    [dropped index]
+    (match
+      (v dropped)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv position)
+          (pv rest))
+        (if
+          (prim
+            lt
+            (v position)
+            (v index))
+          (prim
+            cons
+            (v position)
+            (call
+              BelowIndex
+              (v rest)
+              (v index)))
+          (call
+            BelowIndex
+            (v rest)
+            (v index))))))
+  (judgment
+    EraseBranches
+    [positions dropped branches depth]
+    (match
+      (v branches)
+      (case
+        (pm NoBranch)
+        (prim
+          node
+          (q NoBranch)
+          (lst)))
+      (case
+        (pm
+          Branch
+          (pv tag)
+          (pv arity)
+          (pv body)
+          (pv rest))
+        (prim
+          node
+          (q Branch)
+          (lst
+            (v tag)
+            (v arity)
+            (call
+              EraseCore
+              (v positions)
+              (v dropped)
+              (v body)
+              (prim
+                add
+                (v depth)
+                (call
+                  NatOf
+                  (v arity))))
+            (call
+              EraseBranches
+              (v positions)
+              (v dropped)
+              (v rest)
+              (v depth)))))
+      (case
+        _
+        (fail
+          erase-error
+          (q "malformed branches")))))
+  (judgment
+    EraseSpine
+    [core]
+    (match
+      (v core)
+      (case
+        (pm
+          CApp
+          (pv fn)
+          (pv argument))
+        (prim
+          snoc
+          (call
+            EraseSpine
+            (v fn))
+          (v argument)))
+      (case
+        _
+        (lst
+          (v core)))))
+  (judgment
+    EraseApplication
+    [positions dropped spine depth]
+    (match
+      (v spine)
+      (case
+        (pcons
+          (pv head)
+          (pv args))
+        (call
+          RebuildApplication
+          (call
+            EraseCore
+            (v positions)
+            (v dropped)
+            (v head)
+            (v depth))
+          (call
+            EraseArguments
+            (v positions)
+            (v dropped)
+            (v args)
+            (v depth)
+            (call
+              DroppedForHead
+              (v positions)
+              (v head))
+            (q 0))))
+      (case
+        _
+        (fail
+          erase-error
+          (q "malformed application")))))
+  (judgment
+    DroppedForHead
+    [positions head]
+    (match
+      (v head)
+      (case
+        (pm
+          CGlobal
+          (pv index))
+        (call
+          ErasedAt
+          (v positions)
+          (call
+            NatOf
+            (v index))))
+      (case _ (lst))))
+  (judgment
+    EraseArguments
+    [positions dropped args depth drops position]
+    (match
+      (v args)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv argument)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v drops)
+            (v position))
+          (call
+            EraseArguments
+            (v positions)
+            (v dropped)
+            (v rest)
+            (v depth)
+            (v drops)
+            (prim
+              add
+              (v position)
+              (q 1)))
+          (prim
+            cons
+            (call
+              EraseCore
+              (v positions)
+              (v dropped)
+              (v argument)
+              (v depth))
+            (call
+              EraseArguments
+              (v positions)
+              (v dropped)
+              (v rest)
+              (v depth)
+              (v drops)
+              (prim
+                add
+                (v position)
+                (q 1))))))))
+  (judgment
+    RebuildApplication
+    [head args]
+    (match
+      (v args)
+      (case
+        (pnil)
+        (v head))
+      (case
+        (pcons
+          (pv argument)
+          (pv rest))
+        (call
+          RebuildApplication
+          (prim
+            node
+            (q CApp)
+            (lst
+              (v head)
+              (v argument)))
+          (v rest)))))
+  (judgment
+    EffectDeclarations
+    [grammar sources name]
+    (call
+      LinkModule
+      (call
+        LoadModuleSet
+        (v grammar)
+        (v sources))
+      (v name)))
+  (judgment
+    CheckLinkedCapabilities
+    [grammar sources name]
+    (call
+      CheckCapabilities
+      (call
+        EffectDeclarations
+        (v grammar)
+        (v sources)
+        (v name))))
+  (judgment
+    CheckLinkedMultiplicities
+    [grammar sources name]
+    (call
+      CheckMultiplicities
+      (call
+        EffectDeclarations
+        (v grammar)
+        (v sources)
+        (v name))))
+  (judgment
+    ErasedProgramOf
+    [grammar sources name]
+    (let
+      decls
+      (call
+        EffectDeclarations
+        (v grammar)
+        (v sources)
+        (v name))
+      (call
+        EraseProgram
+        (call
+          ErasedPositions
+          (v decls))
+        (call
+          ReadProgram
+          (v decls)))))
+  (judgment
+    ErasedArities
+    [grammar sources name]
+    (call
+      ArityList
+      (call
+        ErasedProgramOf
+        (v grammar)
+        (v sources)
+        (v name))))
+  (judgment
+    ArityList
+    [program]
+    (match
+      (v program)
+      (case
+        (pm NoDef)
+        (lst))
+      (case
+        (pm
+          Def
+          (pv arity)
+          (pv body)
+          (pv rest))
+        (prim
+          cons
+          (call
+            NatOf
+            (v arity))
+          (call
+            ArityList
+            (v rest))))
+      (case
+        _
+        (fail
+          erase-error
+          (q "malformed program")))))
+  (judgment
+    RunErased
+    [grammar compilerSources sources name entry]
+    (let
+      compiler
+      (call
+        CompilerDeclarations
+        (v grammar)
+        (v compilerSources))
+      (let
+        decls
+        (call
+          EffectDeclarations
+          (v grammar)
+          (v sources)
+          (v name))
+        (let
+          program
+          (call
+            EraseProgram
+            (call
+              ErasedPositions
+              (v decls))
+            (call
+              ReadProgram
+              (v decls)))
+          (let
+            tags
+            (call
+              ConstructorTags
+              (v decls))
+            (call
+              FromMachineValue
+              (call
+                TagNames
+                (v tags))
+              (call
+                RunBlock
+                (call
+                  BlockList
+                  (call
+                    CompileProgramWith
+                    (v compiler)
+                    (v program)))
+                (call
+                  ArityList
+                  (v program))
+                (call
+                  IndexOfGlobal
+                  (call
+                    GlobalIndexes
+                    (v decls))
+                  (v entry))
+                (lst))))))))
+  (judgment
+    ErasurePreservesMeaning
+    [grammar compilerSources sources name entry]
+    (prim
+      eq
+      (call
+        RunErased
+        (v grammar)
+        (v compilerSources)
+        (v sources)
+        (v name)
+        (v entry))
+      (call
+        RunEvaluated
+        (v grammar)
+        (v sources)
+        (v name)
+        (v entry)))))

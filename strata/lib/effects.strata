@@ -1,0 +1,23 @@
+module "strata.effects"
+version 1
+; What a program may do, and how often it may do it.
+;
+; A capability clause says what a definition needs permission for, and it does
+; not travel: a definition that calls something needing `io` must declare `io`
+; itself. A multiplicity says how often a parameter may be used, counted along
+; every path through the body.
+;
+; `erased` is the one that pays for itself. A parameter used on no path can be
+; removed, from the definition that takes it and from every application that
+; supplies it, and the program still computes what it computed.
+import "strata.prelude" 1
+data Path = | Home [] | Root []
+def size [p: Path] ! io: Nat = match p of case Home -> Succ Zero case Root -> Zero end
+def both [p: Path, q: Path] ! io: Nat = add (size p) (size q)
+def pure [n: Nat]: Nat = add n n
+def useOnce [once n: Nat]: Nat = n
+def dropIt [erased n: Nat]: Nat = Succ Zero
+def maybeUse [affine n: Nat, b: Bool]: Nat = match b of case True -> n case False -> Zero end
+def erasedExample []: Nat = dropIt (Succ (Succ Zero))
+def onceExample []: Nat = useOnce (Succ Zero)
+def affineExample []: Nat = maybeUse (Succ Zero) True
