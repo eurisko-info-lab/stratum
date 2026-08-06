@@ -1,0 +1,87 @@
+# S0 acceptance transcript: the Strata seed.
+#
+# F11 |- S0. Strata becomes a language the system can read, print, elaborate
+# and evaluate. Nothing is written in Strata yet: the seed is described in
+# Meta, the way every first-floor language was, so the floor it starts has a
+# legitimate origin.
+
+$ foundation verify --dir foundations/S0
+> foundation S0
+> digest 5f990d8405934d1acf1806ef9c261281ab776530b4a61673cdbafd6cf34ce0bc
+> closure 86 artifacts
+> check strata-prints-exactly ok
+> check strata-round-trips ok
+> check strata-module-name-is-unquoted ok
+> check strata-module-version-is-declared ok
+> check strata-counts-only-declarations ok
+> check strata-module-has-canonical-identity ok
+> check strata-identity-ignores-blank-lines-and-comments ok
+> check strata-evaluates-a-definition ok
+> check strata-evaluates-structural-recursion ok
+> check strata-rejects-an-unbound-name ok
+> check strata-rejects-a-missing-constructor-bar ok
+> check strata-requires-a-version ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/F11 --successor foundations/S0
+> predecessor F11
+> successor S0
+> result (valid #daf363e4d26139f9aaadea37128827521b7d18af9b5c0393fc43db643298cbd5f)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/S0
+> reconstructed S0
+> digest 5f990d8405934d1acf1806ef9c261281ab776530b4a61673cdbafd6cf34ce0bc
+> stable yes
+> closure 86 artifacts
+> checks 12 ok
+
+# The surface prints back byte for byte, so a module can be stored and checked
+# out without a blob standing behind it.
+$ derive --foundation foundations/S0 --goal '(call PrintsExactly (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> #t
+
+$ derive --foundation foundations/S0 --goal '(call RoundTripStrata (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> (roundtrip ok)
+
+# Elaboration reaches the module head, and the name loses its quotes.
+$ derive --foundation foundations/S0 --goal '(call ModuleNameOf (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> "strata.check"
+
+$ derive --foundation foundations/S0 --goal '(call ModuleVersionOf (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> 1
+
+# Blank lines and comments are carried by the surface but are not declarations.
+$ derive --foundation foundations/S0 --goal '(call DeclarationCount (grammar strata) (q "module \"strata.check\"\nversion 1\n\n; a comment is not a declaration\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> 3
+
+# Identity is the digest of the canonical module, so layout cannot change it.
+$ derive --foundation foundations/S0 --goal '(call ModuleDigest (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> "ae223c53cdb1e88697d0d54c519c44cbeaff64323dcdd933b4933c3070d085ec"
+
+$ derive --foundation foundations/S0 --goal '(call ModuleDigest (grammar strata) (q "module \"strata.check\"\nversion 1\n\n; a comment is not a declaration\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> "ae223c53cdb1e88697d0d54c519c44cbeaff64323dcdd933b4933c3070d085ec"
+
+# The core forms evaluate: constructor application, definition application and
+# pattern matching on a declared constructor.
+$ derive --foundation foundations/S0 --goal '(call EvalExample (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> (On)
+
+# Structural recursion over an inductive family terminates and builds a value.
+$ derive --foundation foundations/S0 --goal '(call EvalExample (grammar strata) (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n"))'
+> (Succ (Succ (Zero)))
+
+# A name the module never declares is a verdict, not a crash.
+$ derive --foundation foundations/S0 --goal '(call EvalExample (grammar strata) (q "module \"strata.check\"\nversion 1\ndef example []: Bit = missing\n"))'
+> error eval-error "unbound name missing"
+> exit 1
+
+# A constructor list without its leading bar is not Strata.
+$ derive --foundation foundations/S0 --goal '(call ParseStrata (grammar strata) (q "data Bool = True [] | False []\n"))'
+> error parse-error "parse error at offset 12"
+> exit 1
+
+# A module without a version has no canonical identity.
+$ derive --foundation foundations/S0 --goal '(call ModuleVersionOf (grammar strata) (q "module \"strata.check\"\ndef example []: Bit = On\n"))'
+> error missing-version "a version declaration is required"
+> exit 1

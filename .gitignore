@@ -13,3 +13,4 @@ verifier-lean/.lake/
 tmp/
 node_modules/
 studio/vscode/out/
+.idea/

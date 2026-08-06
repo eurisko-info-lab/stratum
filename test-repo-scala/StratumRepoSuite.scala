@@ -38,7 +38,7 @@ class StratumRepoSuite extends munit.FunSuite:
     val source = temp.resolve("source")
     val repository = temp.resolve("chain")
     Files.createDirectories(source)
-    Files.writeString(source.resolve("alpha.txt"), "one\n")
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
 
     assertEquals(run("init", repository, source).code, 0)
     val first = run("record", repository, source, "--message", "genesis")
@@ -47,8 +47,8 @@ class StratumRepoSuite extends munit.FunSuite:
     assertEquals(run("verify", repository, source).code, 0)
     assertEquals(run("status", repository, source).output, "clean 1 files")
 
-    Files.writeString(source.resolve("alpha.txt"), "two\n")
-    Files.writeString(source.resolve("beta.txt"), "three\n")
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 2 }\n")
+    Files.writeString(source.resolve("good.rust"), "fn value() -> i32 { 3 }\n")
     assertEquals(run("status", repository, source).output, "changed 2 files")
     val second = run("record", repository, source, "--message", "second")
     assertEquals(second.code, 0, second.output)
@@ -62,18 +62,18 @@ class StratumRepoSuite extends munit.FunSuite:
     val source = temp.resolve("source")
     val repository = temp.resolve("chain")
     Files.createDirectories(source)
-    Files.writeString(source.resolve("value.txt"), "main\n")
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
     assertEquals(run("init", repository, source).code, 0)
     assertEquals(run("record", repository, source, "--message", "genesis").code, 0)
     assertEquals(run("branch", repository, source, "--name", "featured/example", "--from", "main").code, 0)
-    Files.writeString(source.resolve("value.txt"), "feature\n")
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 2 }\n")
     assertEquals(run("record", repository, source, "--branch", "featured/example", "--message", "feature").code, 0)
     assertEquals(run("verify", repository, source, "--branch", "featured/example").lines(1), "chain 2 blocks")
     assertEquals(run("verify", repository, source).lines(1), "chain 1 blocks")
     assertEquals(run("branches", repository, source).lines.map(_.split(" ").head), Vector("featured/example", "main"))
     val checkout = temp.resolve("checkout")
     assertEquals(run("checkout", repository, source, "--branch", "featured/example", "--out", checkout.toString).code, 0)
-    assertEquals(Files.readString(checkout.resolve("value.txt")), "feature\n")
+    assert(Files.readString(checkout.resolve("Good.scala")).contains("def value = 2"))
   }
 
   test("recording identical content does not extend the chain") {
@@ -81,7 +81,7 @@ class StratumRepoSuite extends munit.FunSuite:
     val source = temp.resolve("source")
     val repository = temp.resolve("chain")
     Files.createDirectories(source)
-    Files.writeString(source.resolve("only.txt"), "same\n")
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
     assertEquals(run("init", repository, source).code, 0)
     assertEquals(run("record", repository, source).code, 0)
     assertEquals(run("record", repository, source).output, "error: working tree is already recorded")
@@ -128,10 +128,10 @@ class StratumRepoSuite extends munit.FunSuite:
     val source = temp.resolve("source")
     val repository = temp.resolve("chain")
     Files.createDirectories(source)
-    Files.writeString(source.resolve("alpha.txt"), "one\n")
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
     assertEquals(run("init", repository, source).code, 0)
     assertEquals(run("record", repository, source, "--message", "genesis").code, 0)
-    Files.writeString(source.resolve("alpha.txt"), "two\n")
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 2 }\n")
     assertEquals(run("record", repository, source, "--message", "second").code, 0)
 
     val cas = DirectoryCas(repository.resolve("objects"))
@@ -147,7 +147,7 @@ class StratumRepoSuite extends munit.FunSuite:
         Canon.R(head),
         Canon.R(tree),
         Canon.S("tampered"),
-        Canon.L(Vector(Canon.node("replace", Canon.S("alpha.txt"), Canon.S(zero), Canon.S(zero))))
+        Canon.L(Vector(Canon.node("replace", Canon.S("Good.scala"), Canon.S(zero), Canon.S(zero))))
       )
     )
     val badPatchDigest = cas.put(badPatch)
@@ -168,7 +168,7 @@ class StratumRepoSuite extends munit.FunSuite:
     val source = temp.resolve("source")
     val repository = temp.resolve("chain")
     Files.createDirectories(source)
-    Files.writeString(source.resolve("alpha.txt"), "one\n")
+    Files.writeString(source.resolve("Reference.canon"), "#d" + "00" * 32 + "\n")
     Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
     assertEquals(run("init", repository, source).code, 0)
     assertEquals(run("record", repository, source, "--message", "materializers").code, 0)
@@ -179,8 +179,8 @@ class StratumRepoSuite extends munit.FunSuite:
     val treeDigest = readPatchTree(cas, patchDigest)
     val treeEntries = readTreeEntries(cas, treeDigest)
 
-    val textId = readMaterializerId(cas, treeEntries.getOrElse("alpha.txt", fail("missing alpha.txt")))
-    assertEquals(textId, "blob-v1")
+    val canonId = readMaterializerId(cas, treeEntries.getOrElse("Reference.canon", fail("missing Reference.canon")))
+    assertEquals(canonId, "canon-text-write-v1")
 
     val scalaId = readMaterializerId(cas, treeEntries.getOrElse("Good.scala", fail("missing Good.scala")))
     assertEquals(scalaId, "grammar0-native-print-v1")
@@ -287,7 +287,7 @@ class StratumRepoSuite extends munit.FunSuite:
     val repository = temp.resolve("chain")
     Files.createDirectories(source)
     Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
-    Files.writeString(source.resolve("good.rs"), "fn value() -> i32 { 1 }\n")
+    Files.writeString(source.resolve("good.rust"), "fn value() -> i32 { 1 }\n")
     Files.writeString(source.resolve("Reference.canon"), "#d" + "00" * 32 + "\n")
     val declarations = LanguageDeclarations.load(projectRoot).fold(error => fail(error), identity)
     val scala = declarations.find(_.name == "scala").getOrElse(fail("missing Scala language"))

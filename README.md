@@ -248,6 +248,7 @@ Rendered at **<https://eurisko-info-lab.github.io/stratum/>**, and readable in
 the repository as the same files:
 
 - [docs/staircase.md](docs/staircase.md) — how one foundation constructs the next
+- [docs/strata.md](docs/strata.md) — second-floor language architecture and bootstrap theorems
 - [docs/invariants.md](docs/invariants.md) — the properties every layer must hold
 - [docs/native-boundary.md](docs/native-boundary.md) — what the host is allowed to know
 - [docs/studio.md](docs/studio.md) — how an editor is derived from a profile

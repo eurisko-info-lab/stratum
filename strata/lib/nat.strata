@@ -1,0 +1,13 @@
+module "strata.nat"
+version 1
+
+; Natural numbers, with the field numbers that give a constructor its
+; canonical shape independently of how its fields are spelled.
+data Nat = | Zero [] | Succ [pred #1: Nat]
+
+def add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end
+def two []: Nat = Succ (Succ Zero)
+
+law AddZeroLeft [n: Nat] = add Zero n
+
+def example []: Nat = add two two

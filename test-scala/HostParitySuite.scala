@@ -18,7 +18,7 @@ class HostParitySuite extends munit.FunSuite:
 
   /** Foundations first, then any application deployment built on the platform. */
   private def worlds: Vector[String] =
-    val foundations = Vector("F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11")
+    val foundations = Vector("F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "S0")
       .map(name => s"foundations/$name")
     val applications =
       val directory = root.resolve("applications")

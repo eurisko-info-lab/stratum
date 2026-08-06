@@ -1,0 +1,15 @@
+
+artifactevidence
+evidence
+checkstrata-prints-exactlyok
+checkstrata-round-tripsok
+checkstrata-module-name-is-unquotedok
+check!strata-module-version-is-declaredok
+checkstrata-counts-only-declarationsok
+check$strata-module-has-canonical-identityok
+check0strata-identity-ignores-blank-lines-and-commentsok
+checkstrata-evaluates-a-definitionok
+check%strata-evaluates-structural-recursionok
+checkstrata-rejects-an-unbound-nameok
+check(strata-rejects-a-missing-constructor-barok
+checkstrata-requires-a-versionok

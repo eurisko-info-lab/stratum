@@ -1,0 +1,10 @@
+; delta-meta for F11 -> S0: Meta gains the Strata seed -- a surface, an
+; elaboration to canonical modules, and an evaluator for the core forms.
+(change
+  (kind delta-meta)
+  (name "F11->S0 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (absent)
+      (seed strata))))

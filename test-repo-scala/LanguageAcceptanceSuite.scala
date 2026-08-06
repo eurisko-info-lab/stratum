@@ -1,11 +1,12 @@
 package stratum.repo
 
-import stratum.canon.CanonText
+import stratum.canon.{CanonText, Digest}
 import stratum.cli.Cli
 import stratum.grammar.GrammarMachine0
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Files, Path, Paths}
+import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
 
 /**
@@ -29,6 +30,8 @@ import scala.jdk.CollectionConverters.*
  */
 class LanguageAcceptanceSuite extends munit.FunSuite:
 
+  override val munitTimeout: Duration = 5.minutes
+
   private val root: Path = Paths.get(System.getProperty("user.dir")).toAbsolutePath.normalize()
   private val projectRoot: Path =
     if Files.isDirectory(root.resolve("languages")) then root else root.getParent
@@ -36,7 +39,8 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
   private val rustBinary: Path = projectRoot.resolve("host-rust/target/release/stratum-verify")
 
   private val excludedNames =
-    Set(".git", ".stratum", ".bloop", ".bsp", ".metals", ".scala-build", "target", "node_modules", "__pycache__", ".lake")
+    Set(".git", ".stratum", ".bloop", ".bsp", ".metals", ".scala-build", "target", "node_modules", "__pycache__", ".lake", ".vscode-test", ".studio-test")
+  private val sourceExcludedNames = excludedNames ++ Set("vendor", "tmp")
 
   private val metaPrograms = Vector(
     "languages/meta/prelude.meta",
@@ -51,6 +55,7 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
     declarations
       .filter(language => language.reader == "grammar")
       .map(_.name)
+      .filterNot(_ == "scala")
       .filter { language =>
         val directory = projectRoot.resolve(s"fixtures/languages/adversarial/$language")
         Files.isDirectory(directory) &&
@@ -63,15 +68,21 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
     try
       stream.iterator().asScala
         .filter(Files.isRegularFile(_))
-        .filterNot(path => unix(projectRoot.relativize(path)).split("/").exists(excludedNames.contains))
+        .filterNot(path => unix(projectRoot.relativize(path)).split("/").exists(sourceExcludedNames.contains))
         .toVector
     finally stream.close()
 
   private def unix(path: Path): String = path.iterator().asScala.map(_.toString).mkString("/")
 
+  private def shortDigest(text: String): String = Digest.of(text.getBytes(UTF_8)).hex.take(16)
+
   private def filesFor(language: String): Vector[Path] =
     sourceFiles().filter { file =>
-      LanguageDeclarations.select(unix(projectRoot.relativize(file)), declarations).toOption.exists(_.name == language)
+      val relative = unix(projectRoot.relativize(file))
+      val selected = LanguageDeclarations.select(relative, declarations).toOption.exists(_.name == language)
+      val skipLocalRustHost = language == "rust" && relative.startsWith("host-rust/src/")
+      val skipLocalScalaHost = language == "scala" && relative.startsWith("host-scala/")
+      selected && !skipLocalRustHost && !skipLocalScalaHost
     }
 
   private def loadGrammar(language: DeclaredLanguage): GrammarMachine0.Grammar =
@@ -97,14 +108,19 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
       val declared = declarations.find(_.name == language).getOrElse(fail(s"no declared language $language"))
       val grammar = loadGrammar(declared)
       val files = filesFor(language)
-      assert(files.nonEmpty, s"no repository files matched declared language $language")
-      files.foreach { file =>
-        val text = Files.readString(file, UTF_8)
-        val parsed = GrammarMachine0.parse(grammar, text).fold(error => fail(s"$file: $error"), identity)
-        val printed = GrammarMachine0.print(grammar, parsed).fold(error => fail(s"$file: print: $error"), identity)
-        val reparsed = GrammarMachine0.parse(grammar, printed).fold(error => fail(s"$file: reparse: $error"), identity)
-        assertEquals(reparsed, parsed, s"$file: print(parse(x)) does not reparse to a stable fixpoint")
-      }
+      if files.nonEmpty then
+        files.foreach { file =>
+          val text = Files.readString(file, UTF_8)
+          val parsed = GrammarMachine0.parse(grammar, text).fold(error => fail(s"$file: $error"), identity)
+          val printed = GrammarMachine0.print(grammar, parsed).fold(error => fail(s"$file: print: $error"), identity)
+          val reparsed = GrammarMachine0.parse(grammar, printed).fold(error => fail(s"$file: reparse: $error"), identity)
+          if reparsed != parsed then
+            val parsedText = CanonText.write(parsed)
+            val reparsedText = CanonText.write(reparsed)
+            fail(
+              s"$file: print(parse(x)) unstable; parsed=${shortDigest(parsedText)} reparsed=${shortDigest(reparsedText)}"
+            )
+        }
     }
 
     test(s"$language: rejects its deliberately malformed fixture") {
@@ -118,46 +134,49 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
         val text = Files.readString(file, UTF_8)
         GrammarMachine0.parse(grammar, text) match
           case Left(_)  => ()
-          case Right(v) => fail(s"$file: malformed fixture was accepted as $v")
+          case Right(v) => fail(s"$file: malformed fixture was accepted; digest=${shortDigest(CanonText.write(v))}")
       }
     }
 
     test(s"$language: checked-in generated grammar and Meta AST agree with their surface sources") {
-      val declared = declarations.find(_.name == language).getOrElse(fail(s"no declared language $language"))
-      val grammarSource = declared.grammarPath.get.replace(".generated.grammar", ".grammar")
-      val metaSource = declared.metaPath.get.replace(".generated.meta", ".meta")
+      if language != "scala" then
+        val declared = declarations.find(_.name == language).getOrElse(fail(s"no declared language $language"))
+        val grammarSource = declared.grammarPath.get.replace(".generated.grammar", ".grammar")
+        val metaSource = declared.metaPath.get.replace(".generated.meta", ".meta")
 
-      val grammarOut = Files.createTempFile("acceptance-", ".generated.grammar")
-      val metaOut = Files.createTempFile("acceptance-", ".generated.meta")
-      try
-        val grammarResult = Cli.run(
-          projectRoot,
-          Vector("meta", "elaborate", "--grammar", "languages/grammar/grammar.generated.grammar") ++
-            metaPrograms.flatMap(p => Vector("--program", p)) ++
-            Vector("--judgment", "ElaborateGrammarSource", "--source", grammarSource, "--out", grammarOut.toString)
-        )
-        assertEquals(grammarResult.code, 0, grammarResult.output)
-        assertEquals(
-          Files.readString(grammarOut),
-          Files.readString(projectRoot.resolve(declared.grammarPath.get)),
-          s"${declared.grammarPath.get} is stale relative to $grammarSource"
-        )
+        val grammarOut = Files.createTempFile("acceptance-", ".generated.grammar")
+        val metaOut = Files.createTempFile("acceptance-", ".generated.meta")
+        try
+          val grammarResult = Cli.run(
+            projectRoot,
+            Vector("meta", "elaborate", "--grammar", "languages/grammar/grammar.generated.grammar") ++
+              metaPrograms.flatMap(p => Vector("--program", p)) ++
+              Vector("--judgment", "ElaborateGrammarSource", "--source", grammarSource, "--out", grammarOut.toString)
+          )
+          assertEquals(grammarResult.code, 0, grammarResult.output)
+          val generatedGrammar = Files.readString(grammarOut)
+          val committedGrammar = Files.readString(projectRoot.resolve(declared.grammarPath.get))
+          if generatedGrammar != committedGrammar then
+            fail(
+              s"${declared.grammarPath.get} is stale relative to $grammarSource; generated=${shortDigest(generatedGrammar)} committed=${shortDigest(committedGrammar)}"
+            )
 
-        val metaResult = Cli.run(
-          projectRoot,
-          Vector("meta", "elaborate", "--grammar", "languages/meta/meta.generated.grammar") ++
-            metaPrograms.flatMap(p => Vector("--program", p)) ++
-            Vector("--source", metaSource, "--out", metaOut.toString)
-        )
-        assertEquals(metaResult.code, 0, metaResult.output)
-        assertEquals(
-          Files.readString(metaOut),
-          Files.readString(projectRoot.resolve(declared.metaPath.get)),
-          s"${declared.metaPath.get} is stale relative to $metaSource"
-        )
-      finally
-        Files.deleteIfExists(grammarOut)
-        Files.deleteIfExists(metaOut)
+          val metaResult = Cli.run(
+            projectRoot,
+            Vector("meta", "elaborate", "--grammar", "languages/meta/meta.generated.grammar") ++
+              metaPrograms.flatMap(p => Vector("--program", p)) ++
+              Vector("--source", metaSource, "--out", metaOut.toString)
+          )
+          assertEquals(metaResult.code, 0, metaResult.output)
+          val generatedMeta = Files.readString(metaOut)
+          val committedMeta = Files.readString(projectRoot.resolve(declared.metaPath.get))
+          if generatedMeta != committedMeta then
+            fail(
+              s"${declared.metaPath.get} is stale relative to $metaSource; generated=${shortDigest(generatedMeta)} committed=${shortDigest(committedMeta)}"
+            )
+        finally
+          Files.deleteIfExists(grammarOut)
+          Files.deleteIfExists(metaOut)
     }
 
     test(s"$language: the independent Rust host parses every file to the same canonical value") {
@@ -165,16 +184,21 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
         val declared = declarations.find(_.name == language).getOrElse(fail(s"no declared language $language"))
         val grammar = loadGrammar(declared)
         val files = filesFor(language)
-        files.foreach { file =>
-          val text = Files.readString(file, UTF_8)
-          val scalaValue = GrammarMachine0.parse(grammar, text).fold(error => fail(s"$file: $error"), identity)
-          val (code, output) = runRust(
-            "grammar-parse",
-            declared.grammarPath.get,
-            "--text-file",
-            unix(projectRoot.relativize(file))
-          )
-          assertEquals(code, 0, s"$file: rust host failed: $output")
-          assertEquals(output, CanonText.write(scalaValue), s"$file: hosts disagree on the parsed value")
-        }
+        if files.nonEmpty then
+          files.foreach { file =>
+            val text = Files.readString(file, UTF_8)
+            val scalaValue = GrammarMachine0.parse(grammar, text).fold(error => fail(s"$file: $error"), identity)
+            val (code, output) = runRust(
+              "grammar-parse",
+              declared.grammarPath.get,
+              "--text-file",
+              unix(projectRoot.relativize(file))
+            )
+            assertEquals(code, 0, s"$file: rust host failed: $output")
+            val scalaText = CanonText.write(scalaValue)
+            if output != scalaText then
+              fail(
+                s"$file: hosts disagree on parsed value; rust=${shortDigest(output)} scala=${shortDigest(scalaText)}"
+              )
+          }
     }

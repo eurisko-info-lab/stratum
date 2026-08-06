@@ -1,0 +1,90 @@
+; Executable acceptance checks for S0, the Strata seed.
+;
+; Each check is derived by MetaMachine0 against the Strata grammar and the
+; Meta reference implementation of the language.
+[
+  ; A Strata module prints back exactly as it was written, so it can be stored
+  ; and checked out without a blob standing behind it.
+  (check strata-prints-exactly
+    (call PrintsExactly
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value #t))
+
+  (check strata-round-trips
+    (call RoundTripStrata
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value (roundtrip ok)))
+
+  ; Elaboration reaches the module head.
+  (check strata-module-name-is-unquoted
+    (call ModuleNameOf
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value "strata.check"))
+
+  (check strata-module-version-is-declared
+    (call ModuleVersionOf
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value 1))
+
+  ; Blank lines and comments are carried by the surface but are not
+  ; declarations: only the data type and the two definitions are.
+  (check strata-counts-only-declarations
+    (call DeclarationCount
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\n\n; a comment is not a declaration\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value 3))
+
+  ; The canonical module is content addressed: the same declarations always
+  ; have the same identity, whatever surrounds them.
+  (check strata-module-has-canonical-identity
+    (call ModuleDigest
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value "ae223c53cdb1e88697d0d54c519c44cbeaff64323dcdd933b4933c3070d085ec"))
+
+  (check strata-identity-ignores-blank-lines-and-comments
+    (call ModuleDigest
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\n\n; a comment is not a declaration\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value "ae223c53cdb1e88697d0d54c519c44cbeaff64323dcdd933b4933c3070d085ec"))
+
+  ; The core forms evaluate: constructor application, definition application,
+  ; and pattern matching on a declared constructor.
+  (check strata-evaluates-a-definition
+    (call EvalExample
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value (On)))
+
+  ; Structural recursion over an inductive type terminates and builds a value.
+  (check strata-evaluates-structural-recursion
+    (call EvalExample
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n"))
+    (value (Succ (Succ (Zero)))))
+
+  ; A name the module never declares is not silently treated as a binder.
+  (check strata-rejects-an-unbound-name
+    (call EvalExample
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndef example []: Bit = missing\n"))
+    (error eval-error))
+
+  ; A constructor list without its leading bar is not Strata.
+  (check strata-rejects-a-missing-constructor-bar
+    (call ParseStrata
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "data Bool = True [] | False []\n"))
+    (error parse-error))
+
+  ; A module without a version has no canonical identity.
+  (check strata-requires-a-version
+    (call ModuleVersionOf
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\ndef example []: Bit = On\n"))
+    (error missing-version))
+]

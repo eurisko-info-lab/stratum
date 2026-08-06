@@ -1,0 +1,15 @@
+module "strata.bool"
+version 1
+
+; Booleans: the smallest complete Strata module.
+data Bool = | True [] | False []
+
+def not [b: Bool]: Bool = match b of case True -> False case False -> True end
+def and [a: Bool, b: Bool]: Bool = match a of case True -> b case False -> False end
+def or [a: Bool, b: Bool]: Bool = match a of case True -> True case False -> b end
+def eq [a: Bool, b: Bool]: Bool = match a of case True -> b case False -> not b end
+
+; A law is an ordinary declaration. S0 records it; S2 gives it evidence.
+law NotInvolutive [b: Bool] = eq (not (not b)) b
+
+def example []: Bool = and (not False) True

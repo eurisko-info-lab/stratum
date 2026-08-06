@@ -1,0 +1,27 @@
+
+artifactchange
+change
+kind
+foundation
+nameF0->F1
+predecessor
+foundation-offoundations/F0
+
+delta-meta
+filechanges/F0-F1/delta-meta.canon
+delta-grammar
+file!changes/F0-F1/delta-grammar.canon
+feature
+feature
+nameself-described meta and grammar
+grammars
+file%languages/meta/meta.generated.grammar
+file+languages/grammar/grammar.generated.grammar
+elaborators
+filelanguages/meta/elaborate.meta
+file languages/grammar/elaborate.meta
+sources
+	text-filelanguages/meta/meta.grammar
+	text-file!languages/grammar/grammar.grammar
+	text-filelanguages/lambda/lambda.grammar
+	text-filelanguages/lambda/lambda.meta

@@ -660,6 +660,10 @@ object StratumRepo:
 
   private def readLanguageInfo(cas: DirectoryCas, digest: Digest): Either[String, LanguageInfo] =
     cas.get(digest) match
+      case Some(Artifact("language", Canon.Node(_, Vector(Canon.Sym(name), _, _, Canon.L(_), _, _, Canon.L(_), Canon.Sym(reader))))) =>
+        Right(LanguageInfo(name, reader))
+      case Some(Artifact("language", Canon.Node(_, Vector(Canon.Sym(name), _, _, Canon.L(_), _, _, Canon.Sym(reader))))) =>
+        Right(LanguageInfo(name, reader))
       case Some(Artifact("language", Canon.Node(_, Vector(Canon.Sym(name), _, _, _, _, Canon.Sym(reader))))) =>
         Right(LanguageInfo(name, reader))
       case _ => Left(s"invalid language ${digest.hex}")

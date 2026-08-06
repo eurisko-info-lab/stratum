@@ -1,0 +1,350 @@
+module strata
+
+; The Strata seed, described in Meta.
+;
+; S0 gives Strata three things and nothing more: a surface that parses and
+; prints back byte for byte, an elaboration from that surface to a canonical
+; module value, and an evaluator for the core expression forms.
+;
+; Types are parsed and carried, but nothing checks them yet. That is S1.
+
+; ---------------------------------------------------------------- surface
+
+judgment ParseStrata [grammar source] = call Parse [grammar source]
+
+judgment PrintStrata [grammar syntax] = call Print [grammar syntax]
+
+judgment RoundTripStrata [grammar source] = call RoundTrip [grammar source]
+
+; Stronger than `RoundTrip`: printing a parsed module reproduces the source
+; byte for byte, so a Strata file survives storage without a blob beside it.
+judgment Reprint [grammar source] = call Print [grammar call Parse [grammar source]]
+
+judgment PrintsExactly [grammar source] = prim #eq [call Reprint [grammar source] source]
+
+; A `fold` production nests to the left, so a source of several lines arrives
+; as nested `Unit` nodes and a source of one line as the bare line itself.
+judgment Lines [node] =
+  match node {
+    case (#Unit left right) -> prim #snoc [call Lines [left] right]
+    case _ -> list [node]
+  }
+
+; ------------------------------------------------------------ module head
+
+judgment ModuleName [parsed] = call FindModule [call Lines [parsed]]
+
+judgment FindModule [lines] =
+  match lines {
+    case [] -> fail #missing-module "a module declaration is required"
+    case (#Module name eol) :: rest -> call StrataUnquote [name]
+    case head :: rest -> call FindModule [rest]
+  }
+
+; The `text` token carries its own quotes; the canonical module does not.
+; `ssub` takes a half-open range, so the end index is the closing quote.
+;
+; Judgments share one namespace across every module the application loads, so
+; a name that another module already defines is silently shadowed. This one is
+; prefixed for that reason, not for style.
+judgment StrataUnquote [value] =
+  prim #ssub [value 1 prim #sub [prim #slen [value] 1]]
+
+judgment ModuleVersion [parsed] = call FindVersion [call Lines [parsed]]
+
+judgment FindVersion [lines] =
+  match lines {
+    case [] -> fail #missing-version "a version declaration is required"
+    case (#Version value eol) :: rest -> value
+    case head :: rest -> call FindVersion [rest]
+  }
+
+; ------------------------------------------------------------ declarations
+
+judgment Declarations [parsed] = call CollectDeclarations [call Lines [parsed]]
+
+judgment CollectDeclarations [lines] =
+  match lines {
+    case [] -> list []
+    case (#Data name constructors eol) :: rest ->
+      prim #cons [
+        mk #data [name call ConstructorList [constructors]]
+        call CollectDeclarations [rest]
+      ]
+    case (#Def name params result body eol) :: rest ->
+      prim #cons [
+        mk #def [name call ParameterList [params] result body]
+        call CollectDeclarations [rest]
+      ]
+    case (#Law name params body eol) :: rest ->
+      prim #cons [
+        mk #law [name call ParameterList [params] body]
+        call CollectDeclarations [rest]
+      ]
+    case head :: rest -> call CollectDeclarations [rest]
+  }
+
+judgment ConstructorList [node] =
+  match node {
+    case (#Constructors left right) -> prim #snoc [call ConstructorList [left] right]
+    case _ -> list [node]
+  }
+
+judgment ParameterList [node] =
+  match node {
+    case (#NoParams) -> list []
+    case (#Params items) -> call ParameterSeq [items]
+    case _ -> list []
+  }
+
+judgment ParameterSeq [node] =
+  match node {
+    case (#ParamMore head tail) -> prim #cons [head call ParameterSeq [tail]]
+    case (#ParamOne value) -> list [value]
+    case _ -> list [node]
+  }
+
+judgment FieldList [node] =
+  match node {
+    case (#NoFields) -> list []
+    case (#Fields items) -> call FieldSeq [items]
+    case _ -> list []
+  }
+
+judgment FieldSeq [node] =
+  match node {
+    case (#FieldMore head tail) -> prim #cons [head call FieldSeq [tail]]
+    case (#FieldOne value) -> list [value]
+    case _ -> list [node]
+  }
+
+; The canonical module: the authoritative form of a Strata source file.
+judgment ElaborateModule [grammar source] =
+  let parsed = call ParseStrata [grammar source] in
+  mk #module [
+    call ModuleName [parsed]
+    call ModuleVersion [parsed]
+    call Declarations [parsed]
+  ]
+
+; The identity of a module is the digest of its canonical value, rendered as
+; text. A reference would make the closure believe the digest names an artifact
+; it must store, but this is the identity of a module the check computes, not
+; one the foundation carries.
+judgment ModuleDigest [grammar source] =
+  prim #ref->str [prim #digest [call ElaborateModule [grammar source]]]
+
+judgment ModuleNameOf [grammar source] =
+  call ModuleName [call ParseStrata [grammar source]]
+
+judgment ModuleVersionOf [grammar source] =
+  call ModuleVersion [call ParseStrata [grammar source]]
+
+judgment DeclarationCount [grammar source] =
+  prim #len [call Declarations [call ParseStrata [grammar source]]]
+
+; ------------------------------------------------------------ environment
+
+judgment Lookup [env name] =
+  match env {
+    case [] -> mk #none []
+    case (#bind bound value) :: rest ->
+      if prim #eq [bound name] then mk #some [value] else call Lookup [rest name]
+    case head :: rest -> call Lookup [rest name]
+  }
+
+judgment FindConstructor [decls name] =
+  match decls {
+    case [] -> mk #none []
+    case (#data owner constructors) :: rest ->
+      match call FindConstructorIn [constructors name] {
+        case (#some found) -> mk #some [found]
+        case (#none) -> call FindConstructor [rest name]
+      }
+    case head :: rest -> call FindConstructor [rest name]
+  }
+
+judgment FindConstructorIn [constructors name] =
+  match constructors {
+    case [] -> mk #none []
+    case (#Constructor declared fields) :: rest ->
+      if prim #eq [declared name]
+      then mk #some [mk #constructor [declared prim #len [call FieldList [fields]]]]
+      else call FindConstructorIn [rest name]
+    case head :: rest -> call FindConstructorIn [rest name]
+  }
+
+judgment FindDefinition [decls name] =
+  match decls {
+    case [] -> mk #none []
+    case (#def declared params result body) :: rest ->
+      if prim #eq [declared name]
+      then mk #some [mk #def [declared params result body]]
+      else call FindDefinition [rest name]
+    case head :: rest -> call FindDefinition [rest name]
+  }
+
+; ------------------------------------------------------------- evaluation
+
+judgment Eval [decls env expr] =
+  match expr {
+    case (#Natural value) -> value
+    case (#Text value) -> value
+    case (#Var name) -> call EvalName [decls env name]
+    case (#Apply fn argument) ->
+      call StrataApplyValue [
+        decls
+        call Eval [decls env fn]
+        call Eval [decls env argument]
+      ]
+    case (#Let name value body) ->
+      call Eval [
+        decls
+        prim #cons [mk #bind [name call Eval [decls env value]] env]
+        body
+      ]
+    case (#Match scrutinee cases) ->
+      call MatchCases [
+        decls
+        env
+        call Eval [decls env scrutinee]
+        call CaseList [cases]
+      ]
+    case _ -> fail #eval-error "unsupported expression"
+  }
+
+judgment EvalName [decls env name] =
+  match call Lookup [env name] {
+    case (#some value) -> value
+    case (#none) ->
+      match call FindConstructor [decls name] {
+        case (#some (#constructor declared arity)) ->
+          if prim #eq [arity 0]
+          then prim #node [declared list []]
+          else mk #partial [declared list []]
+        case (#none) ->
+          match call FindDefinition [decls name] {
+            case (#some found) -> call EnterDefinition [decls found list []]
+            case (#none) ->
+              fail #eval-error prim #scat ["unbound name " prim #sym->str [name]]
+          }
+      }
+  }
+
+judgment EnterDefinition [decls found args] =
+  match found {
+    case (#def declared params result body) ->
+      if prim #eq [prim #len [args] prim #len [params]]
+      then call Eval [decls call BindParameters [params args list []] body]
+      else mk #closure [declared args]
+    case _ -> fail #eval-error "malformed definition"
+  }
+
+judgment StrataApplyValue [decls fn argument] =
+  match fn {
+    case (#partial declared args) ->
+      let filled = prim #snoc [args argument] in
+      match call FindConstructor [decls declared] {
+        case (#some (#constructor owner arity)) ->
+          if prim #eq [prim #len [filled] arity]
+          then prim #node [declared filled]
+          else mk #partial [declared filled]
+        case (#none) -> fail #eval-error "unknown constructor"
+      }
+    case (#closure declared args) ->
+      let filled = prim #snoc [args argument] in
+      match call FindDefinition [decls declared] {
+        case (#some found) -> call EnterDefinition [decls found filled]
+        case (#none) -> fail #eval-error "unknown definition"
+      }
+    case _ -> fail #eval-error "cannot apply a value that is not a function"
+  }
+
+judgment BindParameters [params args env] =
+  match params {
+    case [] -> env
+    case (#Param name declared) :: rest ->
+      match args {
+        case [] -> fail #eval-error "argument count does not match parameters"
+        case argument :: remaining ->
+          call BindParameters [rest remaining prim #cons [mk #bind [name argument] env]]
+      }
+    case _ -> fail #eval-error "malformed parameter"
+  }
+
+judgment CaseList [node] =
+  match node {
+    case (#Cases left right) -> prim #snoc [call CaseList [left] right]
+    case _ -> list [node]
+  }
+
+judgment MatchCases [decls env value cases] =
+  match cases {
+    case [] -> fail #eval-error "no case matches the scrutinee"
+    case (#Case pattern body) :: rest ->
+      match call MatchPattern [decls pattern value env] {
+        case (#some bound) -> call Eval [decls bound body]
+        case (#none) -> call MatchCases [decls env value rest]
+      }
+    case head :: rest -> call MatchCases [decls env value rest]
+  }
+
+; A bare name in a pattern is a constructor when the module declares one by
+; that name, and a binder otherwise. Nothing here depends on spelling.
+judgment MatchPattern [decls pattern value env] =
+  match pattern {
+    case (#PatWild) -> mk #some [env]
+    case (#PatVar name) ->
+      match call FindConstructor [decls name] {
+        case (#some (#constructor declared arity)) ->
+          call MatchTag [declared value env]
+        case (#none) -> mk #some [prim #cons [mk #bind [name value] env] ]
+      }
+    case (#PatApply left right) ->
+      call MatchSpine [decls call PatternSpine [pattern] value env]
+    case _ -> mk #none []
+  }
+
+judgment MatchTag [declared value env] =
+  if prim #is-node [value]
+  then
+    if prim #eq [prim #tag [value] declared] then mk #some [env] else mk #none []
+  else mk #none []
+
+judgment PatternSpine [node] =
+  match node {
+    case (#PatApply left right) -> prim #snoc [call PatternSpine [left] right]
+    case _ -> list [node]
+  }
+
+judgment MatchSpine [decls parts value env] =
+  match parts {
+    case (#PatVar declared) :: subs ->
+      if prim #is-node [value]
+      then
+        if prim #eq [prim #tag [value] declared]
+        then call MatchArguments [decls subs prim #args [value] env]
+        else mk #none []
+      else mk #none []
+    case _ -> mk #none []
+  }
+
+judgment MatchArguments [decls subs args env] =
+  match subs {
+    case [] -> mk #some [env]
+    case pattern :: rest ->
+      match args {
+        case [] -> mk #none []
+        case argument :: remaining ->
+          match call MatchPattern [decls pattern argument env] {
+            case (#some bound) -> call MatchArguments [decls rest remaining bound]
+            case (#none) -> mk #none []
+          }
+      }
+  }
+
+; Evaluates the definition named `example`, the entry point every S0
+; acceptance fixture provides.
+judgment EvalExample [grammar source] =
+  let parsed = call ParseStrata [grammar source] in
+  call EvalName [call Declarations [parsed] list [] #example]

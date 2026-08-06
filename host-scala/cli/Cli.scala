@@ -129,36 +129,13 @@ object Cli:
   private def capabilitiesFor(cas: Cas, root: Path, seed: String): CapabilityHandler =
     Capabilities.standard(cas, root, seed)
 
-  private def summarize(verdict: Canon): String = verdict match
-    case Canon.Node("verdict", Vector(Canon.Sym("ok"), value, _)) =>
-      val trace = MetaMachine0.traceLines(verdict)
-      val stack = MetaMachine0.evaluationStack(verdict).getOrElse(Vector.empty)
-      val tree = MetaMachine0.evaluationTreeLines(verdict)
-      val semantic = if stack.isEmpty then Vector.empty else stack.map(result => s"eval-stack: ${result.summary}")
-      val lines = trace ++ semantic ++ tree
-      if lines.isEmpty then CanonText.write(value) else s"${CanonText.write(value)}\n${lines.mkString("\n")}"
-    case Canon.Node("verdict", Vector(Canon.Sym("ok"), value, _, _)) =>
-      val trace = MetaMachine0.traceLines(verdict)
-      val stack = MetaMachine0.evaluationStack(verdict).getOrElse(Vector.empty)
-      val tree = MetaMachine0.evaluationTreeLines(verdict)
-      val semantic = if stack.isEmpty then Vector.empty else stack.map(result => s"eval-stack: ${result.summary}")
-      val lines = trace ++ semantic ++ tree
-      if lines.isEmpty then CanonText.write(value) else s"${CanonText.write(value)}\n${lines.mkString("\n")}" 
-    case Canon.Node("verdict", Vector(Canon.Sym("error"), Canon.Sym(kind), Canon.S(msg), _)) =>
-      val trace = MetaMachine0.traceLines(verdict)
-      val stack = MetaMachine0.evaluationStack(verdict).getOrElse(Vector.empty)
-      val tree = MetaMachine0.evaluationTreeLines(verdict)
-      val semantic = if stack.isEmpty then Vector.empty else stack.map(result => s"eval-stack: ${result.summary}")
-      val lines = trace ++ semantic ++ tree
-      if lines.isEmpty then s"error $kind ${CanonText.write(Canon.S(msg))}" else s"error $kind ${CanonText.write(Canon.S(msg))}\n${lines.mkString("\n")}" 
-    case Canon.Node("verdict", Vector(Canon.Sym("error"), Canon.Sym(kind), Canon.S(msg), _, _)) =>
-      val trace = MetaMachine0.traceLines(verdict)
-      val stack = MetaMachine0.evaluationStack(verdict).getOrElse(Vector.empty)
-      val tree = MetaMachine0.evaluationTreeLines(verdict)
-      val semantic = if stack.isEmpty then Vector.empty else stack.map(result => s"eval-stack: ${result.summary}")
-      val lines = trace ++ semantic ++ tree
-      if lines.isEmpty then s"error $kind ${CanonText.write(Canon.S(msg))}" else s"error $kind ${CanonText.write(Canon.S(msg))}\n${lines.mkString("\n")}" 
-    case other => CanonText.write(other)
+  private def summarize(verdict: Canon): String =
+    MetaMachine0.result(verdict) match
+      case Some(value) => CanonText.write(value)
+      case None =>
+        MetaMachine0.failure(verdict) match
+          case Some((kind, msg)) => s"error $kind ${CanonText.write(Canon.S(msg))}"
+          case None              => CanonText.write(verdict)
 
   // ------------------------------------------------------------ dispatch
 

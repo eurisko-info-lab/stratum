@@ -1,0 +1,88 @@
+grammar "strata"
+start unit
+
+token eol sym "\\n"
+token comment str ";[^\\n]*"
+token fieldnum sym "#[0-9]+"
+token ident sym "[A-Za-z_][A-Za-z0-9_']*"
+token number nat "[0-9]+"
+token text str "\"[^\"]*\""
+
+category unit
+  fold Unit line
+
+category line
+  prod Blank value : eol
+  prod Comment value : comment eol : eol
+  prod Module "module" name : text eol : eol
+  prod Version "version" value : number eol : eol
+  prod Data "data" name : ident "=" constructors : constructors eol : eol
+  prod Def "def" name : ident params : params ":" result : type "=" body : expr eol : eol
+  prod Law "law" name : ident params : params "=" body : expr eol : eol
+
+category constructors
+  fold Constructors constructor
+
+category constructor
+  prod Constructor "|" name : ident fields : fields
+
+category fields
+  prod NoFields "[" "]"
+  prod Fields "[" items : fieldseq "]"
+
+category fieldseq
+  prod FieldMore head : fielddecl "," tail : fieldseq
+  prod FieldOne value : fielddecl
+
+category fielddecl
+  prod FieldDecl name : ident number : fieldnum ":" type : type
+
+category params
+  prod NoParams "[" "]"
+  prod Params "[" items : paramseq "]"
+
+category paramseq
+  prod ParamMore head : param "," tail : paramseq
+  prod ParamOne value : param
+
+category param
+  prod Param name : ident ":" type : type
+
+category type
+  prod TypeArrow from : typeapp "->" to : type
+  pass typeapp
+
+category typeapp
+  fold TypeApply typeatom
+
+category typeatom
+  prod TypeRef name : ident
+  paren "(" type ")"
+
+category expr
+  prod Match "match" scrutinee : expr "of" cases : cases "end"
+  prod Let "let" name : ident "=" value : expr "in" body : expr
+  pass application
+
+category cases
+  fold Cases case
+
+category case
+  prod Case "case" pattern : pattern "->" body : expr
+
+category application
+  fold Apply atom
+
+category atom
+  prod Natural value : number
+  prod Text value : text
+  prod Var name : ident
+  paren "(" expr ")"
+
+category pattern
+  fold PatApply patatom
+
+category patatom
+  prod PatWild "_"
+  prod PatVar name : ident
+  paren "(" pattern ")"

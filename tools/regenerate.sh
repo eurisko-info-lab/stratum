@@ -13,7 +13,7 @@ run() {
 }
 
 META="--program languages/meta/prelude.meta --program languages/meta/elaborate.meta --program languages/grammar/elaborate.meta"
-LANGUAGE_PACKAGES="rust scala shell transcript text"
+LANGUAGE_PACKAGES="rust scala shell transcript text strata"
 
 echo "regenerating grammars"
 run meta elaborate --grammar languages/grammar/grammar.generated.grammar $META \
