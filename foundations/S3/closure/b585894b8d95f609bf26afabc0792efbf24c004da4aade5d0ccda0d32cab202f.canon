@@ -1,0 +1,22 @@
+
+artifactchange
+change
+kind
+foundation
+nameF2->F3
+predecessor
+foundation-offoundations/F2
+
+delta-meta
+filechanges/F2-F3/delta-meta.canon
+delta-grammar
+file!changes/F2-F3/delta-grammar.canon
+feature
+feature
+name local causal semantic repository
+programs
+file-features/repository/repository.generated.meta
+file,features/repository/scenarios.generated.meta
+sources
+	text-file#features/repository/repository.meta
+	text-file"features/repository/scenarios.meta

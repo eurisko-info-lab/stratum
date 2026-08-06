@@ -1,0 +1,11 @@
+; delta-grammar for S2 -> S3: the Strata surface is unchanged. A change
+; language is generated from declarations the surface can already write, so
+; S3 adds nothing to write.
+(change
+  (kind delta-grammar)
+  (name "S2->S3 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end telescope index bind])
+      (present [module version data def law match case let end telescope index bind]))))

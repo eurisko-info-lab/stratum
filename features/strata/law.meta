@@ -1,0 +1,247 @@
+module stratalaw
+
+; Laws, and what is known about them.
+;
+; A law is a claim. What makes it worth anything is the evidence behind it,
+; and evidence comes in grades. Saying so explicitly is the difference between
+; a system that knows which of its claims are checked and one that treats a
+; comment and a proof as the same thing.
+;
+;   Declared      written down, and nothing more
+;   Tested        holds on the cases someone chose
+;   Generated     holds on cases nobody chose, from a recorded seed
+;   CrossHost     holds identically on two independent implementations
+;   ModelChecked  holds on every case within a bounded space
+;   Derived       holds because it follows from a law already established
+;   Proved        holds by a checked proof
+;
+; The grades are ordered, and the order is what lets a claim be strengthened
+; without being restated.
+
+judgment GradeRank [grade] =
+  match grade {
+    case (#Declared) -> 0
+    case (#Tested) -> 1
+    case (#Generated) -> 2
+    case (#CrossHost) -> 3
+    case (#ModelChecked) -> 4
+    case (#Derived) -> 5
+    case (#Proved) -> 6
+    case _ -> fail #law-error "not a grade of evidence"
+  }
+
+judgment AtLeastGrade [held wanted] =
+  prim #ge [call GradeRank [held] call GradeRank [wanted]]
+
+judgment StrongerGrade [left right] =
+  if prim #ge [call GradeRank [left] call GradeRank [right]] then left else right
+
+; ------------------------------------------------------------------- laws
+
+judgment DeclaredLaws [grammar source] =
+  call LawsOfDeclarations [call Declarations [call ParseStrata [grammar source]]]
+
+judgment LawsOfDeclarations [decls] =
+  match decls {
+    case [] -> list []
+    case (#law name params body) :: rest ->
+      prim #cons [mk #law [name params body] call LawsOfDeclarations [rest]]
+    case head :: rest -> call LawsOfDeclarations [rest]
+  }
+
+judgment FindLaw [decls name] =
+  match decls {
+    case [] ->
+      fail #law-error prim #scat ["the module declares no law named " prim #sym->str [name]]
+    case (#law declared params body) :: rest ->
+      if prim #eq [declared name]
+      then mk #law [declared params body]
+      else call FindLaw [rest name]
+    case head :: rest -> call FindLaw [rest name]
+  }
+
+judgment LawParameterTypes [params] =
+  match params {
+    case [] -> list []
+    case (#Param pname ptype) :: rest ->
+      prim #cons [call NameOfType [call TypeValue [ptype]] call LawParameterTypes [rest]]
+    case head :: rest -> call LawParameterTypes [rest]
+  }
+
+; ------------------------------------------------------------------- seeds
+;
+; A generated run has to be repeatable from what was recorded, so the values
+; are a function of the seed and nothing else. No clock, no counter kept
+; outside the run, no order of iteration.
+
+judgment NextSeed [seed] =
+  prim #mod [
+    prim #add [prim #mul [seed 6364136223846793005] 1442695040888963407]
+    18446744073709551616
+  ]
+
+judgment SeedFor [seed offset] = call NextSeed [prim #add [seed prim #mul [offset 2654435761]]]
+
+; A choice is taken from the high bits. The low bits of a linear congruential
+; sequence have a short period -- with two constructors they simply alternate
+; -- and a sample that alternates is not evidence of anything.
+judgment ChoiceFrom [seed count] =
+  prim #mod [prim #div [seed 4294967296] count]
+
+; ---------------------------------------------------------------- sampling
+;
+; Values are drawn from the schema, so a type that was declared yesterday has
+; a generator today without one being written.
+
+judgment ConstructorsOfSchema [schemas tname] =
+  match schemas {
+    case [] ->
+      fail #law-error prim #scat ["no schema declares the type " prim #sym->str [tname]]
+    case (#schema declared ctors) :: rest ->
+      if prim #eq [declared tname]
+      then ctors
+      else call ConstructorsOfSchema [rest tname]
+    case head :: rest -> call ConstructorsOfSchema [rest tname]
+  }
+
+; At the bottom of the budget only constructors that carry nothing are
+; available, which is what makes sampling terminate.
+judgment GroundConstructors [ctors] =
+  match ctors {
+    case [] -> list []
+    case (#constructor cname fields) :: rest ->
+      if prim #eq [prim #len [fields] 0]
+      then prim #cons [mk #constructor [cname fields] call GroundConstructors [rest]]
+      else call GroundConstructors [rest]
+    case head :: rest -> call GroundConstructors [rest]
+  }
+
+judgment SampleValue [schemas tname seed depth] =
+  let ctors = call ConstructorsOfSchema [schemas tname] in
+  let available =
+    if prim #gt [depth 0]
+    then ctors
+    else call AvailableGround [tname call GroundConstructors [ctors]]
+  in
+  call SampleFromConstructor [
+    schemas
+    prim #nth [available call ChoiceFrom [seed prim #len [available]]]
+    seed
+    depth
+  ]
+
+judgment AvailableGround [tname ground] =
+  if prim #eq [prim #len [ground] 0]
+  then
+    fail #law-error prim #scat [
+      prim #scat ["the type " prim #sym->str [tname]]
+      " has no constructor without fields, so it cannot be sampled"
+    ]
+  else ground
+
+judgment SampleFromConstructor [schemas chosen seed depth] =
+  match chosen {
+    case (#constructor cname fields) ->
+      prim #node [cname call SampleFields [schemas fields seed depth 1]]
+    case _ -> fail #law-error "malformed constructor"
+  }
+
+judgment SampleFields [schemas fields seed depth offset] =
+  match fields {
+    case [] -> list []
+    case (#field fname fnum ftype) :: rest ->
+      prim #cons [
+        call SampleValue [
+          schemas
+          call NameOfType [ftype]
+          call SeedFor [seed offset]
+          prim #sub [depth 1]
+        ]
+        call SampleFields [schemas rest seed depth prim #add [offset 1]]
+      ]
+    case head :: rest -> call SampleFields [schemas rest seed depth offset]
+  }
+
+judgment SampleValues [schemas tname seed depth count] =
+  if prim #eq [count 0]
+  then list []
+  else
+    prim #cons [
+      call SampleValue [schemas tname seed depth]
+      call SampleValues [schemas tname call NextSeed [seed] depth prim #sub [count 1]]
+    ]
+
+; ---------------------------------------------------------------- evidence
+;
+; Running a law over sampled values earns `Generated`, and the run records the
+; seed it was drawn from, so the same run can be had again.
+
+judgment RunLawGenerated [grammar source lawname seed count] =
+  let parsed = call ParseStrata [grammar source] in
+  let decls = call Declarations [parsed] in
+  let schemas = call SchemaOfDeclarations [decls] in
+  call RunLawOver [
+    decls
+    call FindLaw [decls lawname]
+    schemas
+    seed
+    count
+  ]
+
+judgment RunLawOver [decls found schemas seed count] =
+  match found {
+    case (#law name params body) ->
+      match call LawParameterTypes [params] {
+        case tname :: [] ->
+          mk #evidence [
+            #Generated
+            name
+            seed
+            count
+            call EvalLawAt [
+              decls
+              params
+              body
+              call SampleValues [schemas tname seed 4 count]
+            ]
+          ]
+        case _ -> fail #law-error "a generated run needs a law of exactly one parameter"
+      }
+    case _ -> fail #law-error "malformed law"
+  }
+
+judgment EvalLawAt [decls params body values] =
+  match values {
+    case [] -> list []
+    case value :: rest ->
+      prim #cons [
+        call Eval [decls call BindParameters [params list [value] list []] body]
+        call EvalLawAt [decls params body rest]
+      ]
+  }
+
+judgment EvidenceGrade [earned] =
+  match earned {
+    case (#evidence grade name seed count results) -> grade
+    case _ -> fail #law-error "malformed evidence"
+  }
+
+judgment EvidenceSeed [earned] =
+  match earned {
+    case (#evidence grade name seed count results) -> seed
+    case _ -> fail #law-error "malformed evidence"
+  }
+
+; The run is reproducible when the same seed gives the same run, and the seed
+; is what was recorded rather than what happened to be in the machine.
+judgment RunIsReproducible [grammar source lawname seed count] =
+  prim #eq [
+    call RunLawGenerated [grammar source lawname seed count]
+    call RunLawGenerated [grammar source lawname seed count]
+  ]
+
+judgment RunsDifferBySeed [grammar source lawname left right count] =
+  prim #ne [
+    call RunLawGenerated [grammar source lawname left count]
+    call RunLawGenerated [grammar source lawname right count]
+  ]

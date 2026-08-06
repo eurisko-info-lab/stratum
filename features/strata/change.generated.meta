@@ -1,0 +1,1136 @@
+; Generated from features/strata/change.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratachange)
+  (judgment
+    ChangeTypeName
+    [tname]
+    (prim
+      str->sym
+      (prim
+        scat
+        (q "Delta")
+        (prim
+          sym->str
+          (v tname)))))
+  (judgment
+    KeepName
+    [tname]
+    (prim
+      str->sym
+      (prim
+        scat
+        (q "Keep")
+        (prim
+          sym->str
+          (v tname)))))
+  (judgment
+    SetName
+    [tname]
+    (prim
+      str->sym
+      (prim
+        scat
+        (q "Set")
+        (prim
+          sym->str
+          (v tname)))))
+  (judgment
+    AtName
+    [cname]
+    (prim
+      str->sym
+      (prim
+        scat
+        (q "At")
+        (prim
+          sym->str
+          (v cname)))))
+  (judgment
+    UnderlyingConstructor
+    [schemas atName]
+    (match
+      (v schemas)
+      (case
+        (pnil)
+        (fail
+          change-error
+          (prim
+            scat
+            (q "no declared constructor generates the change ")
+            (prim
+              sym->str
+              (v atName)))))
+      (case
+        (pcons
+          (pm
+            schema
+            (pv tname)
+            (pv ctors))
+          (pv rest))
+        (match
+          (call
+            UnderlyingIn
+            (v ctors)
+            (v atName))
+          (case
+            (pm
+              some
+              (pv cname))
+            (v cname))
+          (case
+            _
+            (call
+              UnderlyingConstructor
+              (v rest)
+              (v atName)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          UnderlyingConstructor
+          (v rest)
+          (v atName)))))
+  (judgment
+    UnderlyingIn
+    [ctors atName]
+    (match
+      (v ctors)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            constructor
+            (pv cname)
+            (pv fields))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (call
+              AtName
+              (v cname))
+            (v atName))
+          (mk
+            some
+            (v cname))
+          (call
+            UnderlyingIn
+            (v rest)
+            (v atName))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          UnderlyingIn
+          (v rest)
+          (v atName)))))
+  (judgment
+    OwnerOfConstructor
+    [schemas cname]
+    (match
+      (call
+        FindSchemaConstructor
+        (v schemas)
+        (v cname))
+      (case
+        (pm
+          some
+          (pm
+            found
+            (pv owner)
+            (pv declared)
+            (pv fields)))
+        (v owner))
+      (case
+        _
+        (fail
+          change-error
+          (prim
+            scat
+            (q "no schema declares the constructor ")
+            (prim
+              sym->str
+              (v cname)))))))
+  (judgment
+    FieldsOfConstructor
+    [schemas cname]
+    (match
+      (call
+        FindSchemaConstructor
+        (v schemas)
+        (v cname))
+      (case
+        (pm
+          some
+          (pm
+            found
+            (pv owner)
+            (pv declared)
+            (pv fields)))
+        (v fields))
+      (case
+        _
+        (fail
+          change-error
+          (prim
+            scat
+            (q "no schema declares the constructor ")
+            (prim
+              sym->str
+              (v cname)))))))
+  (judgment
+    FieldTypeNames
+    [fields]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            field
+            (pv fname)
+            (pv fnum)
+            (pv ftype))
+          (pv rest))
+        (prim
+          cons
+          (call
+            NameOfType
+            (v ftype))
+          (call
+            FieldTypeNames
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FieldTypeNames
+          (v rest)))))
+  (judgment
+    NameOfType
+    [ftype]
+    (match
+      (v ftype)
+      (case
+        (pm
+          con
+          (pv name))
+        (v name))
+      (case
+        _
+        (fail
+          change-error
+          (q "a field whose type is applied has no generated change language yet")))))
+  (judgment
+    GeneratedChanges
+    [schemas]
+    (match
+      (v schemas)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            schema
+            (pv tname)
+            (pv ctors))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            schema
+            (call
+              ChangeTypeName
+              (v tname))
+            (prim
+              cons
+              (mk
+                constructor
+                (call
+                  KeepName
+                  (v tname))
+                (lst))
+              (prim
+                cons
+                (mk
+                  constructor
+                  (call
+                    SetName
+                    (v tname))
+                  (lst
+                    (mk
+                      field
+                      (q to)
+                      (q 1)
+                      (mk
+                        con
+                        (v tname)))))
+                (call
+                  ChangeConstructors
+                  (v ctors)))))
+          (call
+            GeneratedChanges
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          GeneratedChanges
+          (v rest)))))
+  (judgment
+    ChangeConstructors
+    [ctors]
+    (match
+      (v ctors)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            constructor
+            (pv cname)
+            (pv fields))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            constructor
+            (call
+              AtName
+              (v cname))
+            (call
+              ChangeFields
+              (v fields)))
+          (call
+            ChangeConstructors
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ChangeConstructors
+          (v rest)))))
+  (judgment
+    ChangeFields
+    [fields]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            field
+            (pv fname)
+            (pv fnum)
+            (pv ftype))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            field
+            (v fname)
+            (v fnum)
+            (mk
+              con
+              (call
+                ChangeTypeName
+                (call
+                  NameOfType
+                  (v ftype)))))
+          (call
+            ChangeFields
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ChangeFields
+          (v rest)))))
+  (judgment
+    GeneratedChangesAgree
+    [grammar source domainCount]
+    (let
+      schemas
+      (call
+        ModuleSchema
+        (v grammar)
+        (v source))
+      (prim
+        eq
+        (call
+          GeneratedChanges
+          (prim
+            take
+            (v schemas)
+            (v domainCount)))
+        (prim
+          drop
+          (v schemas)
+          (v domainCount)))))
+  (judgment
+    ZeroChange
+    [schemas tname]
+    (prim
+      node
+      (call
+        KeepName
+        (v tname))
+      (lst)))
+  (judgment
+    IsZeroChange
+    [schemas tname change]
+    (prim
+      eq
+      (prim
+        tag
+        (v change))
+      (call
+        KeepName
+        (v tname))))
+  (judgment
+    DiffValues
+    [schemas before after]
+    (let
+      tname
+      (call
+        OwnerOfConstructor
+        (v schemas)
+        (prim
+          tag
+          (v before)))
+      (if
+        (prim
+          eq
+          (v before)
+          (v after))
+        (call
+          ZeroChange
+          (v schemas)
+          (v tname))
+        (if
+          (prim
+            ne
+            (prim
+              tag
+              (v before))
+            (prim
+              tag
+              (v after)))
+          (prim
+            node
+            (call
+              SetName
+              (v tname))
+            (lst
+              (v after)))
+          (prim
+            node
+            (call
+              AtName
+              (prim
+                tag
+                (v before)))
+            (call
+              DiffArguments
+              (v schemas)
+              (prim
+                args
+                (v before))
+              (prim
+                args
+                (v after))))))))
+  (judgment
+    DiffArguments
+    [schemas before after]
+    (match
+      (v before)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv first)
+          (pv restBefore))
+        (match
+          (v after)
+          (case (pnil) (lst))
+          (case
+            (pcons
+              (pv second)
+              (pv restAfter))
+            (prim
+              cons
+              (call
+                DiffValues
+                (v schemas)
+                (v first)
+                (v second))
+              (call
+                DiffArguments
+                (v schemas)
+                (v restBefore)
+                (v restAfter))))))))
+  (judgment
+    ChangeValue
+    [schemas value change]
+    (let
+      tname
+      (call
+        OwnerOfConstructor
+        (v schemas)
+        (prim
+          tag
+          (v value)))
+      (let
+        tag
+        (prim
+          tag
+          (v change))
+        (if
+          (prim
+            eq
+            (v tag)
+            (call
+              KeepName
+              (v tname)))
+          (mk
+            ok
+            (v value))
+          (if
+            (prim
+              eq
+              (v tag)
+              (call
+                SetName
+                (v tname)))
+            (mk
+              ok
+              (call
+                OnlyArgument
+                (prim
+                  args
+                  (v change))))
+            (if
+              (prim
+                eq
+                (v tag)
+                (call
+                  AtName
+                  (prim
+                    tag
+                    (v value))))
+              (mk
+                ok
+                (prim
+                  node
+                  (prim
+                    tag
+                    (v value))
+                  (call
+                    ChangeArguments
+                    (v schemas)
+                    (prim
+                      args
+                      (v value))
+                    (prim
+                      args
+                      (v change)))))
+              (fail
+                change-error
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (q "change ")
+                    (prim
+                      sym->str
+                      (v tag)))
+                  (q " does not apply to this value")))))))))
+  (judgment
+    OnlyArgument
+    [args]
+    (match
+      (v args)
+      (case
+        (pcons
+          (pv value)
+          (pnil))
+        (v value))
+      (case
+        _
+        (fail
+          change-error
+          (q "a replacement carries exactly one value")))))
+  (judgment
+    ChangedValue
+    [result]
+    (match
+      (v result)
+      (case
+        (pm
+          ok
+          (pv value))
+        (v value))
+      (case
+        _
+        (fail
+          change-error
+          (q "a change did not apply")))))
+  (judgment
+    ChangeArguments
+    [schemas args changes]
+    (match
+      (v args)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv arg)
+          (pv restArgs))
+        (match
+          (v changes)
+          (case (pnil) (lst))
+          (case
+            (pcons
+              (pv change)
+              (pv restChanges))
+            (prim
+              cons
+              (call
+                ChangedValue
+                (call
+                  ChangeValue
+                  (v schemas)
+                  (v arg)
+                  (v change)))
+              (call
+                ChangeArguments
+                (v schemas)
+                (v restArgs)
+                (v restChanges))))))))
+  (judgment
+    ThenChange
+    [schemas tname first second]
+    (if
+      (prim
+        eq
+        (prim
+          tag
+          (v first))
+        (call
+          KeepName
+          (v tname)))
+      (v second)
+      (if
+        (prim
+          eq
+          (prim
+            tag
+            (v second))
+          (call
+            KeepName
+            (v tname)))
+        (v first)
+        (if
+          (prim
+            eq
+            (prim
+              tag
+              (v second))
+            (call
+              SetName
+              (v tname)))
+          (v second)
+          (if
+            (prim
+              eq
+              (prim
+                tag
+                (v first))
+              (call
+                SetName
+                (v tname)))
+            (prim
+              node
+              (call
+                SetName
+                (v tname))
+              (lst
+                (call
+                  ChangedValue
+                  (call
+                    ChangeValue
+                    (v schemas)
+                    (call
+                      OnlyArgument
+                      (prim
+                        args
+                        (v first)))
+                    (v second)))))
+            (call
+              ThenAtChange
+              (v schemas)
+              (v first)
+              (v second)))))))
+  (judgment
+    ThenAtChange
+    [schemas first second]
+    (if
+      (prim
+        ne
+        (prim
+          tag
+          (v first))
+        (prim
+          tag
+          (v second)))
+      (fail
+        change-error
+        (q "composed changes disagree about the constructor"))
+      (prim
+        node
+        (prim
+          tag
+          (v first))
+        (call
+          ThenArguments
+          (v schemas)
+          (call
+            FieldTypeNames
+            (call
+              FieldsOfConstructor
+              (v schemas)
+              (call
+                UnderlyingConstructor
+                (v schemas)
+                (prim
+                  tag
+                  (v first)))))
+          (prim
+            args
+            (v first))
+          (prim
+            args
+            (v second))))))
+  (judgment
+    ThenArguments
+    [schemas tnames first second]
+    (match
+      (v tnames)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv tname)
+          (pv restNames))
+        (match
+          (v first)
+          (case (pnil) (lst))
+          (case
+            (pcons
+              (pv a)
+              (pv restFirst))
+            (match
+              (v second)
+              (case (pnil) (lst))
+              (case
+                (pcons
+                  (pv b)
+                  (pv restSecond))
+                (prim
+                  cons
+                  (call
+                    ThenChange
+                    (v schemas)
+                    (v tname)
+                    (v a)
+                    (v b))
+                  (call
+                    ThenArguments
+                    (v schemas)
+                    (v restNames)
+                    (v restFirst)
+                    (v restSecond))))))))))
+  (judgment
+    MergeChanges
+    [schemas tname left right]
+    (if
+      (prim
+        eq
+        (prim
+          tag
+          (v left))
+        (call
+          KeepName
+          (v tname)))
+      (mk
+        merged
+        (v right))
+      (if
+        (prim
+          eq
+          (prim
+            tag
+            (v right))
+          (call
+            KeepName
+            (v tname)))
+        (mk
+          merged
+          (v left))
+        (if
+          (prim
+            eq
+            (v left)
+            (v right))
+          (mk
+            merged
+            (v left))
+          (if
+            (prim
+              ne
+              (prim
+                tag
+                (v left))
+              (prim
+                tag
+                (v right)))
+            (mk
+              conflict
+              (v tname)
+              (v left)
+              (v right))
+            (if
+              (prim
+                eq
+                (prim
+                  tag
+                  (v left))
+                (call
+                  SetName
+                  (v tname)))
+              (mk
+                conflict
+                (v tname)
+                (v left)
+                (v right))
+              (call
+                MergeAtChange
+                (v schemas)
+                (v left)
+                (v right))))))))
+  (judgment
+    MergeAtChange
+    [schemas left right]
+    (let
+      cname
+      (call
+        UnderlyingConstructor
+        (v schemas)
+        (prim
+          tag
+          (v left)))
+      (call
+        MergedOrConflict
+        (prim
+          tag
+          (v left))
+        (call
+          MergeArguments
+          (v schemas)
+          (call
+            FieldTypeNames
+            (call
+              FieldsOfConstructor
+              (v schemas)
+              (v cname)))
+          (prim
+            args
+            (v left))
+          (prim
+            args
+            (v right))))))
+  (judgment
+    MergedOrConflict
+    [tag results]
+    (match
+      (call
+        FirstConflict
+        (v results))
+      (case
+        (pm
+          some
+          (pv conflict))
+        (v conflict))
+      (case
+        _
+        (mk
+          merged
+          (prim
+            node
+            (v tag)
+            (call
+              MergedArguments
+              (v results)))))))
+  (judgment
+    FirstConflict
+    [results]
+    (match
+      (v results)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            conflict
+            (pv tname)
+            (pv left)
+            (pv right))
+          (pv rest))
+        (mk
+          some
+          (mk
+            conflict
+            (v tname)
+            (v left)
+            (v right))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FirstConflict
+          (v rest)))))
+  (judgment
+    MergedArguments
+    [results]
+    (match
+      (v results)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            merged
+            (pv change))
+          (pv rest))
+        (prim
+          cons
+          (v change)
+          (call
+            MergedArguments
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          MergedArguments
+          (v rest)))))
+  (judgment
+    MergeArguments
+    [schemas tnames left right]
+    (match
+      (v tnames)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv tname)
+          (pv restNames))
+        (match
+          (v left)
+          (case (pnil) (lst))
+          (case
+            (pcons
+              (pv a)
+              (pv restLeft))
+            (match
+              (v right)
+              (case (pnil) (lst))
+              (case
+                (pcons
+                  (pv b)
+                  (pv restRight))
+                (prim
+                  cons
+                  (call
+                    MergeChanges
+                    (v schemas)
+                    (v tname)
+                    (v a)
+                    (v b))
+                  (call
+                    MergeArguments
+                    (v schemas)
+                    (v restNames)
+                    (v restLeft)
+                    (v restRight))))))))))
+  (judgment
+    ElaborateIntent
+    [schemas value intent]
+    (let
+      tname
+      (call
+        OwnerOfConstructor
+        (v schemas)
+        (prim
+          tag
+          (v value)))
+      (match
+        (v intent)
+        (case
+          (pm unchanged)
+          (call
+            ZeroChange
+            (v schemas)
+            (v tname)))
+        (case
+          (pm
+            replace
+            (pv replacement))
+          (if
+            (prim
+              eq
+              (v value)
+              (v replacement))
+            (call
+              ZeroChange
+              (v schemas)
+              (v tname))
+            (call
+              DiffValues
+              (v schemas)
+              (v value)
+              (v replacement))))
+        (case
+          (pm
+            in
+            (pv cname)
+            (pv fname)
+            (pv inner))
+          (if
+            (prim
+              ne
+              (prim
+                tag
+                (v value))
+              (v cname))
+            (fail
+              change-error
+              (prim
+                scat
+                (prim
+                  scat
+                  (q "an intent under ")
+                  (prim
+                    sym->str
+                    (v cname)))
+                (q " was made to a value of another constructor")))
+            (prim
+              node
+              (call
+                AtName
+                (v cname))
+              (call
+                ElaborateFields
+                (v schemas)
+                (call
+                  FieldsOfConstructor
+                  (v schemas)
+                  (v cname))
+                (prim
+                  args
+                  (v value))
+                (v fname)
+                (v inner)))))
+        (case
+          _
+          (fail
+            change-error
+            (q "an intent must be unchanged, a replacement or a field"))))))
+  (judgment
+    ElaborateFields
+    [schemas fields args fname inner]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            field
+            (pv declared)
+            (pv fnum)
+            (pv ftype))
+          (pv restFields))
+        (match
+          (v args)
+          (case (pnil) (lst))
+          (case
+            (pcons
+              (pv arg)
+              (pv restArgs))
+            (if
+              (prim
+                eq
+                (v declared)
+                (v fname))
+              (prim
+                cons
+                (call
+                  ElaborateIntent
+                  (v schemas)
+                  (v arg)
+                  (v inner))
+                (call
+                  ElaborateFields
+                  (v schemas)
+                  (v restFields)
+                  (v restArgs)
+                  (v fname)
+                  (v inner)))
+              (prim
+                cons
+                (call
+                  ZeroChange
+                  (v schemas)
+                  (call
+                    NameOfType
+                    (v ftype)))
+                (call
+                  ElaborateFields
+                  (v schemas)
+                  (v restFields)
+                  (v restArgs)
+                  (v fname)
+                  (v inner)))))))
+      (case
+        (pcons
+          (pv head)
+          (pv restFields))
+        (lst))))
+  (judgment
+    IntentIsFaithful
+    [schemas value intent]
+    (let
+      change
+      (call
+        ElaborateIntent
+        (v schemas)
+        (v value)
+        (v intent))
+      (prim
+        eq
+        (v change)
+        (call
+          DiffValues
+          (v schemas)
+          (v value)
+          (call
+            ChangedValue
+            (call
+              ChangeValue
+              (v schemas)
+              (v value)
+              (v change))))))))

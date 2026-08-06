@@ -1,0 +1,453 @@
+module stratachange
+
+; Change, generated from schema rather than written.
+;
+; S1 reads a codec off a declaration instead of writing one by hand. S3 does
+; the same for change: for every declared type `A` there is a type `DeltaA`
+; that nobody wrote, and `apply`, `diff`, `compose` and merge are judgments
+; about the schema rather than about `A`.
+;
+; A change over `A` is one of three things, and the three are enough:
+;
+;   KeepA               nothing changed
+;   SetA [to: A]        replaced outright
+;   AtC [f: DeltaF ..]  still the constructor `C`, with a change under each
+;                       field
+;
+; `AtC` carries a change for every field rather than only the ones that moved,
+; because a field that did not move carries `Keep`. That makes composition and
+; merge structural: they walk two changes of the same shape rather than two
+; sparse maps that have to be aligned first.
+
+; ------------------------------------------------------------------- names
+;
+; The generated names are derived from the declared ones, and read back by
+; searching the schema rather than by taking the strings apart again.
+
+judgment ChangeTypeName [tname] =
+  prim #str->sym [prim #scat ["Delta" prim #sym->str [tname]]]
+
+judgment KeepName [tname] =
+  prim #str->sym [prim #scat ["Keep" prim #sym->str [tname]]]
+
+judgment SetName [tname] =
+  prim #str->sym [prim #scat ["Set" prim #sym->str [tname]]]
+
+judgment AtName [cname] =
+  prim #str->sym [prim #scat ["At" prim #sym->str [cname]]]
+
+judgment UnderlyingConstructor [schemas atName] =
+  match schemas {
+    case [] ->
+      fail #change-error prim #scat [
+        "no declared constructor generates the change "
+        prim #sym->str [atName]
+      ]
+    case (#schema tname ctors) :: rest ->
+      match call UnderlyingIn [ctors atName] {
+        case (#some cname) -> cname
+        case _ -> call UnderlyingConstructor [rest atName]
+      }
+    case head :: rest -> call UnderlyingConstructor [rest atName]
+  }
+
+judgment UnderlyingIn [ctors atName] =
+  match ctors {
+    case [] -> mk #none []
+    case (#constructor cname fields) :: rest ->
+      if prim #eq [call AtName [cname] atName]
+      then mk #some [cname]
+      else call UnderlyingIn [rest atName]
+    case head :: rest -> call UnderlyingIn [rest atName]
+  }
+
+; ------------------------------------------------------------------ lookup
+
+judgment OwnerOfConstructor [schemas cname] =
+  match call FindSchemaConstructor [schemas cname] {
+    case (#some (#found owner declared fields)) -> owner
+    case _ ->
+      fail #change-error prim #scat [
+        "no schema declares the constructor "
+        prim #sym->str [cname]
+      ]
+  }
+
+judgment FieldsOfConstructor [schemas cname] =
+  match call FindSchemaConstructor [schemas cname] {
+    case (#some (#found owner declared fields)) -> fields
+    case _ ->
+      fail #change-error prim #scat [
+        "no schema declares the constructor "
+        prim #sym->str [cname]
+      ]
+  }
+
+judgment FieldTypeNames [fields] =
+  match fields {
+    case [] -> list []
+    case (#field fname fnum ftype) :: rest ->
+      prim #cons [call NameOfType [ftype] call FieldTypeNames [rest]]
+    case head :: rest -> call FieldTypeNames [rest]
+  }
+
+judgment NameOfType [ftype] =
+  match ftype {
+    case (#con name) -> name
+    case _ ->
+      fail #change-error
+        "a field whose type is applied has no generated change language yet"
+  }
+
+; -------------------------------------------------------------- generation
+;
+; This is the whole claim of the layer: given the schema of `A`, the schema of
+; `DeltaA` follows, and nothing about `A` had to be anticipated.
+
+judgment GeneratedChanges [schemas] =
+  match schemas {
+    case [] -> list []
+    case (#schema tname ctors) :: rest ->
+      prim #cons [
+        mk #schema [
+          call ChangeTypeName [tname]
+          prim #cons [
+            mk #constructor [call KeepName [tname] list []]
+            prim #cons [
+              mk #constructor [
+                call SetName [tname]
+                list [mk #field [#to 1 mk #con [tname]]]
+              ]
+              call ChangeConstructors [ctors]
+            ]
+          ]
+        ]
+        call GeneratedChanges [rest]
+      ]
+    case head :: rest -> call GeneratedChanges [rest]
+  }
+
+judgment ChangeConstructors [ctors] =
+  match ctors {
+    case [] -> list []
+    case (#constructor cname fields) :: rest ->
+      prim #cons [
+        mk #constructor [call AtName [cname] call ChangeFields [fields]]
+        call ChangeConstructors [rest]
+      ]
+    case head :: rest -> call ChangeConstructors [rest]
+  }
+
+; A field keeps its name and the number it was declared with, so a change is
+; encoded by the same rule its value is.
+judgment ChangeFields [fields] =
+  match fields {
+    case [] -> list []
+    case (#field fname fnum ftype) :: rest ->
+      prim #cons [
+        mk #field [fname fnum mk #con [call ChangeTypeName [call NameOfType [ftype]]]]
+        call ChangeFields [rest]
+      ]
+    case head :: rest -> call ChangeFields [rest]
+  }
+
+; The change language a module ships must be the one its declarations
+; generate, and this is what decides that.
+judgment GeneratedChangesAgree [grammar source domainCount] =
+  let schemas = call ModuleSchema [grammar source] in
+  prim #eq [
+    call GeneratedChanges [prim #take [schemas domainCount]]
+    prim #drop [schemas domainCount]
+  ]
+
+; -------------------------------------------------------------------- zero
+
+judgment ZeroChange [schemas tname] =
+  prim #node [call KeepName [tname] list []]
+
+judgment IsZeroChange [schemas tname change] =
+  prim #eq [prim #tag [change] call KeepName [tname]]
+
+; -------------------------------------------------------------------- diff
+
+judgment DiffValues [schemas before after] =
+  let tname = call OwnerOfConstructor [schemas prim #tag [before]] in
+  if prim #eq [before after]
+  then call ZeroChange [schemas tname]
+  else
+    if prim #ne [prim #tag [before] prim #tag [after]]
+    then prim #node [call SetName [tname] list [after]]
+    else
+      prim #node [
+        call AtName [prim #tag [before]]
+        call DiffArguments [schemas prim #args [before] prim #args [after]]
+      ]
+
+judgment DiffArguments [schemas before after] =
+  match before {
+    case [] -> list []
+    case first :: restBefore ->
+      match after {
+        case [] -> list []
+        case second :: restAfter ->
+          prim #cons [
+            call DiffValues [schemas first second]
+            call DiffArguments [schemas restBefore restAfter]
+          ]
+      }
+  }
+
+; ------------------------------------------------------------------- apply
+
+judgment ChangeValue [schemas value change] =
+  let tname = call OwnerOfConstructor [schemas prim #tag [value]] in
+  let tag = prim #tag [change] in
+  if prim #eq [tag call KeepName [tname]]
+  then mk #ok [value]
+  else
+    if prim #eq [tag call SetName [tname]]
+    then mk #ok [call OnlyArgument [prim #args [change]]]
+    else
+      if prim #eq [tag call AtName [prim #tag [value]]]
+      then
+        mk #ok [prim #node [
+          prim #tag [value]
+          call ChangeArguments [schemas prim #args [value] prim #args [change]]
+        ]]
+      else
+        fail #change-error prim #scat [
+          prim #scat ["change " prim #sym->str [tag]]
+          " does not apply to this value"
+        ]
+
+judgment OnlyArgument [args] =
+  match args {
+    case value :: [] -> value
+    case _ -> fail #change-error "a replacement carries exactly one value"
+  }
+
+judgment ChangedValue [result] =
+  match result {
+    case (#ok value) -> value
+    case _ -> fail #change-error "a change did not apply"
+  }
+
+judgment ChangeArguments [schemas args changes] =
+  match args {
+    case [] -> list []
+    case arg :: restArgs ->
+      match changes {
+        case [] -> list []
+        case change :: restChanges ->
+          prim #cons [
+            call ChangedValue [call ChangeValue [schemas arg change]]
+            call ChangeArguments [schemas restArgs restChanges]
+          ]
+      }
+  }
+
+; ----------------------------------------------------------------- compose
+;
+; `ThenChange` is sequential: the second change is made to the value the first
+; produced. Applying the composition is applying them in order.
+
+judgment ThenChange [schemas tname first second] =
+  if prim #eq [prim #tag [first] call KeepName [tname]]
+  then second
+  else
+    if prim #eq [prim #tag [second] call KeepName [tname]]
+    then first
+    else
+      if prim #eq [prim #tag [second] call SetName [tname]]
+      then second
+      else
+        if prim #eq [prim #tag [first] call SetName [tname]]
+        then
+          prim #node [call SetName [tname] list [
+            call ChangedValue [call ChangeValue [
+              schemas
+              call OnlyArgument [prim #args [first]]
+              second
+            ]]
+          ]]
+        else call ThenAtChange [schemas first second]
+
+judgment ThenAtChange [schemas first second] =
+  if prim #ne [prim #tag [first] prim #tag [second]]
+  then fail #change-error "composed changes disagree about the constructor"
+  else
+    prim #node [
+      prim #tag [first]
+      call ThenArguments [
+        schemas
+        call FieldTypeNames [call FieldsOfConstructor [
+          schemas
+          call UnderlyingConstructor [schemas prim #tag [first]]
+        ]]
+        prim #args [first]
+        prim #args [second]
+      ]
+    ]
+
+judgment ThenArguments [schemas tnames first second] =
+  match tnames {
+    case [] -> list []
+    case tname :: restNames ->
+      match first {
+        case [] -> list []
+        case a :: restFirst ->
+          match second {
+            case [] -> list []
+            case b :: restSecond ->
+              prim #cons [
+                call ThenChange [schemas tname a b]
+                call ThenArguments [schemas restNames restFirst restSecond]
+              ]
+          }
+      }
+  }
+
+; ------------------------------------------------------------------- merge
+;
+; Two changes made to the same value, rather than one after the other. They
+; merge when they do not disagree anywhere, and the disagreement is reported
+; where it is rather than as a single verdict about the whole value.
+
+judgment MergeChanges [schemas tname left right] =
+  if prim #eq [prim #tag [left] call KeepName [tname]]
+  then mk #merged [right]
+  else
+    if prim #eq [prim #tag [right] call KeepName [tname]]
+    then mk #merged [left]
+    else
+      if prim #eq [left right]
+      then mk #merged [left]
+      else
+        if prim #ne [prim #tag [left] prim #tag [right]]
+        then mk #conflict [tname left right]
+        else
+          if prim #eq [prim #tag [left] call SetName [tname]]
+          then mk #conflict [tname left right]
+          else call MergeAtChange [schemas left right]
+
+judgment MergeAtChange [schemas left right] =
+  let cname = call UnderlyingConstructor [schemas prim #tag [left]] in
+  call MergedOrConflict [
+    prim #tag [left]
+    call MergeArguments [
+      schemas
+      call FieldTypeNames [call FieldsOfConstructor [schemas cname]]
+      prim #args [left]
+      prim #args [right]
+    ]
+  ]
+
+judgment MergedOrConflict [tag results] =
+  match call FirstConflict [results] {
+    case (#some conflict) -> conflict
+    case _ -> mk #merged [prim #node [tag call MergedArguments [results]]]
+  }
+
+judgment FirstConflict [results] =
+  match results {
+    case [] -> mk #none []
+    case (#conflict tname left right) :: rest -> mk #some [mk #conflict [tname left right]]
+    case head :: rest -> call FirstConflict [rest]
+  }
+
+judgment MergedArguments [results] =
+  match results {
+    case [] -> list []
+    case (#merged change) :: rest -> prim #cons [change call MergedArguments [rest]]
+    case head :: rest -> call MergedArguments [rest]
+  }
+
+judgment MergeArguments [schemas tnames left right] =
+  match tnames {
+    case [] -> list []
+    case tname :: restNames ->
+      match left {
+        case [] -> list []
+        case a :: restLeft ->
+          match right {
+            case [] -> list []
+            case b :: restRight ->
+              prim #cons [
+                call MergeChanges [schemas tname a b]
+                call MergeArguments [schemas restNames restLeft restRight]
+              ]
+          }
+      }
+  }
+
+; -------------------------------------------------------------- elaboration
+;
+; A structural change says what moved. A semantic change says what was meant.
+; The second elaborates into the first against the value it is made to, which
+; is what lets an intent be recorded once and replayed against a schema that
+; has since gained fields.
+;
+;   (unchanged)                 nothing was meant
+;   (replace v)                 this value, whatever it was
+;   (in c f intent)             under the field `f` of the constructor `c`
+
+judgment ElaborateIntent [schemas value intent] =
+  let tname = call OwnerOfConstructor [schemas prim #tag [value]] in
+  match intent {
+    case (#unchanged) -> call ZeroChange [schemas tname]
+    case (#replace replacement) ->
+      if prim #eq [value replacement]
+      then call ZeroChange [schemas tname]
+      else call DiffValues [schemas value replacement]
+    case (#in cname fname inner) ->
+      if prim #ne [prim #tag [value] cname]
+      then
+        fail #change-error prim #scat [
+          prim #scat ["an intent under " prim #sym->str [cname]]
+          " was made to a value of another constructor"
+        ]
+      else
+        prim #node [
+          call AtName [cname]
+          call ElaborateFields [
+            schemas
+            call FieldsOfConstructor [schemas cname]
+            prim #args [value]
+            fname
+            inner
+          ]
+        ]
+    case _ -> fail #change-error "an intent must be unchanged, a replacement or a field"
+  }
+
+judgment ElaborateFields [schemas fields args fname inner] =
+  match fields {
+    case [] -> list []
+    case (#field declared fnum ftype) :: restFields ->
+      match args {
+        case [] -> list []
+        case arg :: restArgs ->
+          if prim #eq [declared fname]
+          then
+            prim #cons [
+              call ElaborateIntent [schemas arg inner]
+              call ElaborateFields [schemas restFields restArgs fname inner]
+            ]
+          else
+            prim #cons [
+              call ZeroChange [schemas call NameOfType [ftype]]
+              call ElaborateFields [schemas restFields restArgs fname inner]
+            ]
+      }
+    case head :: restFields -> list []
+  }
+
+; An intent is faithful when the change it elaborates to is the change that
+; the value it produces would have been diffed into. Elaboration adds no
+; movement of its own and loses none of what was meant.
+judgment IntentIsFaithful [schemas value intent] =
+  let change = call ElaborateIntent [schemas value intent] in
+  prim #eq [
+    change
+    call DiffValues [schemas value call ChangedValue [call ChangeValue [schemas value change]]]
+  ]

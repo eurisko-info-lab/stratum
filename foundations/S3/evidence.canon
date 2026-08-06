@@ -1,0 +1,29 @@
+
+artifactevidence
+evidence
+check"strata-generates-a-change-languageok
+check,strata-a-change-keeps-declared-field-numbersok
+check"strata-library-change-is-generatedok
+check&strata-the-zero-change-changes-nothingok
+check&strata-a-difference-reaches-its-targetok
+check-strata-a-value-differs-from-itself-by-nothingok
+check!strata-a-difference-is-structuralok
+check*strata-composition-is-application-in-orderok
+checkstrata-composition-has-a-unitok
+check3strata-composition-rejects-disagreeing-constructorsok
+check strata-independent-changes-mergeok
+check3strata-conflicting-changes-name-where-they-disagreeok
+check-strata-a-change-round-trips-through-its-codecok
+check2strata-an-intent-elaborates-to-a-structural-changeok
+checkstrata-elaboration-is-faithfulok
+check8strata-an-intent-under-a-foreign-constructor-is-rejectedok
+checkstrata-evidence-is-gradedok
+check5strata-a-weaker-grade-does-not-satisfy-a-stronger-oneok
+check&strata-a-generated-run-is-reproducibleok
+check'strata-a-generated-run-records-its-seedok
+check&strata-a-generated-run-earns-its-gradeok
+check)strata-values-are-sampled-from-the-schemaok
+check-strata-a-different-seed-draws-a-different-runok
+check#strata-library-change-is-well-typedok
+check strata-library-law-is-well-typedok
+checkstrata-library-law-terminatesok

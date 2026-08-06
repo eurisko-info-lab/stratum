@@ -1,0 +1,26 @@
+
+artifactsource
+source
+pathstrata/lib/change.strata
+textûmodule "strata.change"
+version 1
+; A worked domain, and the change language its declarations generate.
+;
+; Everything above the line was written. Everything below it was not: it is
+; what `GeneratedChanges` derives from the schema of what was written, and the
+; foundation refuses to build unless the two agree exactly. It is written out
+; here so that a change is an ordinary Strata value a reader can see, encode
+; and store, rather than a shape that only exists inside a checker.
+;
+; `Nat` and `Bit` are declared again rather than imported, because a module
+; cannot yet refer to another one. S4 closes that.
+data Bit = | On [] | Off []
+data Nat = | Zero [] | Succ [pred #1: Nat]
+data Doc = | Doc [flag #1: Bit, size #2: Nat]
+; ---- generated from the declarations above ----
+data DeltaBit = | KeepBit [] | SetBit [to #1: Bit] | AtOn [] | AtOff []
+data DeltaNat = | KeepNat [] | SetNat [to #1: Nat] | AtZero [] | AtSucc [pred #1: DeltaNat]
+data DeltaDoc = | KeepDoc [] | SetDoc [to #1: Doc] | AtDoc [flag #1: DeltaBit, size #2: DeltaNat]
+def example []: Doc = Doc On Zero
+def raised []: Doc = Doc Off (Succ Zero)
+law DocRoundTrips [d: Doc] = d

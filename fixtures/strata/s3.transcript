@@ -1,0 +1,134 @@
+# S3 acceptance transcript: free changes.
+#
+# S2 |- S3. S1 read a codec off a declaration. S3 reads a change language off
+# the same declaration, and then treats a change as an ordinary value: it
+# encodes, it composes, it merges, and it conflicts.
+
+$ foundation verify --dir foundations/S3
+> foundation S3
+> digest 63d163c409c3947251c1dc3d272db7d3d7e25ab563ed0ce666da342b70c14184
+> closure 110 artifacts
+> check strata-generates-a-change-language ok
+> check strata-a-change-keeps-declared-field-numbers ok
+> check strata-library-change-is-generated ok
+> check strata-the-zero-change-changes-nothing ok
+> check strata-a-difference-reaches-its-target ok
+> check strata-a-value-differs-from-itself-by-nothing ok
+> check strata-a-difference-is-structural ok
+> check strata-composition-is-application-in-order ok
+> check strata-composition-has-a-unit ok
+> check strata-composition-rejects-disagreeing-constructors ok
+> check strata-independent-changes-merge ok
+> check strata-conflicting-changes-name-where-they-disagree ok
+> check strata-a-change-round-trips-through-its-codec ok
+> check strata-an-intent-elaborates-to-a-structural-change ok
+> check strata-elaboration-is-faithful ok
+> check strata-an-intent-under-a-foreign-constructor-is-rejected ok
+> check strata-evidence-is-graded ok
+> check strata-a-weaker-grade-does-not-satisfy-a-stronger-one ok
+> check strata-a-generated-run-is-reproducible ok
+> check strata-a-generated-run-records-its-seed ok
+> check strata-a-generated-run-earns-its-grade ok
+> check strata-values-are-sampled-from-the-schema ok
+> check strata-a-different-seed-draws-a-different-run ok
+> check strata-library-change-is-well-typed ok
+> check strata-library-law-is-well-typed ok
+> check strata-library-law-terminates ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S2 --successor foundations/S3
+> predecessor S2
+> successor S3
+> result (valid #d3af16cf3946b2e25c1c7af5318ac2623b1fa40e33ddb4b7dc978d93d870818e4)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/S3
+> reconstructed S3
+> digest 63d163c409c3947251c1dc3d272db7d3d7e25ab563ed0ce666da342b70c14184
+> stable yes
+> closure 110 artifacts
+> checks 26 ok
+
+# The change language of a type follows from its schema. Nobody wrote DeltaBit.
+$ derive --foundation foundations/S3 --goal '(call GeneratedChanges (call ModuleSchema (grammar strata) (q "module \"strata.bit\"\nversion 1\ndata Bit = | On [] | Off []\ndef example []: Bit = On\n")))'
+> [(schema DeltaBit [(constructor KeepBit []) (constructor SetBit [(field to 1 (con Bit))]) (constructor AtOn []) (constructor AtOff [])])]
+
+# The library ships exactly the change language its declarations generate.
+$ derive --foundation foundations/S3 --goal '(call GeneratedChangesAgree (grammar strata) (call SourceText (source "strata/lib/change.strata")) (q 3))'
+> #t
+
+# apply(a, zero) = ok(a).
+$ derive --foundation foundations/S3 --goal '(call ChangeValue (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q (Doc (On) (Zero))) (q (KeepDoc)))'
+> (ok (Doc (On) (Zero)))
+
+# apply(a, diff(a,b)) = ok(b).
+$ derive --foundation foundations/S3 --goal '(call ChangeValue (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q (Doc (On) (Zero))) (call DiffValues (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q (Doc (On) (Zero))) (q (Doc (Off) (Succ (Zero))))))'
+> (ok (Doc (Off) (Succ (Zero))))
+
+# A difference says which field moved, not that the value was replaced.
+$ derive --foundation foundations/S3 --goal '(call DiffValues (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q (Doc (On) (Zero))) (q (Doc (Off) (Zero))))'
+> (AtDoc (SetBit (Off)) (KeepNat))
+
+# Composing two changes is making them in order.
+$ derive --foundation foundations/S3 --goal '(call ThenChange (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q Doc) (q (AtDoc (SetBit (Off)) (KeepNat))) (q (AtDoc (KeepBit) (SetNat (Succ (Zero))))))'
+> (AtDoc (SetBit (Off)) (SetNat (Succ (Zero))))
+
+# Two changes that hold different constructors cannot be made in sequence.
+$ derive --foundation foundations/S3 --goal '(call ThenChange (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q Nat) (q (AtZero)) (q (AtSucc (KeepNat))))'
+> error change-error "composed changes disagree about the constructor"
+> exit 1
+
+# Two changes made to the same value merge when they touch different fields.
+$ derive --foundation foundations/S3 --goal '(call MergeChanges (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q Doc) (q (AtDoc (SetBit (Off)) (KeepNat))) (q (AtDoc (KeepBit) (SetNat (Succ (Zero))))))'
+> (merged (AtDoc (SetBit (Off)) (SetNat (Succ (Zero)))))
+
+# And conflict when they touch the same field differently. The conflict names
+# where it is.
+$ derive --foundation foundations/S3 --goal '(call MergeChanges (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q Doc) (q (AtDoc (SetBit (Off)) (KeepNat))) (q (AtDoc (SetBit (On)) (KeepNat))))'
+> (conflict Bit (SetBit (Off)) (SetBit (On)))
+
+# A change is a value of a declared type, so S1's codec stores it without
+# being told anything new.
+$ derive --foundation foundations/S3 --goal '(call EncodeValue (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q (AtDoc (KeepBit) (SetNat (Succ (Zero))))))'
+> (encoded DeltaDoc AtDoc [(at 1 (encoded DeltaBit KeepBit [])) (at 2 (encoded DeltaNat SetNat [(at 1 (encoded Nat Succ [(at 1 (encoded Nat Zero []))]))]))])
+
+# A semantic change says what was meant; elaborating it gives the structural
+# change that means it.
+$ derive --foundation foundations/S3 --goal '(call ElaborateIntent (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q (Doc (On) (Zero))) (q (in Doc size (replace (Succ (Zero))))))'
+> (AtDoc (KeepBit) (SetNat (Succ (Zero))))
+
+# And elaboration is faithful: it adds no movement of its own and loses none
+# of what was meant.
+$ derive --foundation foundations/S3 --goal '(call IntentIsFaithful (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q (Doc (On) (Zero))) (q (in Doc size (replace (Succ (Zero))))))'
+> #t
+
+# An intent made under one constructor does not apply to another.
+$ derive --foundation foundations/S3 --goal '(call ElaborateIntent (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q (Zero)) (q (in Succ pred (unchanged))))'
+> error change-error "an intent under Succ was made to a value of another constructor"
+> exit 1
+
+# Evidence is graded, and the grades are ordered.
+$ derive --foundation foundations/S3 --goal '(call AtLeastGrade (q (Proved)) (q (Declared)))'
+> #t
+
+$ derive --foundation foundations/S3 --goal '(call AtLeastGrade (q (Declared)) (q (Proved)))'
+> #f
+
+# Values are drawn from the schema, and the draw is a function of the seed.
+$ derive --foundation foundations/S3 --goal '(call SampleValues (call ModuleSchema (grammar strata) (call SourceText (source "strata/lib/change.strata"))) (q Nat) (q 3) (q 3) (q 4))'
+> [(Zero) (Zero) (Succ (Succ (Succ (Zero)))) (Succ (Zero))]
+
+# A run over generated values earns Generated, and records the seed it was
+# drawn from, so it can be had again.
+$ derive --foundation foundations/S3 --goal '(call RunLawGenerated (grammar strata) (call SourceText (source "strata/lib/law.strata")) (q RankIsTotal) (q 20260806) (q 4))'
+> (evidence Generated RankIsTotal 20260806 4 [(Zero) (Zero) (Succ (Zero)) (Succ (Succ (Succ (Succ (Succ (Zero))))))])
+
+$ derive --foundation foundations/S3 --goal '(call RunIsReproducible (grammar strata) (call SourceText (source "strata/lib/law.strata")) (q RankIsTotal) (q 20260806) (q 8))'
+> #t
+
+# And what the layers below decided, S3 still decides.
+$ derive --foundation foundations/S3 --goal '(call CheckModule (grammar strata) (call SourceText (source "strata/lib/law.strata")))'
+> (checked ok)
+
+$ derive --foundation foundations/S3 --goal '(call CheckDependentModule (grammar strata) (call SourceText (source "strata/lib/change.strata")))'
+> (checked ok)

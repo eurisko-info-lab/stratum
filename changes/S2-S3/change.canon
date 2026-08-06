@@ -1,0 +1,37 @@
+; The canonical change from S2 to S3.
+;
+; S2 |- S3. Change stops being written and starts being derived.
+;
+; S1 read a codec off a declaration instead of writing one by hand. S3 does
+; the same for change: for every declared type there is a change type nobody
+; wrote, and `apply`, `diff`, compose and merge are judgments about the schema
+; rather than about the type. A change is then an ordinary value, so it
+; encodes, it stores and it has an identity.
+;
+; A semantic change -- what was meant -- elaborates into a structural change
+; against the value it is made to, and elaboration is faithful: the change it
+; produces is the change that the value it produces would have been diffed
+; into.
+;
+; Laws gain graded evidence, so the system knows which of its claims are
+; checked and how. A run over generated values earns `Generated`, and records
+; the seed it was drawn from, so it can be had again.
+(change
+  (kind foundation)
+  (name "S2->S3")
+  (predecessor (foundation-of "foundations/S2"))
+  (delta-meta (file "changes/S2-S3/delta-meta.canon"))
+  (delta-grammar (file "changes/S2-S3/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "free changes")
+      (programs [
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/change.meta")
+        (text-file "features/strata/law.meta")
+        (text-file "strata/lib/change.strata")
+        (text-file "strata/lib/law.strata")
+      ]))))

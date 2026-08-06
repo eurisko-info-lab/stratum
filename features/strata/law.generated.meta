@@ -1,0 +1,634 @@
+; Generated from features/strata/law.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratalaw)
+  (judgment
+    GradeRank
+    [grade]
+    (match
+      (v grade)
+      (case
+        (pm Declared)
+        (q 0))
+      (case
+        (pm Tested)
+        (q 1))
+      (case
+        (pm Generated)
+        (q 2))
+      (case
+        (pm CrossHost)
+        (q 3))
+      (case
+        (pm ModelChecked)
+        (q 4))
+      (case
+        (pm Derived)
+        (q 5))
+      (case
+        (pm Proved)
+        (q 6))
+      (case
+        _
+        (fail
+          law-error
+          (q "not a grade of evidence")))))
+  (judgment
+    AtLeastGrade
+    [held wanted]
+    (prim
+      ge
+      (call
+        GradeRank
+        (v held))
+      (call
+        GradeRank
+        (v wanted))))
+  (judgment
+    StrongerGrade
+    [left right]
+    (if
+      (prim
+        ge
+        (call
+          GradeRank
+          (v left))
+        (call
+          GradeRank
+          (v right)))
+      (v left)
+      (v right)))
+  (judgment
+    DeclaredLaws
+    [grammar source]
+    (call
+      LawsOfDeclarations
+      (call
+        Declarations
+        (call
+          ParseStrata
+          (v grammar)
+          (v source)))))
+  (judgment
+    LawsOfDeclarations
+    [decls]
+    (match
+      (v decls)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            law
+            (pv name)
+            (pv params)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            law
+            (v name)
+            (v params)
+            (v body))
+          (call
+            LawsOfDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LawsOfDeclarations
+          (v rest)))))
+  (judgment
+    FindLaw
+    [decls name]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (fail
+          law-error
+          (prim
+            scat
+            (q "the module declares no law named ")
+            (prim
+              sym->str
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            law
+            (pv declared)
+            (pv params)
+            (pv body))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            law
+            (v declared)
+            (v params)
+            (v body))
+          (call
+            FindLaw
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindLaw
+          (v rest)
+          (v name)))))
+  (judgment
+    LawParameterTypes
+    [params]
+    (match
+      (v params)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (call
+            NameOfType
+            (call
+              TypeValue
+              (v ptype)))
+          (call
+            LawParameterTypes
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          LawParameterTypes
+          (v rest)))))
+  (judgment
+    NextSeed
+    [seed]
+    (prim
+      mod
+      (prim
+        add
+        (prim
+          mul
+          (v seed)
+          (q 6364136223846793005))
+        (q 1442695040888963407))
+      (q 18446744073709551616)))
+  (judgment
+    SeedFor
+    [seed offset]
+    (call
+      NextSeed
+      (prim
+        add
+        (v seed)
+        (prim
+          mul
+          (v offset)
+          (q 2654435761)))))
+  (judgment
+    ChoiceFrom
+    [seed count]
+    (prim
+      mod
+      (prim
+        div
+        (v seed)
+        (q 4294967296))
+      (v count)))
+  (judgment
+    ConstructorsOfSchema
+    [schemas tname]
+    (match
+      (v schemas)
+      (case
+        (pnil)
+        (fail
+          law-error
+          (prim
+            scat
+            (q "no schema declares the type ")
+            (prim
+              sym->str
+              (v tname)))))
+      (case
+        (pcons
+          (pm
+            schema
+            (pv declared)
+            (pv ctors))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v tname))
+          (v ctors)
+          (call
+            ConstructorsOfSchema
+            (v rest)
+            (v tname))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ConstructorsOfSchema
+          (v rest)
+          (v tname)))))
+  (judgment
+    GroundConstructors
+    [ctors]
+    (match
+      (v ctors)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            constructor
+            (pv cname)
+            (pv fields))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (prim
+              len
+              (v fields))
+            (q 0))
+          (prim
+            cons
+            (mk
+              constructor
+              (v cname)
+              (v fields))
+            (call
+              GroundConstructors
+              (v rest)))
+          (call
+            GroundConstructors
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          GroundConstructors
+          (v rest)))))
+  (judgment
+    SampleValue
+    [schemas tname seed depth]
+    (let
+      ctors
+      (call
+        ConstructorsOfSchema
+        (v schemas)
+        (v tname))
+      (let
+        available
+        (if
+          (prim
+            gt
+            (v depth)
+            (q 0))
+          (v ctors)
+          (call
+            AvailableGround
+            (v tname)
+            (call
+              GroundConstructors
+              (v ctors))))
+        (call
+          SampleFromConstructor
+          (v schemas)
+          (prim
+            nth
+            (v available)
+            (call
+              ChoiceFrom
+              (v seed)
+              (prim
+                len
+                (v available))))
+          (v seed)
+          (v depth)))))
+  (judgment
+    AvailableGround
+    [tname ground]
+    (if
+      (prim
+        eq
+        (prim
+          len
+          (v ground))
+        (q 0))
+      (fail
+        law-error
+        (prim
+          scat
+          (prim
+            scat
+            (q "the type ")
+            (prim
+              sym->str
+              (v tname)))
+          (q " has no constructor without fields, so it cannot be sampled")))
+      (v ground)))
+  (judgment
+    SampleFromConstructor
+    [schemas chosen seed depth]
+    (match
+      (v chosen)
+      (case
+        (pm
+          constructor
+          (pv cname)
+          (pv fields))
+        (prim
+          node
+          (v cname)
+          (call
+            SampleFields
+            (v schemas)
+            (v fields)
+            (v seed)
+            (v depth)
+            (q 1))))
+      (case
+        _
+        (fail
+          law-error
+          (q "malformed constructor")))))
+  (judgment
+    SampleFields
+    [schemas fields seed depth offset]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            field
+            (pv fname)
+            (pv fnum)
+            (pv ftype))
+          (pv rest))
+        (prim
+          cons
+          (call
+            SampleValue
+            (v schemas)
+            (call
+              NameOfType
+              (v ftype))
+            (call
+              SeedFor
+              (v seed)
+              (v offset))
+            (prim
+              sub
+              (v depth)
+              (q 1)))
+          (call
+            SampleFields
+            (v schemas)
+            (v rest)
+            (v seed)
+            (v depth)
+            (prim
+              add
+              (v offset)
+              (q 1)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          SampleFields
+          (v schemas)
+          (v rest)
+          (v seed)
+          (v depth)
+          (v offset)))))
+  (judgment
+    SampleValues
+    [schemas tname seed depth count]
+    (if
+      (prim
+        eq
+        (v count)
+        (q 0))
+      (lst)
+      (prim
+        cons
+        (call
+          SampleValue
+          (v schemas)
+          (v tname)
+          (v seed)
+          (v depth))
+        (call
+          SampleValues
+          (v schemas)
+          (v tname)
+          (call
+            NextSeed
+            (v seed))
+          (v depth)
+          (prim
+            sub
+            (v count)
+            (q 1))))))
+  (judgment
+    RunLawGenerated
+    [grammar source lawname seed count]
+    (let
+      parsed
+      (call
+        ParseStrata
+        (v grammar)
+        (v source))
+      (let
+        decls
+        (call
+          Declarations
+          (v parsed))
+        (let
+          schemas
+          (call
+            SchemaOfDeclarations
+            (v decls))
+          (call
+            RunLawOver
+            (v decls)
+            (call
+              FindLaw
+              (v decls)
+              (v lawname))
+            (v schemas)
+            (v seed)
+            (v count))))))
+  (judgment
+    RunLawOver
+    [decls found schemas seed count]
+    (match
+      (v found)
+      (case
+        (pm
+          law
+          (pv name)
+          (pv params)
+          (pv body))
+        (match
+          (call
+            LawParameterTypes
+            (v params))
+          (case
+            (pcons
+              (pv tname)
+              (pnil))
+            (mk
+              evidence
+              (q Generated)
+              (v name)
+              (v seed)
+              (v count)
+              (call
+                EvalLawAt
+                (v decls)
+                (v params)
+                (v body)
+                (call
+                  SampleValues
+                  (v schemas)
+                  (v tname)
+                  (v seed)
+                  (q 4)
+                  (v count)))))
+          (case
+            _
+            (fail
+              law-error
+              (q "a generated run needs a law of exactly one parameter")))))
+      (case
+        _
+        (fail
+          law-error
+          (q "malformed law")))))
+  (judgment
+    EvalLawAt
+    [decls params body values]
+    (match
+      (v values)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv value)
+          (pv rest))
+        (prim
+          cons
+          (call
+            Eval
+            (v decls)
+            (call
+              BindParameters
+              (v params)
+              (lst
+                (v value))
+              (lst))
+            (v body))
+          (call
+            EvalLawAt
+            (v decls)
+            (v params)
+            (v body)
+            (v rest))))))
+  (judgment
+    EvidenceGrade
+    [earned]
+    (match
+      (v earned)
+      (case
+        (pm
+          evidence
+          (pv grade)
+          (pv name)
+          (pv seed)
+          (pv count)
+          (pv results))
+        (v grade))
+      (case
+        _
+        (fail
+          law-error
+          (q "malformed evidence")))))
+  (judgment
+    EvidenceSeed
+    [earned]
+    (match
+      (v earned)
+      (case
+        (pm
+          evidence
+          (pv grade)
+          (pv name)
+          (pv seed)
+          (pv count)
+          (pv results))
+        (v seed))
+      (case
+        _
+        (fail
+          law-error
+          (q "malformed evidence")))))
+  (judgment
+    RunIsReproducible
+    [grammar source lawname seed count]
+    (prim
+      eq
+      (call
+        RunLawGenerated
+        (v grammar)
+        (v source)
+        (v lawname)
+        (v seed)
+        (v count))
+      (call
+        RunLawGenerated
+        (v grammar)
+        (v source)
+        (v lawname)
+        (v seed)
+        (v count))))
+  (judgment
+    RunsDifferBySeed
+    [grammar source lawname left right count]
+    (prim
+      ne
+      (call
+        RunLawGenerated
+        (v grammar)
+        (v source)
+        (v lawname)
+        (v left)
+        (v count))
+      (call
+        RunLawGenerated
+        (v grammar)
+        (v source)
+        (v lawname)
+        (v right)
+        (v count)))))

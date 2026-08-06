@@ -1,0 +1,299 @@
+; Executable acceptance checks for S3, free changes.
+;
+; S1 reads a codec off a declaration. S3 reads a change language off the same
+; declaration, and then treats a change as an ordinary value: it encodes, it
+; composes, it merges, and it conflicts.
+[
+  ; ------------------------------------------------------------ generation
+
+  ; The change language of a type follows from its schema. Nothing about the
+  ; type had to be anticipated.
+  (check strata-generates-a-change-language
+    (call GeneratedChanges
+      (q [(schema Bit [(constructor On []) (constructor Off [])])]))
+    (value [(schema DeltaBit [
+      (constructor KeepBit [])
+      (constructor SetBit [(field to 1 (con Bit))])
+      (constructor AtOn [])
+      (constructor AtOff [])])]))
+
+  ; A field keeps its declared number, so a change is ordered by the same rule
+  ; its value is.
+  (check strata-a-change-keeps-declared-field-numbers
+    (call GeneratedChanges
+      (q [(schema Pair [(constructor Pair [(field left 1 (con Bit)) (field right 2 (con Bit))])])]))
+    (value [(schema DeltaPair [
+      (constructor KeepPair [])
+      (constructor SetPair [(field to 1 (con Pair))])
+      (constructor AtPair [(field left 1 (con DeltaBit)) (field right 2 (con DeltaBit))])])]))
+
+  ; The change language the library ships is the one its declarations
+  ; generate. This is what stops it drifting into something hand-written.
+  (check strata-library-change-is-generated
+    (call GeneratedChangesAgree
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/change.strata")))
+      (q 3))
+    (value #t))
+
+  ; ------------------------------------------------------------- the laws
+
+  ; apply(a, zero) = ok(a)
+  (check strata-the-zero-change-changes-nothing
+    (call ChangeValue
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q (Doc (On) (Zero)))
+      (call ZeroChange
+        (call ModuleSchema
+          (q (file "languages/strata/strata.generated.grammar"))
+          (call SourceText (q (text-file "strata/lib/change.strata"))))
+        (q Doc)))
+    (value (ok (Doc (On) (Zero)))))
+
+  ; apply(a, diff(a,b)) = ok(b)
+  (check strata-a-difference-reaches-its-target
+    (call ChangeValue
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q (Doc (On) (Zero)))
+      (call DiffValues
+        (call ModuleSchema
+          (q (file "languages/strata/strata.generated.grammar"))
+          (call SourceText (q (text-file "strata/lib/change.strata"))))
+        (q (Doc (On) (Zero)))
+        (q (Doc (Off) (Succ (Zero))))))
+    (value (ok (Doc (Off) (Succ (Zero))))))
+
+  ; The difference between a value and itself is the zero change, not a
+  ; change that happens to do nothing.
+  (check strata-a-value-differs-from-itself-by-nothing
+    (call DiffValues
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q (Doc (On) (Zero)))
+      (q (Doc (On) (Zero))))
+    (value (KeepDoc)))
+
+  ; A difference is structural: it says which field moved, not that the value
+  ; was replaced.
+  (check strata-a-difference-is-structural
+    (call DiffValues
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q (Doc (On) (Zero)))
+      (q (Doc (Off) (Zero))))
+    (value (AtDoc (SetBit (Off)) (KeepNat))))
+
+  ; ------------------------------------------------------------- composing
+
+  ; Composing two changes is making them in order.
+  (check strata-composition-is-application-in-order
+    (call ChangeValue
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q (Doc (On) (Zero)))
+      (call ThenChange
+        (call ModuleSchema
+          (q (file "languages/strata/strata.generated.grammar"))
+          (call SourceText (q (text-file "strata/lib/change.strata"))))
+        (q Doc)
+        (q (AtDoc (SetBit (Off)) (KeepNat)))
+        (q (AtDoc (KeepBit) (SetNat (Succ (Zero)))))))
+    (value (ok (Doc (Off) (Succ (Zero))))))
+
+  ; Composing with the zero change on either side gives the other one back.
+  (check strata-composition-has-a-unit
+    (call ThenChange
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q Doc)
+      (q (KeepDoc))
+      (q (AtDoc (SetBit (Off)) (KeepNat))))
+    (value (AtDoc (SetBit (Off)) (KeepNat))))
+
+  ; Two changes that hold different constructors cannot be made in sequence.
+  (check strata-composition-rejects-disagreeing-constructors
+    (call ThenChange
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q Nat)
+      (q (AtZero))
+      (q (AtSucc (KeepNat))))
+    (error change-error))
+
+  ; --------------------------------------------------------------- merging
+
+  ; Two changes made to the same value merge when they touch different
+  ; fields.
+  (check strata-independent-changes-merge
+    (call MergeChanges
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q Doc)
+      (q (AtDoc (SetBit (Off)) (KeepNat)))
+      (q (AtDoc (KeepBit) (SetNat (Succ (Zero))))))
+    (value (merged (AtDoc (SetBit (Off)) (SetNat (Succ (Zero)))))))
+
+  ; And conflict when they touch the same field differently. The conflict
+  ; names where it is, not merely that there was one.
+  (check strata-conflicting-changes-name-where-they-disagree
+    (call MergeChanges
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q Doc)
+      (q (AtDoc (SetBit (Off)) (KeepNat)))
+      (q (AtDoc (SetBit (On)) (KeepNat))))
+    (value (conflict Bit (SetBit (Off)) (SetBit (On)))))
+
+  ; --------------------------------------------------------------- storage
+
+  ; A change is a value of a declared type, so S1's codec stores it without
+  ; being told anything new.
+  (check strata-a-change-round-trips-through-its-codec
+    (call DecodeValue
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (call EncodeValue
+        (call ModuleSchema
+          (q (file "languages/strata/strata.generated.grammar"))
+          (call SourceText (q (text-file "strata/lib/change.strata"))))
+        (q (AtDoc (KeepBit) (SetNat (Succ (Zero)))))))
+    (value (AtDoc (KeepBit) (SetNat (Succ (Zero))))))
+
+  ; ------------------------------------------------------------ elaboration
+
+  ; A semantic change says what was meant; elaborating it against a value
+  ; gives the structural change that means it.
+  (check strata-an-intent-elaborates-to-a-structural-change
+    (call ElaborateIntent
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q (Doc (On) (Zero)))
+      (q (in Doc size (replace (Succ (Zero))))))
+    (value (AtDoc (KeepBit) (SetNat (Succ (Zero))))))
+
+  ; Elaboration adds no movement of its own and loses none of what was meant.
+  (check strata-elaboration-is-faithful
+    (call IntentIsFaithful
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q (Doc (On) (Zero)))
+      (q (in Doc size (replace (Succ (Zero))))))
+    (value #t))
+
+  ; An intent made under one constructor does not apply to another.
+  (check strata-an-intent-under-a-foreign-constructor-is-rejected
+    (call ElaborateIntent
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q (Zero))
+      (q (in Succ pred (unchanged))))
+    (error change-error))
+
+  ; -------------------------------------------------------------- evidence
+
+  ; Grades are ordered, so a claim can be strengthened without being
+  ; restated.
+  (check strata-evidence-is-graded
+    (call AtLeastGrade (q (Proved)) (q (Declared)))
+    (value #t))
+
+  (check strata-a-weaker-grade-does-not-satisfy-a-stronger-one
+    (call AtLeastGrade (q (Declared)) (q (Proved)))
+    (value #f))
+
+  ; A generated run is a function of its seed and nothing else, so the same
+  ; seed gives the same run.
+  (check strata-a-generated-run-is-reproducible
+    (call RunIsReproducible
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/law.strata")))
+      (q RankIsTotal)
+      (q 20260806)
+      (q 8))
+    (value #t))
+
+  ; And the run records the seed it was drawn from, which is what makes it
+  ; repeatable later rather than merely repeatable now.
+  (check strata-a-generated-run-records-its-seed
+    (call EvidenceSeed
+      (call RunLawGenerated
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/law.strata")))
+        (q RankIsTotal)
+        (q 20260806)
+        (q 8)))
+    (value 20260806))
+
+  ; A run over generated values earns `Generated`, not `Tested`.
+  (check strata-a-generated-run-earns-its-grade
+    (call EvidenceGrade
+      (call RunLawGenerated
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/law.strata")))
+        (q RankIsTotal)
+        (q 20260806)
+        (q 8)))
+    (value Generated))
+
+  ; Values are drawn from the schema, so a type declared today has a
+  ; generator today. The draw is pinned here: a generator that always
+  ; returned the same shape would satisfy every other check in this file and
+  ; be worth nothing.
+  (check strata-values-are-sampled-from-the-schema
+    (call SampleValues
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (call SourceText (q (text-file "strata/lib/change.strata"))))
+      (q Nat)
+      (q 3)
+      (q 3)
+      (q 4))
+    (value [(Zero) (Zero) (Succ (Succ (Succ (Zero)))) (Succ (Zero))]))
+
+  ; And a different seed draws a different run, which is what makes the seed
+  ; worth recording.
+  (check strata-a-different-seed-draws-a-different-run
+    (call RunsDifferBySeed
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/law.strata")))
+      (q RankIsTotal)
+      (q 20260806)
+      (q 20260807)
+      (q 8))
+    (value #t))
+
+  ; --------------------------------------------------------------- library
+
+  (check strata-library-change-is-well-typed
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/change.strata"))))
+    (value (checked ok)))
+
+  (check strata-library-law-is-well-typed
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/law.strata"))))
+    (value (checked ok)))
+
+  (check strata-library-law-terminates
+    (call TotalModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/law.strata"))))
+    (value (total ok)))
+]

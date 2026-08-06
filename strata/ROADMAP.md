@@ -1,6 +1,6 @@
 # Strata rebuild roadmap
 
-## Rebuilding Stratum in Strata, in thirteen commits
+## Rebuilding Stratum in Strata, in fourteen commits
 
 This roadmap starts at `182b7bc` — the commit that completed the first-floor
 landing and defined the second-floor architecture in
@@ -8,8 +8,8 @@ landing and defined the second-floor architecture in
 carried forward.
 
 The plan is the staircase specified in
-[docs/strata.md §24](../docs/strata.md), realized literally: **thirteen
-commits, thirteen foundations, one layer per commit.**
+[docs/strata.md §24](../docs/strata.md), realized literally: **fourteen
+commits, fourteen foundations, one layer per commit.**
 
 $$
 F_{11} \vdash S_0 \qquad S_n \vdash S_{n+1}
@@ -57,10 +57,10 @@ strata/lib/            Strata standard library, written in Strata
 strata/compiler/       Strata compiler, written in Strata
 strata/system/         Stratum itself, written in Strata
 fixtures/strata/       acceptance transcripts
-foundations/S0..S12/   second-floor staircase
+foundations/S0..S13/   second-floor staircase
 ```
 
-## The thirteen commits
+## The fourteen commits
 
 | # | Layer | Constructs | Authority moves to Strata |
 | --- | --- | --- | --- |
@@ -68,20 +68,28 @@ foundations/S0..S12/   second-floor staircase
 | 2 | S1 | canonical data | schemas, codecs |
 | 3 | S2 | the dependent core | what a type may say |
 | 4 | S3 | free changes | change languages |
-| 5 | S4 | self-hosting compiler | the compiler itself |
-| 6 | S5 | Grammar and Meta rewritten | language definitions |
-| 7 | S6 | artifacts and CAS | storage |
-| 8 | S7 | semantic repository | history |
-| 9 | S8 | tooling and studios | editor surface |
-| 10 | S9 | foundation and governance | construction and acceptance |
-| 11 | S10 | ledger, sync, federation | distribution |
-| 12 | S11 | retention and reconstruction | durability |
-| 13 | S12 | investigation agents | the agent substrate |
+| 5 | S4 | modules and names | the module graph |
+| 6 | S5 | self-hosting compiler | the compiler itself |
+| 7 | S6 | Grammar and Meta rewritten | language definitions |
+| 8 | S7 | artifacts and CAS | storage |
+| 9 | S8 | semantic repository | history |
+| 10 | S9 | tooling and studios | editor surface |
+| 11 | S10 | foundation and governance | construction and acceptance |
+| 12 | S11 | ledger, sync, federation | distribution |
+| 13 | S12 | retention and reconstruction | durability |
+| 14 | S13 | investigation agents | the agent substrate |
 
 S1 was originally written here as "the total dependent core". It is two
 layers, not one. S1 gives a declaration a type; S2 lets a type depend on a
 value, which is a change to what can be said rather than to what is done with
 what was already said — and it needs surface the seed does not have.
+
+S4 was originally absent. Building S2 made the gap visible: with no way for
+one module to refer to another, a length-indexed vector had to declare `Nat`
+and `add` a second time, which is not a library but the same declaration
+written twice. Cross-module reference is a law family that can fail, so it is
+a layer — and the vector is shipped as a file only once there, when it can
+say what it depends on.
 
 ---
 
@@ -153,8 +161,10 @@ said — so it begins with surface the seed does not have.
 - `features/strata/depend.meta` — universes, indexed families, dependent
   application, equality and its eliminator
 - normalisation, so that types equal up to computation are accepted
-- `strata/lib/vector.strata` — a family indexed by a value, and the operations
-  a length index makes total
+- a length-indexed family, written out in the checks — a family indexed by a
+  value, and the operations a length index makes total. It is not shipped as
+  a file, because a module that has to redeclare `Nat` is the same
+  declaration written twice rather than a library; that arrives at S4
 - `fixtures/strata/s2.transcript`, `foundations/S2/`
 
 **Acceptance**
@@ -198,9 +208,61 @@ being written.
 
 ---
 
-## Commit 5 — S4: self-hosting compiler
+## Commit 5 — S4: modules and names
 
-**Constructs** $S_3 \vdash S_4$. The decisive commit.
+**Constructs** $S_3 \vdash S_4$.
+
+Until here a module is closed: every name it uses, it declares. That is why
+the length-indexed vector S2 checks has to declare `Nat` and `add` itself
+instead of taking them from `strata/lib/nat.strata`. S4 lets one module refer
+to another, which is a change to what can be said and brings a law family
+with it — a name may now fail to resolve, a module may be missing, an import
+may be ambiguous, a set of modules may contain a cycle, two modules may
+disagree about the version of a third, and a set may hold two modules of one
+name.
+
+This is deliberately its own layer rather than part of the compiler. A
+compiler that both resolved names across modules and compiled itself would be
+doing two new things at once, and the seam between them is where a defect
+hides.
+
+**Adds**
+
+- surface for importing: a module names what it depends on and what it exposes
+- `features/strata/resolve.meta` — name resolution across a module set,
+  producing a resolved module whose every name is qualified by the module that
+  declares it
+- cycle detection over the import graph, and a canonical topological order
+- version agreement: a module set fixes one version per module name
+- content-addressed module identity, so a module is named by what it says
+  rather than by where it sits
+- `strata/lib/prelude.strata` — `Nat`, `Bool` and their operations declared
+  once, imported by the rest
+- `strata/lib/vector.strata` — the length-indexed vector S2 checks inline,
+  shipped as a file now that it can import what it needs
+- `fixtures/strata/s4.transcript`, `foundations/S4/`
+
+**Acceptance**
+
+- `strata/lib/vector.strata` imports `Nat` and `add` and declares neither, and
+  the resulting foundation checks exactly what it checked before
+- an unresolvable name is rejected, and says which module was searched
+- an import cycle is rejected, and names the cycle
+- two modules that require different versions of a third is rejected
+- a module set holds one module per name, so two modules that call themselves
+  the same thing are rejected rather than one silently winning
+- resolution is confluent: the resolved form does not depend on the order the
+  modules were given
+- a module's identity is its content, so renaming a file changes nothing
+
+**Exit condition** — a declaration is written once and used everywhere, and
+the module graph is decided rather than assumed.
+
+---
+
+## Commit 6 — S5: self-hosting compiler
+
+**Constructs** $S_4 \vdash S_5$. The decisive commit.
 
 **Adds**
 
@@ -208,7 +270,7 @@ being written.
   IRs: Surface → Resolved → Typed Core → Effect Core → A-normal → Machine IR
 - judgments with modes, capability-typed effects, linear multiplicities
   (`erased`, `once`, `affine`, `many`)
-- `fixtures/strata/s4.transcript`, `foundations/S4/`
+- `fixtures/strata/s5.transcript`, `foundations/S5/`
 
 **Acceptance**
 
@@ -226,15 +288,15 @@ $$
 
 ---
 
-## Commit 6 — S5: Grammar and Meta rewritten
+## Commit 7 — S6: Grammar and Meta rewritten
 
-**Constructs** $S_4 \vdash S_5$.
+**Constructs** $S_5 \vdash S_6$.
 
 **Adds**
 
 - `strata/system/grammar.strata`, `strata/system/meta.strata`
 - every `languages/*` declaration re-derived from the Strata definitions
-- `fixtures/strata/s5.transcript`, `foundations/S5/`
+- `fixtures/strata/s6.transcript`, `foundations/S6/`
 
 **Acceptance**
 
@@ -250,16 +312,16 @@ witness.
 
 ---
 
-## Commit 7 — S6: artifacts and CAS
+## Commit 8 — S7: artifacts and CAS
 
-**Constructs** $S_5 \vdash S_6$.
+**Constructs** $S_6 \vdash S_7$.
 
 **Adds**
 
 - `strata/system/artifact.strata`, `strata/system/cas.strata`
 - SHA-256 identity, canonical encoding, content-addressed store, typed
   references carrying digest **and** expected schema
-- `fixtures/strata/s6.transcript`, `foundations/S6/`
+- `fixtures/strata/s7.transcript`, `foundations/S7/`
 
 **Acceptance**
 
@@ -272,16 +334,16 @@ first floor.
 
 ---
 
-## Commit 8 — S7: semantic repository
+## Commit 9 — S8: semantic repository
 
-**Constructs** $S_6 \vdash S_7$.
+**Constructs** $S_7 \vdash S_8$.
 
 **Adds**
 
 - `strata/system/repository.strata` — init, record, status, verify, branch,
   checkout, materializers
 - transitions expressed as typed changes from S2, not diffs over bytes
-- `fixtures/strata/s7.transcript`, `foundations/S7/`
+- `fixtures/strata/s8.transcript`, `foundations/S8/`
 
 **Acceptance**
 
@@ -296,15 +358,15 @@ first floor.
 
 ---
 
-## Commit 9 — S8: tooling and studios
+## Commit 10 — S9: tooling and studios
 
-**Constructs** $S_7 \vdash S_8$.
+**Constructs** $S_8 \vdash S_9$.
 
 **Adds**
 
 - `strata/system/studio.strata` — profile-derived editor surface
 - LSP service derived from language declarations, replacing `host-scala/lsp`
-- `fixtures/strata/s8.transcript`, `foundations/S8/`
+- `fixtures/strata/s9.transcript`, `foundations/S9/`
 
 **Acceptance**
 
@@ -315,15 +377,15 @@ first floor.
 
 ---
 
-## Commit 10 — S9: foundation and governance
+## Commit 11 — S10: foundation and governance
 
-**Constructs** $S_8 \vdash S_9$.
+**Constructs** $S_9 \vdash S_{10}$.
 
 **Adds**
 
 - `strata/system/foundation.strata` — construction, closure, attestation
 - `strata/system/governance.strata` — proposal, acceptance, sponsorship
-- `fixtures/strata/s9.transcript`, `foundations/S9/`
+- `fixtures/strata/s10.transcript`, `foundations/S10/`
 
 **Acceptance**
 
@@ -335,15 +397,15 @@ first floor.
 
 ---
 
-## Commit 11 — S10: ledger, sync, federation
+## Commit 12 — S11: ledger, sync, federation
 
-**Constructs** $S_9 \vdash S_{10}$.
+**Constructs** $S_{10} \vdash S_{11}$.
 
 **Adds**
 
 - `strata/system/ledger.strata`, `sync.strata`, `federation.strata`
 - deterministic state machines: commands in, events out, traces as artifacts
-- `fixtures/strata/s10.transcript`, `foundations/S10/`
+- `fixtures/strata/s11.transcript`, `foundations/S11/`
 
 **Acceptance**
 
@@ -355,15 +417,15 @@ first floor.
 
 ---
 
-## Commit 12 — S11: retention and reconstruction
+## Commit 13 — S12: retention and reconstruction
 
-**Constructs** $S_{10} \vdash S_{11}$.
+**Constructs** $S_{11} \vdash S_{12}$.
 
 **Adds**
 
 - `strata/system/retention.strata` — retention classes, expiry, reconstruction
 - clean-room reconstruction driven by Strata
-- `fixtures/strata/s11.transcript`, `foundations/S11/`
+- `fixtures/strata/s12.transcript`, `foundations/S12/`
 
 **Acceptance**
 
@@ -375,16 +437,16 @@ first floor.
 
 ---
 
-## Commit 13 — S12: investigation agents
+## Commit 14 — S13: investigation agents
 
-**Constructs** $S_{11} \vdash S_{12}$, and closes the floor.
+**Constructs** $S_{12} \vdash S_{13}$, and closes the floor.
 
 **Adds**
 
 - `strata/system/agent.strata` — investigation over declarations: stable
   identities, schemas, field paths, effects, laws, changes, history
 - agent edits as first-class change artifacts with capability limits and budgets
-- `fixtures/strata/s12.transcript`, `foundations/S12/`
+- `fixtures/strata/s13.transcript`, `foundations/S13/`
 
 **Acceptance — the retirement criteria from [docs/strata.md §26](../docs/strata.md)**
 
@@ -411,10 +473,10 @@ reference.
 
 ## Definition of done
 
-Fully operational means all twelve hold simultaneously:
+Fully operational means all three hold simultaneously:
 
 $$
-F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 12
+F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 13
 $$
 
 $$

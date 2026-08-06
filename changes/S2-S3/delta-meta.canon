@@ -1,0 +1,10 @@
+; delta-meta for S2 -> S3: Meta gains a change algebra generated from schema,
+; semantic change elaboration, and graded evidence for laws.
+(change
+  (kind delta-meta)
+  (name "S2->S3 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (dependent strata)
+      (changeable strata))))
