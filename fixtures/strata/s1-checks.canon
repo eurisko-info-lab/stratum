@@ -1,0 +1,132 @@
+; Executable acceptance checks for S1, canonical data.
+;
+; S0 could parse and run a module. S1 decides whether a module is well formed
+; before anything runs it, whether its definitions terminate, and what its
+; declarations mean as data.
+[
+  ; ------------------------------------------------------------------ types
+
+  ; A module whose definitions have the types they declare is accepted.
+  (check strata-checks-a-well-typed-module
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value (checked ok)))
+
+  ; Constructors of an inductive family are functions from their fields.
+  (check strata-checks-a-recursive-module
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n"))
+    (value (checked ok)))
+
+  ; A body that does not have the declared result type is rejected.
+  (check strata-rejects-a-result-type-mismatch
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.bad\"\nversion 1\ndata Bit = | On [] | Off []\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef example []: Bit = Zero\n"))
+    (error type-error))
+
+  ; A saturated constructor is a value, and a value is not a function.
+  (check strata-rejects-applying-a-value-that-is-not-a-function
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.over\"\nversion 1\ndata Bit = | On [] | Off []\ndef example []: Bit = On Off\n"))
+    (error type-error))
+
+  ; A pattern may only name constructors of the type being scrutinised.
+  (check strata-rejects-a-foreign-constructor-pattern
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.foreign\"\nversion 1\ndata Bit = | On [] | Off []\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef example []: Bit = match On of case Zero -> Off case On -> Off case Off -> On end\n"))
+    (error type-error))
+
+  ; Every constructor of the scrutinised type must be answered.
+  (check strata-requires-an-exhaustive-match
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.partial\"\nversion 1\ndata Bit = | On [] | Off []\ndef example []: Bit = match On of case On -> Off end\n"))
+    (error type-error))
+
+  ; -------------------------------------------------------------- totality
+
+  ; Recursion on a field taken out of the scrutinee is structural.
+  (check strata-accepts-structural-recursion
+    (call TotalModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n"))
+    (value (total ok)))
+
+  ; Recursion that rebuilds its argument is not.
+  (check strata-rejects-unguarded-recursion
+    (call TotalModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.loop\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef loop [n: Nat]: Nat = match n of case Zero -> Zero case Succ p -> loop (Succ p) end\ndef example []: Nat = loop Zero\n"))
+    (error totality-error))
+
+  ; --------------------------------------------------------------- schemas
+
+  ; Every data declaration emits a canonical schema value.
+  (check strata-emits-a-schema-for-each-data-declaration
+    (call ModuleSchema
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
+    (value [(schema Bit [(constructor On []) (constructor Off [])])]))
+
+  ; A schema is content addressed, so a declaration has a stable identity.
+  (check strata-schema-identity-is-stable
+    (call SchemaDigest
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n"))
+    (value "d6cd93343468ffbafec13883035b9b8f60128bf39796e756a19db6617955be77"))
+
+  ; ---------------------------------------------------------------- codecs
+
+  ; The law every derived codec must satisfy.
+  (check strata-codec-round-trips
+    (call CodecRoundTrip
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q "module \"strata.nat\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndef example []: Nat = add (Succ Zero) (Succ Zero)\n")
+      (q example))
+    (value (roundtrip ok)))
+
+  ; A codec is derived from a schema, so it cannot encode what no schema
+  ; declares.
+  (check strata-codec-rejects-an-undeclared-constructor
+    (call EncodeValue
+      (call ModuleSchema
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef example []: Bit = On\n"))
+      (q (Zero)))
+    (error codec-error))
+
+  ; --------------------------------------------------------------- library
+  ;
+  ; The modules the second floor ships are held to the same rules as any
+  ; other. They are read from the closure, not from the working tree.
+
+  (check strata-library-bool-is-well-typed
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/bool.strata"))))
+    (value (checked ok)))
+
+  (check strata-library-nat-is-well-typed
+    (call CheckModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/nat.strata"))))
+    (value (checked ok)))
+
+  (check strata-library-nat-terminates
+    (call TotalModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/nat.strata"))))
+    (value (total ok)))
+
+  (check strata-library-nat-codec-round-trips
+    (call CodecRoundTrip
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/nat.strata")))
+      (q example))
+    (value (roundtrip ok)))
+]

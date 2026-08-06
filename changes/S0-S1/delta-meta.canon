@@ -1,0 +1,10 @@
+; delta-meta for S0 -> S1: Meta gains a type checker, a termination check and
+; schema-derived codecs for Strata.
+(change
+  (kind delta-meta)
+  (name "S0->S1 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (seed strata)
+      (typed strata))))

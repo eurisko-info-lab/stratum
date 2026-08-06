@@ -1,0 +1,357 @@
+module stratacheck
+
+; The Strata type checker, described in Meta.
+;
+; S0 parses and evaluates. S1 decides whether a module is well formed before
+; anything runs it: every constructor application saturates its declared
+; fields, every definition body has its declared result type, and every match
+; covers the constructors of the type it scrutinises.
+;
+; Judgments share one namespace across every module an application loads, so
+; the names here are chosen not to collide with the seed or with the
+; foundation modules that surround it.
+
+; ------------------------------------------------------------------ types
+;
+; The surface carries types as syntax. The checker compares them as canonical
+; values, so `(A -> B) -> C` and its parenthesised source agree.
+
+judgment TypeValue [node] =
+  match node {
+    case (#TypeArrow from to) -> mk #arrow [call TypeValue [from] call TypeValue [to]]
+    case (#TypeApply left right) -> mk #apply [call TypeValue [left] call TypeValue [right]]
+    case (#TypeRef name) -> mk #con [name]
+    case _ -> fail #type-error "not a type"
+  }
+
+; A constructor or definition is a function from its fields to its owner.
+judgment ArrowsTo [types result] =
+  match types {
+    case [] -> result
+    case head :: rest -> mk #arrow [head call ArrowsTo [rest result]]
+  }
+
+; ------------------------------------------------------------ declarations
+
+judgment ConstructorTable [decls] = call CollectConstructorsInto [decls prim #mnew []]
+
+judgment CollectConstructorsInto [decls table] =
+  match decls {
+    case [] -> table
+    case (#data name ctors) :: rest ->
+      call CollectConstructorsInto [rest call AddConstructorsOf [name ctors table]]
+    case head :: rest -> call CollectConstructorsInto [rest table]
+  }
+
+judgment AddConstructorsOf [owner ctors table] =
+  match ctors {
+    case [] -> table
+    case (#Constructor cname fields) :: rest ->
+      call AddConstructorsOf [
+        owner
+        rest
+        prim #mput [table cname mk #ctor [owner call DeclaredFieldTypes [call FieldList [fields]]]]
+      ]
+    case head :: rest -> call AddConstructorsOf [owner rest table]
+  }
+
+judgment DeclaredFieldTypes [fields] =
+  match fields {
+    case [] -> list []
+    case (#FieldDecl fname fnum ftype) :: rest ->
+      prim #cons [call TypeValue [ftype] call DeclaredFieldTypes [rest]]
+    case head :: rest -> call DeclaredFieldTypes [rest]
+  }
+
+judgment DefinitionTable [decls] = call CollectDefinitionsInto [decls prim #mnew []]
+
+judgment CollectDefinitionsInto [decls table] =
+  match decls {
+    case [] -> table
+    case (#def name params result body) :: rest ->
+      call CollectDefinitionsInto [
+        rest
+        prim #mput [table name mk #sig [call DeclaredParamTypes [params] call TypeValue [result]]]
+      ]
+    case head :: rest -> call CollectDefinitionsInto [rest table]
+  }
+
+judgment DeclaredParamTypes [params] =
+  match params {
+    case [] -> list []
+    case (#Param pname ptype) :: rest ->
+      prim #cons [call TypeValue [ptype] call DeclaredParamTypes [rest]]
+    case head :: rest -> call DeclaredParamTypes [rest]
+  }
+
+judgment ConstructorTypeOf [entry] =
+  match entry {
+    case (#ctor owner fields) -> call ArrowsTo [fields mk #con [owner]]
+    case _ -> fail #type-error "malformed constructor"
+  }
+
+judgment DefinitionTypeOf [entry] =
+  match entry {
+    case (#sig params result) -> call ArrowsTo [params result]
+    case _ -> fail #type-error "malformed definition signature"
+  }
+
+; --------------------------------------------------------------- checking
+
+judgment CheckModule [grammar source] =
+  let decls = call Declarations [call ParseStrata [grammar source]] in
+  call CheckDeclarations [decls call ConstructorTable [decls] call DefinitionTable [decls]]
+
+judgment CheckDeclarations [decls ctors defs] =
+  match decls {
+    case [] -> mk #checked [#ok]
+    case (#def name params result body) :: rest ->
+      let declared = call TypeValue [result] in
+      let found = call InferExpr [ctors defs call BindParameterTypes [params prim #mnew []] body] in
+      if prim #eq [found declared]
+      then call CheckDeclarations [rest ctors defs]
+      else fail #type-error prim #scat [
+        prim #scat ["definition " prim #sym->str [name]]
+        " does not have its declared result type"
+      ]
+    case head :: rest -> call CheckDeclarations [rest ctors defs]
+  }
+
+judgment BindParameterTypes [params env] =
+  match params {
+    case [] -> env
+    case (#Param pname ptype) :: rest ->
+      call BindParameterTypes [rest prim #mput [env pname call TypeValue [ptype]]]
+    case head :: rest -> call BindParameterTypes [rest env]
+  }
+
+; --------------------------------------------------------------- inference
+
+judgment InferExpr [ctors defs env expr] =
+  match expr {
+    case (#Natural value) -> mk #con [#Nat]
+    case (#Text value) -> mk #con [#Text]
+    case (#Var name) -> call InferName [ctors defs env name]
+    case (#Apply fn argument) ->
+      call ApplyType [
+        call InferExpr [ctors defs env fn]
+        call InferExpr [ctors defs env argument]
+      ]
+    case (#Let name value body) ->
+      call InferExpr [
+        ctors
+        defs
+        prim #mput [env name call InferExpr [ctors defs env value]]
+        body
+      ]
+    case (#Match scrutinee cases) ->
+      call InferMatch [ctors defs env call InferExpr [ctors defs env scrutinee] call CaseList [cases]]
+    case _ -> fail #type-error "unsupported expression"
+  }
+
+judgment ApplyType [fnType argType] =
+  match fnType {
+    case (#arrow from to) ->
+      if prim #eq [from argType]
+      then to
+      else fail #type-error "argument does not have the declared parameter type"
+    case _ -> fail #type-error "applied a value that is not a function"
+  }
+
+judgment InferName [ctors defs env name] =
+  if prim #mhas [env name]
+  then prim #mget [env name #unbound]
+  else
+    if prim #mhas [ctors name]
+    then call ConstructorTypeOf [prim #mget [ctors name #unbound]]
+    else
+      if prim #mhas [defs name]
+      then call DefinitionTypeOf [prim #mget [defs name #unbound]]
+      else fail #type-error prim #scat ["unbound name " prim #sym->str [name]]
+
+; ---------------------------------------------------------------- matching
+
+judgment InferMatch [ctors defs env scrutinee cases] =
+  match cases {
+    case [] -> fail #type-error "a match needs at least one case"
+    case (#Case pattern body) :: rest ->
+      let first = call InferExpr [
+        ctors
+        defs
+        call BindPattern [ctors env scrutinee pattern]
+        body
+      ] in
+      let agreed = call InferRemainingCases [ctors defs env scrutinee rest first] in
+      call ResultOfExhaustive [call CheckExhaustive [ctors scrutinee cases] agreed]
+    case _ -> fail #type-error "malformed case"
+  }
+
+; The exhaustiveness verdict is derived before the type is returned, so an
+; unhandled constructor is a failure rather than a note.
+judgment ResultOfExhaustive [verdict result] =
+  match verdict {
+    case (#exhaustive) -> result
+    case _ -> fail #type-error "match is not exhaustive"
+  }
+
+judgment InferRemainingCases [ctors defs env scrutinee cases expected] =
+  match cases {
+    case [] -> expected
+    case (#Case pattern body) :: rest ->
+      let found = call InferExpr [
+        ctors
+        defs
+        call BindPattern [ctors env scrutinee pattern]
+        body
+      ] in
+      if prim #eq [found expected]
+      then call InferRemainingCases [ctors defs env scrutinee rest expected]
+      else fail #type-error "match cases do not agree on a result type"
+    case _ -> fail #type-error "malformed case"
+  }
+
+judgment SpineOfPattern [pattern] =
+  match pattern {
+    case (#PatApply left right) -> prim #snoc [call SpineOfPattern [left] right]
+    case _ -> list [pattern]
+  }
+
+judgment BindPattern [ctors env scrutinee pattern] =
+  match pattern {
+    case (#PatWild) -> env
+    case (#PatVar name) ->
+      if prim #mhas [ctors name]
+      then call BindNullaryConstructor [ctors env scrutinee name]
+      else prim #mput [env name scrutinee]
+    case (#PatApply left right) -> call BindConstructorPattern [ctors env scrutinee pattern]
+    case _ -> fail #type-error "malformed pattern"
+  }
+
+judgment BindNullaryConstructor [ctors env scrutinee name] =
+  match prim #mget [ctors name #unbound] {
+    case (#ctor owner fields) ->
+      if prim #ne [mk #con [owner] scrutinee]
+      then fail #type-error "pattern constructor does not belong to the scrutinised type"
+      else
+        if prim #ne [prim #len [fields] 0]
+        then fail #type-error "constructor pattern is missing its fields"
+        else env
+    case _ -> fail #type-error "malformed constructor"
+  }
+
+judgment BindConstructorPattern [ctors env scrutinee pattern] =
+  match call SpineOfPattern [pattern] {
+    case (#PatVar cname) :: args ->
+      if prim #mhas [ctors cname]
+      then call BindPatternFields [ctors env scrutinee cname args]
+      else fail #type-error "pattern head is not a declared constructor"
+    case _ -> fail #type-error "pattern head is not a declared constructor"
+  }
+
+judgment BindPatternFields [ctors env scrutinee cname args] =
+  match prim #mget [ctors cname #unbound] {
+    case (#ctor owner fields) ->
+      if prim #ne [mk #con [owner] scrutinee]
+      then fail #type-error "pattern constructor does not belong to the scrutinised type"
+      else
+        if prim #ne [prim #len [args] prim #len [fields]]
+        then fail #type-error "constructor pattern does not saturate its fields"
+        else call BindEachField [env args fields]
+    case _ -> fail #type-error "malformed constructor"
+  }
+
+judgment BindEachField [env args fields] =
+  match args {
+    case [] -> env
+    case arg :: restArgs ->
+      match fields {
+        case [] -> env
+        case ftype :: restFields ->
+          match arg {
+            case (#PatVar vname) -> call BindEachField [prim #mput [env vname ftype] restArgs restFields]
+            case (#PatWild) -> call BindEachField [env restArgs restFields]
+            case _ -> fail #type-error "a nested constructor pattern is not part of the seed"
+          }
+      }
+  }
+
+; ---------------------------------------------------------- exhaustiveness
+
+judgment CheckExhaustive [ctors scrutinee cases] =
+  match call HasCatchAll [ctors cases] {
+    case (#yes) -> mk #exhaustive []
+    case _ ->
+      match scrutinee {
+        case (#con owner) ->
+          call EveryConstructorCovered [
+            call ConstructorsOfType [ctors owner]
+            call CoveredConstructors [ctors cases]
+          ]
+        case _ -> mk #exhaustive []
+      }
+  }
+
+judgment HasCatchAll [ctors cases] =
+  match cases {
+    case [] -> mk #no []
+    case (#Case pattern body) :: rest ->
+      match call PatternHeadName [ctors pattern] {
+        case (#none) -> mk #yes []
+        case _ -> call HasCatchAll [ctors rest]
+      }
+    case _ -> mk #no []
+  }
+
+judgment PatternHeadName [ctors pattern] =
+  match pattern {
+    case (#PatWild) -> mk #none []
+    case (#PatVar name) ->
+      if prim #mhas [ctors name]
+      then mk #some [name]
+      else mk #none []
+    case (#PatApply left right) ->
+      match call SpineOfPattern [pattern] {
+        case (#PatVar cname) :: args -> mk #some [cname]
+        case _ -> mk #none []
+      }
+    case _ -> mk #none []
+  }
+
+judgment CoveredConstructors [ctors cases] =
+  match cases {
+    case [] -> list []
+    case (#Case pattern body) :: rest ->
+      match call PatternHeadName [ctors pattern] {
+        case (#some name) -> prim #cons [name call CoveredConstructors [ctors rest]]
+        case _ -> call CoveredConstructors [ctors rest]
+      }
+    case _ -> list []
+  }
+
+judgment ConstructorsOfType [ctors owner] =
+  call ConstructorsOwnedBy [prim #mkeys [ctors] ctors owner]
+
+judgment ConstructorsOwnedBy [names ctors owner] =
+  match names {
+    case [] -> list []
+    case name :: rest ->
+      match prim #mget [ctors name #unbound] {
+        case (#ctor declared fields) ->
+          if prim #eq [declared owner]
+          then prim #cons [name call ConstructorsOwnedBy [rest ctors owner]]
+          else call ConstructorsOwnedBy [rest ctors owner]
+        case _ -> call ConstructorsOwnedBy [rest ctors owner]
+      }
+  }
+
+judgment EveryConstructorCovered [declared covered] =
+  match declared {
+    case [] -> mk #exhaustive []
+    case name :: rest ->
+      if prim #contains [covered name]
+      then call EveryConstructorCovered [rest covered]
+      else fail #type-error prim #scat [
+        "match does not cover the constructor "
+        prim #sym->str [name]
+      ]
+  }
