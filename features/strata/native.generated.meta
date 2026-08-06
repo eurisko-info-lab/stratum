@@ -657,10 +657,12 @@
     (let
       decls
       (call
-        NativeModule
-        (v grammar)
-        (v sources)
-        (v name))
+        IndexedDeclarations
+        (call
+          NativeModule
+          (v grammar)
+          (v sources)
+          (v name)))
       (call
         EnterDefinition
         (v decls)

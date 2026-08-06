@@ -1,0 +1,90 @@
+# S9 acceptance transcript: Meta definitions rewritten.
+#
+# S8 |- S9. What a meaning is becomes Strata's.
+#
+# S8 moved what a syntax is. This moves the other half. Meta elaboration is
+# not the same kind of function: it invents declarations nobody wrote -- a
+# constructor and a predicate per variant for every `data`, a constructor and
+# an accessor per field for every `record` -- each named by concatenating onto
+# the type's name. That is why a name is text here rather than carried
+# unopened, and it is the whole difference between this layer and the last.
+#
+# Forty-three Meta sources, byte for byte, replayed by the first line.
+
+$ foundation verify --dir foundations/S9
+> foundation S9
+> digest ebc7eff139c58613a3ca08941fc7b89a6b34fa5ca4d040f64b1f93c33cae62df
+> closure 247 artifacts
+> check strata-the-meta-elaborator-prints-exactly ok
+> check strata-the-meta-elaborator-checks ok
+> check strata-the-meta-elaborator-is-total ok
+> check strata-elaborates-features-change-change ok
+> check strata-elaborates-features-federation-federation ok
+> check strata-elaborates-features-foundation-foundation ok
+> check strata-elaborates-features-governance-governance ok
+> check strata-elaborates-features-governance-scenarios ok
+> check strata-elaborates-features-ledger-ledger ok
+> check strata-elaborates-features-repository-repository ok
+> check strata-elaborates-features-repository-scenarios ok
+> check strata-elaborates-features-retention-retention ok
+> check strata-elaborates-features-strata-change ok
+> check strata-elaborates-features-strata-check ok
+> check strata-elaborates-features-strata-compile ok
+> check strata-elaborates-features-strata-depend ok
+> check strata-elaborates-features-strata-effect ok
+> check strata-elaborates-features-strata-language ok
+> check strata-elaborates-features-strata-law ok
+> check strata-elaborates-features-strata-metasource ok
+> check strata-elaborates-features-strata-native ok
+> check strata-elaborates-features-strata-resolve ok
+> check strata-elaborates-features-strata-schema ok
+> check strata-elaborates-features-strata-total ok
+> check strata-elaborates-features-studio-studio ok
+> check strata-elaborates-features-sync-sync ok
+> check strata-elaborates-features-tooling-tooling ok
+> check strata-elaborates-languages-gitattributes-gitattributes ok
+> check strata-elaborates-languages-gitignore-gitignore ok
+> check strata-elaborates-languages-html-html ok
+> check strata-elaborates-languages-json-json ok
+> check strata-elaborates-languages-lambda-lambda ok
+> check strata-elaborates-languages-lean-lean ok
+> check strata-elaborates-languages-markdown-markdown ok
+> check strata-elaborates-languages-pdf-pdf ok
+> check strata-elaborates-languages-properties-properties ok
+> check strata-elaborates-languages-rust-rust ok
+> check strata-elaborates-languages-scala-scala ok
+> check strata-elaborates-languages-service-service ok
+> check strata-elaborates-languages-shell-shell ok
+> check strata-elaborates-languages-strata-strata ok
+> check strata-elaborates-languages-text-text ok
+> check strata-elaborates-languages-toml-toml ok
+> check strata-elaborates-languages-transcript-transcript ok
+> check strata-elaborates-languages-typescript-typescript ok
+> check strata-elaborates-languages-yaml-yaml ok
+> check strata-is-the-same-function-as-meta-on-text ok
+> check strata-is-the-same-function-as-meta-on-the-boundary ok
+> verdict ok
+
+# The elaborator is an ordinary Strata module.
+$ derive --foundation foundations/S9 --goal '(call CheckLinkedNative (grammar strata) (call StrataMetaSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/meta.strata"))) (q "strata.meta"))'
+> (checked ok)
+
+$ derive --foundation foundations/S9 --goal '(call TotalLinkedModule (grammar strata) (call StrataMetaSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/meta.strata"))) (q "strata.meta"))'
+> (total ok)
+
+# The smallest Meta source in the tree, elaborated in Strata. This is the
+# whole artifact, and it is the file that is committed.
+$ derive --foundation foundations/S9 --goal '(call ElaborateMetaInStrata (grammar strata) (call StrataMetaSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/meta.strata"))) (grammar meta) (call SourceText (source "languages/text/text.meta")))'
+> (program (module text) (judgment TextFile [text] (mk TextFile (v text))) (judgment TextFile'text [record] (prim nth (prim args (v record)) (q 0))) (judgment ParseText [grammar source] (call Parse (v grammar) (v source))) (judgment PrintText [grammar syntax] (call Print (v grammar) (v syntax))) (judgment TextWellFormed [grammar source] (match (call ParseText (v grammar) (v source)) (case (pm TextFile (pv text)) (mk valid (prim slen (v text)))) (case _ (mk invalid (q parse))))))
+
+# The same function, not the same bytes by luck: both elaborators run, and
+# their results compared.
+$ derive --foundation foundations/S9 --goal '(call StrataMetaMatchesMeta (grammar strata) (call StrataMetaSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/meta.strata"))) (grammar meta) (call SourceText (source "features/strata/native.meta")))'
+> (agree ok)
+
+# What the layers below decided, S9 still decides.
+$ derive --foundation foundations/S9 --goal '(call BootstrapIsStable (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))))'
+> #t
+
+$ derive --foundation foundations/S9 --goal '(call CheckLinkedDependent (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/vector.strata")) (q []))) (q "strata.vector"))'
+> (checked ok)

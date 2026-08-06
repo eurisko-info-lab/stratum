@@ -74,9 +74,9 @@ fn load(directory: &Path, cas: &Cas) -> Result<Foundation, String> {
         .and_then(Budget::from_canon)
         .unwrap_or_else(Budget::default_budget);
     let checks = match application.body.field("checks") {
-        Some(Canon::List(items)) => items.as_ref().clone(),
+        Some(Canon::List(items)) => items.to_vec(),
         Some(Canon::Ref(reference)) => match cas.get(reference)?.body {
-            Canon::List(items) => items.as_ref().clone(),
+            Canon::List(items) => items.to_vec(),
             _ => Vec::new(),
         },
         _ => Vec::new(),
@@ -160,7 +160,7 @@ fn derivation_report(directory: &Path) -> Result<Canon, String> {
         "derivation-report",
         vec![
             Canon::node("foundation", vec![Canon::Ref(foundation.digest)]),
-            Canon::node("checks", vec![Canon::List(Rc::new(reported))]),
+            Canon::node("checks", vec![Canon::list(reported)]),
         ],
     ))
 }
@@ -222,7 +222,7 @@ fn field<'a>(value: &'a Canon, key: &str) -> Option<&'a Canon> {
 
 fn items(value: Option<&Canon>) -> Vec<Canon> {
     match value {
-        Some(Canon::List(items)) => items.as_ref().clone(),
+        Some(Canon::List(items)) => items.to_vec(),
         _ => Vec::new(),
     }
 }

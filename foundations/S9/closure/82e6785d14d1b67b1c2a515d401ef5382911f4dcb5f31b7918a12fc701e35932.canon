@@ -1,0 +1,105 @@
+
+artifactsource
+source
+pathlanguages/shell/shell.grammar
+text¢grammar "shell"
+start document
+
+token dquoted str "\"(\\\\.|[^\"\\\\\\r\\n])*\""
+token squoted str "'[^'\\r\\n]*'"
+token word str "[^ \\t\\r\\n|&;<>(){}\\[\\]'\"=#]+"
+token newline sym "\\n"
+
+category document
+  fold ShellDocument statement
+
+category statement
+  prod Comment "#" content : commentAtoms newline : newline
+  prod CommentBlank "#" newline : newline
+  prod Assignment name : word "=" value : atoms newline : newline
+  prod FunctionDef name : word "(" ")" "{" newline : newline body : document "}" newline2 : newline
+  prod IfStatement "if" condition : headerAtoms ";" "then" newline : newline thenBody : document tail : ifTail
+  prod ForStatement "for" var : word "in" items : headerAtoms ";" "do" newline : newline body : document "done" newline2 : newline
+  prod WhileStatement "while" condition : headerAtoms ";" "do" newline : newline body : document "done" newline2 : newline
+  prod UntilStatement "until" condition : headerAtoms ";" "do" newline : newline body : document "done" newline2 : newline
+  prod Statement content : atoms newline : newline
+  prod Blank newline : newline
+
+category ifTail
+  prod ElifTail "elif" condition : headerAtoms ";" "then" newline : newline body : document rest : ifTail
+  prod ElseTail "else" newline : newline body : document "fi" newline2 : newline
+  prod EndTail "fi" newline : newline
+
+category atoms
+  fold Atoms atom
+
+category atom
+  prod DQuoted value : dquoted
+  prod SQuoted value : squoted
+  prod Word value : word
+  prod If "if"
+  prod For "for"
+  prod While "while"
+  prod Until "until"
+  prod Function "function"
+  prod In "in"
+  prod DoubleOpenBracket "[["
+  prod DoubleCloseBracket "]]"
+  prod OpenBracket "["
+  prod CloseBracket "]"
+  prod OpenParen "("
+  prod CloseParen ")"
+  prod OpenBrace "{"
+  prod CloseBrace "}"
+  prod Semicolon ";"
+  prod Or "||"
+  prod Pipe "|"
+  prod And "&&"
+  prod Background "&"
+  prod AppendRedirect ">>"
+  prod RedirectOut ">"
+  prod RedirectIn "<"
+  prod NotEqual "!="
+  prod Bang "!"
+  prod Equals "="
+  prod Hash "#"
+  prod Apostrophe "'"
+  prod QuoteMark "\""
+
+category commentAtoms
+  fold CommentAtoms commentAtom
+
+category commentAtom
+  pass atom
+  prod CommentThen "then"
+  prod CommentElif "elif"
+  prod CommentElse "else"
+  prod CommentFi "fi"
+  prod CommentDo "do"
+  prod CommentDone "done"
+
+category headerAtoms
+  fold HeaderAtoms headerAtom
+
+category headerAtom
+  prod HeaderDQuoted value : dquoted
+  prod HeaderSQuoted value : squoted
+  prod HeaderWord value : word
+  prod HeaderDoubleOpenBracket "[["
+  prod HeaderDoubleCloseBracket "]]"
+  prod HeaderOpenBracket "["
+  prod HeaderCloseBracket "]"
+  prod HeaderOpenParen "("
+  prod HeaderCloseParen ")"
+  prod HeaderOr "||"
+  prod HeaderPipe "|"
+  prod HeaderAnd "&&"
+  prod HeaderRedirectOut ">"
+  prod HeaderRedirectIn "<"
+  prod HeaderNotEqual "!="
+  prod HeaderBang "!"
+  prod HeaderEquals "="
+  prod HeaderHash "#"
+  prod HeaderApostrophe "'"
+  prod HeaderQuoteMark "\""
+  prod HeaderNewline newline : newline

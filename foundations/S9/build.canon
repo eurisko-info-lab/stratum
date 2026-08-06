@@ -1,0 +1,56 @@
+; S9: Meta definitions rewritten, and the tenth foundation of the second floor.
+;
+; S8 moved what a syntax is. This moves what a meaning is: `strata/system/
+; meta.strata` turns a parsed Meta source into the canonical Meta0 program the
+; machine runs, and the artifact it produces is the artifact already committed.
+;
+; It is not the same work S8 did. Grammar elaboration rearranges a tree; this
+; invents declarations nobody wrote -- a predicate and a constructor per
+; variant for every `data`, a constructor and an accessor per field for every
+; `record` -- each with a name built by concatenating onto the type's name.
+; That is why a name is text here rather than something carried unopened.
+(build
+  (name "S9")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/S8"))
+  (change (file "changes/S8-S9/change.canon"))
+  (application
+    (application
+      (name "strata-s9")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        ; Ahead of the evaluator whose answers it makes cheaper. Where two
+        ; modules define a judgment the first one merged is the one that
+        ; answers, so a module that finds a name in less time than walking
+        ; the declarations takes says so here.
+        (file "features/strata/index.generated.meta")
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "foundations/S9/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+        (file "features/strata/metasource.generated.meta")
+      ]))
+      (grammars {
+        strata (file "foundations/S9/surface/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (checks (include "fixtures/strata/s9-checks.canon"))
+      (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print)))
+      (resources (budget (steps 400000000) (depth 20000))))))

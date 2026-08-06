@@ -1,0 +1,167 @@
+
+artifactsource
+source
+path"features/repository/scenarios.meta
+textÓ)module repositoryscenarios
+
+; Executable scenarios for the local semantic repository.
+; They are ordinary artifacts, replayed by the acceptance checks.
+
+judgment BaseState [] = map [#A #one #B #two]
+
+judgment ChangeA [] = mk #AtKey [#A mk #Replace [#one #ten]]
+judgment ChangeB [] = mk #AtKey [#B mk #Replace [#two #twenty]]
+judgment ChangeAConflicting [] = mk #AtKey [#A mk #Replace [#one #eleven]]
+
+judgment RepoOrderOne [] =
+  let empty = call EmptyRepository [] in
+  let first = call RecordPatch [empty #main list [] list [call ChangeA []]] in
+  call RecordPatch [first #main list [] list [call ChangeB []]]
+
+judgment RepoOrderTwo [] =
+  let empty = call EmptyRepository [] in
+  let first = call RecordPatch [empty #main list [] list [call ChangeB []]] in
+  call RecordPatch [first #main list [] list [call ChangeA []]]
+
+judgment IndependentOrderAgrees [] =
+  prim #eq [
+    call ReplayState [call DescProgram [] call BaseState [] call RepoOrderOne [] #main]
+    call ReplayState [call DescProgram [] call BaseState [] call RepoOrderTwo [] #main]
+  ]
+
+judgment OrderOneState [] =
+  call ReplayState [call DescProgram [] call BaseState [] call RepoOrderOne [] #main]
+
+; Patch identity is a digest of dependencies and changes, so it does not depend
+; on the mutable branch a patch was recorded on.
+judgment IdentityIndependentOfBranch [] =
+  let empty = call EmptyRepository [] in
+  let onMain = call RecordPatch [empty #main list [] list [call ChangeA []]] in
+  let onOther = call RecordPatch [empty #other list [] list [call ChangeA []]] in
+  prim #eq [
+    prim #head [call Members [onMain #main]]
+    prim #head [call Members [onOther #other]]
+  ]
+
+judgment TwoBranches [] =
+  let empty = call EmptyRepository [] in
+  let recorded = call RecordPatch [empty #main list [] list [call ChangeA []]] in
+  let branched = call CreateBranch [recorded #main #topic] in
+  call RecordPatch [branched #topic list [] list [call ChangeB []]]
+
+judgment BranchesAgree [] =
+  call SameState [call DescProgram [] call BaseState [] call TwoBranches [] #main #topic]
+
+judgment TopicState [] =
+  call ReplayState [call DescProgram [] call BaseState [] call TwoBranches [] #topic]
+
+judgment MergedState [] =
+  call ReplayState [
+    call DescProgram []
+    call BaseState []
+    call MergeBranch [call TwoBranches [] #main #topic]
+    #main
+  ]
+
+; A genuine overlapping conflict: both patches expect the same predecessor value.
+judgment ConflictRepo [] =
+  let empty = call EmptyRepository [] in
+  let first = call RecordPatch [empty #main list [] list [call ChangeA []]] in
+  call RecordPatch [first #main list [] list [call ChangeAConflicting []]]
+
+judgment ConflictCount [] =
+  prim #len [call ReplayConflicts [call DescProgram [] call BaseState [] call ConflictRepo [] #main]]
+
+judgment ConflictReason [] =
+  match call ReplayConflicts [call DescProgram [] call BaseState [] call ConflictRepo [] #main] {
+    case [] -> mk #none []
+    case head :: rest -> call PatchConflict'reason [head]
+  }
+
+; The conflict is resolved by an ordinary patch that depends on both sides and
+; is authored against the observed conflicted state.
+judgment ConflictedValue [] =
+  prim #mget [
+    call ReplayState [call DescProgram [] call BaseState [] call ConflictRepo [] #main]
+    #A
+    mk #absent []
+  ]
+
+judgment ResolvedRepo [] =
+  let base = call ConflictRepo [] in
+  call RecordPatch [
+    base #main
+    call Members [base #main]
+    list [mk #AtKey [#A mk #Replace [call ConflictedValue [] #resolved]]]
+  ]
+
+judgment ResolvedState [] =
+  call ReplayState [call DescProgram [] call BaseState [] call ResolvedRepo [] #main]
+
+; Unrecording changes branch membership; the patch remains in history.
+judgment UnrecordedState [] =
+  let repo = call RepoOrderOne [] in
+  call ReplayState [
+    call DescProgram []
+    call BaseState []
+    call UnapplyPatch [repo #main prim #head [call Members [repo #main]]]
+    #main
+  ]
+
+judgment HistoryRetainedAfterUnrecord [] =
+  let repo = call RepoOrderOne [] in
+  let identity = prim #head [call Members [repo #main]] in
+  prim #mhas [call Repository'patches [call UnapplyPatch [repo #main identity]] identity]
+
+; Meta and Grammar are edited on a branch through the same mechanism.
+judgment MetaEditState [] =
+  call ReplayState [
+    call DescProgram []
+    call BaseState []
+    call RecordPatch [call EmptyRepository [] #meta list [] list [mk #InsertKey [#C #three]]]
+    #meta
+  ]
+
+judgment BaseGrammarState [] = map [#atom list [mk #entry [#Var #varprod]]]
+
+judgment GrammarEditState [] =
+  call ReplayState [
+    call DescGrammar []
+    call BaseGrammarState []
+    call RecordPatch [
+      call EmptyRepository []
+      #grammar
+      list []
+      list [mk #AtKey [#atom mk #InsertKey [#Hole #holeprod]]]
+    ]
+    #grammar
+  ]
+
+; A successor foundation is reconstructed from replayed branch state.
+judgment SuccessorFromBranch [] =
+  mk #name [
+    call Require [
+      call FoundationFromBranch [
+        call DescProgram []
+        call BaseState []
+        call RepoOrderOne []
+        #main
+        "F3-successor"
+        mk #none []
+      ]
+      #name
+    ]
+  ]
+
+judgment SuccessorApplication [] =
+  call Require [
+    call FoundationFromBranch [
+      call DescProgram []
+      call BaseState []
+      call RepoOrderOne []
+      #main
+      "F3-successor"
+      mk #none []
+    ]
+    #application
+  ]

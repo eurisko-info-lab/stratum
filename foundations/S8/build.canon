@@ -20,6 +20,11 @@
       (name "strata-s8")
       (host (file "host/core.canon"))
       (meta (program-of [
+        ; Ahead of the evaluator whose answers it makes cheaper. Where two
+        ; modules define a judgment the first one merged is the one that
+        ; answers, so a module that finds a name in less time than walking
+        ; the declarations takes says so here.
+        (file "features/strata/index.generated.meta")
         (file "languages/meta/prelude.meta")
         (file "languages/meta/source.meta")
         (file "languages/meta/elaborate.meta")

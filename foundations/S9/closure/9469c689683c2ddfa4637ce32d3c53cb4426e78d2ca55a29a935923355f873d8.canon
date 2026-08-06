@@ -1,0 +1,127 @@
+
+artifactsource
+source
+path#features/foundation/foundation.meta
+text™)module foundationprotocol
+
+; Complete systems become ordinary applications and foundations.
+;
+; A host verifies a foundation from `digest + closure` and must not accept
+; host-supplied semantic overrides.
+
+record MachineProfile [name machines]
+record RuntimeProfile [name runtimes]
+record EvidenceProfile [name required]
+record ApplicationManifest [
+  name meta grammar languages programs machine runtimes entries studios dependencies
+]
+record FoundationManifest [
+  name bootstrap application kernel acceptance repository resources evidenceProfile predecessor change
+]
+record CompatibilityWitness [predecessor successor compatible reason]
+record FoundationChange [predecessor successor deltaMeta deltaGrammar feature]
+record SuccessorFoundation [foundation witness]
+
+judgment ApplicationIdentity [manifest] = prim #digest [manifest]
+judgment FoundationIdentity [manifest] = prim #digest [manifest]
+
+; ------------------------------------------------------- verification interface
+
+; Verification consumes a reference and the closure. Nothing else.
+judgment VerifyRoot [reference] =
+  match call Fetch [reference #foundation] {
+    case (#none) -> mk #invalid [#foundation-missing]
+    case (#some manifest) ->
+      match call Field [manifest #application] {
+        case (#none) -> mk #invalid [#application-field-missing]
+        case (#some applicationReference) ->
+          match call Fetch [applicationReference #application] {
+            case (#none) -> mk #invalid [#application-missing]
+            case (#some application) ->
+              match call Field [application #meta] {
+                case (#none) -> mk #invalid [#meta-field-missing]
+                case (#some metaReference) ->
+                  match call Fetch [metaReference #meta-program] {
+                    case (#none) -> mk #invalid [#meta-program-missing]
+                    case (#some program) -> mk #valid [reference]
+                  }
+              }
+          }
+      }
+  }
+
+; A caller may offer a manifest value. It is only ever used to detect an
+; attempted override; the closure remains authoritative.
+judgment VerifyClaimed [reference claimed] =
+  match call Fetch [reference #foundation] {
+    case (#none) -> mk #invalid [#foundation-missing]
+    case (#some manifest) ->
+      if prim #eq [manifest claimed]
+      then call VerifyRoot [reference]
+      else mk #invalid [#host-override-rejected]
+  }
+
+judgment VerificationIsClosureOnly [reference] =
+  prim #eq [call VerifyRoot [reference] call VerifyRoot [reference]]
+
+; ------------------------------------------------------------- compatibility
+
+judgment CompatibleWith [predecessorReference successorReference] =
+  match call Fetch [successorReference #foundation] {
+    case (#none) -> call CompatibilityWitness [predecessorReference successorReference false #successor-missing]
+    case (#some successor) ->
+      match call Field [successor #predecessor] {
+        case (#none) ->
+          call CompatibilityWitness [predecessorReference successorReference false #predecessor-field-missing]
+        case (#some declared) ->
+          match declared {
+            case (#none) ->
+              call CompatibilityWitness [predecessorReference successorReference false #successor-without-predecessor]
+            case (#some actual) ->
+              if prim #eq [actual predecessorReference]
+              then call CompatibilityWitness [predecessorReference successorReference true #compatible]
+              else call CompatibilityWitness [predecessorReference successorReference false #wrong-predecessor]
+          }
+      }
+  }
+
+judgment IsCompatible [predecessorReference successorReference] =
+  call CompatibilityWitness'compatible [call CompatibleWith [predecessorReference successorReference]]
+
+judgment CompatibilityReason [predecessorReference successorReference] =
+  call CompatibilityWitness'reason [call CompatibleWith [predecessorReference successorReference]]
+
+; ---------------------------------------------------------- successor building
+
+judgment BuildSuccessor [predecessorReference successorReference] =
+  call SuccessorFoundation [
+    successorReference
+    call CompatibleWith [predecessorReference successorReference]
+  ]
+
+judgment SuccessorIsGoverned [predecessorReference successorReference decisions] =
+  if call AllAccepted [decisions]
+  then call BuildSuccessor [predecessorReference successorReference]
+  else mk #blocked [#unaccepted-patches]
+
+; ------------------------------------------------------------------ profiles
+
+judgment DefaultMachineProfile [] = call MachineProfile [#meta0-grammar0 list [#MetaMachine0 #GrammarMachine0]]
+
+judgment DefaultRuntimeProfile [] = call RuntimeProfile [#hosts list [#scala #rust]]
+
+judgment DefaultEvidenceProfile [] =
+  call EvidenceProfile [#canonical list [#steps #calls #capabilities]]
+
+judgment ProfileNames [] =
+  list [
+    call MachineProfile'name [call DefaultMachineProfile []]
+    call RuntimeProfile'name [call DefaultRuntimeProfile []]
+    call EvidenceProfile'name [call DefaultEvidenceProfile []]
+  ]
+
+; ------------------------------------------------------- decision fixtures
+
+judgment MixedDecisions [] = list [call AcceptedDecision [] call RejectedDecision []]
+
+judgment AcceptedDecisions [] = list [call AcceptedDecision []]

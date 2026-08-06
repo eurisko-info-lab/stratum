@@ -7,14 +7,14 @@
 //! verdicts to the reference host.
 
 use std::rc::Rc;
-use crate::canon::{canonical_map, compare, decode, encode, write_text, Canon, Digest};
+use crate::canon::{canonical_map, compare, decode, encode, write_text, Canon, Digest, List};
 use crate::grammar;
 use crate::number::{Int, Nat};
 use crate::sha::sha256;
 use crate::store::{digest_of, Cas};
 use std::cell::RefCell;
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 
 #[derive(Clone, Debug)]
 pub struct Fail {
@@ -99,13 +99,61 @@ impl Kernel {
 
 #[derive(Clone, Debug)]
 pub struct Judgment {
-    pub params: Vec<String>,
+    pub params: Vec<Rc<str>>,
     pub body: Canon,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Program {
-    pub judgments: BTreeMap<String, Judgment>,
+    pub judgments: NameMap<Rc<Judgment>>,
+}
+
+/// What names are bound to while a judgment body is evaluated.
+///
+/// A frame holds a judgment's parameters and whatever `let` has added, which
+/// is a handful of entries and never more. It was a `BTreeMap<String, Canon>`,
+/// and every attempted match case cloned one -- allocating a fresh `String`
+/// per binding to decide something that usually failed. A short vector of
+/// shared names clones by counting references, so a trial costs what looking
+/// at it costs.
+///
+/// Later bindings shadow earlier ones, which is what inserting into a map did.
+#[derive(Clone, Debug, Default)]
+pub struct Bindings {
+    entries: Vec<(Rc<str>, Canon)>,
+}
+
+impl Bindings {
+    pub fn new() -> Bindings {
+        Bindings { entries: Vec::new() }
+    }
+
+    pub fn with_capacity(size: usize) -> Bindings {
+        Bindings { entries: Vec::with_capacity(size) }
+    }
+
+    pub fn get(&self, name: &str) -> Option<&Canon> {
+        self.entries.iter().rev().find(|(bound, _)| &**bound == name).map(|(_, value)| value)
+    }
+
+    pub fn bind(&mut self, name: Rc<str>, value: Canon) {
+        self.entries.push((name, value));
+    }
+
+    /// A copy with room to grow, so that binding into it does not reallocate.
+    pub fn extended(&self, room: usize) -> Bindings {
+        let mut entries = Vec::with_capacity(self.entries.len() + room);
+        entries.extend(self.entries.iter().cloned());
+        Bindings { entries }
+    }
+
+    pub fn mark(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn rewind(&mut self, mark: usize) {
+        self.entries.truncate(mark);
+    }
 }
 
 impl Program {
@@ -132,16 +180,15 @@ impl Program {
                     let declared = args[1].as_list().ok_or("judgment parameters must be a list")?;
                     let mut params = Vec::new();
                     for parameter in declared {
-                        params.push(
+                        params.push(Rc::from(
                             parameter
                                 .as_sym()
-                                .ok_or_else(|| format!("judgment {} has a non-symbol parameter", name))?
-                                .to_string(),
-                        );
+                                .ok_or_else(|| format!("judgment {} has a non-symbol parameter", name))?,
+                        ));
                     }
                     accumulated
                         .judgments
-                        .insert(name, Judgment { params, body: args[2].clone() });
+                        .insert(name, Rc::new(Judgment { params, body: args[2].clone() }));
                 }
                 Canon::Node(tag, args) if &**tag == "use" && args.len() == 1 => {
                     let reference = match &args[0] {
@@ -217,6 +264,42 @@ fn denied(value: Canon) -> Canon {
 
 // ------------------------------------------------------------------ engine
 
+/// A small non-cryptographic hash for the interpreter's own tables.
+///
+/// The judgment table is looked up once per call and the call counter once
+/// more, and the standard hasher is SipHash, which is chosen to resist an
+/// adversary choosing keys. Nobody chooses these keys: they are the judgment
+/// names in a program the host has already accepted. Multiplying and rotating
+/// is enough, and it was an eighth of the running time.
+#[derive(Default, Clone, Copy)]
+pub struct NameHasher {
+    state: u64,
+}
+
+impl std::hash::Hasher for NameHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        for byte in bytes {
+            self.state = (self.state ^ *byte as u64).wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+
+    fn finish(&self) -> u64 {
+        self.state ^ (self.state >> 29)
+    }
+}
+
+#[derive(Default, Clone, Copy)]
+pub struct NameHash;
+
+impl std::hash::BuildHasher for NameHash {
+    type Hasher = NameHasher;
+    fn build_hasher(&self) -> NameHasher {
+        NameHasher { state: 0xcbf2_9ce4_8422_2325 }
+    }
+}
+
+pub type NameMap<V> = HashMap<String, V, NameHash>;
+
 pub struct Engine<'a> {
     program: &'a Program,
     cas: &'a Cas,
@@ -224,8 +307,8 @@ pub struct Engine<'a> {
     budget: Budget,
     environment: Environment,
     steps: u64,
-    calls: BTreeMap<String, u64>,
-    capabilities: BTreeMap<String, u64>,
+    calls: NameMap<u64>,
+    capabilities: NameMap<u64>,
 }
 
 impl<'a> Engine<'a> {
@@ -237,17 +320,21 @@ impl<'a> Engine<'a> {
             budget,
             environment: Environment::new(seed),
             steps: 0,
-            calls: BTreeMap::new(),
-            capabilities: BTreeMap::new(),
+            calls: NameMap::default(),
+            capabilities: NameMap::default(),
         }
     }
 
     fn evidence(&self) -> Canon {
-        let counts = |source: &BTreeMap<String, u64>| {
+        // Counted in a hash map and reported in order, because the evidence is
+        // part of what two hosts must agree on byte for byte.
+        let counts = |source: &NameMap<u64>| {
+            let mut entries: Vec<(&String, &u64)> = source.iter().collect();
+            entries.sort_by(|a, b| a.0.cmp(b.0));
             Canon::map(
-                source
-                    .iter()
-                    .map(|(name, count)| (Canon::Sym(Rc::from(name.clone())), Canon::nat(*count as u128)))
+                entries
+                    .into_iter()
+                    .map(|(name, count)| (Canon::Sym(Rc::from(name.as_str())), Canon::nat(*count as u128)))
                     .collect(),
             )
         };
@@ -273,7 +360,7 @@ impl<'a> Engine<'a> {
     }
 
     pub fn derive(&mut self, goal: &Canon) -> Canon {
-        let environment: BTreeMap<String, Canon> = BTreeMap::new();
+        let environment: Bindings = Bindings::new();
         match self.eval(goal, &environment, 0) {
             Ok(value) => Canon::node(
                 "verdict",
@@ -291,7 +378,7 @@ impl<'a> Engine<'a> {
         }
     }
 
-    fn eval(&mut self, expression: &Canon, bindings: &BTreeMap<String, Canon>, depth: u32) -> Eval {
+    fn eval(&mut self, expression: &Canon, bindings: &Bindings, depth: u32) -> Eval {
         self.tick()?;
         if depth > self.budget.depth {
             return fail("depth-exhausted", format!("depth budget {} exceeded", self.budget.depth));
@@ -308,26 +395,28 @@ impl<'a> Engine<'a> {
                 Some(name) => match bindings.get(name) {
                     Some(value) => Ok(value.clone()),
                     None => fail("unbound-variable", format!("unbound variable {}", name)),
-                },
-                None => fail(
+                },                None => fail(
                     "bad-expression",
                     format!("not an expression: {}", write_text(expression)),
                 ),
             },
             ("mk", _) if !args.is_empty() && args[0].as_sym().is_some() => {
-                let node_tag = args[0].as_sym().unwrap().to_string();
-                let mut built = Vec::new();
+                let node_tag = match &args[0] {
+                    Canon::Sym(tag) => tag.clone(),
+                    _ => unreachable!(),
+                };
+                let mut built = Vec::with_capacity(args.len() - 1);
                 for argument in &args[1..] {
                     built.push(self.eval(argument, bindings, depth + 1)?);
                 }
-                Ok(Canon::Node(Rc::from(node_tag), Rc::new(built)))
+                Ok(Canon::Node(node_tag, Rc::new(built)))
             }
             ("lst", _) => {
                 let mut items = Vec::new();
                 for argument in args.iter() {
                     items.push(self.eval(argument, bindings, depth + 1)?);
                 }
-                Ok(Canon::List(Rc::new(items)))
+                Ok(Canon::list(items))
             }
             ("mp", _) => {
                 if args.len() % 2 != 0 {
@@ -355,15 +444,18 @@ impl<'a> Engine<'a> {
                 ),
             },
             ("let", 3) if args[0].as_sym().is_some() => {
-                let name = args[0].as_sym().unwrap().to_string();
+                let name = match &args[0] {
+                    Canon::Sym(name) => name.clone(),
+                    _ => unreachable!(),
+                };
                 let value = self.eval(&args[1], bindings, depth + 1)?;
-                let mut extended = bindings.clone();
-                extended.insert(name, value);
+                let mut extended = bindings.extended(1);
+                extended.bind(name, value);
                 self.eval(&args[2], &extended, depth + 1)
             }
             ("call", _) if !args.is_empty() && args[0].as_sym().is_some() => {
-                let name = args[0].as_sym().unwrap().to_string();
-                let judgment = match self.program.judgments.get(&name) {
+                let name = args[0].as_sym().unwrap();
+                let judgment = match self.program.judgments.get(name) {
                     Some(judgment) => judgment.clone(),
                     None => return fail("unknown-judgment", format!("unknown judgment {}", name)),
                 };
@@ -379,14 +471,16 @@ impl<'a> Engine<'a> {
                         ),
                     );
                 }
-                let mut evaluated = Vec::new();
-                for argument in arguments {
-                    evaluated.push(self.eval(argument, bindings, depth + 1)?);
+                let mut frame = Bindings::with_capacity(arguments.len());
+                for (parameter, argument) in judgment.params.iter().zip(arguments) {
+                    let value = self.eval(argument, bindings, depth + 1)?;
+                    frame.bind(parameter.clone(), value);
                 }
-                *self.calls.entry(name).or_insert(0) += 1;
-                let mut frame: BTreeMap<String, Canon> = BTreeMap::new();
-                for (parameter, value) in judgment.params.iter().zip(evaluated) {
-                    frame.insert(parameter.clone(), value);
+                match self.calls.get_mut(name) {
+                    Some(count) => *count += 1,
+                    None => {
+                        self.calls.insert(name.to_string(), 1);
+                    }
                 }
                 self.eval(&judgment.body, &frame, depth + 1)
             }
@@ -395,26 +489,32 @@ impl<'a> Engine<'a> {
                 self.match_cases(&scrutinee, &args[1..], bindings, depth)
             }
             ("prim", _) if !args.is_empty() && args[0].as_sym().is_some() => {
-                let name = args[0].as_sym().unwrap().to_string();
-                let mut evaluated = Vec::new();
+                let name = args[0].as_sym().unwrap();
+                let mut evaluated = Vec::with_capacity(args.len() - 1);
                 for argument in &args[1..] {
                     evaluated.push(self.eval(argument, bindings, depth + 1)?);
                 }
-                primitive(&name, &evaluated)
+                primitive(name, &evaluated)
             }
             ("cap", _) if !args.is_empty() && args[0].as_sym().is_some() => {
-                let name = args[0].as_sym().unwrap().to_string();
+                let name = args[0].as_sym().unwrap();
                 if !self.kernel.allow.iter().any(|allowed| &**allowed == name) {
                     return fail(
                         "capability-denied",
                         format!("capability {} is not constituted", name),
                     );
                 }
-                *self.capabilities.entry(name.clone()).or_insert(0) += 1;
-                let mut evaluated = Vec::new();
+                match self.capabilities.get_mut(name) {
+                    Some(count) => *count += 1,
+                    None => {
+                        self.capabilities.insert(name.to_string(), 1);
+                    }
+                }
+                let mut evaluated = Vec::with_capacity(args.len() - 1);
                 for argument in &args[1..] {
                     evaluated.push(self.eval(argument, bindings, depth + 1)?);
                 }
+                let name = args[0].as_sym().unwrap().to_string();
                 Ok(self.capability(&name, &evaluated))
             }
             ("fail", 2) if args[0].as_sym().is_some() => {
@@ -436,16 +536,20 @@ impl<'a> Engine<'a> {
         &mut self,
         value: &Canon,
         cases: &[Canon],
-        bindings: &BTreeMap<String, Canon>,
+        bindings: &Bindings,
         depth: u32,
     ) -> Eval {
+        // One frame for the whole match, rewound between cases. Cloning it per
+        // case was cloning what usually did not match.
+        let mut extended = bindings.extended(4);
+        let mark = extended.mark();
         for case in cases {
             match case {
                 Canon::Node(tag, args) if &**tag == "case" && args.len() == 2 => {
-                    let mut extended = bindings.clone();
                     if self.match_pattern(&args[0], value, &mut extended)? {
                         return self.eval(&args[1], &extended, depth + 1);
                     }
+                    extended.rewind(mark);
                 }
                 other => {
                     return fail(
@@ -462,13 +566,16 @@ impl<'a> Engine<'a> {
         &mut self,
         pattern: &Canon,
         value: &Canon,
-        bindings: &mut BTreeMap<String, Canon>,
+        bindings: &mut Bindings,
     ) -> Result<bool, Fail> {
         self.tick()?;
         match pattern {
             Canon::Sym(name) if &**name == "_" => Ok(true),
             Canon::Node(tag, args) if &**tag == "pv" && args.len() == 1 && args[0].as_sym().is_some() => {
-                bindings.insert(args[0].as_sym().unwrap().to_string(), value.clone());
+                match &args[0] {
+                    Canon::Sym(name) => bindings.bind(name.clone(), value.clone()),
+                    _ => unreachable!(),
+                }
                 Ok(true)
             }
             Canon::Node(tag, args) if &**tag == "pq" && args.len() == 1 => Ok(&args[0] == value),
@@ -485,14 +592,19 @@ impl<'a> Engine<'a> {
             }
             Canon::Node(tag, args) if &**tag == "pnode" && args.len() == 2 => match value {
                 Canon::Node(actual, values) => {
-                    let mut trial = bindings.clone();
-                    if !self.match_pattern(&args[0], &Canon::Sym(actual.clone()), &mut trial)? {
+                    let mark = bindings.mark();
+                    if !self.match_pattern(&args[0], &Canon::Sym(actual.clone()), bindings)? {
+                        bindings.rewind(mark);
                         return Ok(false);
                     }
-                    if !self.match_pattern(&args[1], &Canon::List(values.clone()), &mut trial)? {
+                    if !self.match_pattern(
+                        &args[1],
+                        &Canon::List(List::shared(values.clone())),
+                        bindings,
+                    )? {
+                        bindings.rewind(mark);
                         return Ok(false);
                     }
-                    *bindings = trial;
                     Ok(true)
                 }
                 _ => Ok(false),
@@ -505,15 +617,16 @@ impl<'a> Engine<'a> {
             },
             Canon::Node(tag, args) if &**tag == "pcons" && args.len() == 2 => match value {
                 Canon::List(items) if !items.is_empty() => {
-                    let mut trial = bindings.clone();
-                    if !self.match_pattern(&args[0], &items[0], &mut trial)? {
+                    let mark = bindings.mark();
+                    if !self.match_pattern(&args[0], &items[0], bindings)? {
+                        bindings.rewind(mark);
                         return Ok(false);
                     }
-                    let rest = Canon::List(Rc::new(items[1..].to_vec()));
-                    if !self.match_pattern(&args[1], &rest, &mut trial)? {
+                    let rest = Canon::List(items.tail());
+                    if !self.match_pattern(&args[1], &rest, bindings)? {
+                        bindings.rewind(mark);
                         return Ok(false);
                     }
-                    *bindings = trial;
                     Ok(true)
                 }
                 _ => Ok(false),
@@ -530,15 +643,15 @@ impl<'a> Engine<'a> {
         &mut self,
         patterns: &[Canon],
         values: &[Canon],
-        bindings: &mut BTreeMap<String, Canon>,
+        bindings: &mut Bindings,
     ) -> Result<bool, Fail> {
-        let mut trial = bindings.clone();
+        let mark = bindings.mark();
         for (pattern, value) in patterns.iter().zip(values.iter()) {
-            if !self.match_pattern(pattern, value, &mut trial)? {
+            if !self.match_pattern(pattern, value, bindings)? {
+                bindings.rewind(mark);
                 return Ok(false);
             }
         }
-        *bindings = trial;
         Ok(true)
     }
 
@@ -547,6 +660,25 @@ impl<'a> Engine<'a> {
             ("hash", [value]) => ok(Canon::Ref(digest_of(value))),
             ("digest-of-bytes", [Canon::Bytes(bytes)]) => {
                 ok(Canon::Ref(Digest(sha256(bytes))))
+            }
+            ("text-octets", [Canon::Str(text)]) => ok(Canon::list(
+                text.as_bytes().iter().map(|b| Canon::nat(*b as u128)).collect(),
+            )),
+            ("octets-of-bytes", [Canon::Bytes(bytes)]) => ok(Canon::list(
+                bytes.iter().map(|b| Canon::nat(*b as u128)).collect(),
+            )),
+            ("bytes-of-octets", [Canon::List(items)]) => {
+                let mut octets = Vec::with_capacity(items.len());
+                for item in items.iter() {
+                    match item {
+                        Canon::Nat(value) => match value.to_u128() {
+                            Some(value) if value < 256 => octets.push(value as u8),
+                            _ => return denied(Canon::sym("not-an-octet")),
+                        },
+                        _ => return denied(Canon::sym("not-an-octet")),
+                    }
+                }
+                ok(Canon::Bytes(Rc::new(octets)))
             }
             ("cas-get", [Canon::Ref(reference)]) => match self.cas.get(reference) {
                 Ok(artifact) => ok(artifact.to_canon()),
@@ -676,7 +808,7 @@ fn make_number(value: i128) -> Canon {
     }
 }
 
-fn list_of(value: &Canon) -> Result<&Vec<Canon>, Fail> {
+fn list_of(value: &Canon) -> Result<&List, Fail> {
     match value {
         Canon::List(items) => Ok(items),
         other => Err(Fail {
@@ -884,7 +1016,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         "args" => {
             arity(1)?;
             match &args[0] {
-                Canon::Node(_, values) => Ok(Canon::List(values.clone())),
+                Canon::Node(_, values) => Ok(Canon::List(List::shared(values.clone()))),
                 other => fail(
                     "type-error",
                     format!("args expects a node, found {}", write_text(other)),
@@ -894,7 +1026,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         "node" => {
             arity(2)?;
             match &args[0] {
-                Canon::Sym(tag) => Ok(Canon::Node(tag.clone(), Rc::new(list_of(&args[1])?.clone()))),
+                Canon::Sym(tag) => Ok(Canon::Node(tag.clone(), Rc::new(list_of(&args[1])?.to_vec()))),
                 other => fail(
                     "type-error",
                     format!("node expects a symbol tag, found {}", write_text(other)),
@@ -913,13 +1045,13 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             arity(2)?;
             let mut items = vec![args[0].clone()];
             items.extend(list_of(&args[1])?.iter().cloned());
-            Ok(Canon::List(Rc::new(items)))
+            Ok(Canon::list(items))
         }
         "snoc" => {
             arity(2)?;
-            let mut items = list_of(&args[0])?.clone();
+            let mut items = list_of(&args[0])?.to_vec();
             items.push(args[1].clone());
-            Ok(Canon::List(Rc::new(items)))
+            Ok(Canon::list(items))
         }
         "head" => {
             arity(1)?;
@@ -935,7 +1067,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             if items.is_empty() {
                 fail("empty-list", "tail of empty list".to_string())
             } else {
-                Ok(Canon::List(Rc::new(items[1..].to_vec())))
+                Ok(Canon::List(items.tail()))
             }
         }
         "nth" => {
@@ -950,15 +1082,15 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         }
         "append" => {
             arity(2)?;
-            let mut items = list_of(&args[0])?.clone();
+            let mut items = list_of(&args[0])?.to_vec();
             items.extend(list_of(&args[1])?.iter().cloned());
-            Ok(Canon::List(Rc::new(items)))
+            Ok(Canon::list(items))
         }
         "rev" => {
             arity(1)?;
-            let mut items = list_of(&args[0])?.clone();
+            let mut items = list_of(&args[0])?.to_vec();
             items.reverse();
-            Ok(Canon::List(Rc::new(items)))
+            Ok(Canon::list(items))
         }
         "take" => {
             arity(2)?;
@@ -974,19 +1106,19 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         }
         "sort" => {
             arity(1)?;
-            let mut items = list_of(&args[0])?.clone();
+            let mut items = list_of(&args[0])?.to_vec();
             items.sort_by(compare);
-            Ok(Canon::List(Rc::new(items)))
+            Ok(Canon::list(items))
         }
         "distinct" => {
             arity(1)?;
             let mut items: Vec<Canon> = Vec::new();
-            for item in list_of(&args[0])? {
+            for item in list_of(&args[0])?.iter() {
                 if !items.contains(item) {
                     items.push(item.clone());
                 }
             }
-            Ok(Canon::List(Rc::new(items)))
+            Ok(Canon::list(items))
         }
         "contains" => {
             arity(2)?;
@@ -1006,9 +1138,9 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             if index < 0 || index >= items.len() as i128 {
                 fail("index-out-of-range", format!("index {} out of range", index))
             } else {
-                let mut updated = items.clone();
+                let mut updated = items.to_vec();
                 updated[index as usize] = args[2].clone();
-                Ok(Canon::List(Rc::new(updated)))
+                Ok(Canon::list(updated))
             }
         }
         "insert-at" => {
@@ -1018,9 +1150,9 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             if index < 0 || index > items.len() as i128 {
                 fail("index-out-of-range", format!("index {} out of range", index))
             } else {
-                let mut updated = items.clone();
+                let mut updated = items.to_vec();
                 updated.insert(index as usize, args[2].clone());
-                Ok(Canon::List(Rc::new(updated)))
+                Ok(Canon::list(updated))
             }
         }
         "remove-at" => {
@@ -1030,9 +1162,9 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             if index < 0 || index >= items.len() as i128 {
                 fail("index-out-of-range", format!("index {} out of range", index))
             } else {
-                let mut updated = items.clone();
+                let mut updated = items.to_vec();
                 updated.remove(index as usize);
-                Ok(Canon::List(Rc::new(updated)))
+                Ok(Canon::list(updated))
             }
         }
         "mnew" => {
@@ -1094,7 +1226,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         "mfrom" => {
             arity(1)?;
             let mut entries = Vec::new();
-            for item in list_of(&args[0])? {
+            for item in list_of(&args[0])?.iter() {
                 match item {
                     Canon::Node(tag, values) if &**tag == "entry" && values.len() == 2 => {
                         entries.push((values[0].clone(), values[1].clone()));

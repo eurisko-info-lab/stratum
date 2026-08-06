@@ -70,6 +70,31 @@ final class HashCapability extends CapabilityHandler:
       CapabilityResponse(true, Canon.R(Digest.of(bytes.toArray)))
     case _ => CapabilityResponse(false, Canon.Sym("bad-request"))
 
+/**
+ * Texts and byte strings, named as numbers.
+ *
+ * A program that cannot look inside a text or a byte string can still be told
+ * what numbers are in one, and can still name one by its numbers. `textBytes`
+ * already crossed a text as bytes; this is the same crossing without the
+ * framing, and in a shape a program with no bytes of its own can read.
+ */
+final class OctetCapability extends CapabilityHandler:
+  def names: Set[String] = Set("text-octets", "octets-of-bytes", "bytes-of-octets")
+
+  private def octets(bytes: Iterable[Byte]): Canon =
+    Canon.L(bytes.iterator.map(b => Canon.N(BigInt(b & 0xff))).toVector)
+
+  def handle(req: CapabilityRequest): CapabilityResponse = (req.name, req.args) match
+    case ("text-octets", Vector(Canon.S(text))) =>
+      CapabilityResponse(true, octets(text.getBytes(StandardCharsets.UTF_8)))
+    case ("octets-of-bytes", Vector(Canon.Y(bytes))) =>
+      CapabilityResponse(true, octets(bytes))
+    case ("bytes-of-octets", Vector(Canon.L(items))) =>
+      val bytes = items.collect { case Canon.N(v) if v >= 0 && v < 256 => v.toByte }
+      if bytes.length != items.length then CapabilityResponse(false, Canon.Sym("not-an-octet"))
+      else CapabilityResponse(true, Canon.Y(bytes))
+    case _ => CapabilityResponse(false, Canon.Sym("bad-request"))
+
 /** Read and write access to the content addressed store. */
 final class CasCapability(cas: Cas) extends CapabilityHandler:
   def names: Set[String] = Set("cas-get", "cas-put", "cas-has")
@@ -270,6 +295,7 @@ object Capabilities:
   def standard(cas: Cas, workspace: Path, seed: String): CapabilityHandler =
     CapabilityHandler.compose(
       new HashCapability,
+      new OctetCapability,
       new CasCapability(cas),
       new GrammarCapability(cas),
       new FileCapability(workspace),

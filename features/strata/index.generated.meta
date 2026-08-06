@@ -1,0 +1,424 @@
+; Generated from features/strata/index.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataindex)
+  (judgment
+    BuildIndex
+    [decls]
+    (mk
+      index
+      (call
+        IndexConstructors
+        (v decls)
+        (prim mnew))
+      (call
+        IndexDefinitions
+        (v decls)
+        (prim mnew))
+      (call
+        IndexPrimitives
+        (v decls)
+        (prim mnew))))
+  (judgment
+    IndexedDeclarations
+    [decls]
+    (prim
+      cons
+      (call
+        BuildIndex
+        (v decls))
+      (v decls)))
+  (judgment
+    PutFirst
+    [table name value]
+    (if
+      (prim
+        mhas
+        (v table)
+        (v name))
+      (v table)
+      (prim
+        mput
+        (v table)
+        (v name)
+        (v value))))
+  (judgment
+    IndexConstructors
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            data
+            (pv owner)
+            (pv constructors))
+          (pv rest))
+        (call
+          IndexConstructors
+          (v rest)
+          (call
+            IndexConstructorList
+            (v constructors)
+            (v table))))
+      (case
+        (pcons
+          (pm
+            family
+            (pv owner)
+            (pv params)
+            (pv constructors))
+          (pv rest))
+        (call
+          IndexConstructors
+          (v rest)
+          (call
+            IndexConstructorList
+            (v constructors)
+            (v table))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          IndexConstructors
+          (v rest)
+          (v table)))))
+  (judgment
+    IndexConstructorList
+    [constructors table]
+    (match
+      (v constructors)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv declared)
+            (pv fields))
+          (pv rest))
+        (call
+          IndexConstructorList
+          (v rest)
+          (call
+            PutFirst
+            (v table)
+            (v declared)
+            (mk
+              constructor
+              (v declared)
+              (prim
+                len
+                (call
+                  FieldList
+                  (v fields)))))))
+      (case
+        (pcons
+          (pm
+            ConstructorAt
+            (pv declared)
+            (pv fields)
+            (pv result))
+          (pv rest))
+        (call
+          IndexConstructorList
+          (v rest)
+          (call
+            PutFirst
+            (v table)
+            (v declared)
+            (mk
+              constructor
+              (v declared)
+              (prim
+                len
+                (call
+                  FieldList
+                  (v fields)))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          IndexConstructorList
+          (v rest)
+          (v table)))))
+  (judgment
+    IndexDefinitions
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            def
+            (pv declared)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (call
+          IndexDefinitions
+          (v rest)
+          (call
+            PutFirst
+            (v table)
+            (v declared)
+            (mk
+              def
+              (v declared)
+              (v params)
+              (v result)
+              (v body)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          IndexDefinitions
+          (v rest)
+          (v table)))))
+  (judgment
+    IndexPrimitives
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            prim
+            (pv declared)
+            (pv params)
+            (pv result))
+          (pv rest))
+        (call
+          IndexPrimitives
+          (v rest)
+          (call
+            PutFirst
+            (v table)
+            (v declared)
+            (mk
+              prim
+              (v declared)
+              (v params)
+              (v result)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          IndexPrimitives
+          (v rest)
+          (v table)))))
+  (judgment
+    FindConstructor
+    [decls name]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            index
+            (pv constructors)
+            (pv definitions)
+            (pv primitives))
+          (pv rest))
+        (call
+          LookUpIndexed
+          (v constructors)
+          (v name)))
+      (case
+        (pcons
+          (pm
+            data
+            (pv owner)
+            (pv constructors))
+          (pv rest))
+        (match
+          (call
+            FindConstructorIn
+            (v constructors)
+            (v name))
+          (case
+            (pm
+              some
+              (pv found))
+            (mk
+              some
+              (v found)))
+          (case
+            (pm none)
+            (call
+              FindConstructor
+              (v rest)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            family
+            (pv owner)
+            (pv params)
+            (pv constructors))
+          (pv rest))
+        (match
+          (call
+            FindConstructorIn
+            (v constructors)
+            (v name))
+          (case
+            (pm
+              some
+              (pv found))
+            (mk
+              some
+              (v found)))
+          (case
+            (pm none)
+            (call
+              FindConstructor
+              (v rest)
+              (v name)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindConstructor
+          (v rest)
+          (v name)))))
+  (judgment
+    FindDefinition
+    [decls name]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            index
+            (pv constructors)
+            (pv definitions)
+            (pv primitives))
+          (pv rest))
+        (call
+          LookUpIndexed
+          (v definitions)
+          (v name)))
+      (case
+        (pcons
+          (pm
+            def
+            (pv declared)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            some
+            (mk
+              def
+              (v declared)
+              (v params)
+              (v result)
+              (v body)))
+          (call
+            FindDefinition
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindDefinition
+          (v rest)
+          (v name)))))
+  (judgment
+    FindPrimitive
+    [decls name]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            index
+            (pv constructors)
+            (pv definitions)
+            (pv primitives))
+          (pv rest))
+        (call
+          LookUpIndexed
+          (v primitives)
+          (v name)))
+      (case
+        (pcons
+          (pm
+            prim
+            (pv declared)
+            (pv params)
+            (pv result))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            some
+            (mk
+              prim
+              (v declared)
+              (v params)
+              (v result)))
+          (call
+            FindPrimitive
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindPrimitive
+          (v rest)
+          (v name)))))
+  (judgment
+    LookUpIndexed
+    [table name]
+    (if
+      (prim
+        mhas
+        (v table)
+        (v name))
+      (mk
+        some
+        (prim
+          mget
+          (v table)
+          (v name)
+          (q #unit)))
+      (mk none))))

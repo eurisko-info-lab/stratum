@@ -463,30 +463,65 @@ Grammar elaboration rearranges a tree. Meta elaboration *derives* things that
 were not written down: a data declaration becomes a predicate, a set of
 variant tags, and one accessor judgment per field, each with a name built by
 concatenating onto the type's name. That is a code generator, and it needs
-Strata to take a name apart and put one together — symbol and text are not
-the same type, and S7's boundary provides no crossing between them.
+Strata to take a name apart and put one together.
 
-So this layer draws that crossing and then uses it. Splitting it from S8 keeps
-the smaller claim — nineteen grammars, byte for byte — from being held up by
-the larger one.
+This was written as needing two new primitives at the S7 boundary, a name as
+text and a text as a name. Building it showed that is not so, and the reason
+is worth keeping. A name reaches Strata as the text it spells, and goes back
+as a name; both conversions happen in the reader and the writer, which are
+Meta programs using Meta's own `sym->str` and `str->sym`. Strata never sees a
+symbol, so it needs no way to convert one. The set S7 declared is unchanged,
+and so this layer costs the boundary nothing.
+
+Splitting it from S8 keeps the smaller claim — nineteen grammars, byte for
+byte — from being held up by the larger one.
 
 **Adds**
 
-- two primitives at the S7 boundary: a name as text, and a text as a name
 - `strata/system/meta.strata` — Meta source to Meta artifact
-- the reader and writer for Meta's syntax tree
+- `features/strata/metasource.meta` — the reader and writer for Meta's syntax
+  tree
 - `fixtures/strata/s9.transcript`, `foundations/S9/`
 
 **Acceptance**
 
-- for every Meta program in the tree, the artifact the Strata elaborator
-  produces is the artifact already committed, byte for byte
-- including the self-description: elaborating `languages/meta/meta.meta`
-  reaches the same fixpoint it reaches today
+- for every Meta source in the tree — all forty-three, from a nine-line one
+  for plain text to `depend.meta`'s nine hundred and ninety-three — the
+  artifact the Strata elaborator produces is the artifact already committed,
+  byte for byte
+- and on two of them both elaborators are run and their results compared, so
+  what is decided is that the two are the same function rather than that one
+  of them once agreed with a file
 - every name the generator invents — predicates, tags, accessors — is the
-  name the Meta elaborator invents
+  name the Meta elaborator invents, which the above decide together rather
+  than separately
+
+**What is not in the corpus, and why.** Eight `.meta` files are not counted
+above: the Meta0 prelude, the two elaborators, the foundation programs and the
+lambda bootstrap. They are written directly in canonical Meta0 — s-expressions,
+not the Meta surface — so they are artifacts already and no elaborator has ever
+touched them. This was written as though `languages/meta/elaborate.meta` could
+be elaborated by its replacement, which would have been the nicest check in the
+layer. It cannot: there is no surface source for it to be the elaboration of.
 
 **Authority moves** — Meta definitions. What a meaning *is* becomes Strata's.
+
+**What this costs.** S9 is the first layer whose gate is measured in minutes
+rather than seconds: two minutes to check in the Scala host, six and a half in
+the Rust one. That is scale, not pathology — per line of corpus it costs about
+what S8 cost, and there is ten times the corpus. Both hosts' timeouts were
+raised to match, because a limit that a correct run exceeds is measuring
+patience rather than truth.
+
+One thing in it *is* pathological and worth naming for whoever comes next. The
+boundary S7 drew can split a text into its characters and join two texts, and
+nothing else. So every name the elaborator handles — every `#Tag` whose hash
+must come off, every string literal whose quotes must — is taken apart one
+character at a time and rebuilt by repeated concatenation, which is quadratic
+in the length of the name and crosses the boundary once per character. A
+primitive that takes a slice of a text would make most of this disappear. It
+was not added here because the boundary belongs to S7, and widening it would
+mean rebuilding S7 and S8 to say something neither of them needed.
 
 **What does not move, and why.** Grammar0 and Meta0 keep running the
 definitions. Rewriting the machines themselves is not blocked by expressive

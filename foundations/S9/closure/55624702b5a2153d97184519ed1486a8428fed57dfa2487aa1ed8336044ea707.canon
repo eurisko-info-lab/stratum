@@ -1,0 +1,32 @@
+
+artifactsource
+source
+path$languages/properties/properties.meta
+textãmodule properties
+
+record PropertiesFile [lines]
+record Property [key value newline]
+record Blank [newline]
+
+judgment ParseProperties [grammar source] = call Parse [grammar source]
+judgment PrintProperties [grammar syntax] = call Print [grammar syntax]
+judgment PropertiesWellFormed [grammar source] =
+  match call ParseProperties [grammar source] {
+    case (#PropertiesFile lines) -> mk #valid [lines]
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment PropertiesLines [node] = call FlattenSeq [node #PropertiesFile]
+
+judgment PropertiesInferLines [lines] =
+  match lines {
+    case [] -> list []
+    case (#Property key value newline) :: rest ->
+      prim #cons [mk #type [key #string #declared #string] call PropertiesInferLines [rest]]
+    case head :: rest -> call PropertiesInferLines [rest]
+  }
+
+judgment InferProperties [grammar source] =
+  call PropertiesInferLines [call PropertiesLines [call ParseProperties [grammar source]]]
+
+judgment TypeCheckProperties [grammar source] = list []

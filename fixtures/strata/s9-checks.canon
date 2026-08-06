@@ -1,0 +1,575 @@
+; Executable acceptance checks for S9, Meta definitions rewritten.
+[
+  (check strata-the-meta-elaborator-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/meta.strata"))))
+    (value #t))
+
+  (check strata-the-meta-elaborator-checks
+    (call CheckLinkedNative
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q "strata.meta"))
+    (value (checked ok)))
+
+  (check strata-the-meta-elaborator-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q "strata.meta"))
+    (value (total ok)))
+
+  (check strata-elaborates-features-change-change
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/change/change.meta")))
+      (q (file "features/change/change.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-federation-federation
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/federation/federation.meta")))
+      (q (file "features/federation/federation.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-foundation-foundation
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/foundation/foundation.meta")))
+      (q (file "features/foundation/foundation.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-governance-governance
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/governance/governance.meta")))
+      (q (file "features/governance/governance.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-governance-scenarios
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/governance/scenarios.meta")))
+      (q (file "features/governance/scenarios.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-ledger-ledger
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/ledger/ledger.meta")))
+      (q (file "features/ledger/ledger.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-repository-repository
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/repository/repository.meta")))
+      (q (file "features/repository/repository.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-repository-scenarios
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/repository/scenarios.meta")))
+      (q (file "features/repository/scenarios.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-retention-retention
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/retention/retention.meta")))
+      (q (file "features/retention/retention.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-change
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/change.meta")))
+      (q (file "features/strata/change.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-check
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/check.meta")))
+      (q (file "features/strata/check.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-compile
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/compile.meta")))
+      (q (file "features/strata/compile.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-depend
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/depend.meta")))
+      (q (file "features/strata/depend.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-effect
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/effect.meta")))
+      (q (file "features/strata/effect.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-language
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/language.meta")))
+      (q (file "features/strata/language.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-law
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/law.meta")))
+      (q (file "features/strata/law.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-metasource
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/metasource.meta")))
+      (q (file "features/strata/metasource.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-native
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/native.meta")))
+      (q (file "features/strata/native.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-resolve
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/resolve.meta")))
+      (q (file "features/strata/resolve.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-schema
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/schema.meta")))
+      (q (file "features/strata/schema.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-strata-total
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/total.meta")))
+      (q (file "features/strata/total.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-studio-studio
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/studio/studio.meta")))
+      (q (file "features/studio/studio.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-sync-sync
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/sync/sync.meta")))
+      (q (file "features/sync/sync.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-features-tooling-tooling
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/tooling/tooling.meta")))
+      (q (file "features/tooling/tooling.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-gitattributes-gitattributes
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/gitattributes/gitattributes.meta")))
+      (q (file "languages/gitattributes/gitattributes.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-gitignore-gitignore
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/gitignore/gitignore.meta")))
+      (q (file "languages/gitignore/gitignore.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-html-html
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/html/html.meta")))
+      (q (file "languages/html/html.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-json-json
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/json/json.meta")))
+      (q (file "languages/json/json.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-lambda-lambda
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/lambda/lambda.meta")))
+      (q (file "languages/lambda/lambda.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-lean-lean
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/lean/lean.meta")))
+      (q (file "languages/lean/lean.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-markdown-markdown
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/markdown/markdown.meta")))
+      (q (file "languages/markdown/markdown.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-pdf-pdf
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/pdf/pdf.meta")))
+      (q (file "languages/pdf/pdf.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-properties-properties
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/properties/properties.meta")))
+      (q (file "languages/properties/properties.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-rust-rust
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/rust/rust.meta")))
+      (q (file "languages/rust/rust.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-scala-scala
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/scala/scala.meta")))
+      (q (file "languages/scala/scala.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-service-service
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/service/service.meta")))
+      (q (file "languages/service/service.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-shell-shell
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/shell/shell.meta")))
+      (q (file "languages/shell/shell.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-strata-strata
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/strata/strata.meta")))
+      (q (file "languages/strata/strata.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-text-text
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/text/text.meta")))
+      (q (file "languages/text/text.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-toml-toml
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/toml/toml.meta")))
+      (q (file "languages/toml/toml.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-transcript-transcript
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/transcript/transcript.meta")))
+      (q (file "languages/transcript/transcript.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-typescript-typescript
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/typescript/typescript.meta")))
+      (q (file "languages/typescript/typescript.generated.meta")))
+    (value (agree ok)))
+
+  (check strata-elaborates-languages-yaml-yaml
+    (call StrataMetaAgrees
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/yaml/yaml.meta")))
+      (q (file "languages/yaml/yaml.generated.meta")))
+    (value (agree ok)))
+
+  ; --------------------------------------------- the same function, not the
+  ;                                                same bytes by luck
+  ;
+  ; Every check above compares against a committed artifact, which the Meta
+  ; elaborator produced at some point in the past. These two run both
+  ; elaborators now and compare what they return, so what is being decided is
+  ; that the two are the same function -- not that one of them once agreed
+  ; with a file.
+
+  (check strata-is-the-same-function-as-meta-on-text
+    (call StrataMetaMatchesMeta
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "languages/text/text.meta"))))
+    (value (agree ok)))
+
+  (check strata-is-the-same-function-as-meta-on-the-boundary
+    (call StrataMetaMatchesMeta
+      (q (file "foundations/S9/surface/strata.generated.grammar"))
+      (call StrataMetaSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/meta.strata"))))
+      (q (file "languages/meta/meta.generated.grammar"))
+      (call SourceText (q (text-file "features/strata/native.meta"))))
+    (value (agree ok)))
+]

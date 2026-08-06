@@ -1,0 +1,215 @@
+
+artifactsource
+source
+pathlanguages/pdf/pdf.meta
+textï)module pdf
+
+; PDF as a projection language.
+;
+; The profile has always declared pdf as a foreign surface. This is that
+; surface: a printer that turns laid-out text into an actual PDF file, written
+; in Meta like everything else, so an export is a derivation under a step
+; budget rather than a feature of some client.
+;
+; It is a printer rather than a grammar because the format is not context free:
+; the cross reference table holds the byte offset of every object, so the file
+; cannot be produced by printing a tree without knowing how long the earlier
+; parts turned out to be. Those offsets are computed here with string lengths,
+; which is exactly what a grammar printer cannot do.
+;
+; The caller supplies blocks of {size, text}. Nothing here knows what a
+; chemical or a hazard is.
+
+judgment PdfEol [] = "
+"
+
+judgment PdfBackslash [] = "\"
+
+judgment PdfJoin [parts] =
+  match parts {
+    case [] -> ""
+    case head :: rest -> prim #scat [head call PdfJoin [rest]]
+  }
+
+judgment PdfPad [text width] =
+  if prim #ge [prim #slen [text] width]
+  then text
+  else call PdfPad [prim #scat ["0" text] width]
+
+; ---------------------------------------------------------------- escaping
+
+judgment PdfSpecials [] = list ["(" ")" call PdfBackslash []]
+
+judgment PdfEscapeChar [ch] =
+  if prim #contains [call PdfSpecials [] ch]
+  then prim #scat [call PdfBackslash [] ch]
+  else ch
+
+judgment PdfEscapeFrom [text at acc] =
+  if prim #ge [at prim #slen [text]]
+  then acc
+  else
+    call PdfEscapeFrom [
+      text
+      prim #add [at 1]
+      prim #scat [acc call PdfEscapeChar [prim #ssub [text at prim #add [at 1]]]]
+    ]
+
+judgment PdfEscape [text] = call PdfEscapeFrom [text 0 ""]
+
+; ----------------------------------------------------------- the page body
+
+judgment PdfTop [] = 780
+
+judgment PdfBottom [] = 56
+
+judgment PdfLeft [] = 56
+
+judgment PdfShow [block y] =
+  let size = prim #mget [block #size 11] in
+  call PdfJoin [list [
+    "BT /F1 "
+    prim #nat->str [size]
+    " Tf "
+    prim #nat->str [call PdfLeft []]
+    " "
+    prim #nat->str [y]
+    " Td ("
+    call PdfEscape [prim #mget [block #text ""]]
+    ") Tj ET"
+    call PdfEol []
+  ]]
+
+judgment PdfBody [blocks y acc] =
+  match blocks {
+    case [] -> acc
+    case head :: rest ->
+      if prim #lt [y call PdfBottom []]
+      then acc
+      else
+        call PdfBody [
+          rest
+          prim #sub [y prim #add [prim #mget [head #size 11] 6]]
+          prim #scat [acc call PdfShow [head y]]
+        ]
+  }
+
+judgment PdfContent [blocks] = call PdfBody [blocks call PdfTop [] ""]
+
+; ------------------------------------------------------------- the objects
+
+judgment PdfObject [number body] =
+  call PdfJoin [list [
+    prim #nat->str [number]
+    " 0 obj"
+    call PdfEol []
+    body
+    call PdfEol []
+    "endobj"
+    call PdfEol []
+  ]]
+
+judgment PdfCatalogue [] =
+  call PdfObject [1 "<< /Type /Catalog /Pages 2 0 R >>"]
+
+judgment PdfPages [] =
+  call PdfObject [2 "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"]
+
+judgment PdfPage [] =
+  call PdfObject [
+    3
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>"
+  ]
+
+judgment PdfStream [content] =
+  call PdfObject [
+    4
+    call PdfJoin [list [
+      "<< /Length "
+      prim #nat->str [prim #slen [content]]
+      " >>"
+      call PdfEol []
+      "stream"
+      call PdfEol []
+      content
+      "endstream"
+    ]]
+  ]
+
+judgment PdfFont [] =
+  call PdfObject [5 "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+
+judgment PdfHeader [] = call PdfJoin [list ["%PDF-1.4" call PdfEol []]]
+
+; --------------------------------------------------------- the cross table
+
+; Every entry is exactly twenty bytes, and every offset is the length of
+; everything that came before it.
+
+judgment PdfEntry [offset] =
+  call PdfJoin [list [
+    call PdfPad [prim #nat->str [offset] 10]
+    " 00000 n "
+    call PdfEol []
+  ]]
+
+judgment PdfFreeEntry [] =
+  call PdfJoin [list ["0000000000 65535 f " call PdfEol []]]
+
+judgment PdfOffsets [parts at acc] =
+  match parts {
+    case [] -> acc
+    case head :: rest ->
+      call PdfOffsets [
+        rest
+        prim #add [at prim #slen [head]]
+        prim #append [acc list [at]]
+      ]
+  }
+
+judgment PdfEntries [offsets] =
+  match offsets {
+    case [] -> ""
+    case head :: rest -> prim #scat [call PdfEntry [head] call PdfEntries [rest]]
+  }
+
+judgment PdfTrailer [count start] =
+  call PdfJoin [list [
+    "trailer"
+    call PdfEol []
+    "<< /Size "
+    prim #nat->str [count]
+    " /Root 1 0 R >>"
+    call PdfEol []
+    "startxref"
+    call PdfEol []
+    prim #nat->str [start]
+    call PdfEol []
+    "%%EOF"
+    call PdfEol []
+  ]]
+
+judgment PdfFile [blocks] =
+  let objects = list [
+    call PdfCatalogue []
+    call PdfPages []
+    call PdfPage []
+    call PdfStream [call PdfContent [blocks]]
+    call PdfFont []
+  ] in
+  let prologue = prim #cons [call PdfHeader [] objects] in
+  let offsets = call PdfOffsets [prologue 0 list []] in
+  let start = prim #add [
+    prim #nth [offsets prim #sub [prim #len [offsets] 1]]
+    prim #slen [prim #nth [prologue prim #sub [prim #len [prologue] 1]]]
+  ] in
+  call PdfJoin [list [
+    call PdfJoin [prologue]
+    "xref"
+    call PdfEol []
+    "0 6"
+    call PdfEol []
+    call PdfFreeEntry []
+    call PdfEntries [prim #tail [offsets]]
+    call PdfTrailer [6 start]
+  ]]

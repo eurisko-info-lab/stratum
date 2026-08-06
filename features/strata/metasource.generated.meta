@@ -1,0 +1,1286 @@
+; Generated from features/strata/metasource.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratametasource)
+  (judgment
+    ReadMetaDecls
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Seq
+          (pv lhs)
+          (pv rhs))
+        (mk
+          MSeq
+          (call
+            ReadMetaDecls
+            (v lhs))
+          (call
+            ReadMetaDecls
+            (v rhs))))
+      (case
+        _
+        (mk
+          MOneDecl
+          (call
+            ReadMetaDecl
+            (v node))))))
+  (judgment
+    ReadMetaDecl
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Module
+          (pv name))
+        (mk
+          DModule
+          (prim
+            sym->str
+            (v name))))
+      (case
+        (pm
+          Import
+          (pv name))
+        (mk
+          DImport
+          (prim
+            sym->str
+            (v name))))
+      (case
+        (pm
+          Capability
+          (pv name))
+        (mk
+          DCapability
+          (prim
+            sym->str
+            (v name))))
+      (case
+        (pm
+          Evidence
+          (pv name))
+        (mk
+          DEvidence
+          (prim
+            sym->str
+            (v name))))
+      (case
+        (pm
+          Mode
+          (pv name)
+          (pv modes))
+        (mk
+          DMode
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaParams
+            (v modes))))
+      (case
+        (pm
+          Measure
+          (pv name)
+          (pv body))
+        (mk
+          DMeasure
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaExpr
+            (v body))))
+      (case
+        (pm
+          Data
+          (pv name)
+          (pv variants))
+        (mk
+          DData
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaVariants
+            (v variants))))
+      (case
+        (pm
+          Record
+          (pv name)
+          (pv fields))
+        (mk
+          DRecord
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaParams
+            (v fields))))
+      (case
+        (pm
+          JudgmentRules
+          (pv name)
+          (pv params)
+          (pv rules))
+        (mk
+          DJudgmentRules
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaParams
+            (v params))
+          (call
+            ReadMetaRules
+            (v rules))))
+      (case
+        (pm
+          JudgmentBody
+          (pv name)
+          (pv params)
+          (pv body))
+        (mk
+          DJudgmentBody
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaParams
+            (v params))
+          (call
+            ReadMetaExpr
+            (v body))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a declaration the reader does not know")))))
+  (judgment
+    ReadMetaVariants
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Variants
+          (pv lhs)
+          (pv rhs))
+        (mk
+          MVariantSeq
+          (call
+            ReadMetaVariants
+            (v lhs))
+          (call
+            ReadMetaVariants
+            (v rhs))))
+      (case
+        _
+        (mk
+          MOneVariant
+          (call
+            ReadMetaVariant
+            (v node))))))
+  (judgment
+    ReadMetaVariant
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Variant
+          (pv name)
+          (pv fields))
+        (mk
+          MVariant
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaParams
+            (v fields))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a variant the reader does not know")))))
+  (judgment
+    ReadMetaParams
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Params
+          (pv names))
+        (mk
+          MSomeParams
+          (call
+            ReadMetaIdents
+            (v names))))
+      (case
+        _
+        (mk MNoParams))))
+  (judgment
+    ReadMetaIdents
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Idents
+          (pv lhs)
+          (pv rhs))
+        (mk
+          MIdentSeq
+          (call
+            ReadMetaIdents
+            (v lhs))
+          (call
+            ReadMetaIdents
+            (v rhs))))
+      (case
+        _
+        (mk
+          MOneIdent
+          (prim
+            sym->str
+            (v node))))))
+  (judgment
+    ReadMetaRules
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Rules
+          (pv lhs)
+          (pv rhs))
+        (mk
+          MRuleSeq
+          (call
+            ReadMetaRules
+            (v lhs))
+          (call
+            ReadMetaRules
+            (v rhs))))
+      (case
+        _
+        (mk
+          MOneRule
+          (call
+            ReadMetaRule
+            (v node))))))
+  (judgment
+    ReadMetaRule
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Rule
+          (pv pattern)
+          (pv body))
+        (mk
+          MRule
+          (call
+            ReadMetaPattern
+            (v pattern))
+          (call
+            ReadMetaExpr
+            (v body))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a rule the reader does not know")))))
+  (judgment
+    ReadMetaCases
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Cases
+          (pv lhs)
+          (pv rhs))
+        (mk
+          MCaseSeq
+          (call
+            ReadMetaCases
+            (v lhs))
+          (call
+            ReadMetaCases
+            (v rhs))))
+      (case
+        _
+        (mk
+          MOneCase
+          (call
+            ReadMetaCase
+            (v node))))))
+  (judgment
+    ReadMetaCase
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Case
+          (pv pattern)
+          (pv body))
+        (mk
+          MCase
+          (call
+            ReadMetaPattern
+            (v pattern))
+          (call
+            ReadMetaExpr
+            (v body))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a case the reader does not know")))))
+  (judgment
+    ReadMetaExprs
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Exprs
+          (pv items))
+        (mk
+          MSomeExprs
+          (call
+            ReadMetaExprSeq
+            (v items))))
+      (case
+        _
+        (mk MNoExprs))))
+  (judgment
+    ReadMetaExprSeq
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          ExprSeq
+          (pv lhs)
+          (pv rhs))
+        (mk
+          MExprMore
+          (call
+            ReadMetaExprSeq
+            (v lhs))
+          (call
+            ReadMetaExprSeq
+            (v rhs))))
+      (case
+        _
+        (mk
+          MOneExpr
+          (call
+            ReadMetaExpr
+            (v node))))))
+  (judgment
+    ReadMetaExpr
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Var
+          (pv name))
+        (mk
+          EVar
+          (prim
+            sym->str
+            (v name))))
+      (case
+        (pm
+          Symbol
+          (pv value))
+        (mk
+          ESymbol
+          (prim
+            sym->str
+            (v value))))
+      (case
+        (pm
+          Natural
+          (pv value))
+        (mk
+          ENatural
+          (v value)))
+      (case
+        (pm
+          Negative
+          (pv value))
+        (mk
+          ENegative
+          (v value)))
+      (case
+        (pm
+          Text
+          (pv value))
+        (mk
+          EText
+          (v value)))
+      (case
+        (pm True)
+        (mk ETrue))
+      (case
+        (pm False)
+        (mk EFalse))
+      (case
+        (pm Unit)
+        (mk EUnit))
+      (case
+        (pm
+          Mk
+          (pv tag)
+          (pv arguments))
+        (mk
+          EMk
+          (prim
+            sym->str
+            (v tag))
+          (call
+            ReadMetaExprs
+            (v arguments))))
+      (case
+        (pm
+          Call
+          (pv name)
+          (pv arguments))
+        (mk
+          ECall
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaExprs
+            (v arguments))))
+      (case
+        (pm
+          Prim
+          (pv name)
+          (pv arguments))
+        (mk
+          EPrim
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaExprs
+            (v arguments))))
+      (case
+        (pm
+          Cap
+          (pv name)
+          (pv arguments))
+        (mk
+          ECap
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaExprs
+            (v arguments))))
+      (case
+        (pm
+          ListOf
+          (pv items))
+        (mk
+          EListOf
+          (call
+            ReadMetaExprs
+            (v items))))
+      (case
+        (pm
+          MapOf
+          (pv items))
+        (mk
+          EMapOf
+          (call
+            ReadMetaExprs
+            (v items))))
+      (case
+        (pm
+          If
+          (pv condition)
+          (pv consequent)
+          (pv alternative))
+        (mk
+          EIf
+          (call
+            ReadMetaExpr
+            (v condition))
+          (call
+            ReadMetaExpr
+            (v consequent))
+          (call
+            ReadMetaExpr
+            (v alternative))))
+      (case
+        (pm
+          Let
+          (pv name)
+          (pv value)
+          (pv body))
+        (mk
+          ELet
+          (prim
+            sym->str
+            (v name))
+          (call
+            ReadMetaExpr
+            (v value))
+          (call
+            ReadMetaExpr
+            (v body))))
+      (case
+        (pm
+          Fail
+          (pv kind)
+          (pv message))
+        (mk
+          EFail
+          (prim
+            sym->str
+            (v kind))
+          (call
+            ReadMetaExpr
+            (v message))))
+      (case
+        (pm
+          Match
+          (pv scrutinee)
+          (pv cases))
+        (mk
+          EMatch
+          (call
+            ReadMetaExpr
+            (v scrutinee))
+          (call
+            ReadMetaCases
+            (v cases))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "an expression the reader does not know")))))
+  (judgment
+    ReadMetaPattern
+    [node]
+    (match
+      (v node)
+      (case
+        (pm PatWild)
+        (mk PatWild))
+      (case
+        (pm
+          PatVar
+          (pv name))
+        (mk
+          PatVar
+          (prim
+            sym->str
+            (v name))))
+      (case
+        (pm
+          PatSymbol
+          (pv value))
+        (mk
+          PatSymbol
+          (prim
+            sym->str
+            (v value))))
+      (case
+        (pm
+          PatNatural
+          (pv value))
+        (mk
+          PatNatural
+          (v value)))
+      (case
+        (pm
+          PatText
+          (pv value))
+        (mk
+          PatText
+          (v value)))
+      (case
+        (pm PatNil)
+        (mk PatNil))
+      (case
+        (pm
+          PatNodeEmpty
+          (pv tag))
+        (mk
+          PatNodeEmpty
+          (prim
+            sym->str
+            (v tag))))
+      (case
+        (pm
+          PatNode
+          (pv tag)
+          (pv arguments))
+        (mk
+          PatNode
+          (prim
+            sym->str
+            (v tag))
+          (call
+            ReadMetaPatSeq
+            (v arguments))))
+      (case
+        (pm
+          PatList
+          (pv items))
+        (mk
+          PatList
+          (call
+            ReadMetaPatSeq
+            (v items))))
+      (case
+        (pm
+          PatCons
+          (pv head)
+          (pv tail))
+        (mk
+          PatCons
+          (call
+            ReadMetaPattern
+            (v head))
+          (call
+            ReadMetaPattern
+            (v tail))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a pattern the reader does not know")))))
+  (judgment
+    ReadMetaPatSeq
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          PatSeq
+          (pv lhs)
+          (pv rhs))
+        (mk
+          MPatMore
+          (call
+            ReadMetaPatSeq
+            (v lhs))
+          (call
+            ReadMetaPatSeq
+            (v rhs))))
+      (case
+        _
+        (mk
+          MOnePat
+          (call
+            ReadMetaPattern
+            (v node))))))
+  (judgment
+    WriteMetaProgram
+    [value]
+    (match
+      (v value)
+      (case
+        (pm
+          OProgram
+          (pv decls))
+        (prim
+          node
+          (q program)
+          (call
+            WriteMetaDecls
+            (v decls))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "elaboration did not produce a program")))))
+  (judgment
+    WriteMetaDecls
+    [decls]
+    (match
+      (v decls)
+      (case
+        (pm
+          OMoreDecl
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteMetaDecl
+            (v head))
+          (call
+            WriteMetaDecls
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteMetaDecl
+    [decl]
+    (match
+      (v decl)
+      (case
+        (pm
+          OModule
+          (pv name))
+        (mk
+          module
+          (prim
+            str->sym
+            (v name))))
+      (case
+        (pm
+          OJudgment
+          (pv name)
+          (pv params)
+          (pv body))
+        (prim
+          node
+          (q judgment)
+          (lst
+            (prim
+              str->sym
+              (v name))
+            (call
+              WriteNames
+              (v params))
+            (call
+              WriteMetaExpr
+              (v body)))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a declaration the writer does not know")))))
+  (judgment
+    WriteNames
+    [names]
+    (match
+      (v names)
+      (case
+        (pm
+          MoreName
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (prim
+            str->sym
+            (v head))
+          (call
+            WriteNames
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteMetaExprs
+    [exprs]
+    (match
+      (v exprs)
+      (case
+        (pm
+          MoreOExpr
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteMetaExpr
+            (v head))
+          (call
+            WriteMetaExprs
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteMetaExpr
+    [expr]
+    (match
+      (v expr)
+      (case
+        (pm
+          OVar
+          (pv name))
+        (mk
+          v
+          (prim
+            str->sym
+            (v name))))
+      (case
+        (pm
+          OQuote
+          (pv value))
+        (mk
+          q
+          (call
+            WriteQuoted
+            (v value))))
+      (case
+        (pm
+          OMk
+          (pv tag)
+          (pv args))
+        (prim
+          node
+          (q mk)
+          (prim
+            cons
+            (prim
+              str->sym
+              (v tag))
+            (call
+              WriteMetaExprs
+              (v args)))))
+      (case
+        (pm
+          OCall
+          (pv name)
+          (pv args))
+        (prim
+          node
+          (q call)
+          (prim
+            cons
+            (prim
+              str->sym
+              (v name))
+            (call
+              WriteMetaExprs
+              (v args)))))
+      (case
+        (pm
+          OPrim
+          (pv name)
+          (pv args))
+        (prim
+          node
+          (q prim)
+          (prim
+            cons
+            (prim
+              str->sym
+              (v name))
+            (call
+              WriteMetaExprs
+              (v args)))))
+      (case
+        (pm
+          OCap
+          (pv name)
+          (pv args))
+        (prim
+          node
+          (q cap)
+          (prim
+            cons
+            (prim
+              str->sym
+              (v name))
+            (call
+              WriteMetaExprs
+              (v args)))))
+      (case
+        (pm
+          OList
+          (pv items))
+        (prim
+          node
+          (q lst)
+          (call
+            WriteMetaExprs
+            (v items))))
+      (case
+        (pm
+          OMap
+          (pv items))
+        (prim
+          node
+          (q mp)
+          (call
+            WriteMetaExprs
+            (v items))))
+      (case
+        (pm
+          OIf
+          (pv condition)
+          (pv consequent)
+          (pv alternative))
+        (prim
+          node
+          (q if)
+          (lst
+            (call
+              WriteMetaExpr
+              (v condition))
+            (call
+              WriteMetaExpr
+              (v consequent))
+            (call
+              WriteMetaExpr
+              (v alternative)))))
+      (case
+        (pm
+          OLet
+          (pv name)
+          (pv value)
+          (pv body))
+        (prim
+          node
+          (q let)
+          (lst
+            (prim
+              str->sym
+              (v name))
+            (call
+              WriteMetaExpr
+              (v value))
+            (call
+              WriteMetaExpr
+              (v body)))))
+      (case
+        (pm
+          OFail
+          (pv kind)
+          (pv message))
+        (mk
+          fail
+          (prim
+            str->sym
+            (v kind))
+          (call
+            WriteMetaExpr
+            (v message))))
+      (case
+        (pm
+          OMatch
+          (pv scrutinee)
+          (pv cases))
+        (prim
+          node
+          (q match)
+          (prim
+            cons
+            (call
+              WriteMetaExpr
+              (v scrutinee))
+            (call
+              WriteMetaCases
+              (v cases)))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "an expression the writer does not know")))))
+  (judgment
+    WriteMetaCases
+    [cases]
+    (match
+      (v cases)
+      (case
+        (pm
+          MoreOArm
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteMetaCase
+            (v head))
+          (call
+            WriteMetaCases
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteMetaCase
+    [arm]
+    (match
+      (v arm)
+      (case
+        (pm
+          OArm
+          (pv pattern)
+          (pv body))
+        (mk
+          case
+          (call
+            WriteMetaPat
+            (v pattern))
+          (call
+            WriteMetaExpr
+            (v body))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a case the writer does not know")))))
+  (judgment
+    WriteMetaPats
+    [patterns]
+    (match
+      (v patterns)
+      (case
+        (pm
+          MoreOPat
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteMetaPat
+            (v head))
+          (call
+            WriteMetaPats
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteMetaPat
+    [pattern]
+    (match
+      (v pattern)
+      (case
+        (pm PWild)
+        (q _))
+      (case
+        (pm
+          PVar
+          (pv name))
+        (mk
+          pv
+          (prim
+            str->sym
+            (v name))))
+      (case
+        (pm
+          PQuote
+          (pv value))
+        (mk
+          pq
+          (call
+            WriteQuoted
+            (v value))))
+      (case
+        (pm PNil)
+        (prim
+          node
+          (q pnil)
+          (lst)))
+      (case
+        (pm
+          PNode
+          (pv tag)
+          (pv args))
+        (prim
+          node
+          (q pm)
+          (prim
+            cons
+            (prim
+              str->sym
+              (v tag))
+            (call
+              WriteMetaPats
+              (v args)))))
+      (case
+        (pm
+          PList
+          (pv items))
+        (prim
+          node
+          (q pl)
+          (call
+            WriteMetaPats
+            (v items))))
+      (case
+        (pm
+          PCons
+          (pv head)
+          (pv tail))
+        (mk
+          pcons
+          (call
+            WriteMetaPat
+            (v head))
+          (call
+            WriteMetaPat
+            (v tail))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a pattern the writer does not know")))))
+  (judgment
+    WriteQuotedList
+    [items]
+    (match
+      (v items)
+      (case
+        (pm
+          MoreQ
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteQuoted
+            (v head))
+          (call
+            WriteQuotedList
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteQuoted
+    [value]
+    (match
+      (v value)
+      (case
+        (pm
+          QSym
+          (pv name))
+        (prim
+          str->sym
+          (v name)))
+      (case
+        (pm
+          QNat
+          (pv number))
+        (v number))
+      (case
+        (pm
+          QNeg
+          (pv number))
+        (prim
+          sub
+          (q 0)
+          (v number)))
+      (case
+        (pm
+          QText
+          (pv text))
+        (v text))
+      (case
+        (pm QTrue)
+        (q #t))
+      (case
+        (pm QFalse)
+        (q #f))
+      (case
+        (pm QUnit)
+        (q #unit))
+      (case
+        (pm
+          QListOf
+          (pv items))
+        (call
+          WriteQuotedList
+          (v items)))
+      (case
+        (pm
+          QNode
+          (pv tag)
+          (pv args))
+        (prim
+          node
+          (prim
+            str->sym
+            (v tag))
+          (call
+            WriteQuotedList
+            (v args))))
+      (case
+        _
+        (fail
+          metasource-error
+          (q "a quoted value the writer does not know")))))
+  (judgment
+    StrataMetaSystem
+    [prelude native meta]
+    (lst
+      (v prelude)
+      (v native)
+      (v meta)))
+  (judgment
+    ElaborateMetaInStrata
+    [strataGrammar sources metaGrammar source]
+    (call
+      WriteMetaProgram
+      (call
+        RunStrataOn
+        (v strataGrammar)
+        (v sources)
+        (q "strata.meta")
+        (q elaborate)
+        (call
+          ReadMetaDecls
+          (call
+            Parse
+            (v metaGrammar)
+            (v source))))))
+  (judgment
+    StrataMetaAgrees
+    [strataGrammar sources metaGrammar source artifactReference]
+    (match
+      (call
+        Fetch
+        (v artifactReference)
+        (q meta-program))
+      (case
+        (pm
+          some
+          (pv committed))
+        (if
+          (prim
+            eq
+            (v committed)
+            (call
+              ElaborateMetaInStrata
+              (v strataGrammar)
+              (v sources)
+              (v metaGrammar)
+              (v source)))
+          (mk
+            agree
+            (q ok))
+          (mk
+            agree
+            (q mismatch))))
+      (case
+        _
+        (mk
+          agree
+          (q artifact-missing)))))
+  (judgment
+    StrataMetaMatchesMeta
+    [strataGrammar sources metaGrammar source]
+    (if
+      (prim
+        eq
+        (call
+          ElaborateSource
+          (v metaGrammar)
+          (v source))
+        (call
+          ElaborateMetaInStrata
+          (v strataGrammar)
+          (v sources)
+          (v metaGrammar)
+          (v source)))
+      (mk
+        agree
+        (q ok))
+      (mk
+        agree
+        (q mismatch)))))
