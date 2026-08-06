@@ -1,0 +1,11 @@
+; delta-meta for S1 -> S2: Meta gains telescopes, indexed families, dependent
+; application and type normalisation, so a judgment about a type may depend on
+; a value.
+(change
+  (kind delta-meta)
+  (name "S1->S2 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (typed strata)
+      (dependent strata))))

@@ -1,0 +1,106 @@
+# S2 acceptance transcript: the dependent core.
+#
+# S1 |- S2. S1 gave a declaration a type. S2 lets a type mention a value: a
+# family carries a telescope, a constructor says which index it lands on, and
+# two types are the same when they compute to the same thing.
+
+$ foundation verify --dir foundations/S2
+> foundation S2
+> digest f98472d7ff9c4fa7c275b791c664c60a9d50080400225d53c1c8b695d8748d73
+> closure 102 artifacts
+> check strata-checks-an-indexed-family ok
+> check strata-rejects-an-undeclared-parameter-type ok
+> check strata-rejects-a-family-that-parameterises-itself ok
+> check strata-rejects-a-constructor-that-lands-elsewhere ok
+> check strata-rejects-an-unsaturated-index ok
+> check strata-requires-an-index-on-a-family-constructor ok
+> check strata-normalises-an-index-before-comparing ok
+> check strata-separates-indices-that-differ ok
+> check strata-rejects-an-append-whose-index-does-not-add-up ok
+> check strata-rewrites-along-a-proof ok
+> check strata-dependent-surface-prints-exactly ok
+> check strata-seed-surface-still-parses ok
+> check strata-an-indexed-vector-is-well-formed ok
+> check strata-an-indexed-vector-terminates ok
+> check strata-rejects-a-length-that-is-off-by-one ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S1 --successor foundations/S2
+> predecessor S1
+> successor S2
+> result (valid #d07e7571f7816c9cd62cb28298c5826760edb11b12846a7acde2d464ea9d561eb)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/S2
+> reconstructed S2
+> digest f98472d7ff9c4fa7c275b791c664c60a9d50080400225d53c1c8b695d8748d73
+> stable yes
+> closure 102 artifacts
+> checks 15 ok
+
+# A family declared with a telescope, whose constructors each land on an
+# index.
+$ derive --foundation foundations/S2 --goal '(call CheckDependentModule (grammar strata) (q "module \"strata.vec\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef example []: Nat = Zero\n"))'
+> (checked ok)
+
+# A parameter declared with a type nothing declares is a kind error, not a
+# name resolved later.
+$ derive --foundation foundations/S2 --goal '(call CheckDependentModule (grammar strata) (q "module \"strata.bad\"\nversion 1\ndata Vec [a: Type, n: Missing] = | Nil []: Vec a Missing\ndef example []: Nat = Zero\n"))'
+> error kind-error "a parameter is declared with the undeclared type Missing"
+> exit 1
+
+# Nothing may be its own type.
+$ derive --foundation foundations/S2 --goal '(call CheckDependentModule (grammar strata) (q "module \"strata.cyclic\"\nversion 1\ndata Loop [a: Loop] = | Wrap []: Loop a\ndef example []: Nat = Zero\n"))'
+> error kind-error "family Loop is a parameter of itself"
+> exit 1
+
+# A constructor must land on the family that declares it.
+$ derive --foundation foundations/S2 --goal '(call CheckDependentModule (grammar strata) (q "module \"strata.elsewhere\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndata Vec [a: Type, n: Nat] = | Nil []: Nat\ndef example []: Nat = Zero\n"))'
+> error index-error "constructor Nil does not land on the family that declares it"
+> exit 1
+
+# And must saturate the indices of that family.
+$ derive --foundation foundations/S2 --goal '(call CheckDependentModule (grammar strata) (q "module \"strata.short\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a\ndef example []: Nat = Zero\n"))'
+> error index-error "constructor Nil does not saturate the indices of its family"
+> exit 1
+
+# The length of an appended vector is the sum of the two lengths, and the
+# checker decides that from the declaration alone.
+$ derive --foundation foundations/S2 --goal '(call CheckDependentModule (grammar strata) (q "module \"strata.vector\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef append [a: Type, m: Nat, n: Nat, xs: Vec a m, ys: Vec a n]: Vec a (add m n) = match xs of case Nil b -> ys case Cons b p h t -> Cons b (add p n) h (append b p n t ys) end\ndata Eq [a: Type, x: a, y: a] = | Refl []: Eq a x x\ndef zeroAdds [n: Nat]: Eq Nat n n = Refl Nat n\ndef single [a: Type, x: a]: Vec a (Succ Zero) = Cons a Zero x (Nil a)\ndef pair [a: Type, x: a, y: a]: Vec a (Succ (Succ Zero)) = append a (Succ Zero) (Succ Zero) (single a x) (single a y)\n"))'
+> (checked ok)
+
+# The same module with an index that does not add up is rejected.
+$ derive --foundation foundations/S2 --goal '(call CheckDependentModule (grammar strata) (q "module \"strata.bad\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef append [a: Type, m: Nat, n: Nat, xs: Vec a m, ys: Vec a n]: Vec a m = match xs of case Nil b -> ys case Cons b p h t -> Cons b (add p n) h (append b p n t ys) end\n"))'
+> error type-error "definition append does not have its declared result type"
+> exit 1
+
+# `add Zero Zero` and `Zero` are one index, because comparison happens after
+# computation.
+$ derive --foundation foundations/S2 --goal '(call SameType (call DependentConstructors (call Declarations (call ParseStrata (grammar strata) (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n")))) (call DependentDefinitions (call Declarations (call ParseStrata (grammar strata) (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n")))) (q (apply (apply (con add) (con Zero)) (con Zero))) (q (con Zero)))'
+> #t
+
+# Computation stops rather than fails at a name with no value yet, which is
+# what lets a length add up while it is still unknown.
+$ derive --foundation foundations/S2 --goal '(call NormalizeType (call DependentConstructors (call Declarations (call ParseStrata (grammar strata) (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n")))) (call DependentDefinitions (call Declarations (call ParseStrata (grammar strata) (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n")))) (q (apply (apply (con add) (apply (con Succ) (con k))) (con j))))'
+> (apply (con Succ) (apply (apply (con add) (con k)) (con j)))
+
+# A proof of equality rewrites one side into the other.
+$ derive --foundation foundations/S2 --goal '(call RewriteAlong (call DependentConstructors (call Declarations (call ParseStrata (grammar strata) (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n")))) (call DependentDefinitions (call Declarations (call ParseStrata (grammar strata) (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n")))) (q (apply (apply (apply (con Eq) (con Nat)) (con m)) (apply (apply (con add) (con Zero)) (con m)))) (q (apply (apply (con Vec) (con a)) (con m))))'
+> (apply (apply (con Vec) (con a)) (con m))
+
+# The seed surface still parses and still prints back byte for byte, because
+# a foundation may not take away what its predecessor could say.
+$ derive --foundation foundations/S2 --goal '(call PrintsExactly (grammar strata) (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))'
+> #t
+
+# The library's `pair` declares a length of two and builds one by appending
+# two vectors of one. The two spellings meet here.
+$ derive --foundation foundations/S2 --goal '(call NormalizeType (call DependentConstructors (call Declarations (call ParseStrata (grammar strata) (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n")))) (call DependentDefinitions (call Declarations (call ParseStrata (grammar strata) (q "module \"strata.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\n")))) (q (apply (apply (con add) (apply (con Succ) (con Zero))) (apply (con Succ) (con Zero)))))'
+> (apply (con Succ) (apply (con Succ) (con Zero)))
+
+# And what S1 decided, S2 still decides.
+$ derive --foundation foundations/S2 --goal '(call CheckModule (grammar strata) (call SourceText (source "strata/lib/nat.strata")))'
+> (checked ok)
+
+$ derive --foundation foundations/S2 --goal '(call TotalModule (grammar strata) (q "module \"strata.vector\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ndef add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero | Cons [head #1: a, tail #2: Vec a n]: Vec a (Succ n)\ndef append [a: Type, m: Nat, n: Nat, xs: Vec a m, ys: Vec a n]: Vec a (add m n) = match xs of case Nil b -> ys case Cons b p h t -> Cons b (add p n) h (append b p n t ys) end\ndata Eq [a: Type, x: a, y: a] = | Refl []: Eq a x x\ndef zeroAdds [n: Nat]: Eq Nat n n = Refl Nat n\ndef single [a: Type, x: a]: Vec a (Succ Zero) = Cons a Zero x (Nil a)\ndef pair [a: Type, x: a, y: a]: Vec a (Succ (Succ Zero)) = append a (Succ Zero) (Succ Zero) (single a x) (single a y)\n"))'
+> (total ok)

@@ -16,6 +16,7 @@ category line
   prod Comment value : comment eol : eol
   prod Module "module" name : text eol : eol
   prod Version "version" value : number eol : eol
+  prod DataParams "data" name : ident params : params "=" constructors : constructors eol : eol
   prod Data "data" name : ident "=" constructors : constructors eol : eol
   prod Def "def" name : ident params : params ":" result : type "=" body : expr eol : eol
   prod Law "law" name : ident params : params "=" body : expr eol : eol
@@ -24,6 +25,7 @@ category constructors
   fold Constructors constructor
 
 category constructor
+  prod ConstructorAt "|" name : ident fields : fields ":" result : type
   prod Constructor "|" name : ident fields : fields
 
 category fields
@@ -49,6 +51,7 @@ category param
   prod Param name : ident ":" type : type
 
 category type
+  prod TypeDepend params : params "->" to : type
   prod TypeArrow from : typeapp "->" to : type
   pass typeapp
 

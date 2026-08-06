@@ -1,0 +1,993 @@
+module stratadepend
+
+; The dependent core, described in Meta.
+;
+; S1 gives a declaration a type. S2 lets a type mention a value.
+;
+; A family is declared with a telescope, and each of its constructors says
+; which index it lands on:
+;
+;   data Vec [a: Type, n: Nat] =
+;     | Nil [] : Vec a Zero
+;     | Cons [head #1: a, tail #2: Vec a n] : Vec a (Succ n)
+;
+; Two types are the same when they compute to the same thing, so `Vec a
+; (add Zero n)` and `Vec a n` are one type rather than two. That is the whole
+; difference from S1: comparison happens after computation, not before.
+;
+; Nothing here is inferred that was not written. A constructor binds the
+; family parameters its fields and its index mention, and those arguments are
+; passed and matched like any other. Working out an argument that was left out
+; is a separate question, and it is not this floor's.
+;
+; A type is one of
+;
+;   (con name)              a name, which may be a family, a constructor or a
+;                           variable that has not been given a value yet
+;   (apply left right)      one type applied to another
+;   (arrow from to)         a function whose result does not mention its
+;                           argument
+;   (depend name from to)   a function whose result does mention its argument
+
+; ------------------------------------------------------------------- spines
+
+judgment TypeSpine [type] =
+  match type {
+    case (#apply left right) -> prim #snoc [call TypeSpine [left] right]
+    case _ -> list [type]
+  }
+
+judgment ApplySpine [head args] =
+  match args {
+    case [] -> head
+    case arg :: rest -> call ApplySpine [mk #apply [head arg] rest]
+  }
+
+judgment TypeHead [type] =
+  match call TypeSpine [type] {
+    case head :: args -> head
+    case _ -> type
+  }
+
+judgment TypeArgs [type] =
+  match call TypeSpine [type] {
+    case head :: args -> args
+    case _ -> list []
+  }
+
+; -------------------------------------------------------------- occurrence
+
+judgment OccursInType [name type] =
+  match type {
+    case (#con declared) -> prim #eq [declared name]
+    case (#apply left right) ->
+      prim #or [call OccursInType [name left] call OccursInType [name right]]
+    case (#arrow from to) ->
+      prim #or [call OccursInType [name from] call OccursInType [name to]]
+    case (#depend bound from to) ->
+      prim #or [
+        call OccursInType [name from]
+        prim #and [prim #ne [bound name] call OccursInType [name to]]
+      ]
+    case _ -> false
+  }
+
+judgment OccursInAny [name types] =
+  match types {
+    case [] -> false
+    case head :: rest ->
+      prim #or [call OccursInType [name head] call OccursInAny [name rest]]
+  }
+
+; ------------------------------------------------------------ substitution
+
+judgment SubstituteType [name value type] =
+  match type {
+    case (#con declared) ->
+      if prim #eq [declared name] then value else type
+    case (#apply left right) ->
+      mk #apply [
+        call SubstituteType [name value left]
+        call SubstituteType [name value right]
+      ]
+    case (#arrow from to) ->
+      mk #arrow [
+        call SubstituteType [name value from]
+        call SubstituteType [name value to]
+      ]
+    case (#depend bound from to) ->
+      if prim #eq [bound name]
+      then mk #depend [bound call SubstituteType [name value from] to]
+      else
+        mk #depend [
+          bound
+          call SubstituteType [name value from]
+          call SubstituteType [name value to]
+        ]
+    case _ -> type
+  }
+
+; A solution maps names to types. Applying one applies every entry at once,
+; so a name a later entry introduces is not substituted again.
+judgment SubstituteSolution [solution type] =
+  match type {
+    case (#con declared) -> prim #mget [solution declared type]
+    case (#apply left right) ->
+      mk #apply [
+        call SubstituteSolution [solution left]
+        call SubstituteSolution [solution right]
+      ]
+    case (#arrow from to) ->
+      mk #arrow [
+        call SubstituteSolution [solution from]
+        call SubstituteSolution [solution to]
+      ]
+    case (#depend bound from to) ->
+      mk #depend [
+        bound
+        call SubstituteSolution [solution from]
+        call SubstituteSolution [solution to]
+      ]
+    case _ -> type
+  }
+
+judgment SubstituteEach [solution types] =
+  match types {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        call SubstituteSolution [solution head]
+        call SubstituteEach [solution rest]
+      ]
+  }
+
+; Every type an environment records moves with the solution, because a
+; pattern that refines an index refines everything already in scope.
+judgment SubstituteEnv [solution env] =
+  call SubstituteEnvKeys [solution env prim #mkeys [env] prim #mnew []]
+
+judgment SubstituteEnvKeys [solution env keys out] =
+  match keys {
+    case [] -> out
+    case key :: rest ->
+      call SubstituteEnvKeys [
+        solution
+        env
+        rest
+        prim #mput [out key call SubstituteSolution [solution prim #mget [env key #unbound]]]
+      ]
+  }
+
+; ------------------------------------------------------------------ tables
+
+judgment DependentFamilies [decls] = call CollectFamiliesInto [decls prim #mnew []]
+
+judgment CollectFamiliesInto [decls table] =
+  match decls {
+    case [] -> table
+    case (#family name params ctors) :: rest ->
+      call CollectFamiliesInto [
+        rest
+        prim #mput [table name mk #telescope [
+          call TelescopeNames [params]
+          call TelescopeTypes [params]
+        ]]
+      ]
+    case (#data name ctors) :: rest ->
+      call CollectFamiliesInto [
+        rest
+        prim #mput [table name mk #telescope [list [] list []]]
+      ]
+    case head :: rest -> call CollectFamiliesInto [rest table]
+  }
+
+judgment TelescopeNames [params] =
+  match params {
+    case [] -> list []
+    case (#Param pname ptype) :: rest ->
+      prim #cons [pname call TelescopeNames [rest]]
+    case head :: rest -> call TelescopeNames [rest]
+  }
+
+judgment TelescopeTypes [params] =
+  match params {
+    case [] -> list []
+    case (#Param pname ptype) :: rest ->
+      prim #cons [call TypeValue [ptype] call TelescopeTypes [rest]]
+    case head :: rest -> call TelescopeTypes [rest]
+  }
+
+; A constructor is recorded with the binders it needs, the types of its
+; fields and the index it lands on. Families are recorded in the same table,
+; because a type is passed as an argument like anything else, and a family is
+; the type of the type it builds.
+judgment DependentConstructors [decls] =
+  call CollectIndexedInto [decls call CollectFamilyEntries [decls prim #mnew []]]
+
+judgment CollectFamilyEntries [decls table] =
+  match decls {
+    case [] -> table
+    case (#family name params ctors) :: rest ->
+      call CollectFamilyEntries [
+        rest
+        prim #mput [table name mk #familyof [
+          call TelescopeNames [params]
+          call TelescopeTypes [params]
+        ]]
+      ]
+    case (#data name ctors) :: rest ->
+      call CollectFamilyEntries [
+        rest
+        prim #mput [table name mk #familyof [list [] list []]]
+      ]
+    case head :: rest -> call CollectFamilyEntries [rest table]
+  }
+
+; Rigid names are constructors and families alike; only a constructor can be
+; taken apart by a case.
+judgment IsConstructor [ctors name] =
+  if prim #mhas [ctors name]
+  then
+    match prim #mget [ctors name #unbound] {
+      case (#indexed owner names types fields result) -> true
+      case _ -> false
+    }
+  else false
+
+judgment CollectIndexedInto [decls table] =
+  match decls {
+    case [] -> table
+    case (#family owner params ctors) :: rest ->
+      call CollectIndexedInto [
+        rest
+        call AddIndexedOf [
+          owner
+          call TelescopeNames [params]
+          call TelescopeTypes [params]
+          ctors
+          table
+        ]
+      ]
+    case (#data owner ctors) :: rest ->
+      call CollectIndexedInto [
+        rest
+        call AddIndexedOf [owner list [] list [] ctors table]
+      ]
+    case head :: rest -> call CollectIndexedInto [rest table]
+  }
+
+judgment AddIndexedOf [owner pnames ptypes ctors table] =
+  match ctors {
+    case [] -> table
+    case (#ConstructorAt cname fields result) :: rest ->
+      call AddIndexedOf [
+        owner
+        pnames
+        ptypes
+        rest
+        call AddOneIndexed [
+          table
+          cname
+          owner
+          pnames
+          ptypes
+          call DeclaredFieldTypes [call FieldList [fields]]
+          call TypeValue [result]
+        ]
+      ]
+    case (#Constructor cname fields) :: rest ->
+      call AddIndexedOf [
+        owner
+        pnames
+        ptypes
+        rest
+        call AddOneIndexed [
+          table
+          cname
+          owner
+          pnames
+          ptypes
+          call DeclaredFieldTypes [call FieldList [fields]]
+          call ApplySpine [mk #con [owner] call NamesAsTypes [pnames]]
+        ]
+      ]
+    case head :: rest -> call AddIndexedOf [owner pnames ptypes rest table]
+  }
+
+judgment NamesAsTypes [names] =
+  match names {
+    case [] -> list []
+    case name :: rest -> prim #cons [mk #con [name] call NamesAsTypes [rest]]
+  }
+
+; A constructor binds the family parameters its fields or its index actually
+; mention, and no others. `Nil : Vec a Zero` binds `a` alone; `Cons` binds
+; both `a` and the length it grows.
+judgment AddOneIndexed [table cname owner pnames ptypes fields result] =
+  prim #mput [table cname mk #indexed [
+    owner
+    call BinderNames [pnames ptypes prim #snoc [fields result]]
+    call BinderTypes [pnames ptypes prim #snoc [fields result]]
+    fields
+    result
+  ]]
+
+judgment BinderNames [pnames ptypes mentioned] =
+  match pnames {
+    case [] -> list []
+    case pname :: restNames ->
+      match ptypes {
+        case [] -> list []
+        case ptype :: restTypes ->
+          if call OccursInAny [pname mentioned]
+          then prim #cons [pname call BinderNames [restNames restTypes mentioned]]
+          else call BinderNames [restNames restTypes mentioned]
+      }
+  }
+
+judgment BinderTypes [pnames ptypes mentioned] =
+  match pnames {
+    case [] -> list []
+    case pname :: restNames ->
+      match ptypes {
+        case [] -> list []
+        case ptype :: restTypes ->
+          if call OccursInAny [pname mentioned]
+          then prim #cons [ptype call BinderTypes [restNames restTypes mentioned]]
+          else call BinderTypes [restNames restTypes mentioned]
+      }
+  }
+
+; Definitions are recorded with their bodies, because normalising a type that
+; mentions a definition means running it.
+judgment DependentDefinitions [decls] = call CollectDependentDefs [decls prim #mnew []]
+
+judgment CollectDependentDefs [decls table] =
+  match decls {
+    case [] -> table
+    case (#def name params result body) :: rest ->
+      call CollectDependentDefs [
+        rest
+        prim #mput [table name mk #dsig [
+          call TelescopeNames [params]
+          call TelescopeTypes [params]
+          call TypeValue [result]
+          body
+        ]]
+      ]
+    case head :: rest -> call CollectDependentDefs [rest table]
+  }
+
+; Every parameter binds, so a later one may mention an earlier one.
+judgment DependentArrows [names types result] =
+  match names {
+    case [] -> result
+    case name :: restNames ->
+      match types {
+        case [] -> result
+        case type :: restTypes ->
+          mk #depend [name type call DependentArrows [restNames restTypes result]]
+      }
+  }
+
+judgment DependentTypeOf [entry] =
+  match entry {
+    case (#dsig names types result body) -> call DependentArrows [names types result]
+    case _ -> fail #type-error "malformed definition signature"
+  }
+
+judgment IndexedTypeOf [entry] =
+  match entry {
+    case (#indexed owner names types fields result) ->
+      call DependentArrows [names types call ArrowsTo [fields result]]
+    case (#familyof names types) ->
+      call DependentArrows [names types mk #con [#Type]]
+    case _ -> fail #type-error "malformed constructor"
+  }
+
+; ------------------------------------------------------------ normalisation
+;
+; A type may mention a definition applied to arguments. Two such types are the
+; same when they compute to the same thing, so comparison normalises first.
+;
+; Normalising stops rather than fails when it meets a name that has no value
+; yet, because that is the ordinary situation inside a definition: `add (Succ
+; n) k` becomes `Succ (add n k)` while `n` is still unknown, and that step is
+; exactly what makes an index add up.
+
+judgment NormalizeType [ctors defs type] =
+  match type {
+    case (#apply left right) ->
+      call NormalizeHead [
+        ctors
+        defs
+        mk #apply [
+          call NormalizeType [ctors defs left]
+          call NormalizeType [ctors defs right]
+        ]
+      ]
+    case (#arrow from to) ->
+      mk #arrow [
+        call NormalizeType [ctors defs from]
+        call NormalizeType [ctors defs to]
+      ]
+    case (#depend bound from to) ->
+      mk #depend [
+        bound
+        call NormalizeType [ctors defs from]
+        call NormalizeType [ctors defs to]
+      ]
+    case (#con name) -> call NormalizeHead [ctors defs type]
+    case _ -> type
+  }
+
+judgment NormalizeHead [ctors defs type] =
+  match call TypeSpine [type] {
+    case (#con name) :: args ->
+      if prim #mhas [defs name]
+      then call NormalizeDefinition [ctors defs type prim #mget [defs name #unbound] args]
+      else type
+    case _ -> type
+  }
+
+judgment NormalizeDefinition [ctors defs original entry args] =
+  match entry {
+    case (#dsig names types result body) ->
+      if prim #ne [prim #len [names] prim #len [args]]
+      then original
+      else
+        call UnstuckOr [
+          original
+          call NormalizeExpr [ctors defs call BindNames [names args prim #mnew []] body]
+        ]
+    case _ -> original
+  }
+
+judgment BindNames [names values env] =
+  match names {
+    case [] -> env
+    case name :: restNames ->
+      match values {
+        case [] -> env
+        case value :: restValues ->
+          call BindNames [restNames restValues prim #mput [env name value]]
+      }
+  }
+
+; When a definition gets stuck on a name that has no value, the application is
+; left as it was written rather than half reduced.
+judgment UnstuckOr [original result] =
+  match result {
+    case (#stuck) -> original
+    case _ -> result
+  }
+
+; Strata expressions, read as types.
+judgment NormalizeExpr [ctors defs env expr] =
+  match expr {
+    case (#Var name) ->
+      if prim #mhas [env name]
+      then prim #mget [env name #unbound]
+      else call NormalizeHead [ctors defs mk #con [name]]
+    case (#Apply fn argument) ->
+      call NormalizeApplication [
+        ctors
+        defs
+        call NormalizeExpr [ctors defs env fn]
+        call NormalizeExpr [ctors defs env argument]
+      ]
+    case (#Let name value body) ->
+      call NormalizeExpr [
+        ctors
+        defs
+        prim #mput [env name call NormalizeExpr [ctors defs env value]]
+        body
+      ]
+    case (#Match scrutinee cases) ->
+      call NormalizeMatch [
+        ctors
+        defs
+        env
+        call NormalizeExpr [ctors defs env scrutinee]
+        call CaseList [cases]
+      ]
+    case _ -> mk #stuck []
+  }
+
+judgment NormalizeApplication [ctors defs left right] =
+  match left {
+    case (#stuck) -> mk #stuck []
+    case _ ->
+      match right {
+        case (#stuck) -> mk #stuck []
+        case _ -> call NormalizeHead [ctors defs mk #apply [left right]]
+      }
+  }
+
+judgment NormalizeMatch [ctors defs env scrutinee cases] =
+  match scrutinee {
+    case (#stuck) -> mk #stuck []
+    case _ ->
+      match call TypeHead [scrutinee] {
+        case (#con name) ->
+          if call IsConstructor [ctors name]
+          then call SelectCase [ctors defs env name call TypeArgs [scrutinee] cases]
+          else mk #stuck []
+        case _ -> mk #stuck []
+      }
+  }
+
+judgment SelectCase [ctors defs env cname args cases] =
+  match cases {
+    case [] -> mk #stuck []
+    case (#Case pattern body) :: rest ->
+      match call PatternSpine [pattern] {
+        case (#PatWild) :: _ -> call NormalizeExpr [ctors defs env body]
+        case (#PatVar head) :: rest2 ->
+          if call IsConstructor [ctors head]
+          then
+            if prim #eq [head cname]
+            then call NormalizeExpr [ctors defs call BindPatternNames [rest2 args env] body]
+            else call SelectCase [ctors defs env cname args rest]
+          else call NormalizeExpr [ctors defs prim #mput [env head call ApplySpine [mk #con [cname] args]] body]
+        case _ -> mk #stuck []
+      }
+    case _ -> mk #stuck []
+  }
+
+; A constructor's binders come first in its spine, so a case that names them
+; lines up with the arguments the value carries.
+judgment BindPatternNames [patterns args env] =
+  match patterns {
+    case [] -> env
+    case (#PatVar name) :: restPatterns ->
+      match args {
+        case [] -> env
+        case arg :: restArgs ->
+          call BindPatternNames [restPatterns restArgs prim #mput [env name arg]]
+      }
+    case (#PatWild) :: restPatterns ->
+      match args {
+        case [] -> env
+        case arg :: restArgs -> call BindPatternNames [restPatterns restArgs env]
+      }
+    case head :: restPatterns -> env
+  }
+
+; Two types are the same when they normalise to the same thing.
+judgment SameType [ctors defs left right] =
+  prim #eq [
+    call NormalizeType [ctors defs left]
+    call NormalizeType [ctors defs right]
+  ]
+
+; --------------------------------------------------------------- universes
+;
+; `Type` is what a type parameter is declared with. Everything else must be
+; something the module declares, and nothing may be its own type.
+
+judgment CheckTelescopes [decls] = call CheckTelescopesIn [decls decls]
+
+judgment CheckTelescopesIn [all remaining] =
+  match remaining {
+    case [] -> mk #kinded [#ok]
+    case (#family name params ctors) :: rest ->
+      match call CheckTelescope [all name params list []] {
+        case _ -> call CheckTelescopesIn [all rest]
+      }
+    case head :: rest -> call CheckTelescopesIn [all rest]
+  }
+
+; A later parameter may be typed by an earlier one, which is what lets `Eq`
+; say that its two sides belong to the type it was handed.
+judgment CheckTelescope [all owner params bound] =
+  match params {
+    case [] -> mk #kinded [#ok]
+    case (#Param pname ptype) :: rest ->
+      match call CheckParameterKind [all owner bound call TypeValue [ptype]] {
+        case _ -> call CheckTelescope [all owner rest prim #snoc [bound pname]]
+      }
+    case head :: rest -> call CheckTelescope [all owner rest bound]
+  }
+
+judgment CheckParameterKind [all owner bound type] =
+  match call TypeHead [type] {
+    case (#con name) ->
+      if prim #eq [name #Type]
+      then mk #kinded [#ok]
+      else
+        if prim #contains [bound name]
+        then mk #kinded [#ok]
+        else
+          if prim #eq [name owner]
+          then
+            fail #kind-error prim #scat [
+              prim #scat ["family " prim #sym->str [owner]]
+              " is a parameter of itself"
+            ]
+          else call KnownTypeName [all name]
+    case _ -> mk #kinded [#ok]
+  }
+
+judgment KnownTypeName [all name] =
+  match all {
+    case [] ->
+      fail #kind-error prim #scat [
+        "a parameter is declared with the undeclared type "
+        prim #sym->str [name]
+      ]
+    case (#data declared ctors) :: rest ->
+      if prim #eq [declared name] then mk #kinded [#ok] else call KnownTypeName [rest name]
+    case (#family declared params ctors) :: rest ->
+      if prim #eq [declared name] then mk #kinded [#ok] else call KnownTypeName [rest name]
+    case head :: rest -> call KnownTypeName [rest name]
+  }
+
+; ----------------------------------------------------------------- indices
+;
+; A constructor of a family must say where it lands, and must land on its own
+; family, saturated.
+
+judgment CheckIndices [decls] =
+  match decls {
+    case [] -> mk #indexed [#ok]
+    case (#family name params ctors) :: rest ->
+      match call CheckConstructorIndices [name call TelescopeNames [params] ctors] {
+        case _ -> call CheckIndices [rest]
+      }
+    case head :: rest -> call CheckIndices [rest]
+  }
+
+judgment CheckConstructorIndices [owner pnames ctors] =
+  match ctors {
+    case [] -> mk #indexed [#ok]
+    case (#ConstructorAt cname fields result) :: rest ->
+      match call CheckOneIndex [owner pnames cname call TypeValue [result]] {
+        case _ -> call CheckConstructorIndices [owner pnames rest]
+      }
+    case (#Constructor cname fields) :: rest ->
+      fail #index-error prim #scat [
+        prim #scat ["constructor " prim #sym->str [cname]]
+        " belongs to an indexed family and must say which index it lands on"
+      ]
+    case head :: rest -> call CheckConstructorIndices [owner pnames rest]
+  }
+
+judgment CheckOneIndex [owner pnames cname result] =
+  match call TypeHead [result] {
+    case (#con head) ->
+      if prim #ne [head owner]
+      then
+        fail #index-error prim #scat [
+          prim #scat ["constructor " prim #sym->str [cname]]
+          " does not land on the family that declares it"
+        ]
+      else
+        if prim #ne [prim #len [call TypeArgs [result]] prim #len [pnames]]
+        then
+          fail #index-error prim #scat [
+            prim #scat ["constructor " prim #sym->str [cname]]
+            " does not saturate the indices of its family"
+          ]
+        else mk #indexed [#ok]
+    case _ ->
+      fail #index-error prim #scat [
+        prim #scat ["constructor " prim #sym->str [cname]]
+        " does not land on a family"
+      ]
+  }
+
+; ----------------------------------------------------------------- checking
+
+judgment CheckDependentModule [grammar source] =
+  call CheckDependentDeclarations [
+    call Declarations [call ParseStrata [grammar source]]
+  ]
+
+judgment CheckDependentDeclarations [decls] =
+  match call CheckTelescopes [decls] {
+    case _ ->
+      match call CheckIndices [decls] {
+        case _ ->
+          call CheckDependentDefs [
+            decls
+            call DependentConstructors [decls]
+            call DependentDefinitions [decls]
+          ]
+      }
+  }
+
+judgment CheckDependentDefs [decls ctors defs] =
+  match decls {
+    case [] -> mk #checked [#ok]
+    case (#def name params result body) :: rest ->
+      match call CheckOneDefinition [ctors defs name params call TypeValue [result] body] {
+        case _ -> call CheckDependentDefs [rest ctors defs]
+      }
+    case head :: rest -> call CheckDependentDefs [rest ctors defs]
+  }
+
+judgment CheckOneDefinition [ctors defs name params declared body] =
+  call ResultOfDefinition [
+    name
+    call CheckAgainst [
+      ctors
+      defs
+      call BindNames [call TelescopeNames [params] call TelescopeTypes [params] prim #mnew []]
+      declared
+      body
+    ]
+  ]
+
+judgment ResultOfDefinition [name verdict] =
+  match verdict {
+    case (#agrees) -> mk #checked [#ok]
+    case (#differs found expected) ->
+      fail #type-error prim #scat [
+        prim #scat ["definition " prim #sym->str [name]]
+        " does not have its declared result type"
+      ]
+    case _ -> verdict
+  }
+
+; Checking, rather than inferring, because a match may refine the type that
+; is expected of its branches.
+judgment CheckAgainst [ctors defs env expected expr] =
+  match expr {
+    case (#Match scrutinee cases) ->
+      call CheckMatch [
+        ctors
+        defs
+        env
+        expected
+        call InferDependent [ctors defs env scrutinee]
+        call CaseList [cases]
+      ]
+    case (#Let name value body) ->
+      call CheckAgainst [
+        ctors
+        defs
+        prim #mput [env name call InferDependent [ctors defs env value]]
+        expected
+        body
+      ]
+    case _ -> call Agreement [ctors defs call InferDependent [ctors defs env expr] expected]
+  }
+
+judgment Agreement [ctors defs found expected] =
+  if call SameType [ctors defs found expected]
+  then mk #agrees []
+  else mk #differs [found expected]
+
+judgment CheckMatch [ctors defs env expected scrutinee cases] =
+  match cases {
+    case [] -> fail #type-error "a match needs at least one case"
+    case _ -> call CheckEachCase [ctors defs env expected scrutinee cases]
+  }
+
+judgment CheckEachCase [ctors defs env expected scrutinee cases] =
+  match cases {
+    case [] -> mk #checked [#ok]
+    case (#Case pattern body) :: rest ->
+      match call CheckOneCase [ctors defs env expected scrutinee pattern body] {
+        case (#differs found wanted) -> mk #differs [found wanted]
+        case _ -> call CheckEachCase [ctors defs env expected scrutinee rest]
+      }
+    case _ -> fail #type-error "malformed case"
+  }
+
+; A case refines what is known. The constructor's index is matched against the
+; type being scrutinised, and whatever that settles is applied to the expected
+; type and to everything already in scope before the branch is checked.
+judgment CheckOneCase [ctors defs env expected scrutinee pattern body] =
+  match call PatternSpine [pattern] {
+    case (#PatWild) :: _ -> call CheckAgainst [ctors defs env expected body]
+    case (#PatVar head) :: args ->
+      if call IsConstructor [ctors head]
+      then
+        call CheckRefinedCase [
+          ctors
+          defs
+          env
+          expected
+          scrutinee
+          prim #mget [ctors head #unbound]
+          head
+          args
+          body
+        ]
+      else call CheckAgainst [ctors defs prim #mput [env head scrutinee] expected body]
+    case _ -> fail #type-error "malformed pattern"
+  }
+
+judgment CheckRefinedCase [ctors defs env expected scrutinee entry cname args body] =
+  match entry {
+    case (#indexed owner names types fields result) ->
+      if prim #ne [prim #len [args] prim #add [prim #len [names] prim #len [fields]]]
+      then
+        fail #type-error prim #scat [
+          prim #scat ["pattern " prim #sym->str [cname]]
+          " does not name its binders and its fields"
+        ]
+      else
+        call CheckWithSolution [
+          ctors
+          defs
+          env
+          expected
+          scrutinee
+          names
+          types
+          fields
+          result
+          args
+          call BinderSolution [names call PatternNames [prim #take [args prim #len [names]]] prim #mnew []]
+          body
+        ]
+    case _ -> fail #type-error "malformed constructor"
+  }
+
+judgment PatternNames [patterns] =
+  match patterns {
+    case [] -> list []
+    case (#PatVar name) :: rest -> prim #cons [mk #con [name] call PatternNames [rest]]
+    case (#PatWild) :: rest -> prim #cons [mk #con [#_] call PatternNames [rest]]
+    case head :: rest -> fail #type-error "a binder in a pattern must be named"
+  }
+
+judgment BinderSolution [names values solution] = call BindNames [names values solution]
+
+judgment CheckWithSolution [ctors defs env expected scrutinee names types fields result args solution body] =
+  let refinement = call RefineIndex [
+    ctors
+    call SubstituteSolution [solution result]
+    scrutinee
+    prim #mnew []
+  ] in
+  call CheckAgainst [
+    ctors
+    defs
+    call SubstituteEnv [refinement
+      call BindNames [
+        call PatternPlainNames [prim #drop [args prim #len [names]]]
+        call SubstituteEach [solution fields]
+        call BindNames [
+          call PatternPlainNames [prim #take [args prim #len [names]]]
+          call SubstituteEach [solution types]
+          env
+        ]
+      ]
+    ]
+    call SubstituteSolution [refinement expected]
+    body
+  ]
+
+judgment PatternPlainNames [patterns] =
+  match patterns {
+    case [] -> list []
+    case (#PatVar name) :: rest -> prim #cons [name call PatternPlainNames [rest]]
+    case (#PatWild) :: rest -> prim #cons [#_ call PatternPlainNames [rest]]
+    case head :: rest -> fail #type-error "a field in a pattern must be named"
+  }
+
+; The index a constructor lands on, matched against the type being
+; scrutinised. A name on the scrutinised side that is not a constructor is
+; what the branch learns.
+judgment RefineIndex [ctors landed scrutinised refinement] =
+  if prim #eq [landed scrutinised]
+  then refinement
+  else
+  match scrutinised {
+    case (#con name) ->
+      if prim #mhas [ctors name]
+      then refinement
+      else prim #mput [refinement name landed]
+    case (#apply sl sr) ->
+      match landed {
+        case (#apply ll lr) ->
+          call RefineIndex [ctors lr sr call RefineIndex [ctors ll sl refinement]]
+        case _ -> refinement
+      }
+    case _ -> refinement
+  }
+
+; --------------------------------------------------------------- inference
+
+judgment InferDependent [ctors defs env expr] =
+  match expr {
+    case (#Natural value) -> mk #con [#Nat]
+    case (#Text value) -> mk #con [#Text]
+    case (#Var name) -> call InferDependentName [ctors defs env name]
+    case (#Apply fn argument) ->
+      call ApplyDependent [
+        ctors
+        defs
+        call InferDependent [ctors defs env fn]
+        argument
+        call InferDependent [ctors defs env argument]
+      ]
+    case (#Let name value body) ->
+      call InferDependent [
+        ctors
+        defs
+        prim #mput [env name call InferDependent [ctors defs env value]]
+        body
+      ]
+    case _ -> fail #type-error "a match is checked against a type, not inferred"
+  }
+
+judgment InferDependentName [ctors defs env name] =
+  if prim #mhas [env name]
+  then prim #mget [env name #unbound]
+  else
+    if prim #mhas [ctors name]
+    then call IndexedTypeOf [prim #mget [ctors name #unbound]]
+    else
+      if prim #mhas [defs name]
+      then call DependentTypeOf [prim #mget [defs name #unbound]]
+      else fail #type-error prim #scat ["unbound name " prim #sym->str [name]]
+
+; Applying a function whose result mentions its argument substitutes the
+; argument into the result, so what comes back mentions the value passed.
+judgment ApplyDependent [ctors defs fnType argument argType] =
+  match fnType {
+    case (#depend bound from to) ->
+      if call SameType [ctors defs from argType]
+      then call SubstituteType [bound call ArgumentAsType [argument] to]
+      else fail #type-error "argument does not have the declared parameter type"
+    case (#arrow from to) ->
+      if call SameType [ctors defs from argType]
+      then to
+      else fail #type-error "argument does not have the declared parameter type"
+    case _ -> fail #type-error "applied a value that is not a function"
+  }
+
+judgment ArgumentAsType [argument] =
+  match argument {
+    case (#Var name) -> mk #con [name]
+    case (#Apply left right) ->
+      mk #apply [call ArgumentAsType [left] call ArgumentAsType [right]]
+    case _ -> mk #con [#opaque]
+  }
+
+; -------------------------------------------------------------- rewriting
+;
+; Equality is not a primitive. It is a family whose only constructor lands on
+; the index where both sides agree, so a proof is an ordinary value and the
+; eliminator is an ordinary judgment: given a proof that `x` is `y`, a type
+; that mentions `x` becomes the same type mentioning `y`.
+
+judgment RewriteAlong [ctors defs proofType type] =
+  match call TypeSpine [proofType] {
+    case (#con family) :: args ->
+      match args {
+        case carrier :: (from :: (to :: [])) ->
+          call NormalizeType [ctors defs call RewriteOccurrences [from to type]]
+        case _ -> fail #type-error "a proof of equality carries a type and two sides"
+      }
+    case _ -> fail #type-error "a proof of equality carries a type and two sides"
+  }
+
+judgment RewriteOccurrences [from to type] =
+  if prim #eq [type from]
+  then to
+  else
+    match type {
+      case (#apply left right) ->
+        mk #apply [
+          call RewriteOccurrences [from to left]
+          call RewriteOccurrences [from to right]
+        ]
+      case (#arrow a b) ->
+        mk #arrow [
+          call RewriteOccurrences [from to a]
+          call RewriteOccurrences [from to b]
+        ]
+      case (#depend bound a b) ->
+        mk #depend [
+          bound
+          call RewriteOccurrences [from to a]
+          call RewriteOccurrences [from to b]
+        ]
+      case _ -> type
+    }

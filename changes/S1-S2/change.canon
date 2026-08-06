@@ -1,0 +1,28 @@
+; The canonical change from S1 to S2.
+;
+; S1 |- S2. S1 gave a declaration a type. S2 lets a type mention a value.
+;
+; A family is declared with a telescope, each constructor says which index it
+; lands on, and a function type may bind its argument so the result can refer
+; to it. Types are compared after computation rather than before, so a type
+; that adds up is accepted and one that does not is a type error.
+;
+; Equality is not a primitive. It is a family whose only constructor lands on
+; the index where both sides agree, so a proof is an ordinary value.
+(change
+  (kind foundation)
+  (name "S1->S2")
+  (predecessor (foundation-of "foundations/S1"))
+  (delta-meta (file "changes/S1-S2/delta-meta.canon"))
+  (delta-grammar (file "changes/S1-S2/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "the dependent core")
+      (programs [
+        (file "features/strata/depend.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/depend.meta")
+        (text-file "languages/strata/strata.grammar")
+        (text-file "languages/strata/strata.meta")
+      ]))))

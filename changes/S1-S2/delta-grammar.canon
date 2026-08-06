@@ -1,0 +1,12 @@
+; delta-grammar for S1 -> S2: the Strata surface gains what a dependent type
+; needs to be written down. A data declaration may carry a telescope, a
+; constructor may declare the index it lands on, and a function type may bind
+; its argument. Everything S1 could write still parses.
+(change
+  (kind delta-grammar)
+  (name "S1->S2 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end])
+      (present [module version data def law match case let end telescope index bind]))))
