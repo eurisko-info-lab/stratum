@@ -8,8 +8,8 @@
 
 $ foundation verify --dir foundations/S7
 > foundation S7
-> digest 1c0cd1c0d124fc63abbd279687f12fbf5101317db9b77cabaff7bda70a738d2b
-> closure 142 artifacts
+> digest a6348d1fe7a497a0a74d99c6119a74cc23b916ce22dae1164f292e2bb900a003
+> closure 143 artifacts
 > check strata-the-boundary-surface-prints-exactly ok
 > check strata-modules-without-primitives-still-parse ok
 > check strata-a-primitive-is-a-declaration ok
@@ -33,14 +33,14 @@ $ foundation verify --dir foundations/S7
 $ foundation verify-successor --predecessor foundations/S6 --successor foundations/S7
 > predecessor S6
 > successor S7
-> result (valid #d1c87e9324987696378a48ac585bca657add44426cbc5a1996f77ce0075bfbd38)
+> result (valid #d951e69ab8352cae8c793491e7c303fb67f1e8eec6546d8f383d89d56ed4b143d)
 
 # Reconstruction in a fresh process from digest plus closure alone.
 $ foundation reconstruct --dir foundations/S7
 > reconstructed S7
-> digest 1c0cd1c0d124fc63abbd279687f12fbf5101317db9b77cabaff7bda70a738d2b
+> digest a6348d1fe7a497a0a74d99c6119a74cc23b916ce22dae1164f292e2bb900a003
 > stable yes
-> closure 142 artifacts
+> closure 143 artifacts
 > checks 18 ok
 
 # A primitive is a declaration like any other: a name, a type, the capability

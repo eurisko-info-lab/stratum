@@ -138,7 +138,7 @@ judgment WriteElem [element] =
 ; being elaborated; the decisions are all in the Strata module.
 
 judgment RunStrataOn [grammar sources name entry argument] =
-  let decls = call NativeModule [grammar sources name] in
+  let decls = call IndexedDeclarations [call NativeModule [grammar sources name]] in
   call EnterDefinition [
     decls
     call RequiredDefinition [decls entry]

@@ -236,7 +236,7 @@ judgment CheckLinkedBoundary [grammar sources name] =
   call CheckNativeBoundary [call NativeModule [grammar sources name]]
 
 judgment RunNative [grammar sources name entry] =
-  let decls = call NativeModule [grammar sources name] in
+  let decls = call IndexedDeclarations [call NativeModule [grammar sources name]] in
   call EnterDefinition [decls call RequiredDefinition [decls entry] list []]
 
 ; A value that crosses to the host and back is the value that set out.

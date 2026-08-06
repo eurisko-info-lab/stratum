@@ -10,8 +10,8 @@
 
 $ foundation verify --dir foundations/S8
 > foundation S8
-> digest ca3606aabd014da249cec80a2e03111f82454f32560e83439233d0db3a173887
-> closure 181 artifacts
+> digest b4c5e371abc744c2e371b531a50c0fe74cfb210f54f7db77a37ab95cf91c70ba
+> closure 182 artifacts
 > check strata-the-elaborator-prints-exactly ok
 > check strata-the-elaborator-checks ok
 > check strata-the-elaborator-is-total ok

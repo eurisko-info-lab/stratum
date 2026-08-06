@@ -43,6 +43,60 @@ impl Digest {
 /// `Rc` is the whole fix. Nothing about what a value *is* changes: equality is
 /// still structural, the canonical order is unchanged, and the bytes a value
 /// encodes to are the bytes it encoded to before.
+/// A list value: a shared vector and where in it this list starts.
+///
+/// The offset is why it is a type rather than an `Rc<Vec<Canon>>`. Meta0's
+/// only way through a list is `pcons`, which matches a head and binds the
+/// rest, and copying the rest each time made walking a list quadratic in its
+/// length -- which is what walking a module's declarations for every name in
+/// it turned out to cost. Taking the tail is now sharing the same vector and
+/// counting one further in.
+///
+/// Two lists are equal when the elements they are views of are equal, so the
+/// offset is invisible to everything above: identity, order and the canonical
+/// encoding all see the same value they saw before.
+#[derive(Clone, Debug)]
+pub struct List {
+    items: Rc<Vec<Canon>>,
+    from: usize,
+}
+
+impl List {
+    pub fn new(items: Vec<Canon>) -> List {
+        List { items: Rc::new(items), from: 0 }
+    }
+
+    pub fn shared(items: Rc<Vec<Canon>>) -> List {
+        List { items, from: 0 }
+    }
+
+    /// Everything after the first element, sharing the same vector.
+    pub fn tail(&self) -> List {
+        List { items: self.items.clone(), from: (self.from + 1).min(self.items.len()) }
+    }
+}
+
+impl std::ops::Deref for List {
+    type Target = [Canon];
+    fn deref(&self) -> &[Canon] {
+        &self.items[self.from..]
+    }
+}
+
+impl PartialEq for List {
+    fn eq(&self, other: &List) -> bool {
+        **self == **other
+    }
+}
+
+impl Eq for List {}
+
+impl From<Vec<Canon>> for List {
+    fn from(items: Vec<Canon>) -> List {
+        List::new(items)
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Canon {
     Unit,
@@ -53,7 +107,7 @@ pub enum Canon {
     Str(Rc<str>),
     Sym(Rc<str>),
     Ref(Digest),
-    List(Rc<Vec<Canon>>),
+    List(List),
     Map(Rc<Vec<(Canon, Canon)>>),
     Node(Rc<str>, Rc<Vec<Canon>>),
 }
@@ -84,7 +138,7 @@ impl Canon {
     }
 
     pub fn list(items: Vec<Canon>) -> Canon {
-        Canon::List(Rc::new(items))
+        Canon::List(List::new(items))
     }
 
     pub fn map(entries: Vec<(Canon, Canon)>) -> Canon {
@@ -122,7 +176,7 @@ impl Canon {
         }
     }
 
-    pub fn as_list(&self) -> Option<&Vec<Canon>> {
+    pub fn as_list(&self) -> Option<&[Canon]> {
         match self {
             Canon::List(items) => Some(items),
             _ => None,
@@ -388,7 +442,7 @@ fn read(cursor: &mut Cursor) -> Result<Canon, String> {
             for _ in 0..count {
                 items.push(read(cursor)?);
             }
-            Ok(Canon::List(Rc::new(items)))
+            Ok(Canon::list(items))
         }
         9 => {
             let count = cursor.length()?;
@@ -596,7 +650,7 @@ impl<'a> TextReader<'a> {
             return Err("unterminated list".to_string());
         }
         self.position += 1;
-        Ok(Canon::List(Rc::new(items)))
+        Ok(Canon::list(items))
     }
 
     fn map(&mut self) -> Result<Canon, String> {

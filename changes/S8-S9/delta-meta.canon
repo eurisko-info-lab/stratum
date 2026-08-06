@@ -1,0 +1,9 @@
+; delta-meta for S8 -> S9: Meta gains the crossing for its own elaborator.
+(change
+  (kind delta-meta)
+  (name "S8->S9 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (elaborating strata)
+      (meaning strata))))

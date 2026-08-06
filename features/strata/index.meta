@@ -1,0 +1,152 @@
+module strataindex
+
+; Finding a name without reading the module again.
+;
+; The seed's evaluator answers "what is this name" by walking the declaration
+; list: once for the constructors, once for the definitions, once for the
+; primitives. That was free when a module was a page long. It is not free now.
+; Deriving one S10 check spends two hundred and sixty million steps, and
+; twenty million of the twenty million and change judgment calls in it are
+; those three walks -- the evaluation itself is thirty five thousand calls,
+; and every one of them pays six hundred to ask who a name is.
+;
+; This is the same three answers from a table built once. A module is indexed
+; when its declaration list is preceded by `(#index constructors definitions
+; primitives)`, and the three judgments below answer from the table when it is
+; there and walk the list when it is not. Nothing else changes: the tables are
+; built by the same walk in the same order and keep the first declaration of
+; a name, so an indexed module answers exactly what an unindexed one answers.
+;
+; It is a module rather than an edit to the seed's evaluator because the
+; evaluator lives in `languages/strata/strata.meta`, which S8 and S9 elaborate
+; and compare byte for byte -- editing it would change what they are a claim
+; about. A program is the union of its modules and the first one merged says
+; the word, so a layer that wants a faster answer states one and stands ahead
+; of the layer it is replacing an answer for. Every layer from S7 on carries
+; it, because S7 is where a linked module first got large enough for the walk
+; to be what the layer costs.
+
+; ---------------------------------------------------------------- building
+
+judgment BuildIndex [decls] =
+  mk #index [
+    call IndexConstructors [decls prim #mnew []]
+    call IndexDefinitions [decls prim #mnew []]
+    call IndexPrimitives [decls prim #mnew []]
+  ]
+
+judgment IndexedDeclarations [decls] = prim #cons [call BuildIndex [decls] decls]
+
+; A name already in the table keeps the declaration that put it there, which
+; is what walking the list from the front and stopping at the first match
+; means.
+judgment PutFirst [table name value] =
+  if prim #mhas [table name] then table else prim #mput [table name value]
+
+judgment IndexConstructors [decls table] =
+  match decls {
+    case [] -> table
+    case (#data owner constructors) :: rest ->
+      call IndexConstructors [rest call IndexConstructorList [constructors table]]
+    case (#family owner params constructors) :: rest ->
+      call IndexConstructors [rest call IndexConstructorList [constructors table]]
+    case head :: rest -> call IndexConstructors [rest table]
+  }
+
+judgment IndexConstructorList [constructors table] =
+  match constructors {
+    case [] -> table
+    case (#Constructor declared fields) :: rest ->
+      call IndexConstructorList [
+        rest
+        call PutFirst [
+          table declared
+          mk #constructor [declared prim #len [call FieldList [fields]]]
+        ]
+      ]
+    case (#ConstructorAt declared fields result) :: rest ->
+      call IndexConstructorList [
+        rest
+        call PutFirst [
+          table declared
+          mk #constructor [declared prim #len [call FieldList [fields]]]
+        ]
+      ]
+    case head :: rest -> call IndexConstructorList [rest table]
+  }
+
+judgment IndexDefinitions [decls table] =
+  match decls {
+    case [] -> table
+    case (#def declared params result body) :: rest ->
+      call IndexDefinitions [
+        rest
+        call PutFirst [table declared mk #def [declared params result body]]
+      ]
+    case head :: rest -> call IndexDefinitions [rest table]
+  }
+
+judgment IndexPrimitives [decls table] =
+  match decls {
+    case [] -> table
+    case (#prim declared params result) :: rest ->
+      call IndexPrimitives [
+        rest
+        call PutFirst [table declared mk #prim [declared params result]]
+      ]
+    case head :: rest -> call IndexPrimitives [rest table]
+  }
+
+; ---------------------------------------------------------------- answering
+;
+; Each of the three is the seed's judgment with one clause in front of it. The
+; clauses after it are the seed's, unchanged, because a module that was never
+; indexed must still be answered for -- the checker and the totality argument
+; both ask these questions of a plain declaration list.
+
+judgment FindConstructor [decls name] =
+  match decls {
+    case [] -> mk #none []
+    case (#index constructors definitions primitives) :: rest ->
+      call LookUpIndexed [constructors name]
+    case (#data owner constructors) :: rest ->
+      match call FindConstructorIn [constructors name] {
+        case (#some found) -> mk #some [found]
+        case (#none) -> call FindConstructor [rest name]
+      }
+    case (#family owner params constructors) :: rest ->
+      match call FindConstructorIn [constructors name] {
+        case (#some found) -> mk #some [found]
+        case (#none) -> call FindConstructor [rest name]
+      }
+    case head :: rest -> call FindConstructor [rest name]
+  }
+
+judgment FindDefinition [decls name] =
+  match decls {
+    case [] -> mk #none []
+    case (#index constructors definitions primitives) :: rest ->
+      call LookUpIndexed [definitions name]
+    case (#def declared params result body) :: rest ->
+      if prim #eq [declared name]
+      then mk #some [mk #def [declared params result body]]
+      else call FindDefinition [rest name]
+    case head :: rest -> call FindDefinition [rest name]
+  }
+
+judgment FindPrimitive [decls name] =
+  match decls {
+    case [] -> mk #none []
+    case (#index constructors definitions primitives) :: rest ->
+      call LookUpIndexed [primitives name]
+    case (#prim declared params result) :: rest ->
+      if prim #eq [declared name]
+      then mk #some [mk #prim [declared params result]]
+      else call FindPrimitive [rest name]
+    case head :: rest -> call FindPrimitive [rest name]
+  }
+
+judgment LookUpIndexed [table name] =
+  if prim #mhas [table name]
+  then mk #some [prim #mget [table name unit]]
+  else mk #none []

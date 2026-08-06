@@ -3,9 +3,16 @@ package stratum
 import stratum.cli.Transcript
 
 import java.nio.file.{Files, Path, Paths}
+import scala.concurrent.duration.Duration
 
 /** Replays every transcript in the repository. This is the primary functional test. */
 class TranscriptSuite extends munit.FunSuite:
+
+  // A second-floor transcript replays `foundation verify`, which re-runs every
+  // check in that foundation. S9 elaborates forty-three Meta programs through
+  // an interpreter running on an interpreter and takes minutes, not seconds.
+  // The default thirty seconds was a limit on nothing in particular.
+  override val munitTimeout: Duration = Duration(20, "min")
 
   private val root: Path = Paths.get(System.getProperty("user.dir")).toAbsolutePath.normalize()
   private val MaxFailuresInReport = 5

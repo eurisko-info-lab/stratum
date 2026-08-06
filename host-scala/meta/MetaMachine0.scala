@@ -424,61 +424,102 @@ object MetaMachine0:
     def eval(expr: Canon, env: Map[String, Canon], depth: Int): Canon =
       tick()
       if depth > budget.depth then fail("depth-exhausted", s"depth budget ${budget.depth} exceeded")
+      // The form is decided by one switch on the tag rather than by trying the
+      // twelve shapes in turn. `call`, `match` and `prim` are the three the
+      // interpreter spends its life in, and they were the last three tried.
       expr match
-        case Canon.Node("q", Vector(v)) => v
+        case Canon.Node(tag, args) =>
+          tag match
+            case "q" =>
+              args match
+                case Vector(v) => v
+                case _         => notAnExpression(expr)
 
-        case Canon.Node("v", Vector(Canon.Sym(name))) =>
-          env.getOrElse(name, fail("unbound-variable", s"unbound variable $name"))
+            case "v" =>
+              args match
+                case Vector(Canon.Sym(name)) =>
+                  env.getOrElse(name, fail("unbound-variable", s"unbound variable $name"))
+                case _ => notAnExpression(expr)
 
-        case Canon.Node("mk", Canon.Sym(tag) +: rest) =>
-          Canon.Node(tag, rest.map(eval(_, env, depth + 1)))
+            case "mk" =>
+              args match
+                case Canon.Sym(nodeTag) +: rest => Canon.Node(nodeTag, rest.map(eval(_, env, depth + 1)))
+                case _                          => notAnExpression(expr)
 
-        case Canon.Node("lst", items) =>
-          Canon.L(items.map(eval(_, env, depth + 1)))
+            case "lst" => Canon.L(args.map(eval(_, env, depth + 1)))
 
-        case Canon.Node("mp", pairs) =>
-          if pairs.length % 2 != 0 then fail("bad-expression", "map literal needs an even number of elements")
-          val entries = pairs.grouped(2).map { p => eval(p(0), env, depth + 1) -> eval(p(1), env, depth + 1) }.toVector
-          Canon.M(entries.distinctBy(_._1).sortWith((a, b) => Canon.compare(a._1, b._1) < 0))
+            case "mp" =>
+              if args.length % 2 != 0 then fail("bad-expression", "map literal needs an even number of elements")
+              val entries = args.grouped(2).map { p => eval(p(0), env, depth + 1) -> eval(p(1), env, depth + 1) }.toVector
+              Canon.M(entries.distinctBy(_._1).sortWith((a, b) => Canon.compare(a._1, b._1) < 0))
 
-        case Canon.Node("if", Vector(c, t, e)) =>
-          eval(c, env, depth + 1) match
-            case Canon.B(true)  => eval(t, env, depth + 1)
-            case Canon.B(false) => eval(e, env, depth + 1)
-            case other          => fail("type-error", s"if condition is not a boolean: ${CanonText.write(other)}")
+            case "if" =>
+              args match
+                case Vector(c, t, e) =>
+                  eval(c, env, depth + 1) match
+                    case Canon.B(true)  => eval(t, env, depth + 1)
+                    case Canon.B(false) => eval(e, env, depth + 1)
+                    case other          => fail("type-error", s"if condition is not a boolean: ${CanonText.write(other)}")
+                case _ => notAnExpression(expr)
 
-        case Canon.Node("let", Vector(Canon.Sym(name), value, body)) =>
-          val v = eval(value, env, depth + 1)
-          eval(body, env + (name -> v), depth + 1)
+            case "let" =>
+              args match
+                case Vector(Canon.Sym(name), value, body) =>
+                  val v = eval(value, env, depth + 1)
+                  eval(body, env + (name -> v), depth + 1)
+                case _ => notAnExpression(expr)
 
-        case Canon.Node("call", Canon.Sym(name) +: argExprs) =>
-          val j = program.judgments.getOrElse(name, fail("unknown-judgment", s"unknown judgment $name"))
-          if j.params.length != argExprs.length then
-            fail("arity-error", s"judgment $name expects ${j.params.length} arguments, got ${argExprs.length}")
-          val args = argExprs.map(eval(_, env, depth + 1))
-          calls.updateWith(name)(c => Some(c.getOrElse(0L) + 1))
-          eval(j.body, j.params.zip(args).toMap, depth + 1)
+            case "call" =>
+              args match
+                case Canon.Sym(name) +: argExprs =>
+                  val j = program.judgments.getOrElse(name, fail("unknown-judgment", s"unknown judgment $name"))
+                  if j.params.length != argExprs.length then
+                    fail("arity-error", s"judgment $name expects ${j.params.length} arguments, got ${argExprs.length}")
+                  var frame = Map.empty[String, Canon]
+                  var i = 0
+                  while i < argExprs.length do
+                    frame = frame.updated(j.params(i), eval(argExprs(i), env, depth + 1))
+                    i += 1
+                  calls.put(name, calls.getOrElse(name, 0L) + 1L)
+                  eval(j.body, frame, depth + 1)
+                case _ => notAnExpression(expr)
 
-        case Canon.Node("match", scrutinee +: cases) =>
-          val v = eval(scrutinee, env, depth + 1)
-          matchCases(v, cases, env, depth)
+            case "match" =>
+              args match
+                case scrutinee +: cases =>
+                  val v = eval(scrutinee, env, depth + 1)
+                  matchCases(v, cases, env, depth)
+                case _ => notAnExpression(expr)
 
-        case Canon.Node("prim", Canon.Sym(name) +: argExprs) =>
-          Prims.apply(name, argExprs.map(eval(_, env, depth + 1)), fail)
+            case "prim" =>
+              args match
+                case Canon.Sym(name) +: argExprs =>
+                  Prims.apply(name, argExprs.map(eval(_, env, depth + 1)), fail)
+                case _ => notAnExpression(expr)
 
-        case Canon.Node("cap", Canon.Sym(name) +: argExprs) =>
-          if !kernel.allow.contains(name) then fail("capability-denied", s"capability $name is not constituted")
-          caps.updateWith(name)(c => Some(c.getOrElse(0L) + 1))
-          val args = argExprs.map(eval(_, env, depth + 1))
-          val response = capabilities.handle(CapabilityRequest(name, args))
-          response.toCanon
+            case "cap" =>
+              args match
+                case Canon.Sym(name) +: argExprs =>
+                  if !kernel.allow.contains(name) then fail("capability-denied", s"capability $name is not constituted")
+                  caps.put(name, caps.getOrElse(name, 0L) + 1L)
+                  val evaluated = argExprs.map(eval(_, env, depth + 1))
+                  capabilities.handle(CapabilityRequest(name, evaluated)).toCanon
+                case _ => notAnExpression(expr)
 
-        case Canon.Node("fail", Vector(Canon.Sym(kind), message)) =>
-          eval(message, env, depth + 1) match
-            case Canon.S(m) => fail(kind, m)
-            case other      => fail(kind, CanonText.write(other))
+            case "fail" =>
+              args match
+                case Vector(Canon.Sym(kind), message) =>
+                  eval(message, env, depth + 1) match
+                    case Canon.S(m) => fail(kind, m)
+                    case other      => fail(kind, CanonText.write(other))
+                case _ => notAnExpression(expr)
 
-        case other => fail("bad-expression", s"not an expression: ${CanonText.write(other)}")
+            case _ => notAnExpression(expr)
+
+        case other => notAnExpression(other)
+
+    private def notAnExpression(value: Canon): Nothing =
+      fail("bad-expression", s"not an expression: ${CanonText.write(value)}")
 
     private def matchCases(value: Canon, cases: Vector[Canon], env: Map[String, Canon], depth: Int): Canon =
       var i = 0
@@ -495,32 +536,52 @@ object MetaMachine0:
     private def matchPattern(pattern: Canon, value: Canon, env: Map[String, Canon]): Option[Map[String, Canon]] =
       tick()
       pattern match
-        case Canon.Sym("_")                     => Some(env)
-        case Canon.Node("pv", Vector(Canon.Sym(n))) => Some(env + (n -> value))
-        case Canon.Node("pq", Vector(expected))     => if expected == value then Some(env) else None
-        case Canon.Node("pm", Canon.Sym(tag) +: subs) =>
-          value match
-            case Canon.Node(t, args) if t == tag && args.length == subs.length =>
-              matchAll(subs, args, env)
-            case _ => None
-        case Canon.Node("pnode", Vector(tagPat, argsPat)) =>
-          value match
-            case Canon.Node(t, args) =>
-              matchPattern(tagPat, Canon.Sym(t), env).flatMap(e => matchPattern(argsPat, Canon.L(args), e))
-            case _ => None
-        case Canon.Node("pl", subs) =>
-          value match
-            case Canon.L(items) if items.length == subs.length => matchAll(subs, items, env)
-            case _                                             => None
-        case Canon.Node("pcons", Vector(h, t)) =>
-          value match
-            case Canon.L(items) if items.nonEmpty =>
-              matchPattern(h, items.head, env).flatMap(e => matchPattern(t, Canon.L(items.tail), e))
-            case _ => None
-        case Canon.Node("pnil", Vector()) =>
-          value match
-            case Canon.L(items) if items.isEmpty => Some(env)
-            case _                               => None
+        case Canon.Sym("_") => Some(env)
+        case Canon.Node(tag, args) =>
+          def badPattern: Nothing = fail("bad-pattern", s"not a pattern: ${CanonText.write(pattern)}")
+          tag match
+            case "pv" =>
+              args match
+                case Vector(Canon.Sym(n)) => Some(env + (n -> value))
+                case _                    => badPattern
+            case "pq" =>
+              args match
+                case Vector(expected) => if expected == value then Some(env) else None
+                case _                => badPattern
+            case "pm" =>
+              args match
+                case Canon.Sym(expected) +: subs =>
+                  value match
+                    case Canon.Node(t, values) if t == expected && values.length == subs.length =>
+                      matchAll(subs, values, env)
+                    case _ => None
+                case _ => badPattern
+            case "pnode" =>
+              args match
+                case Vector(tagPat, argsPat) =>
+                  value match
+                    case Canon.Node(t, values) =>
+                      matchPattern(tagPat, Canon.Sym(t), env).flatMap(e => matchPattern(argsPat, Canon.L(values), e))
+                    case _ => None
+                case _ => badPattern
+            case "pl" =>
+              value match
+                case Canon.L(items) if items.length == args.length => matchAll(args, items, env)
+                case _                                             => None
+            case "pcons" =>
+              args match
+                case Vector(h, t) =>
+                  value match
+                    case Canon.L(items) if items.nonEmpty =>
+                      matchPattern(h, items.head, env).flatMap(e => matchPattern(t, Canon.L(items.tail), e))
+                    case _ => None
+                case _ => badPattern
+            case "pnil" =>
+              if args.nonEmpty then badPattern
+              value match
+                case Canon.L(items) if items.isEmpty => Some(env)
+                case _                               => None
+            case _ => badPattern
         case other => fail("bad-pattern", s"not a pattern: ${CanonText.write(other)}")
 
     private def matchAll(

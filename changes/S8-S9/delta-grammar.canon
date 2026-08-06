@@ -1,0 +1,11 @@
+; delta-grammar for S8 -> S9: the Strata surface is unchanged. Elaborating Meta
+; needed nothing the language did not already have -- a name is text, and S8
+; already made text mean what it spells.
+(change
+  (kind delta-grammar)
+  (name "S8->S9 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many prim type escape])
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many prim type escape]))))

@@ -1,0 +1,130 @@
+module "strata.meta"
+version 1
+; Meta elaboration, written in Strata.
+;
+; `languages/meta/elaborate.meta` turns a parsed Meta source into the
+; canonical Meta0 program that the machine runs. This is the same function,
+; and the claim is the same one S8 made about grammars: the artifact this
+; produces is the artifact already committed, byte for byte.
+;
+; It is not the same *kind* of function, which is why it is its own layer.
+; Grammar elaboration rearranges a tree. This one invents declarations nobody
+; wrote: a `data` becomes one judgment per variant plus a predicate that
+; recognises any of their tags, and a `record` becomes a constructor plus one
+; accessor per field. Every one of those has a name built by concatenating
+; onto the type's name.
+;
+; That is why a name here is a `Text` rather than something abstract. S8 could
+; carry a name without ever looking at one; this cannot. Nothing new crosses
+; the boundary to make that possible -- a name reaches Strata as the text it
+; spells, and goes back as a name, which the reader and writer arrange. The
+; primitive set S7 declared is unchanged.
+import "strata.prelude" 1
+import "strata.native" 1
+
+; ---------------------------------------------------------------- the tree
+;
+; One type per grammar category, so that every match below covers what it
+; matches. The three `pass` categories -- application, atom, patatom -- have
+; no node of their own, so their productions live in the type of the category
+; that passes to them.
+
+data MDecls = | MSeq [seqLeft #1: MDecls, seqRight #2: MDecls] | MOneDecl [oneDecl #1: MDecl]
+data MDecl = | DModule [moduleName #1: Text] | DImport [importName #1: Text] | DCapability [capabilityName #1: Text] | DEvidence [evidenceName #1: Text] | DMode [modeName #1: Text, modeParams #2: MParams] | DMeasure [measureName #1: Text, measureBody #2: MExpr] | DData [dataName #1: Text, dataVariants #2: MVariants] | DRecord [recordName #1: Text, recordFields #2: MParams] | DJudgmentRules [rulesName #1: Text, rulesParams #2: MParams, rulesOf #3: MRules] | DJudgmentBody [bodyName #1: Text, bodyParams #2: MParams, bodyOf #3: MExpr]
+data MVariants = | MVariantSeq [variantsLeft #1: MVariants, variantsRight #2: MVariants] | MOneVariant [oneVariant #1: MVariant]
+data MVariant = | MVariant [variantName #1: Text, variantFields #2: MParams]
+data MParams = | MNoParams [] | MSomeParams [paramNames #1: MIdents]
+data MIdents = | MIdentSeq [identsLeft #1: MIdents, identsRight #2: MIdents] | MOneIdent [oneIdent #1: Text]
+data MRules = | MRuleSeq [rulesLeft #1: MRules, rulesRight #2: MRules] | MOneRule [oneRule #1: MRule]
+data MRule = | MRule [rulePattern #1: MPattern, ruleBody #2: MExpr]
+data MCases = | MCaseSeq [casesLeft #1: MCases, casesRight #2: MCases] | MOneCase [oneCase #1: MCase]
+data MCase = | MCase [casePattern #1: MPattern, caseBody #2: MExpr]
+data MExprs = | MNoExprs [] | MSomeExprs [exprItems #1: MExprSeq]
+data MExprSeq = | MExprMore [exprsLeft #1: MExprSeq, exprsRight #2: MExprSeq] | MOneExpr [oneExpr #1: MExpr]
+data MExpr = | EMatch [matchScrutinee #1: MExpr, matchCases #2: MCases] | EIf [ifCondition #1: MExpr, ifThen #2: MExpr, ifElse #3: MExpr] | ELet [letName #1: Text, letValue #2: MExpr, letBody #3: MExpr] | EFail [failKind #1: Text, failMessage #2: MExpr] | EMk [mkTag #1: Text, mkArguments #2: MExprs] | ECall [callName #1: Text, callArguments #2: MExprs] | EPrim [primName #1: Text, primArguments #2: MExprs] | ECap [capName #1: Text, capArguments #2: MExprs] | EListOf [listItems #1: MExprs] | EMapOf [mapItems #1: MExprs] | ENegative [negativeValue #1: Number] | ETrue [] | EFalse [] | EUnit [] | ESymbol [symbolValue #1: Text] | ENatural [naturalValue #1: Number] | EText [textValue #1: Text] | EVar [varName #1: Text]
+data MPatSeq = | MPatMore [patsLeft #1: MPatSeq, patsRight #2: MPatSeq] | MOnePat [onePat #1: MPattern]
+data MPattern = | PatCons [consHead #1: MPattern, consTail #2: MPattern] | PatNode [nodeTag #1: Text, nodeArguments #2: MPatSeq] | PatNodeEmpty [emptyTag #1: Text] | PatNil [] | PatList [patListItems #1: MPatSeq] | PatWild [] | PatSymbol [patSymbolValue #1: Text] | PatNatural [patNaturalValue #1: Number] | PatText [patTextValue #1: Text] | PatVar [patVarName #1: Text]
+
+; -------------------------------------------------------------- the artifact
+;
+; Canonical Meta0. A quoted value is any canonical value, which is why it has
+; a type of its own rather than being folded into the expressions.
+
+data QList = | NoQ [] | MoreQ [qHead #1: QValue, qTail #2: QList]
+data QValue = | QSym [qSymName #1: Text] | QNat [qNatValue #1: Number] | QNeg [qNegValue #1: Number] | QText [qTextValue #1: Text] | QTrue [] | QFalse [] | QUnit [] | QListOf [qItems #1: QList] | QNode [qTag #1: Text, qArgs #2: QList]
+data NameList = | NoName [] | MoreName [nameHead #1: Text, nameTail #2: NameList]
+data OPatList = | NoOPat [] | MoreOPat [patHead #1: OPat, patTail #2: OPatList]
+data OPat = | PWild [] | PVar [pVarName #1: Text] | PQuote [pQuoted #1: QValue] | PNil [] | PNode [pNodeTag #1: Text, pNodeArgs #2: OPatList] | PList [pListItems #1: OPatList] | PCons [pConsHead #1: OPat, pConsTail #2: OPat]
+data OExprList = | NoOExpr [] | MoreOExpr [oHead #1: OExpr, oTail #2: OExprList]
+data OCaseList = | NoOArm [] | MoreOArm [armHead #1: OArm, armTail #2: OCaseList]
+data OArm = | OArm [armPattern #1: OPat, armBody #2: OExpr]
+data OExpr = | OVar [oVarName #1: Text] | OQuote [oQuoted #1: QValue] | OMk [oMkTag #1: Text, oMkArgs #2: OExprList] | OCall [oCallName #1: Text, oCallArgs #2: OExprList] | OPrim [oPrimName #1: Text, oPrimArgs #2: OExprList] | OCap [oCapName #1: Text, oCapArgs #2: OExprList] | OList [oListItems #1: OExprList] | OMap [oMapItems #1: OExprList] | OIf [oIfCondition #1: OExpr, oIfThen #2: OExpr, oIfElse #3: OExpr] | OLet [oLetName #1: Text, oLetValue #2: OExpr, oLetBody #3: OExpr] | OFail [oFailKind #1: Text, oFailMessage #2: OExpr] | OMatch [oMatchScrutinee #1: OExpr, oMatchCases #2: OCaseList]
+data ODeclList = | ONoDecl [] | OMoreDecl [declHead #1: ODecl, declTail #2: ODeclList]
+data ODecl = | OModule [oModuleName #1: Text] | OJudgment [oJudgmentName #1: Text, oJudgmentParams #2: NameList, oJudgmentBody #3: OExpr]
+data OProgram = | OProgram [programDecls #1: ODeclList]
+
+; ------------------------------------------------------------------- names
+;
+; A name is text, so taking one apart is walking its characters. These repeat
+; three lines of `strata.grammar` rather than importing it: that module is
+; sealed by S8, and a layer does not get to reach into one below it for the
+; sake of three lines.
+
+def restChars [cs: Chars]: Chars = match cs of case NoChar -> NoChar case MoreChar c rest -> rest end
+def dropLast [cs: Chars]: Chars = match cs of case NoChar -> NoChar case MoreChar c rest -> match rest of case NoChar -> NoChar case _ -> MoreChar c (dropLast rest) end end
+def joinChars [cs: Chars, accumulator: Text] ! text: Text = match cs of case NoChar -> accumulator case MoreChar c rest -> joinChars rest (textConcat accumulator c) end
+
+; `#Foo` names the tag `Foo`. The hash is how the surface tells a tag from an
+; identifier, and it is not part of the name.
+def stripHash [name: Text] ! text: Text = joinChars (restChars (textCharacters name)) ""
+def unquoteText [literal: Text] ! text: Text = joinChars (dropLast (restChars (textCharacters literal))) ""
+def prefixed [prefix: Text, name: Text] ! text: Text = textConcat prefix name
+
+def zeroIndex [] ! arith: Number = numberOfNat Zero
+def nextIndex [index: Number] ! arith: Number = numberAdd index (numberOfNat (Succ Zero))
+
+; -------------------------------------------------------------- the program
+
+def elaborate [ast: MDecls] ! text arith: OProgram = OProgram (elabDecls ast ONoDecl)
+def elabDecls [node: MDecls, accumulator: ODeclList] ! text arith: ODeclList = match node of case MSeq lhs rhs -> elabDecls lhs (elabDecls rhs accumulator) case MOneDecl one -> appendDecls (elabDecl one) accumulator end
+def appendDecls [left: ODeclList, right: ODeclList]: ODeclList = match left of case ONoDecl -> right case OMoreDecl head tail -> OMoreDecl head (appendDecls tail right) end
+def oneDecl [decl: ODecl]: ODeclList = OMoreDecl decl ONoDecl
+
+def elabDecl [node: MDecl] ! text arith: ODeclList = match node of case DModule name -> oneDecl (OModule name) case DImport name -> oneDecl (OJudgment (prefixed "Import'" name) NoName (OQuote (QNode "import" (MoreQ (QSym name) NoQ)))) case DCapability name -> oneDecl (OJudgment (prefixed "Capability'" (stripHash name)) NoName (OQuote (QNode "capability" (MoreQ (QSym (stripHash name)) NoQ)))) case DEvidence name -> oneDecl (OJudgment (prefixed "Evidence'" (stripHash name)) NoName (OQuote (QNode "evidence" (MoreQ (QSym (stripHash name)) NoQ)))) case DMode name modes -> oneDecl (OJudgment (prefixed "Mode'" name) NoName (OQuote (QNode "mode" (MoreQ (QListOf (quotedNames (elabParams modes))) NoQ)))) case DMeasure name body -> oneDecl (OJudgment (prefixed "Measure'" name) NoName (elabExpr body)) case DData name variants -> appendDecls (elabVariants variants ONoDecl) (oneDecl (predicateFor name variants)) case DRecord name fields -> OMoreDecl (OJudgment name (elabParams fields) (constructorBody name (elabParams fields))) (accessors name (elabParams fields) zeroIndex) case DJudgmentBody name params body -> oneDecl (OJudgment name (elabParams params) (elabExpr body)) case DJudgmentRules name params rules -> oneDecl (OJudgment name (elabParams params) (OMatch (OVar (firstName (elabParams params))) (elabRules rules NoOArm))) end
+
+def firstName [names: NameList]: Text = match names of case NoName -> "" case MoreName head tail -> head end
+def quotedNames [names: NameList]: QList = match names of case NoName -> NoQ case MoreName head tail -> MoreQ (QSym head) (quotedNames tail) end
+
+def elabParams [params: MParams]: NameList = match params of case MNoParams -> NoName case MSomeParams names -> elabIdents names NoName end
+def elabIdents [node: MIdents, accumulator: NameList]: NameList = match node of case MIdentSeq lhs rhs -> elabIdents lhs (elabIdents rhs accumulator) case MOneIdent name -> MoreName name accumulator end
+
+def constructorBody [tag: Text, fields: NameList]: OExpr = OMk tag (varRefs fields)
+def varRefs [names: NameList]: OExprList = match names of case NoName -> NoOExpr case MoreName head tail -> MoreOExpr (OVar head) (varRefs tail) end
+
+def elabVariants [node: MVariants, accumulator: ODeclList] ! text: ODeclList = match node of case MVariantSeq lhs rhs -> elabVariants lhs (elabVariants rhs accumulator) case MOneVariant one -> OMoreDecl (elabVariant one) accumulator end
+def elabVariant [variant: MVariant] ! text: ODecl = match variant of case MVariant name fields -> OJudgment (stripHash name) (elabParams fields) (constructorBody (stripHash name) (elabParams fields)) end
+
+; `Is<Name>` recognises any declared variant tag.
+def predicateFor [name: Text, variants: MVariants] ! text: ODecl = OJudgment (prefixed "Is" name) (MoreName "value" NoName) (OPrim "contains" (MoreOExpr (OQuote (QListOf (variantTags variants NoQ))) (MoreOExpr (OPrim "tag" (MoreOExpr (OVar "value") NoOExpr)) NoOExpr)))
+def variantTags [node: MVariants, accumulator: QList] ! text: QList = match node of case MVariantSeq lhs rhs -> variantTags lhs (variantTags rhs accumulator) case MOneVariant one -> MoreQ (QSym (tagOfVariant one)) accumulator end
+def tagOfVariant [variant: MVariant] ! text: Text = match variant of case MVariant name fields -> stripHash name end
+
+def accessors [name: Text, fields: NameList, index: Number] ! text arith: ODeclList = match fields of case NoName -> ONoDecl case MoreName field rest -> OMoreDecl (OJudgment (prefixed (textConcat name "'") field) (MoreName "record" NoName) (OPrim "nth" (MoreOExpr (OPrim "args" (MoreOExpr (OVar "record") NoOExpr)) (MoreOExpr (OQuote (QNat index)) NoOExpr)))) (accessors name rest (nextIndex index)) end
+
+def elabRules [node: MRules, accumulator: OCaseList] ! text arith: OCaseList = match node of case MRuleSeq lhs rhs -> elabRules lhs (elabRules rhs accumulator) case MOneRule one -> MoreOArm (elabRule one) accumulator end
+def elabRule [rule: MRule] ! text arith: OArm = match rule of case MRule pattern body -> OArm (elabPattern pattern) (elabExpr body) end
+
+; ---------------------------------------------------------- expressions
+
+def elabExprs [exprs: MExprs] ! text arith: OExprList = match exprs of case MNoExprs -> NoOExpr case MSomeExprs items -> elabExprSeq items NoOExpr end
+def elabExprSeq [node: MExprSeq, accumulator: OExprList] ! text arith: OExprList = match node of case MExprMore lhs rhs -> elabExprSeq lhs (elabExprSeq rhs accumulator) case MOneExpr one -> MoreOExpr (elabExpr one) accumulator end
+
+def elabExpr [expr: MExpr] ! text arith: OExpr = match expr of case EVar name -> OVar name case ESymbol value -> OQuote (QSym (stripHash value)) case ENatural value -> OQuote (QNat value) case ENegative value -> OQuote (QNeg value) case EText value -> OQuote (QText (unquoteText value)) case ETrue -> OQuote QTrue case EFalse -> OQuote QFalse case EUnit -> OQuote QUnit case EMk tag arguments -> OMk (stripHash tag) (elabExprs arguments) case ECall name arguments -> OCall name (elabExprs arguments) case EPrim name arguments -> OPrim (stripHash name) (elabExprs arguments) case ECap name arguments -> OCap (stripHash name) (elabExprs arguments) case EListOf items -> OList (elabExprs items) case EMapOf items -> OMap (elabExprs items) case EIf condition consequent alternative -> OIf (elabExpr condition) (elabExpr consequent) (elabExpr alternative) case ELet name value body -> OLet name (elabExpr value) (elabExpr body) case EFail kind message -> OFail (stripHash kind) (elabExpr message) case EMatch scrutinee cases -> OMatch (elabExpr scrutinee) (elabCases cases NoOArm) end
+
+def elabCases [node: MCases, accumulator: OCaseList] ! text arith: OCaseList = match node of case MCaseSeq lhs rhs -> elabCases lhs (elabCases rhs accumulator) case MOneCase one -> MoreOArm (elabCase one) accumulator end
+def elabCase [arm: MCase] ! text arith: OArm = match arm of case MCase pattern body -> OArm (elabPattern pattern) (elabExpr body) end
+
+; ------------------------------------------------------------- patterns
+
+def elabPattern [pattern: MPattern] ! text: OPat = match pattern of case PatWild -> PWild case PatVar name -> PVar name case PatSymbol value -> PQuote (QSym (stripHash value)) case PatNatural value -> PQuote (QNat value) case PatText value -> PQuote (QText (unquoteText value)) case PatNil -> PNil case PatNodeEmpty tag -> PNode (stripHash tag) NoOPat case PatNode tag arguments -> PNode (stripHash tag) (elabPatSeq arguments NoOPat) case PatList items -> PList (elabPatSeq items NoOPat) case PatCons head tail -> PCons (elabPattern head) (elabPattern tail) end
+def elabPatSeq [node: MPatSeq, accumulator: OPatList] ! text: OPatList = match node of case MPatMore lhs rhs -> elabPatSeq lhs (elabPatSeq rhs accumulator) case MOnePat one -> MoreOPat (elabPattern one) accumulator end
