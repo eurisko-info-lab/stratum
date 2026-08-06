@@ -1,0 +1,11 @@
+; delta-meta for S4 -> S5: Meta gains a reader that resolves a checked module
+; into core, a machine that runs what the compiler emits, and the driver that
+; decides the bootstrap. The compiler itself is not Meta -- it is Strata.
+(change
+  (kind delta-meta)
+  (name "S4->S5 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (modular strata)
+      (self-hosting strata))))

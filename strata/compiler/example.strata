@@ -1,0 +1,15 @@
+module "strata.example"
+version 1
+; What a compiler has to get right, written down so it can be run both ways.
+;
+; Every definition here is checked twice: once by evaluating the source, and
+; once by compiling it and running the result. The two must agree, which is
+; the obligation compiling carries.
+import "strata.prelude" 1
+data Pair = | Pair [left #1: Nat, right #2: Nat]
+def double [n: Nat]: Nat = add n n
+def four []: Nat = double (Succ (Succ Zero))
+def flipped []: Bool = not (not False)
+def viaLet []: Nat = let x = Succ Zero in add x (add x x)
+def waiting []: Nat = let f = add (Succ Zero) in f (Succ (Succ Zero))
+def built []: Pair = let p = Pair (Succ Zero) in p (Succ (Succ Zero))

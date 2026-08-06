@@ -3,6 +3,7 @@ package stratum
 import stratum.cli.Cli
 
 import java.nio.file.{Files, Path, Paths}
+import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters.*
 
 /**
@@ -13,12 +14,19 @@ import scala.jdk.CollectionConverters.*
  */
 class HostParitySuite extends munit.FunSuite:
 
+  /**
+   * Deriving every foundation includes deriving S5, which compiles the Strata
+   * compiler with the reference evaluator and then runs that compiled compiler
+   * on its own source. That is real work and it is meant to be.
+   */
+  override val munitTimeout: Duration = Duration(10, "min")
+
   private val root: Path = Paths.get(System.getProperty("user.dir")).toAbsolutePath.normalize()
   private val rustBinary: Path = root.resolve("host-rust/target/release/stratum-verify")
 
   /** Foundations first, then any application deployment built on the platform. */
   private def worlds: Vector[String] =
-    val foundations = Vector("F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "S0", "S1", "S2", "S3", "S4")
+    val foundations = Vector("F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "S0", "S1", "S2", "S3", "S4", "S5")
       .map(name => s"foundations/$name")
     val applications =
       val directory = root.resolve("applications")

@@ -1,0 +1,35 @@
+; The canonical change from S4 to S5.
+;
+; S4 |- S5. Strata compiles Strata.
+;
+; Strata has no primitives: data, definitions, application, `let` and `match`,
+; and nothing else. That is what makes a compiler for it writable in it. It is
+; also what stops the compiler resolving its own names -- there is no equality
+; to compare two names with -- so the compiler takes a resolved core in which
+; a variable is an index, a constructor is a tag and an arity, and a
+; definition is a position. Resolving is the reader's job.
+;
+; The target has structured control flow, as Wasm does. What the compiler does
+; is linearise a tree of expressions into a sequence of stack instructions,
+; turn application spines into explicit pushes and applies, and turn pattern
+; matching into a tag dispatch that binds its fields by position.
+;
+; The bootstrap is the ordinary one, and it is the acceptance of the layer:
+; the compiler's own source compiled by the reference evaluator, and that
+; compiled compiler run on the same source, are the same.
+(change
+  (kind foundation)
+  (name "S4->S5")
+  (predecessor (foundation-of "foundations/S4"))
+  (delta-meta (file "changes/S4-S5/delta-meta.canon"))
+  (delta-grammar (file "changes/S4-S5/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "the self-hosting compiler")
+      (programs [
+        (file "features/strata/compile.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/compile.meta")
+        (text-file "strata/compiler/compile.strata")
+      ]))))

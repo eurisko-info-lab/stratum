@@ -1,0 +1,10 @@
+; delta-grammar for S4 -> S5: the Strata surface is unchanged. The compiler is
+; written in the language as it already stands, which is the point.
+(change
+  (kind delta-grammar)
+  (name "S4->S5 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end telescope index bind import export])
+      (present [module version data def law match case let end telescope index bind import export]))))

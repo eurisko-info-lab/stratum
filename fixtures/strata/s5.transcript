@@ -1,0 +1,89 @@
+# S5 acceptance transcript: the self-hosting compiler.
+#
+# S4 |- S5. Strata compiles Strata.
+#
+# Strata has no primitives, which is what makes a compiler for it writable in
+# it, and also what stops that compiler resolving its own names. So it takes a
+# resolved core, and the reader makes one.
+
+$ foundation verify --dir foundations/S5
+> foundation S5
+> digest cdccd19d532c2d305f503bc6d7b627a9c5237ce83c731753d8132affb7fe514d
+> closure 126 artifacts
+> check strata-a-module-resolves-into-core ok
+> check strata-the-core-does-not-describe-literals ok
+> check strata-the-compiler-is-well-typed ok
+> check strata-the-compiler-terminates ok
+> check strata-the-compiler-linearises-a-definition ok
+> check strata-a-compiled-program-computes ok
+> check strata-compiling-preserves-recursion ok
+> check strata-compiling-preserves-let ok
+> check strata-compiling-preserves-partial-application ok
+> check strata-compiling-preserves-partial-construction ok
+> check strata-compiling-preserves-imports ok
+> check strata-the-bootstrap-is-stable ok
+> check strata-the-bootstrap-has-an-identity ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S4 --successor foundations/S5
+> predecessor S4
+> successor S5
+> result (valid #d2da8bb6040211f6cf4b503c07c5e6d650416fed32c4e366865686bbf2f1baa1a)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/S5
+> reconstructed S5
+> digest cdccd19d532c2d305f503bc6d7b627a9c5237ce83c731753d8132affb7fe514d
+> stable yes
+> closure 126 artifacts
+> checks 13 ok
+
+# A checked module becomes a core in which a variable is an index, a
+# constructor is a tag and an arity, and a definition is a position.
+$ derive --foundation foundations/S5 --goal '(call ReadProgram (call LinkModule (call LoadModuleSet (grammar strata) (q ["module \"probe.bit\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"])) (q "probe.bit")))'
+> (Def (Succ (Zero)) (CCase (CLocal (Zero)) (Branch (Zero) (Zero) (CCon (Succ (Zero)) (Zero)) (Branch (Succ (Zero)) (Zero) (CCon (Zero) (Zero)) (NoBranch)))) (NoDef))
+
+# The core describes declared data and nothing else, so a literal has no place
+# in it.
+$ derive --foundation foundations/S5 --goal '(call ReadProgram (call LinkModule (call LoadModuleSet (grammar strata) (q ["module \"probe.lit\"\nversion 1\ndata Bit = | On [] | Off []\ndef count []: Bit = 3\n"])) (q "probe.lit")))'
+> error compile-error "the core does not describe literals, only declared data"
+> exit 1
+
+# The compiler linearises that tree into a sequence of stack instructions.
+$ derive --foundation foundations/S5 --goal '(call CompileProgramWith (call CompilerDeclarations (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q [])))) (call ReadProgram (call LinkModule (call LoadModuleSet (grammar strata) (q ["module \"probe.bit\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"])) (q "probe.bit"))))'
+> (Block (IStep (ILocal (Zero)) (IStep (IMatch (Arm (Zero) (Zero) (IStep (ICon (Succ (Zero)) (Zero)) (IDone)) (Arm (Succ (Zero)) (Zero) (IStep (ICon (Zero) (Zero)) (IDone)) (NoArm)))) (IDone))) (NoBlock))
+
+# The compiler is an ordinary Strata module, held to what every module is held
+# to.
+$ derive --foundation foundations/S5 --goal '(call CheckLinkedModule (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))) (q "strata.compiler"))'
+> (checked ok)
+
+$ derive --foundation foundations/S5 --goal '(call TotalLinkedModule (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))) (q "strata.compiler"))'
+> (total ok)
+
+# A compiled program computes, and computes what the source computes.
+$ derive --foundation foundations/S5 --goal '(call RunCompiled (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/example.strata")) (q []))) (q "strata.example") (q four))'
+> (Succ (Succ (Succ (Succ (Zero)))))
+
+$ derive --foundation foundations/S5 --goal '(call CompilingPreservesMeaning (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/example.strata")) (q []))) (q "strata.example") (q waiting))'
+> #t
+
+$ derive --foundation foundations/S5 --goal '(call CompilingPreservesMeaning (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/example.strata")) (q []))) (q "strata.example") (q built))'
+> #t
+
+# The acceptance of the layer. C1 is the compiler's own source compiled by the
+# reference evaluator; C2 is C1 -- that compiled compiler -- run on the same
+# source.
+$ derive --foundation foundations/S5 --goal '(call BootstrapIsStable (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))))'
+> #t
+
+# And the compiler it produces has an identity.
+$ derive --foundation foundations/S5 --goal '(call BootstrapDigest (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))))'
+> "ae7f5cf23ef65feff1c15310ed0a2b5d84ddbbdac1a8d7ccf5b49c0567bdf0af"
+
+# What the layers below decided, S5 still decides.
+$ derive --foundation foundations/S5 --goal '(call CheckLinkedDependent (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/vector.strata")) (q []))) (q "strata.vector"))'
+> (checked ok)
+
+$ derive --foundation foundations/S5 --goal '(call GeneratedChangesAgree (grammar strata) (call SourceText (source "strata/lib/change.strata")) (q 3))'
+> #t
