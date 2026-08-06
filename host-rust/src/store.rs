@@ -1,5 +1,6 @@
 //! Artifact envelopes, the content addressed store and closure traversal.
 
+use std::rc::Rc;
 use crate::canon::{decode, encode, Canon, Digest};
 use crate::sha::sha256;
 use std::collections::{BTreeMap, BTreeSet};
@@ -15,17 +16,17 @@ pub struct Artifact {
 impl Artifact {
     pub fn to_canon(&self) -> Canon {
         Canon::Node(
-            "artifact".to_string(),
-            vec![Canon::Sym(self.kind.clone()), self.body.clone()],
+            Rc::from("artifact".to_string()),
+            Rc::new(vec![Canon::Sym(Rc::from(self.kind.clone())), self.body.clone()]),
         )
     }
 
     pub fn from_canon(value: Canon) -> Result<Artifact, String> {
         match value {
-            Canon::Node(tag, mut args) if tag == "artifact" && args.len() == 2 => {
-                let body = args.pop().unwrap();
-                match args.pop().unwrap() {
-                    Canon::Sym(kind) => Ok(Artifact { kind, body }),
+            Canon::Node(tag, args) if tag == Rc::from("artifact") && args.len() == 2 => {
+                let body = args[1].clone();
+                match &args[0] {
+                    Canon::Sym(kind) => Ok(Artifact { kind: kind.clone().to_string(), body }),
                     _ => Err("artifact kind is not a symbol".to_string()),
                 }
             }

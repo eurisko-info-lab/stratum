@@ -1,0 +1,70 @@
+module "strata.grammar"
+version 1
+; Grammar elaboration, written in Strata.
+;
+; `languages/grammar/elaborate.meta` turns a parsed grammar source into the
+; canonical grammar artifact that every other language is read with. This is
+; the same function, in the language the second floor is built in, and the
+; claim S8 makes is not that it is similar: for every grammar in the tree the
+; artifact this produces is byte for byte the artifact that one produces.
+;
+; Two things make it writable here at all. The first is S7: elaboration has to
+; unescape a text literal, and Strata could not compare a character until the
+; boundary was drawn. The second is that a text crosses that boundary as the
+; list of its characters rather than as something to be indexed, so unescaping
+; recurses on a list and is accepted as total. An index would not have been.
+;
+; A name is never compared, only carried -- from the parse tree to the
+; artifact, unchanged. That is why `Name` can be abstract, and why elaboration
+; needs no way to look inside one.
+import "strata.prelude" 1
+import "strata.native" 1
+
+type Name
+
+; The parse tree, as the grammar of grammars produces it. Each of the three
+; folds gets its own type, so that every match below covers what it matches
+; and there is nowhere to put a case that means "the rest".
+data GDecls = | GSeq [seqLeft #1: GDecls, seqRight #2: GDecls] | GOneDecl [oneDecl #1: GDeclNode]
+data GDeclNode = | GName [nameSpelling #1: Text] | GStart [startCategory #1: Name] | GToken [tokenName #1: Name, tokenKind #2: Name, tokenPattern #3: Text] | GSkip [skipPattern #1: Text] | GCategory [categoryName #1: Name, categoryProductions #2: GProds]
+data GProds = | GProductions [prodsLeft #1: GProds, prodsRight #2: GProds] | GOneProd [oneProd #1: GProdNode]
+data GProdNode = | GProduction [productionTag #1: Name, productionElements #2: GElems] | GPass [passTarget #1: Name] | GFold [foldTag #1: Name, foldTarget #2: Name] | GParen [parenOpen #1: Text, parenTarget #2: Name, parenClose #3: Text]
+data GElems = | GElements [elementsLeft #1: GElems, elementsRight #2: GElems] | GOneElem [oneElem #1: GElemNode]
+data GElemNode = | GKeyword [keywordSpelling #1: Text] | GBinding [bindingField #1: Name, bindingTarget #2: Name]
+
+; The artifact, as a value. A fold in the tree has become a list, and a text
+; literal has become the text it spells.
+data Elem = | EKeyword [keywordText #1: Text] | EBinding [bindField #1: Name, bindTarget #2: Name]
+data ElemList = | NoElem [] | MoreElem [elemHead #1: Elem, elemTail #2: ElemList]
+data Prod = | PProd [prodTag #1: Name, prodElements #2: ElemList] | PPass [passName #1: Name] | PFold [foldName #1: Name, foldOver #2: Name] | PParen [openText #1: Text, parenOver #2: Name, closeText #3: Text]
+data ProdList = | NoProd [] | MoreProd [prodHead #1: Prod, prodTail #2: ProdList]
+data GDecl = | DName [grammarText #1: Text] | DStart [startName #1: Name] | DToken [tokenId #1: Name, tokenSort #2: Name, tokenText #3: Text] | DSkip [skipText #1: Text] | DCategory [categoryId #1: Name, categoryProds #2: ProdList]
+data DeclList = | NoDecl [] | MoreDecl [declHead #1: GDecl, declTail #2: DeclList]
+data Grammar = | Grammar [grammarDecls #1: DeclList]
+
+; ---------------------------------------------------------------- literals
+
+def restChars [cs: Chars]: Chars = match cs of case NoChar -> NoChar case MoreChar c rest -> rest end
+def dropLast [cs: Chars]: Chars = match cs of case NoChar -> NoChar case MoreChar c rest -> match rest of case NoChar -> NoChar case _ -> MoreChar c (dropLast rest) end end
+def unquote [cs: Chars]: Chars = dropLast (restChars cs)
+
+def escapeValue [c: Text] ! text: Text = match textEq c "n" of case True -> "\n" case False -> match textEq c "t" of case True -> "\t" case False -> match textEq c "r" of case True -> "\r" case False -> c end end end
+
+; A backslash takes the character after it with it, which is why the escaped
+; case consumes two and recurses on what is left of the second.
+def unescape [cs: Chars, accumulator: Text] ! text: Text = match cs of case NoChar -> accumulator case MoreChar c rest -> match textEq c "\\" of case True -> match rest of case NoChar -> accumulator case MoreChar e more -> unescape more (textConcat accumulator (escapeValue e)) end case False -> unescape rest (textConcat accumulator c) end end
+
+def textValue [literal: Text] ! text: Text = unescape (unquote (textCharacters literal)) ""
+
+; -------------------------------------------------------------- elaboration
+;
+; Each fold is flattened and elaborated in one pass, from the right, so that
+; the list comes out in the order the source was written in.
+
+def elaborate [ast: GDecls] ! text: Grammar = Grammar (elabDecls ast NoDecl)
+def elabDecls [node: GDecls, accumulator: DeclList] ! text: DeclList = match node of case GSeq lhs rhs -> elabDecls lhs (elabDecls rhs accumulator) case GOneDecl one -> MoreDecl (elabDecl one) accumulator end
+def elabDecl [node: GDeclNode] ! text: GDecl = match node of case GName spelling -> DName (textValue spelling) case GStart category -> DStart category case GToken name kind pattern -> DToken name kind (textValue pattern) case GSkip pattern -> DSkip (textValue pattern) case GCategory name productions -> DCategory name (elabProds productions NoProd) end
+def elabProds [node: GProds, accumulator: ProdList] ! text: ProdList = match node of case GProductions lhs rhs -> elabProds lhs (elabProds rhs accumulator) case GOneProd one -> MoreProd (elabProd one) accumulator end
+def elabProd [node: GProdNode] ! text: Prod = match node of case GProduction tag elements -> PProd tag (elabElems elements NoElem) case GPass target -> PPass target case GFold tag target -> PFold tag target case GParen open target close -> PParen (textValue open) target (textValue close) end
+def elabElems [node: GElems, accumulator: ElemList] ! text: ElemList = match node of case GElements lhs rhs -> elabElems lhs (elabElems rhs accumulator) case GOneElem one -> MoreElem (elabElem one) accumulator end
+def elabElem [node: GElemNode] ! text: Elem = match node of case GKeyword spelling -> EKeyword (textValue spelling) case GBinding field target -> EBinding field target end

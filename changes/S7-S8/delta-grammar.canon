@@ -1,0 +1,11 @@
+; delta-grammar for S7 -> S8: a text literal gains escapes, and denotes what
+; it spells rather than how it spells it. Everything S7 could write still
+; parses, and every literal without a backslash still means what it meant.
+(change
+  (kind delta-grammar)
+  (name "S7->S8 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many prim type])
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many prim type escape]))))

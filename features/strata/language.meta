@@ -1,0 +1,174 @@
+module stratalanguage
+
+; Grammar elaboration, crossed into Strata and back.
+;
+; `languages/grammar/elaborate.meta` is the elaborator every language in the
+; tree is read with. `strata/system/grammar.strata` is the same function
+; written in Strata. Neither can call the other -- one is a Meta program and
+; the other a Strata module -- so what connects them is here: a reader that
+; turns a parse tree into a Strata value, a writer that turns the Strata
+; result back into a grammar artifact, and a judgment that asks whether the
+; artifact that comes out is the artifact that was committed.
+;
+; The reader and the writer are the only places that know both shapes. They
+; are deliberately dull: no decisions, no defaulting, one clause per node.
+; Everything that could be got wrong is got wrong in Strata, where the check
+; will catch it.
+
+; ------------------------------------------------------------- the reader
+;
+; A parse tree becomes a value of `GDecls`. An ident crosses unchanged --
+; `Name` is abstract in Strata, so the symbol is carried, never inspected. A
+; text token crosses as it was written, quotes and backslashes intact,
+; because unescaping it is the work being tested.
+
+judgment ReadGrammarDecls [node] =
+  match node {
+    case (#Seq lhs rhs) ->
+      mk #GSeq [call ReadGrammarDecls [lhs] call ReadGrammarDecls [rhs]]
+    case _ -> mk #GOneDecl [call ReadGrammarDecl [node]]
+  }
+
+judgment ReadGrammarDecl [node] =
+  match node {
+    case (#GrammarName spelling) -> mk #GName [spelling]
+    case (#Start category) -> mk #GStart [category]
+    case (#Token name kind pattern) -> mk #GToken [name kind pattern]
+    case (#Skip pattern) -> mk #GSkip [pattern]
+    case (#Category name productions) ->
+      mk #GCategory [name call ReadGrammarProds [productions]]
+    case _ -> fail #language-error "a grammar declaration the reader does not know"
+  }
+
+judgment ReadGrammarProds [node] =
+  match node {
+    case (#Productions lhs rhs) ->
+      mk #GProductions [call ReadGrammarProds [lhs] call ReadGrammarProds [rhs]]
+    case _ -> mk #GOneProd [call ReadGrammarProd [node]]
+  }
+
+judgment ReadGrammarProd [node] =
+  match node {
+    case (#Production tag elements) ->
+      mk #GProduction [tag call ReadGrammarElems [elements]]
+    case (#Pass target) -> mk #GPass [target]
+    case (#Fold tag target) -> mk #GFold [tag target]
+    case (#Paren open target close) -> mk #GParen [open target close]
+    case _ -> fail #language-error "a production the reader does not know"
+  }
+
+judgment ReadGrammarElems [node] =
+  match node {
+    case (#Elements lhs rhs) ->
+      mk #GElements [call ReadGrammarElems [lhs] call ReadGrammarElems [rhs]]
+    case _ -> mk #GOneElem [call ReadGrammarElem [node]]
+  }
+
+judgment ReadGrammarElem [node] =
+  match node {
+    case (#Keyword spelling) -> mk #GKeyword [spelling]
+    case (#Binding field target) -> mk #GBinding [field target]
+    case _ -> fail #language-error "an element the reader does not know"
+  }
+
+; ------------------------------------------------------------- the writer
+;
+; A value of `Grammar` becomes the artifact. Every list Strata built out of
+; `MoreDecl`, `MoreProd` and `MoreElem` becomes an ordinary list again, in
+; the order it was built in.
+
+judgment WriteGrammar [value] =
+  match value {
+    case (#Grammar decls) -> prim #node [#grammar call WriteDecls [decls]]
+    case _ -> fail #language-error "elaboration did not produce a grammar"
+  }
+
+judgment WriteDecls [decls] =
+  match decls {
+    case (#MoreDecl head tail) ->
+      prim #cons [call WriteDecl [head] call WriteDecls [tail]]
+    case _ -> list []
+  }
+
+judgment WriteDecl [decl] =
+  match decl {
+    case (#DName text) -> mk #name [text]
+    case (#DStart name) -> mk #start [name]
+    case (#DToken name kind pattern) -> mk #token [name kind pattern]
+    case (#DSkip pattern) -> mk #skip [pattern]
+    case (#DCategory name productions) ->
+      prim #node [#category prim #cons [name call WriteProds [productions]]]
+    case _ -> fail #language-error "elaboration produced a declaration the writer does not know"
+  }
+
+judgment WriteProds [productions] =
+  match productions {
+    case (#MoreProd head tail) ->
+      prim #cons [call WriteProd [head] call WriteProds [tail]]
+    case _ -> list []
+  }
+
+judgment WriteProd [production] =
+  match production {
+    case (#PProd tag elements) -> mk #prod [tag call WriteElems [elements]]
+    case (#PPass target) -> mk #pass [target]
+    case (#PFold tag target) -> mk #fold [tag target]
+    case (#PParen open target close) -> mk #paren [open target close]
+    case _ -> fail #language-error "elaboration produced a production the writer does not know"
+  }
+
+judgment WriteElems [elements] =
+  match elements {
+    case (#MoreElem head tail) ->
+      prim #cons [call WriteElem [head] call WriteElems [tail]]
+    case _ -> list []
+  }
+
+judgment WriteElem [element] =
+  match element {
+    case (#EKeyword text) -> mk #kw [text]
+    case (#EBinding field target) -> mk #bind [field target]
+    case _ -> fail #language-error "elaboration produced an element the writer does not know"
+  }
+
+; -------------------------------------------------------------- the round
+;
+; Parse with the grammar of grammars, read into Strata, run `elaborate`,
+; write the result out. Nothing here decides anything about the language
+; being elaborated; the decisions are all in the Strata module.
+
+judgment RunStrataOn [grammar sources name entry argument] =
+  let decls = call NativeModule [grammar sources name] in
+  call EnterDefinition [
+    decls
+    call RequiredDefinition [decls entry]
+    list [argument]
+  ]
+
+judgment ElaborateGrammarInStrata [strataGrammar sources grammarGrammar source] =
+  call WriteGrammar [
+    call RunStrataOn [
+      strataGrammar sources "strata.grammar" #elaborate
+      call ReadGrammarDecls [call Parse [grammarGrammar source]]
+    ]
+  ]
+
+; The claim S8 makes about every grammar in the tree: what Strata elaborates
+; is what is committed, byte for byte. Not equivalent, not equal up to
+; ordering -- the same artifact.
+judgment StrataGrammarAgrees [strataGrammar sources grammarGrammar source artifactReference] =
+  match call Fetch [artifactReference #grammar] {
+    case (#some committed) ->
+      if prim #eq [
+        committed
+        call ElaborateGrammarInStrata [strataGrammar sources grammarGrammar source]
+      ]
+      then mk #agree [#ok]
+      else mk #agree [#mismatch]
+    case _ -> mk #agree [#artifact-missing]
+  }
+
+
+; The system module set: the prelude, the boundary, and the elaborator that
+; needs both.
+judgment StrataSystem [prelude native grammar] = list [prelude native grammar]

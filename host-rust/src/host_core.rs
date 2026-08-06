@@ -4,10 +4,11 @@
 //! the canonical tags, the Meta0 forms, the primitive set, the Grammar0 forms,
 //! the evidence shape or the verdict forms, the digests stop matching.
 
+use std::rc::Rc;
 use crate::canon::Canon;
 
 fn symbols(names: &[&str]) -> Canon {
-    Canon::List(names.iter().map(|name| Canon::sym(name)).collect())
+    Canon::list(names.iter().map(|name| Canon::sym(name)).collect())
 }
 
 const CANON_TAGS: [&str; 11] = [
@@ -42,7 +43,7 @@ pub fn manifest() -> Canon {
     Canon::node(
         "host-core",
         vec![
-            Canon::node("bootstrap", vec![Canon::Str("StratumHost0/1".to_string())]),
+            Canon::node("bootstrap", vec![Canon::Str(Rc::from("StratumHost0/1".to_string()))]),
             Canon::node(
                 "canon",
                 vec![

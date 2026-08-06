@@ -309,7 +309,8 @@ judgment FindDefinition [decls name] =
 judgment Eval [decls env expr] =
   match expr {
     case (#Natural value) -> value
-    case (#Text value) -> value
+    ; A text literal denotes what it spells, not how it spells it.
+    case (#Text value) -> call TextValue [value]
     case (#Var name) -> call EvalName [decls env name]
     case (#Apply fn argument) ->
       call StrataApplyValue [

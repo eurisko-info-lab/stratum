@@ -1,0 +1,132 @@
+
+artifactsource
+source
+pathlanguages/rust/rust.grammar
+textŸgrammar "rust"
+start document
+
+skip "//[^\\r\\n]*"
+skip "/\\*([^*]|\\*+[^*/])*\\*+/"
+
+token dquoted str "\"(\\\\.|[^\"\\\\])*\""
+token bytestring str "b\"(\\\\.|[^\"\\\\])*\""
+token bytechar str "b'(\\\\.|[^'\\\\])'"
+token charlit str "'(\\\\.|[^'\\\\])'"
+token lifetime sym "'[A-Za-z_][A-Za-z0-9_]*"
+token number str "(0x[0-9a-fA-F_]+|0o[0-7_]+|0b[01_]+|[0-9][0-9_]*(\\.[0-9_]+)?)([a-zA-Z][0-9]*)?"
+token word str "[A-Za-z_][A-Za-z0-9_]*"
+
+category document
+  fold RustDocument item
+
+category item
+  prod Brace "{" body : document "}"
+  prod EmptyBrace "{" "}"
+  prod FunctionDecl "fn" name : word header : headerDocument "{" body : document "}"
+  prod StructDecl "struct" name : word "{" body : document "}"
+  prod EmptyStructDecl "struct" name : word "{" "}"
+  prod TupleStructDecl "struct" name : word "(" body : document ")" ";"
+  prod UnitStructDecl "struct" name : word ";"
+  prod EnumDecl "enum" name : word "{" body : document "}"
+  prod ImplDecl "impl" heritage : headerDocument "{" body : document "}"
+  prod EmptyImplDecl "impl" heritage : headerDocument "{" "}"
+  prod TraitDecl "trait" name : word "{" body : document "}"
+  prod TraitDeclHeritage "trait" name : word heritage : headerDocument "{" body : document "}"
+  prod ModDecl "mod" name : word ";"
+  prod ModDeclBraced "mod" name : word "{" body : document "}"
+  pass itemCore
+
+category itemCore
+  prod Paren "(" body : document ")"
+  prod EmptyParen "(" ")"
+  prod Bracket "[" body : document "]"
+  prod EmptyBracket "[" "]"
+  prod DQuoted value : dquoted
+  prod ByteString value : bytestring
+  prod ByteChar value : bytechar
+  prod CharLit value : charlit
+  prod Lifetime value : lifetime
+  prod Number value : number
+  prod As "as"
+  prod Break "break"
+  prod Const "const"
+  prod Continue "continue"
+  prod Crate "crate"
+  prod Dyn "dyn"
+  prod Else "else"
+  prod Enum "enum"
+  prod Extern "extern"
+  prod False "false"
+  prod Fn "fn"
+  prod For "for"
+  prod If "if"
+  prod Impl "impl"
+  prod In "in"
+  prod Let "let"
+  prod Loop "loop"
+  prod Match "match"
+  prod Mod "mod"
+  prod Move "move"
+  prod Mut "mut"
+  prod Pub "pub"
+  prod Ref "ref"
+  prod Return "return"
+  prod SelfUpper "Self"
+  prod SelfLower "self"
+  prod Static "static"
+  prod Struct "struct"
+  prod Super "super"
+  prod Trait "trait"
+  prod True "true"
+  prod TypeKw "type"
+  prod Unsafe "unsafe"
+  prod Use "use"
+  prod Where "where"
+  prod While "while"
+  prod Async "async"
+  prod Await "await"
+  prod PathSep "::"
+  prod Arrow "->"
+  prod FatArrow "=>"
+  prod DotDotEq "..="
+  prod DotDot ".."
+  prod Dot "."
+  prod AndAnd "&&"
+  prod OrOr "||"
+  prod EqEq "=="
+  prod Ne "!="
+  prod Le "<="
+  prod Ge ">="
+  prod Shl "<<"
+  prod Shr ">>"
+  prod PlusEq "+="
+  prod MinusEq "-="
+  prod StarEq "*="
+  prod SlashEq "/="
+  prod PercentEq "%="
+  prod Less "<"
+  prod Greater ">"
+  prod Amp "&"
+  prod Pipe "|"
+  prod Plus "+"
+  prod Minus "-"
+  prod Star "*"
+  prod Slash "/"
+  prod Percent "%"
+  prod Caret "^"
+  prod Tilde "~"
+  prod Question "?"
+  prod Bang "!"
+  prod Hash "#"
+  prod At "@"
+  prod Colon ":"
+  prod Comma ","
+  prod Semicolon ";"
+  prod Assign "="
+  prod Word value : word
+
+category headerDocument
+  fold HeaderDocument headerItem
+
+category headerItem
+  pass itemCore

@@ -9,7 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 repository=$PWD
 
-RUST_HOST=host-rust/target/release/stratum-verify
+RUST_HOST="$repository/host-rust/target/release/stratum-verify"
 if [ ! -x "$RUST_HOST" ]; then
   echo "the independent host is not built" >&2
   exit 1
@@ -26,31 +26,58 @@ worlds() {
 
 cp "$RUST_HOST" "$room/stratum-verify"
 
-for dir in $(worlds); do
+# Every world's clean-room and repository verification is independent of
+# every other world's, and within a world the four stratum-verify calls (room
+# attest, room report, repository attest, repository report) are independent
+# of each other too -- `report` alone takes over a minute on the largest
+# foundations, so running all of this one call at a time left most of the
+# machine idle. Everything below runs concurrently instead.
+verify_world() {
+  local dir=$1 name
   name=$(basename "$dir")
   mkdir -p "$room/$name/closure"
   cp "$dir/digest.txt" "$room/$name/digest.txt"
   cp "$dir"/closure/*.canon "$room/$name/closure/"
-done
 
-cd "$room"
-for name in $(ls -d */ | sed 's|/$||'); do
-  ./stratum-verify attest "$name" > "$name.attestation"
-  ./stratum-verify report "$name" > "$name.report"
-  echo "  $name $(tail -n 1 "$name.attestation")"
-  echo "  $name $(tail -n 1 "$name.report")"
-done
+  local pids=()
+  (cd "$room" && ./stratum-verify attest "$name" > "$name.attestation") & pids+=($!)
+  (cd "$room" && ./stratum-verify report "$name" > "$name.report") & pids+=($!)
+  "$RUST_HOST" attest "$dir" > "$room/$name.repository-attestation" & pids+=($!)
+  "$RUST_HOST" report "$dir" > "$room/$name.repository-report" & pids+=($!)
 
-# The clean room results must equal the results computed in the repository.
-cd "$repository"
-for dir in $(worlds); do
-  name=$(basename "$dir")
-  "$RUST_HOST" attest "$dir" > "$room/$name.repository-attestation"
-  "$RUST_HOST" report "$dir" > "$room/$name.repository-report"
+  local failed=0 p
+  for p in "${pids[@]}"; do
+    wait "$p" || failed=1
+  done
+  if [ "$failed" -ne 0 ]; then
+    echo "stratum-verify failed for $name" >&2
+    return 1
+  fi
+
+  echo "  $name $(tail -n 1 "$room/$name.attestation")"
+  echo "  $name $(tail -n 1 "$room/$name.report")"
+
+  # The clean room results must equal the results computed in the repository.
   diff -u "$room/$name.attestation" "$room/$name.repository-attestation" >/dev/null || {
-    echo "clean room attestation differs for $name" >&2; exit 1; }
+    echo "clean room attestation differs for $name" >&2; return 1; }
   diff -u "$room/$name.report" "$room/$name.repository-report" >/dev/null || {
-    echo "clean room derivation differs for $name" >&2; exit 1; }
+    echo "clean room derivation differs for $name" >&2; return 1; }
+}
+
+pids=()
+names=()
+for dir in $(worlds); do
+  verify_world "$dir" &
+  pids+=($!)
+  names+=("$(basename "$dir")")
 done
 
-echo "clean room reconstruction ok"
+status=0
+for i in "${!pids[@]}"; do
+  wait "${pids[$i]}" || { echo "verification failed for ${names[$i]}" >&2; status=1; }
+done
+
+if [ "$status" -eq 0 ]; then
+  echo "clean room reconstruction ok"
+fi
+exit "$status"

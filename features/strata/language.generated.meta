@@ -1,0 +1,488 @@
+; Generated from features/strata/language.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratalanguage)
+  (judgment
+    ReadGrammarDecls
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Seq
+          (pv lhs)
+          (pv rhs))
+        (mk
+          GSeq
+          (call
+            ReadGrammarDecls
+            (v lhs))
+          (call
+            ReadGrammarDecls
+            (v rhs))))
+      (case
+        _
+        (mk
+          GOneDecl
+          (call
+            ReadGrammarDecl
+            (v node))))))
+  (judgment
+    ReadGrammarDecl
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          GrammarName
+          (pv spelling))
+        (mk
+          GName
+          (v spelling)))
+      (case
+        (pm
+          Start
+          (pv category))
+        (mk
+          GStart
+          (v category)))
+      (case
+        (pm
+          Token
+          (pv name)
+          (pv kind)
+          (pv pattern))
+        (mk
+          GToken
+          (v name)
+          (v kind)
+          (v pattern)))
+      (case
+        (pm
+          Skip
+          (pv pattern))
+        (mk
+          GSkip
+          (v pattern)))
+      (case
+        (pm
+          Category
+          (pv name)
+          (pv productions))
+        (mk
+          GCategory
+          (v name)
+          (call
+            ReadGrammarProds
+            (v productions))))
+      (case
+        _
+        (fail
+          language-error
+          (q "a grammar declaration the reader does not know")))))
+  (judgment
+    ReadGrammarProds
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Productions
+          (pv lhs)
+          (pv rhs))
+        (mk
+          GProductions
+          (call
+            ReadGrammarProds
+            (v lhs))
+          (call
+            ReadGrammarProds
+            (v rhs))))
+      (case
+        _
+        (mk
+          GOneProd
+          (call
+            ReadGrammarProd
+            (v node))))))
+  (judgment
+    ReadGrammarProd
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Production
+          (pv tag)
+          (pv elements))
+        (mk
+          GProduction
+          (v tag)
+          (call
+            ReadGrammarElems
+            (v elements))))
+      (case
+        (pm
+          Pass
+          (pv target))
+        (mk
+          GPass
+          (v target)))
+      (case
+        (pm
+          Fold
+          (pv tag)
+          (pv target))
+        (mk
+          GFold
+          (v tag)
+          (v target)))
+      (case
+        (pm
+          Paren
+          (pv open)
+          (pv target)
+          (pv close))
+        (mk
+          GParen
+          (v open)
+          (v target)
+          (v close)))
+      (case
+        _
+        (fail
+          language-error
+          (q "a production the reader does not know")))))
+  (judgment
+    ReadGrammarElems
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Elements
+          (pv lhs)
+          (pv rhs))
+        (mk
+          GElements
+          (call
+            ReadGrammarElems
+            (v lhs))
+          (call
+            ReadGrammarElems
+            (v rhs))))
+      (case
+        _
+        (mk
+          GOneElem
+          (call
+            ReadGrammarElem
+            (v node))))))
+  (judgment
+    ReadGrammarElem
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Keyword
+          (pv spelling))
+        (mk
+          GKeyword
+          (v spelling)))
+      (case
+        (pm
+          Binding
+          (pv field)
+          (pv target))
+        (mk
+          GBinding
+          (v field)
+          (v target)))
+      (case
+        _
+        (fail
+          language-error
+          (q "an element the reader does not know")))))
+  (judgment
+    WriteGrammar
+    [value]
+    (match
+      (v value)
+      (case
+        (pm
+          Grammar
+          (pv decls))
+        (prim
+          node
+          (q grammar)
+          (call
+            WriteDecls
+            (v decls))))
+      (case
+        _
+        (fail
+          language-error
+          (q "elaboration did not produce a grammar")))))
+  (judgment
+    WriteDecls
+    [decls]
+    (match
+      (v decls)
+      (case
+        (pm
+          MoreDecl
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteDecl
+            (v head))
+          (call
+            WriteDecls
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteDecl
+    [decl]
+    (match
+      (v decl)
+      (case
+        (pm
+          DName
+          (pv text))
+        (mk
+          name
+          (v text)))
+      (case
+        (pm
+          DStart
+          (pv name))
+        (mk
+          start
+          (v name)))
+      (case
+        (pm
+          DToken
+          (pv name)
+          (pv kind)
+          (pv pattern))
+        (mk
+          token
+          (v name)
+          (v kind)
+          (v pattern)))
+      (case
+        (pm
+          DSkip
+          (pv pattern))
+        (mk
+          skip
+          (v pattern)))
+      (case
+        (pm
+          DCategory
+          (pv name)
+          (pv productions))
+        (prim
+          node
+          (q category)
+          (prim
+            cons
+            (v name)
+            (call
+              WriteProds
+              (v productions)))))
+      (case
+        _
+        (fail
+          language-error
+          (q "elaboration produced a declaration the writer does not know")))))
+  (judgment
+    WriteProds
+    [productions]
+    (match
+      (v productions)
+      (case
+        (pm
+          MoreProd
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteProd
+            (v head))
+          (call
+            WriteProds
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteProd
+    [production]
+    (match
+      (v production)
+      (case
+        (pm
+          PProd
+          (pv tag)
+          (pv elements))
+        (mk
+          prod
+          (v tag)
+          (call
+            WriteElems
+            (v elements))))
+      (case
+        (pm
+          PPass
+          (pv target))
+        (mk
+          pass
+          (v target)))
+      (case
+        (pm
+          PFold
+          (pv tag)
+          (pv target))
+        (mk
+          fold
+          (v tag)
+          (v target)))
+      (case
+        (pm
+          PParen
+          (pv open)
+          (pv target)
+          (pv close))
+        (mk
+          paren
+          (v open)
+          (v target)
+          (v close)))
+      (case
+        _
+        (fail
+          language-error
+          (q "elaboration produced a production the writer does not know")))))
+  (judgment
+    WriteElems
+    [elements]
+    (match
+      (v elements)
+      (case
+        (pm
+          MoreElem
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteElem
+            (v head))
+          (call
+            WriteElems
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteElem
+    [element]
+    (match
+      (v element)
+      (case
+        (pm
+          EKeyword
+          (pv text))
+        (mk
+          kw
+          (v text)))
+      (case
+        (pm
+          EBinding
+          (pv field)
+          (pv target))
+        (mk
+          bind
+          (v field)
+          (v target)))
+      (case
+        _
+        (fail
+          language-error
+          (q "elaboration produced an element the writer does not know")))))
+  (judgment
+    RunStrataOn
+    [grammar sources name entry argument]
+    (let
+      decls
+      (call
+        NativeModule
+        (v grammar)
+        (v sources)
+        (v name))
+      (call
+        EnterDefinition
+        (v decls)
+        (call
+          RequiredDefinition
+          (v decls)
+          (v entry))
+        (lst
+          (v argument)))))
+  (judgment
+    ElaborateGrammarInStrata
+    [strataGrammar sources grammarGrammar source]
+    (call
+      WriteGrammar
+      (call
+        RunStrataOn
+        (v strataGrammar)
+        (v sources)
+        (q "strata.grammar")
+        (q elaborate)
+        (call
+          ReadGrammarDecls
+          (call
+            Parse
+            (v grammarGrammar)
+            (v source))))))
+  (judgment
+    StrataGrammarAgrees
+    [strataGrammar sources grammarGrammar source artifactReference]
+    (match
+      (call
+        Fetch
+        (v artifactReference)
+        (q grammar))
+      (case
+        (pm
+          some
+          (pv committed))
+        (if
+          (prim
+            eq
+            (v committed)
+            (call
+              ElaborateGrammarInStrata
+              (v strataGrammar)
+              (v sources)
+              (v grammarGrammar)
+              (v source)))
+          (mk
+            agree
+            (q ok))
+          (mk
+            agree
+            (q mismatch))))
+      (case
+        _
+        (mk
+          agree
+          (q artifact-missing)))))
+  (judgment
+    StrataSystem
+    [prelude native grammar]
+    (lst
+      (v prelude)
+      (v native)
+      (v grammar))))

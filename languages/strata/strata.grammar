@@ -6,7 +6,7 @@ token comment str ";[^\\n]*"
 token fieldnum sym "#[0-9]+"
 token ident sym "[A-Za-z_][A-Za-z0-9_']*"
 token number nat "[0-9]+"
-token text str "\"[^\"]*\""
+token text str "\"([^\"\\\\]|\\\\.)*\""
 
 category unit
   fold Unit line
