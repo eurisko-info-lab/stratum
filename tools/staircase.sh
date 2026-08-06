@@ -9,8 +9,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# The loop below issues dozens of Stratum invocations. Compiling and asking
+# sbt for the runtime classpath once, then invoking `java` directly for every
+# command, avoids paying sbt's ~3s startup cost on each of them.
+echo "== compiling"
+classpath=$(sbt -batch --error 'export Runtime/fullClasspath')
+
 run() {
-  sbt -batch --error "runMain stratum.cli.Stratum $*"
+  java -Xss256m -cp "$classpath" stratum.cli.Stratum "$@"
 }
 
 previous=""

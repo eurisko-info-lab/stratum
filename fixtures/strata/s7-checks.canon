@@ -1,0 +1,199 @@
+; Executable acceptance checks for S7, the native boundary.
+;
+; A primitive is declared, not built in. What it does is the host's; what it
+; is called, what it takes and what it needs permission for is the module's.
+[
+  ; -------------------------------------------------------------- the surface
+
+  ; A primitive declaration and an abstract type print back byte for byte.
+  (check strata-the-boundary-surface-prints-exactly
+    (call PrintsExactly
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/native.strata"))))
+    (value #t))
+
+  ; A module written before there was either still parses.
+  (check strata-modules-without-primitives-still-parse
+    (call PrintsExactly
+      (q (file "languages/strata/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/effects.strata"))))
+    (value #t))
+
+  ; A primitive is a declaration like any other: a name, a type, the
+  ; capability it needs, and no body.
+  (check strata-a-primitive-is-a-declaration
+    (call Declarations
+      (call ParseStrata
+        (q (file "languages/strata/strata.generated.grammar"))
+        (q "module \"probe.n\"\nversion 1\ntype Bytes\nprim digest [b: Bytes] ! hash: Bytes\n")))
+    (value [
+      (abstract Bytes)
+      (prim digest [(Param b (TypeRef Bytes))] (TypeRef Bytes))
+      (grades digest [(graded b many)])
+      (uses digest [hash])]))
+
+  ; ---------------------------------------------------------------- the set
+
+  ; What the module declares is what the host provides.
+  (check strata-the-boundary-agrees-with-the-host
+    (call CheckLinkedBoundary
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/system/native.strata")))
+          (q [])))
+      (q "strata.native"))
+    (value (bounded ok)))
+
+  ; A primitive the host does not provide is rejected, and named.
+  (check strata-a-primitive-the-host-lacks-is-rejected
+    (call CheckNativeBoundary
+      (call Declarations
+        (call ParseStrata
+          (q (file "languages/strata/strata.generated.grammar"))
+          (q "module \"probe.n\"\nversion 1\ntype Bytes\nprim summon [b: Bytes] ! hash: Bytes\n"))))
+    (error native-error))
+
+  ; A primitive the host provides but the module does not declare is not
+  ; reachable, because a hole in the boundary is not a boundary.
+  (check strata-a-host-primitive-left-undeclared-is-rejected
+    (call CheckNativeBoundary
+      (call Declarations
+        (call ParseStrata
+          (q (file "languages/strata/strata.generated.grammar"))
+          (q "module \"probe.n\"\nversion 1\ntype Bytes\nprim digest [b: Bytes] ! hash: Bytes\n"))))
+    (error native-error))
+
+  ; And one declared with the wrong number of arguments is rejected too.
+  (check strata-a-primitive-of-the-wrong-arity-is-rejected
+    (call CheckEachDeclared
+      (q [(declared numberAdd 1)]))
+    (error native-error))
+
+  ; ------------------------------------------------------------- permission
+
+  ; Using a primitive without declaring its capability is rejected -- by S6's
+  ; rule, unchanged. The boundary costs a new kind of declaration and no new
+  ; law family.
+  (check strata-a-primitive-needs-its-capability
+    (call CheckLinkedCapabilities
+      (q (file "languages/strata/strata.generated.grammar"))
+      (q ["module \"probe.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ntype Number\nprim numberOfNat [n: Nat] ! arith: Number\ndef quiet [n: Nat]: Number = numberOfNat n\n"])
+      (q "probe.n"))
+    (error capability-error))
+
+  (check strata-declaring-the-capability-permits-the-primitive
+    (call CheckLinkedCapabilities
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/system/native.strata")))
+          (q [])))
+      (q "strata.native"))
+    (value (permitted ok)))
+
+  ; --------------------------------------------------------------- typing
+
+  ; A primitive has a type, so a call to one is checked like any other call.
+  (check strata-a-primitive-is-typed-like-a-definition
+    (call CheckLinkedNative
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/system/native.strata")))
+          (q [])))
+      (q "strata.native"))
+    (value (checked ok)))
+
+  ; ------------------------------------------------------------ the crossing
+
+  ; A value that crosses to the host and back is the value that set out.
+  (check strata-a-value-crosses-and-returns
+    (call CrossingIsFaithful (q (Succ (Succ (Succ (Zero))))))
+    (value #t))
+
+  (check strata-zero-crosses-and-returns
+    (call CrossingIsFaithful (q (Zero)))
+    (value #t))
+
+  ; The host performs the addition, and hands back a number the language can
+  ; take apart.
+  (check strata-the-host-performs-the-addition
+    (call RunNative
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/system/native.strata")))
+          (q [])))
+      (q "strata.native")
+      (q viaHost))
+    (value (Succ (Succ (Succ (Zero))))))
+
+  ; And it works out what the language would have worked out. If these
+  ; disagreed the boundary would not be a boundary; it would be a second
+  ; answer.
+  (check strata-the-host-agrees-with-the-language
+    (call HostAgreesWithStrata
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/system/native.strata")))
+          (q [])))
+      (q "strata.native")
+      (q viaHost)
+      (q viaStrata))
+    (value #t))
+
+  ; What no amount of Strata could have worked out: a digest.
+  (check strata-the-host-hashes-what-strata-cannot
+    (call RunNative
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/system/native.strata")))
+          (q [])))
+      (q "strata.native")
+      (q hashed))
+    (value "efb12e4d42778332a2efe537f29c2d1f9f718462bad24d90cefeffff6ad5d0e6"))
+
+  ; ------------------------------------------------------------- the floor
+
+  ; What the layers below decided, S7 still decides.
+  (check strata-the-bootstrap-is-still-stable
+    (call BootstrapIsStable
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q []))))
+    (value #t))
+
+  (check strata-the-vector-still-checks
+    (call CheckLinkedDependent
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/lib/vector.strata")))
+          (q [])))
+      (q "strata.vector"))
+    (value (checked ok)))
+
+  (check strata-effects-still-check
+    (call CheckLinkedMultiplicities
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/lib/effects.strata")))
+          (q [])))
+      (q "strata.effects"))
+    (value (used ok)))
+]

@@ -10,7 +10,7 @@
   ; else.
   (check strata-module-surface-prints-exactly
     (call PrintsExactly
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (q "module \"strata.vec\"\nversion 1\nimport \"strata.prelude\" 1\nexport Vec Nil\ndata Vec [a: Type, n: Nat] = | Nil []: Vec a Zero\n"))
     (value #t))
 
@@ -18,7 +18,7 @@
   ; foundation may not take away what its predecessor could say.
   (check strata-closed-modules-still-parse
     (call PrintsExactly
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (q "module \"strata.check\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"))
     (value #t))
 
@@ -29,10 +29,10 @@
   (check strata-identity-survives-reformatting
     (prim eq
       (call ModuleIdentity
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off []\n"))
       (call ModuleIdentity
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q "module \"strata.b\"\nversion 1\n; a comment nobody had written before\ndata Bit = | On [] | Off []\n\n")))
     (value #t))
 
@@ -40,10 +40,10 @@
   (check strata-identity-follows-what-is-declared
     (prim ne
       (call ModuleIdentity
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off []\n"))
       (call ModuleIdentity
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off [] | Unset []\n")))
     (value #t))
 
@@ -53,7 +53,7 @@
   (check strata-a-module-exposes-what-it-lists
     (call ModuleExports
       (call LoadModule
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q "module \"strata.b\"\nversion 1\nexport Bit\ndata Bit = | On [] | Off []\n")))
     (value [Bit]))
 
@@ -62,7 +62,7 @@
   (check strata-a-silent-module-exposes-everything
     (call ModuleExports
       (call LoadModule
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q "module \"strata.b\"\nversion 1\ndata Bit = | On [] | Off []\n")))
     (value [Bit On Off]))
 
@@ -70,7 +70,7 @@
   (check strata-a-module-cannot-export-what-it-lacks
     (call ModuleExports
       (call LoadModule
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q "module \"strata.b\"\nversion 1\nexport Bit Missing\ndata Bit = | On [] | Off []\n")))
     (error export-error))
 
@@ -81,7 +81,7 @@
   (check strata-resolution-says-which-module-declares-each-name
     (call ResolveModule
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
           "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
@@ -97,7 +97,7 @@
   (check strata-an-unresolvable-name-says-where-it-looked
     (call ResolveModule
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.bits\"\nversion 1\nexport Bit\ndata Bit = | On [] | Off []\n"
           "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
@@ -110,7 +110,7 @@
   (check strata-an-ambiguous-name-is-rejected
     (call ResolveModule
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.one\"\nversion 1\ndata Bit = | On [] | Off []\n"
           "module \"lib.two\"\nversion 1\ndata Bit = | On [] | Off []\n"
@@ -124,7 +124,7 @@
   (check strata-a-missing-module-is-reported-as-missing
     (call ResolveModule
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.uses\"\nversion 1\nimport \"lib.absent\" 1\ndef example []: Bit = On\n"
         ]))
@@ -134,7 +134,7 @@
   ; Resolution does not depend on the order the modules were given in.
   (check strata-resolution-is-confluent
     (call ResolutionIsConfluent
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (q [
         "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
         "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
@@ -148,7 +148,7 @@
   (check strata-imports-come-first
     (call ImportOrder
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
           "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
@@ -159,7 +159,7 @@
   (check strata-an-import-cycle-is-named
     (call ImportOrder
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.a\"\nversion 1\nimport \"lib.b\" 1\ndata A = | A []\n"
           "module \"lib.b\"\nversion 1\nimport \"lib.a\" 1\ndata B = | B []\n"
@@ -171,7 +171,7 @@
   (check strata-a-module-cannot-import-itself
     (call ImportOrder
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.a\"\nversion 1\nimport \"lib.a\" 1\ndata A = | A []\n"
         ])))
@@ -183,7 +183,7 @@
   (check strata-a-module-set-fixes-one-version
     (call VersionsAgree
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.bits\"\nversion 2\ndata Bit = | On [] | Off []\n"
           "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef example []: Bit = On\n"
@@ -193,7 +193,7 @@
   (check strata-agreeing-versions-are-accepted
     (call VersionsAgree
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
           "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef example []: Bit = On\n"
@@ -206,7 +206,7 @@
   (check strata-a-module-set-holds-one-module-per-name
     (call VersionsAgree
       (call LoadModuleSet
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (q [
           "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
           "module \"lib.bits\"\nversion 1\ndata Bit = | Yes [] | No []\n"
@@ -219,7 +219,7 @@
   ; below nothing.
   (check strata-a-linked-module-is-well-typed
     (call CheckLinkedModule
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (q [
         "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
         "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\ndef example []: Bit = flip Off\n"
@@ -231,7 +231,7 @@
   ; either.
   (check strata-linking-is-confluent
     (call LinkingIsConfluent
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (q [
         "module \"lib.bits\"\nversion 1\ndata Bit = | On [] | Off []\n"
         "module \"lib.uses\"\nversion 1\nimport \"lib.bits\" 1\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"
@@ -244,13 +244,13 @@
   ; The prelude declares what three modules used to declare separately.
   (check strata-library-prelude-is-well-typed
     (call CheckModule
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (call SourceText (q (text-file "strata/lib/prelude.strata"))))
     (value (checked ok)))
 
   (check strata-library-prelude-terminates
     (call TotalModule
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (call SourceText (q (text-file "strata/lib/prelude.strata"))))
     (value (total ok)))
 
@@ -258,7 +258,7 @@
   ; declares neither, and checks exactly what it checked before.
   (check strata-vector-imports-rather-than-redeclares
     (call CheckLinkedDependent
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -269,7 +269,7 @@
 
   (check strata-the-imported-vector-still-terminates
     (call TotalLinkedModule
-      (q (file "languages/strata/strata.v3.generated.grammar"))
+      (q (file "foundations/S4/surface/strata.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -282,7 +282,7 @@
   (check strata-the-imported-vector-declares-no-nat
     (call ModuleDeclared
       (call LoadModule
-        (q (file "languages/strata/strata.v3.generated.grammar"))
+        (q (file "foundations/S4/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/vector.strata")))))
     (value [Vec Nil Cons append Eq Refl single pair]))
 ]

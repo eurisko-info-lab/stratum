@@ -1,0 +1,10 @@
+; delta-grammar for S6 -> S7: the Strata surface gains a primitive declaration
+; and an abstract type. Everything S6 could write still parses.
+(change
+  (kind delta-grammar)
+  (name "S6->S7 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many])
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many prim type]))))

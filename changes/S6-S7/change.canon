@@ -1,0 +1,37 @@
+; The canonical change from S6 to S7.
+;
+; S6 |- S7. Strata can reach the host, and only where it says so.
+;
+; Strata has no primitives. Data, definitions, application, `let` and `match`,
+; and nothing else -- which is what makes a compiler for it writable in it,
+; and also what stops it comparing a character or hashing a byte. Every layer
+; above this one needs at least one of those.
+;
+; So the boundary is drawn rather than the primitives smuggled in. A primitive
+; is declared: a name, a type, and the capability it needs, with no body. What
+; it does is the host's, and three things must hold for that to be worth
+; anything. The set the module declares is the set the host provides, name for
+; name and arity for arity. A value that crosses out and back is the value
+; that set out. And using a primitive needs its capability -- which is S6's
+; rule, unchanged, because a primitive declares `uses` like anything else.
+;
+; Only the first two are new. The third costs nothing, which is the argument
+; for having built S6 before this.
+(change
+  (kind foundation)
+  (name "S6->S7")
+  (predecessor (foundation-of "foundations/S6"))
+  (delta-meta (file "changes/S6-S7/delta-meta.canon"))
+  (delta-grammar (file "changes/S6-S7/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "the native boundary")
+      (programs [
+        (file "features/strata/native.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/native.meta")
+        (text-file "languages/strata/strata.grammar")
+        (text-file "languages/strata/strata.meta")
+        (text-file "strata/system/native.strata")
+      ]))))

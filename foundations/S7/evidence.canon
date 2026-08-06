@@ -1,0 +1,21 @@
+
+artifactevidence
+evidence
+check*strata-the-boundary-surface-prints-exactlyok
+check-strata-modules-without-primitives-still-parseok
+check#strata-a-primitive-is-a-declarationok
+check(strata-the-boundary-agrees-with-the-hostok
+check-strata-a-primitive-the-host-lacks-is-rejectedok
+check3strata-a-host-primitive-left-undeclared-is-rejectedok
+check1strata-a-primitive-of-the-wrong-arity-is-rejectedok
+check'strata-a-primitive-needs-its-capabilityok
+check5strata-declaring-the-capability-permits-the-primitiveok
+check-strata-a-primitive-is-typed-like-a-definitionok
+check"strata-a-value-crosses-and-returnsok
+checkstrata-zero-crosses-and-returnsok
+check%strata-the-host-performs-the-additionok
+check(strata-the-host-agrees-with-the-languageok
+check)strata-the-host-hashes-what-strata-cannotok
+check$strata-the-bootstrap-is-still-stableok
+checkstrata-the-vector-still-checksok
+checkstrata-effects-still-checkok

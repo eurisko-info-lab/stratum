@@ -1,0 +1,36 @@
+
+artifactsource
+source
+pathstrata/compiler/compile.strata
+text•module "strata.compiler"
+version 1
+; The Strata compiler, written in Strata.
+;
+; Strata has no primitives. There is no equality, so there is no way to
+; compare two names, and a compiler that had to look names up could not be
+; written in the language it compiles. So it does not: it takes a resolved
+; core in which a variable is an index, a constructor is a tag and an arity,
+; and a definition is a position in the program. Resolving is the reader's
+; job, and the reader is `features/strata/compile.meta`.
+;
+; The target has structured control flow rather than jumps, as Wasm does: a
+; match carries its arms, and a let carries its body. Nothing here allocates a
+; label, because allocating one would need arithmetic the compiler would then
+; have to be trusted to get right. What it does do is real: it linearises a
+; tree of expressions into a sequence of stack instructions, turns application
+; spines into explicit pushes and applies, and turns pattern matching into a
+; tag dispatch that binds its fields by position.
+import "strata.prelude" 1
+data Core = | CLocal [index #1: Nat] | CGlobal [index #1: Nat] | CCon [tag #1: Nat, arity #2: Nat] | CApp [fn #1: Core, arg #2: Core] | CLet [value #1: Core, body #2: Core] | CCase [scrutinee #1: Core, branches #2: Branches]
+data Branches = | NoBranch [] | Branch [tag #1: Nat, arity #2: Nat, body #3: Core, rest #4: Branches]
+data Program = | NoDef [] | Def [arity #1: Nat, body #2: Core, rest #3: Program]
+data Instr = | ILocal [index #1: Nat] | IGlobal [index #1: Nat] | ICon [tag #1: Nat, arity #2: Nat] | IApply [] | ILet [body #1: Code] | IMatch [arms #1: Arms]
+data Code = | IDone [] | IStep [head #1: Instr, tail #2: Code]
+data Arms = | NoArm [] | Arm [tag #1: Nat, arity #2: Nat, body #3: Code, rest #4: Arms]
+data Blocks = | NoBlock [] | Block [code #1: Code, rest #2: Blocks]
+; An expression is compiled against the code that follows it, so the result is
+; already a sequence and nothing has to be appended afterwards.
+def compileCore [e: Core, k: Code]: Code = match e of case CLocal i -> IStep (ILocal i) k case CGlobal g -> IStep (IGlobal g) k case CCon t a -> IStep (ICon t a) k case CApp f x -> compileCore f (compileCore x (IStep IApply k)) case CLet v b -> compileCore v (IStep (ILet (compileCore b IDone)) k) case CCase s bs -> compileCore s (IStep (IMatch (compileArms bs)) k) end
+def compileArms [bs: Branches]: Arms = match bs of case NoBranch -> NoArm case Branch t a b rest -> Arm t a (compileCore b IDone) (compileArms rest) end
+def compileProgram [p: Program]: Blocks = match p of case NoDef -> NoBlock case Def a b rest -> Block (compileCore b IDone) (compileProgram rest) end
+def compile [p: Program]: Blocks = compileProgram p

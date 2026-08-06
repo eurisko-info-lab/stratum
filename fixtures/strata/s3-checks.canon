@@ -31,7 +31,7 @@
   ; generate. This is what stops it drifting into something hand-written.
   (check strata-library-change-is-generated
     (call GeneratedChangesAgree
-      (q (file "languages/strata/strata.v2.generated.grammar"))
+      (q (file "foundations/S3/surface/strata.generated.grammar"))
       (call SourceText (q (text-file "strata/lib/change.strata")))
       (q 3))
     (value #t))
@@ -42,12 +42,12 @@
   (check strata-the-zero-change-changes-nothing
     (call ChangeValue
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q (Doc (On) (Zero)))
       (call ZeroChange
         (call ModuleSchema
-          (q (file "languages/strata/strata.v2.generated.grammar"))
+          (q (file "foundations/S3/surface/strata.generated.grammar"))
           (call SourceText (q (text-file "strata/lib/change.strata"))))
         (q Doc)))
     (value (ok (Doc (On) (Zero)))))
@@ -56,12 +56,12 @@
   (check strata-a-difference-reaches-its-target
     (call ChangeValue
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q (Doc (On) (Zero)))
       (call DiffValues
         (call ModuleSchema
-          (q (file "languages/strata/strata.v2.generated.grammar"))
+          (q (file "foundations/S3/surface/strata.generated.grammar"))
           (call SourceText (q (text-file "strata/lib/change.strata"))))
         (q (Doc (On) (Zero)))
         (q (Doc (Off) (Succ (Zero))))))
@@ -72,7 +72,7 @@
   (check strata-a-value-differs-from-itself-by-nothing
     (call DiffValues
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q (Doc (On) (Zero)))
       (q (Doc (On) (Zero))))
@@ -83,7 +83,7 @@
   (check strata-a-difference-is-structural
     (call DiffValues
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q (Doc (On) (Zero)))
       (q (Doc (Off) (Zero))))
@@ -95,12 +95,12 @@
   (check strata-composition-is-application-in-order
     (call ChangeValue
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q (Doc (On) (Zero)))
       (call ThenChange
         (call ModuleSchema
-          (q (file "languages/strata/strata.v2.generated.grammar"))
+          (q (file "foundations/S3/surface/strata.generated.grammar"))
           (call SourceText (q (text-file "strata/lib/change.strata"))))
         (q Doc)
         (q (AtDoc (SetBit (Off)) (KeepNat)))
@@ -111,7 +111,7 @@
   (check strata-composition-has-a-unit
     (call ThenChange
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q Doc)
       (q (KeepDoc))
@@ -122,7 +122,7 @@
   (check strata-composition-rejects-disagreeing-constructors
     (call ThenChange
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q Nat)
       (q (AtZero))
@@ -136,7 +136,7 @@
   (check strata-independent-changes-merge
     (call MergeChanges
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q Doc)
       (q (AtDoc (SetBit (Off)) (KeepNat)))
@@ -148,7 +148,7 @@
   (check strata-conflicting-changes-name-where-they-disagree
     (call MergeChanges
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q Doc)
       (q (AtDoc (SetBit (Off)) (KeepNat)))
@@ -162,11 +162,11 @@
   (check strata-a-change-round-trips-through-its-codec
     (call DecodeValue
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (call EncodeValue
         (call ModuleSchema
-          (q (file "languages/strata/strata.v2.generated.grammar"))
+          (q (file "foundations/S3/surface/strata.generated.grammar"))
           (call SourceText (q (text-file "strata/lib/change.strata"))))
         (q (AtDoc (KeepBit) (SetNat (Succ (Zero)))))))
     (value (AtDoc (KeepBit) (SetNat (Succ (Zero))))))
@@ -178,7 +178,7 @@
   (check strata-an-intent-elaborates-to-a-structural-change
     (call ElaborateIntent
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q (Doc (On) (Zero)))
       (q (in Doc size (replace (Succ (Zero))))))
@@ -188,7 +188,7 @@
   (check strata-elaboration-is-faithful
     (call IntentIsFaithful
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q (Doc (On) (Zero)))
       (q (in Doc size (replace (Succ (Zero))))))
@@ -198,7 +198,7 @@
   (check strata-an-intent-under-a-foreign-constructor-is-rejected
     (call ElaborateIntent
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q (Zero))
       (q (in Succ pred (unchanged))))
@@ -220,7 +220,7 @@
   ; seed gives the same run.
   (check strata-a-generated-run-is-reproducible
     (call RunIsReproducible
-      (q (file "languages/strata/strata.v2.generated.grammar"))
+      (q (file "foundations/S3/surface/strata.generated.grammar"))
       (call SourceText (q (text-file "strata/lib/law.strata")))
       (q RankIsTotal)
       (q 20260806)
@@ -232,7 +232,7 @@
   (check strata-a-generated-run-records-its-seed
     (call EvidenceSeed
       (call RunLawGenerated
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/law.strata")))
         (q RankIsTotal)
         (q 20260806)
@@ -243,7 +243,7 @@
   (check strata-a-generated-run-earns-its-grade
     (call EvidenceGrade
       (call RunLawGenerated
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/law.strata")))
         (q RankIsTotal)
         (q 20260806)
@@ -257,7 +257,7 @@
   (check strata-values-are-sampled-from-the-schema
     (call SampleValues
       (call ModuleSchema
-        (q (file "languages/strata/strata.v2.generated.grammar"))
+        (q (file "foundations/S3/surface/strata.generated.grammar"))
         (call SourceText (q (text-file "strata/lib/change.strata"))))
       (q Nat)
       (q 3)
@@ -269,7 +269,7 @@
   ; worth recording.
   (check strata-a-different-seed-draws-a-different-run
     (call RunsDifferBySeed
-      (q (file "languages/strata/strata.v2.generated.grammar"))
+      (q (file "foundations/S3/surface/strata.generated.grammar"))
       (call SourceText (q (text-file "strata/lib/law.strata")))
       (q RankIsTotal)
       (q 20260806)
@@ -281,19 +281,19 @@
 
   (check strata-library-change-is-well-typed
     (call CheckModule
-      (q (file "languages/strata/strata.v2.generated.grammar"))
+      (q (file "foundations/S3/surface/strata.generated.grammar"))
       (call SourceText (q (text-file "strata/lib/change.strata"))))
     (value (checked ok)))
 
   (check strata-library-law-is-well-typed
     (call CheckModule
-      (q (file "languages/strata/strata.v2.generated.grammar"))
+      (q (file "foundations/S3/surface/strata.generated.grammar"))
       (call SourceText (q (text-file "strata/lib/law.strata"))))
     (value (checked ok)))
 
   (check strata-library-law-terminates
     (call TotalModule
-      (q (file "languages/strata/strata.v2.generated.grammar"))
+      (q (file "foundations/S3/surface/strata.generated.grammar"))
       (call SourceText (q (text-file "strata/lib/law.strata"))))
     (value (total ok)))
 ]

@@ -1,0 +1,699 @@
+; Generated from features/strata/native.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratanative)
+  (judgment
+    HostNames
+    []
+    (lst
+      (q numberOfNat)
+      (q natOfNumber)
+      (q numberAdd)
+      (q numberEq)
+      (q numberLess)
+      (q textBytes)
+      (q bytesText)
+      (q bytesEq)
+      (q digest)
+      (q textCharacters)
+      (q textConcat)
+      (q textEq)))
+  (judgment
+    HostArity
+    [name]
+    (if
+      (prim
+        contains
+        (call HostNames)
+        (v name))
+      (call
+        ArityOfHost
+        (v name))
+      (fail
+        native-error
+        (prim
+          scat
+          (q "the host provides no primitive named ")
+          (prim
+            sym->str
+            (v name))))))
+  (judgment
+    ArityOfHost
+    [name]
+    (if
+      (prim
+        eq
+        (v name)
+        (q numberAdd))
+      (q 2)
+      (if
+        (prim
+          eq
+          (v name)
+          (q numberEq))
+        (q 2)
+        (if
+          (prim
+            eq
+            (v name)
+            (q numberLess))
+          (q 2)
+          (if
+            (prim
+              eq
+              (v name)
+              (q bytesEq))
+            (q 2)
+            (if
+              (prim
+                eq
+                (v name)
+                (q textConcat))
+              (q 2)
+              (if
+                (prim
+                  eq
+                  (v name)
+                  (q textEq))
+                (q 2)
+                (q 1))))))))
+  (judgment
+    NatToHost
+    [value]
+    (match
+      (v value)
+      (case
+        (pm Zero)
+        (q 0))
+      (case
+        (pm
+          Succ
+          (pv inner))
+        (prim
+          add
+          (q 1)
+          (call
+            NatToHost
+            (v inner))))
+      (case
+        _
+        (fail
+          native-error
+          (q "a value crossing as a number is not one")))))
+  (judgment
+    HostToNat
+    [n]
+    (if
+      (prim
+        eq
+        (v n)
+        (q 0))
+      (prim
+        node
+        (q Zero)
+        (lst))
+      (prim
+        node
+        (q Succ)
+        (lst
+          (call
+            HostToNat
+            (prim
+              sub
+              (v n)
+              (q 1)))))))
+  (judgment
+    HostToChars
+    [text index]
+    (if
+      (prim
+        ge
+        (v index)
+        (prim
+          slen
+          (v text)))
+      (prim
+        node
+        (q NoChar)
+        (lst))
+      (prim
+        node
+        (q MoreChar)
+        (lst
+          (prim
+            ssub
+            (v text)
+            (v index)
+            (prim
+              add
+              (v index)
+              (q 1)))
+          (call
+            HostToChars
+            (v text)
+            (prim
+              add
+              (v index)
+              (q 1)))))))
+  (judgment
+    HostToBool
+    [flag]
+    (if
+      (v flag)
+      (prim
+        node
+        (q True)
+        (lst))
+      (prim
+        node
+        (q False)
+        (lst))))
+  (judgment
+    NativePrimitive
+    [name args]
+    (if
+      (prim
+        ne
+        (prim
+          len
+          (v args))
+        (call
+          HostArity
+          (v name)))
+      (fail
+        native-error
+        (prim
+          scat
+          (prim
+            scat
+            (q "the primitive ")
+            (prim
+              sym->str
+              (v name)))
+          (q " was given the wrong number of arguments")))
+      (call
+        PerformPrimitive
+        (v name)
+        (v args))))
+  (judgment
+    PerformPrimitive
+    [name args]
+    (if
+      (prim
+        eq
+        (v name)
+        (q numberOfNat))
+      (call
+        NatToHost
+        (prim
+          nth
+          (v args)
+          (q 0)))
+      (if
+        (prim
+          eq
+          (v name)
+          (q natOfNumber))
+        (call
+          HostToNat
+          (prim
+            nth
+            (v args)
+            (q 0)))
+        (if
+          (prim
+            eq
+            (v name)
+            (q numberAdd))
+          (prim
+            add
+            (prim
+              nth
+              (v args)
+              (q 0))
+            (prim
+              nth
+              (v args)
+              (q 1)))
+          (if
+            (prim
+              eq
+              (v name)
+              (q numberEq))
+            (call
+              HostToBool
+              (prim
+                eq
+                (prim
+                  nth
+                  (v args)
+                  (q 0))
+                (prim
+                  nth
+                  (v args)
+                  (q 1))))
+            (if
+              (prim
+                eq
+                (v name)
+                (q numberLess))
+              (call
+                HostToBool
+                (prim
+                  lt
+                  (prim
+                    nth
+                    (v args)
+                    (q 0))
+                  (prim
+                    nth
+                    (v args)
+                    (q 1))))
+              (if
+                (prim
+                  eq
+                  (v name)
+                  (q textBytes))
+                (prim
+                  encode
+                  (prim
+                    nth
+                    (v args)
+                    (q 0)))
+                (if
+                  (prim
+                    eq
+                    (v name)
+                    (q bytesText))
+                  (prim
+                    decode
+                    (prim
+                      nth
+                      (v args)
+                      (q 0)))
+                  (if
+                    (prim
+                      eq
+                      (v name)
+                      (q bytesEq))
+                    (call
+                      HostToBool
+                      (prim
+                        eq
+                        (prim
+                          nth
+                          (v args)
+                          (q 0))
+                        (prim
+                          nth
+                          (v args)
+                          (q 1))))
+                    (if
+                      (prim
+                        eq
+                        (v name)
+                        (q digest))
+                      (prim
+                        ref->str
+                        (prim
+                          digest
+                          (prim
+                            nth
+                            (v args)
+                            (q 0))))
+                      (if
+                        (prim
+                          eq
+                          (v name)
+                          (q textCharacters))
+                        (call
+                          HostToChars
+                          (prim
+                            nth
+                            (v args)
+                            (q 0))
+                          (q 0))
+                        (if
+                          (prim
+                            eq
+                            (v name)
+                            (q textConcat))
+                          (prim
+                            scat
+                            (prim
+                              nth
+                              (v args)
+                              (q 0))
+                            (prim
+                              nth
+                              (v args)
+                              (q 1)))
+                          (if
+                            (prim
+                              eq
+                              (v name)
+                              (q textEq))
+                            (call
+                              HostToBool
+                              (prim
+                                eq
+                                (prim
+                                  nth
+                                  (v args)
+                                  (q 0))
+                                (prim
+                                  nth
+                                  (v args)
+                                  (q 1))))
+                            (fail
+                              native-error
+                              (prim
+                                scat
+                                (q "the host provides no primitive named ")
+                                (prim
+                                  sym->str
+                                  (v name)))))))))))))))))
+  (judgment
+    DeclaredPrimitives
+    [decls]
+    (match
+      (v decls)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            prim
+            (pv name)
+            (pv params)
+            (pv result))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            declared
+            (v name)
+            (prim
+              len
+              (v params)))
+          (call
+            DeclaredPrimitives
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          DeclaredPrimitives
+          (v rest)))))
+  (judgment
+    CheckNativeBoundary
+    [decls]
+    (match
+      (call
+        CheckEachDeclared
+        (call
+          DeclaredPrimitives
+          (v decls)))
+      (case
+        _
+        (call
+          CheckNothingMissing
+          (call
+            DeclaredPrimitiveNames
+            (v decls))
+          (call HostNames)))))
+  (judgment
+    DeclaredPrimitiveNames
+    [decls]
+    (match
+      (v decls)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            prim
+            (pv name)
+            (pv params)
+            (pv result))
+          (pv rest))
+        (prim
+          cons
+          (v name)
+          (call
+            DeclaredPrimitiveNames
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          DeclaredPrimitiveNames
+          (v rest)))))
+  (judgment
+    CheckEachDeclared
+    [declared]
+    (match
+      (v declared)
+      (case
+        (pnil)
+        (mk
+          bounded
+          (q ok)))
+      (case
+        (pcons
+          (pm
+            declared
+            (pv name)
+            (pv arity))
+          (pv rest))
+        (if
+          (prim
+            contains
+            (call HostNames)
+            (v name))
+          (if
+            (prim
+              ne
+              (v arity)
+              (call
+                ArityOfHost
+                (v name)))
+            (fail
+              native-error
+              (prim
+                scat
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (q "the module declares ")
+                    (prim
+                      sym->str
+                      (v name)))
+                  (prim
+                    scat
+                    (q " with ")
+                    (prim
+                      nat->str
+                      (v arity))))
+                (prim
+                  scat
+                  (prim
+                    scat
+                    (q " arguments, but the host performs it with ")
+                    (prim
+                      nat->str
+                      (call
+                        ArityOfHost
+                        (v name))))
+                  (q ""))))
+            (call
+              CheckEachDeclared
+              (v rest)))
+          (fail
+            native-error
+            (prim
+              scat
+              (prim
+                scat
+                (q "the module declares the primitive ")
+                (prim
+                  sym->str
+                  (v name)))
+              (q ", which the host does not provide")))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CheckEachDeclared
+          (v rest)))))
+  (judgment
+    CheckNothingMissing
+    [declared hosted]
+    (match
+      (v hosted)
+      (case
+        (pnil)
+        (mk
+          bounded
+          (q ok)))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (if
+          (prim
+            contains
+            (v declared)
+            (v name))
+          (call
+            CheckNothingMissing
+            (v declared)
+            (v rest))
+          (fail
+            native-error
+            (prim
+              scat
+              (prim
+                scat
+                (q "the host provides ")
+                (prim
+                  sym->str
+                  (v name)))
+              (q ", which the module does not declare")))))))
+  (judgment
+    NativeDefinitions
+    [decls]
+    (call
+      AddPrimitiveSignatures
+      (v decls)
+      (call
+        DefinitionTable
+        (v decls))))
+  (judgment
+    AddPrimitiveSignatures
+    [decls table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            prim
+            (pv name)
+            (pv params)
+            (pv result))
+          (pv rest))
+        (call
+          AddPrimitiveSignatures
+          (v rest)
+          (prim
+            mput
+            (v table)
+            (v name)
+            (mk
+              sig
+              (call
+                DeclaredParamTypes
+                (v params))
+              (call
+                TypeValue
+                (v result))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          AddPrimitiveSignatures
+          (v rest)
+          (v table)))))
+  (judgment
+    CheckNativeDeclarations
+    [decls]
+    (call
+      CheckDeclarations
+      (v decls)
+      (call
+        ConstructorTable
+        (v decls))
+      (call
+        NativeDefinitions
+        (v decls))))
+  (judgment
+    NativeModule
+    [grammar sources name]
+    (call
+      LinkModule
+      (call
+        LoadModuleSet
+        (v grammar)
+        (v sources))
+      (v name)))
+  (judgment
+    CheckLinkedNative
+    [grammar sources name]
+    (call
+      CheckNativeDeclarations
+      (call
+        NativeModule
+        (v grammar)
+        (v sources)
+        (v name))))
+  (judgment
+    CheckLinkedBoundary
+    [grammar sources name]
+    (call
+      CheckNativeBoundary
+      (call
+        NativeModule
+        (v grammar)
+        (v sources)
+        (v name))))
+  (judgment
+    RunNative
+    [grammar sources name entry]
+    (let
+      decls
+      (call
+        NativeModule
+        (v grammar)
+        (v sources)
+        (v name))
+      (call
+        EnterDefinition
+        (v decls)
+        (call
+          RequiredDefinition
+          (v decls)
+          (v entry))
+        (lst))))
+  (judgment
+    CrossingIsFaithful
+    [value]
+    (prim
+      eq
+      (v value)
+      (call
+        HostToNat
+        (call
+          NatToHost
+          (v value)))))
+  (judgment
+    HostAgreesWithStrata
+    [grammar sources name left right]
+    (prim
+      eq
+      (call
+        RunNative
+        (v grammar)
+        (v sources)
+        (v name)
+        (v left))
+      (call
+        RunNative
+        (v grammar)
+        (v sources)
+        (v name)
+        (v right)))))

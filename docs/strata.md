@@ -65,7 +65,7 @@ Strata language
 Strata compiler
 Strata runtime libraries
 Strata implementation of Stratum
-S0 -> S1 -> ... -> S14
+S0 -> S1 -> ... -> S15
 ```
 
 First floor job:
@@ -313,7 +313,7 @@ Stage 3:
 
 ## 24. Second-floor staircase
 
-Second floor uses `S0 -> S14`:
+Second floor uses `S0 -> S15`:
 
 - S0: Strata seed
 - S1: canonical data
@@ -322,14 +322,15 @@ Second floor uses `S0 -> S14`:
 - S4: modules and names
 - S5: self-hosting compiler
 - S6: effects and multiplicities
-- S7: Grammar and Meta rewritten
-- S8: artifacts and CAS
-- S9: semantic repository
-- S10: tooling and studios
-- S11: foundation and governance
-- S12: ledger, sync, federation
-- S13: retention and reconstruction
-- S14: investigation agents
+- S7: the native boundary
+- S8: Grammar and Meta rewritten
+- S9: artifacts and CAS
+- S10: semantic repository
+- S11: tooling and studios
+- S12: foundation and governance
+- S13: ledger, sync, federation
+- S14: retention and reconstruction
+- S15: investigation agents
 
 The dependent core is its own layer because it is a change to what can be
 said, not to what is done with what was already said. S1 gives a declaration
@@ -347,7 +348,13 @@ Strata in Strata is a change to what does the saying; a type that states which
 capabilities a judgment needs, and how many times an argument may be used, is
 a change to what can be said. S5 does the first and S6 the second.
 
-At S14, second floor reconstructs first-floor capability set and extends it
+The native boundary is its own layer for a third time. Strata has no
+primitives, which is what makes a compiler for it writable in it and also what
+stops it comparing a character or hashing a byte. Reaching the host is a
+change to what can be said, and S6's capabilities are already the discipline
+that decides where it is allowed.
+
+At S15, second floor reconstructs first-floor capability set and extends it
 with agent substrate.
 
 ## 25. Rewrite strategy
