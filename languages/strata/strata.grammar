@@ -22,6 +22,8 @@ category line
   prod Data "data" name : ident "=" constructors : constructors eol : eol
   prod DefUses "def" name : ident params : params "!" uses : idents ":" result : type "=" body : expr eol : eol
   prod Def "def" name : ident params : params ":" result : type "=" body : expr eol : eol
+  prod Prim "prim" name : ident params : params "!" uses : idents ":" result : type eol : eol
+  prod Abstract "type" name : ident eol : eol
   prod Law "law" name : ident params : params "=" body : expr eol : eol
 
 category constructors

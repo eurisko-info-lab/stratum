@@ -1,0 +1,45 @@
+module "strata.native"
+version 1
+; The primitive set, declared in Strata.
+;
+; Strata has no primitives. Data, definitions, application, `let` and `match`,
+; and nothing else -- which is what makes a compiler for it writable in it,
+; and also what stops it comparing a character or hashing a byte.
+;
+; This is where that ends, and it ends by declaration rather than by
+; exception. A primitive has a name, a type and the capability it needs, and
+; no body. What it does is the host's. `features/strata/native.meta` decides
+; whether the host agrees: a primitive declared here that the host does not
+; provide is an error, and a primitive the host provides that is not declared
+; here cannot be reached.
+;
+; An abstract type has no constructors, so a Strata program may hold one of
+; its values and cannot take it apart. That is what makes such a value the
+; host's to make and the host's to read.
+import "strata.prelude" 1
+type Text
+type Number
+type Bytes
+prim numberOfNat [n: Nat] ! arith: Number
+prim natOfNumber [n: Number] ! arith: Nat
+prim numberAdd [a: Number, b: Number] ! arith: Number
+prim numberEq [a: Number, b: Number] ! arith: Bool
+prim numberLess [a: Number, b: Number] ! arith: Bool
+prim textBytes [t: Text] ! text: Bytes
+prim bytesText [b: Bytes] ! text: Text
+prim bytesEq [a: Bytes, b: Bytes] ! text: Bool
+prim digest [b: Bytes] ! hash: Text
+; A character list, because a text is walked rather than indexed: recursion on
+; a list is structural, and recursion on an index is not.
+data Chars = | NoChar [] | MoreChar [head #1: Text, tail #2: Chars]
+prim textCharacters [t: Text] ! text: Chars
+prim textConcat [a: Text, b: Text] ! text: Text
+prim textEq [a: Text, b: Text] ! text: Bool
+; Addition done through the host rather than by recursion. It must agree with
+; the prelude's `add`, which is the point: the boundary is only worth crossing
+; if what comes back is what would have been computed anyway.
+def sum [a: Nat, b: Nat] ! arith: Nat = natOfNumber (numberAdd (numberOfNat a) (numberOfNat b))
+def sameNat [a: Nat, b: Nat] ! arith: Bool = numberEq (numberOfNat a) (numberOfNat b)
+def viaHost [] ! arith: Nat = sum (Succ (Succ Zero)) (Succ Zero)
+def viaStrata []: Nat = add (Succ (Succ Zero)) (Succ Zero)
+def hashed [] ! text hash: Text = digest (textBytes "stratum")

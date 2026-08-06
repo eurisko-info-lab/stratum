@@ -1,27 +1,28 @@
 module strata
 
-; The Strata seed, described in Meta -- third revision of the surface.
+; The Strata surface, described in Meta.
 ;
-; S0 gives Strata three things and nothing more: a surface that parses and
+; S0 gave Strata three things and nothing more: a surface that parses and
 ; prints back byte for byte, an elaboration from that surface to a canonical
-; module value, and an evaluator for the core expression forms.
+; module value, and an evaluator for the core expression forms. Types were
+; parsed and carried, but nothing checked them; that is S1.
 ;
-; Types are parsed and carried, but nothing checks them yet. That is S1.
+; A primitive is declared here like a definition, but with no body: a name, a
+; type, and the capability it needs. What it does is the host's, and the
+; boundary that decides whether the host agrees is
+; `features/strata/native.meta`. An abstract type is declared with no
+; constructors, so a Strata program may hold one of its values and cannot take
+; it apart -- which is what makes it the host's to make.
 ;
-; This is a separate file rather than an edit to `strata.meta`, and
-; `strata.v3.grammar` is a separate file rather than an edit to
-; `strata.grammar`, because S0 and S2 record the earlier revisions by path and
-; by content. A foundation that has been published names the bytes it was
-; constituted with, so the tree is append-only for anything a foundation
-; records: editing the surface in place would silently re-digest two
-; foundations that are already standing.
+; The surface has grown since, and this file grows with it -- a foundation
+; pins the artifact its `build.canon` resolves, not the source behind it, so
+; the source is edited rather than revised. What each foundation was
+; constituted with is kept beside it, under `foundations/<name>/surface/`.
 ;
-; What v3 adds is the import line and the export line. Everything v2 could
-; write still parses, and still prints back byte for byte.
-
-; What v4 adds is a capability clause on a definition and a multiplicity on a
-; parameter. A definition with neither means what it meant before: it requires
-; nothing, and its parameters may be used as often as they like.
+; S4 added the import line and the export line. S6 added a capability clause
+; on a definition and a multiplicity on a parameter; a definition with neither
+; means what it meant before, requiring nothing and using its parameters as
+; often as it likes.
 
 ; ---------------------------------------------------------------- surface
 
@@ -99,6 +100,22 @@ judgment CollectDeclarations [lines] =
     case (#Export names eol) :: rest ->
       prim #cons [
         mk #export [call IdentList [names]]
+        call CollectDeclarations [rest]
+      ]
+    case (#Prim name params uses result eol) :: rest ->
+      prim #cons [
+        mk #prim [name call ParameterList [params] result]
+        prim #cons [
+          mk #grades [name call ParameterGrades [params]]
+          prim #cons [
+            mk #uses [name call IdentList [uses]]
+            call CollectDeclarations [rest]
+          ]
+        ]
+      ]
+    case (#Abstract name eol) :: rest ->
+      prim #cons [
+        mk #abstract [name]
         call CollectDeclarations [rest]
       ]
     case (#Def name params result body eol) :: rest ->
@@ -328,10 +345,31 @@ judgment EvalName [decls env name] =
         case (#none) ->
           match call FindDefinition [decls name] {
             case (#some found) -> call EnterDefinition [decls found list []]
-            case (#none) ->
-              fail #eval-error prim #scat ["unbound name " prim #sym->str [name]]
+            case (#none) -> call EvalPrimitive [decls name]
           }
       }
+  }
+
+; A primitive has no body. It waits for its arguments like anything else, and
+; when it has them all it is handed across to the host.
+judgment EvalPrimitive [decls name] =
+  match call FindPrimitive [decls name] {
+    case (#some (#prim declared params result)) ->
+      if prim #eq [prim #len [params] 0]
+      then call NativePrimitive [declared list []]
+      else mk #native [declared prim #len [params] list []]
+    case _ ->
+      fail #eval-error prim #scat ["unbound name " prim #sym->str [name]]
+  }
+
+judgment FindPrimitive [decls name] =
+  match decls {
+    case [] -> mk #none []
+    case (#prim declared params result) :: rest ->
+      if prim #eq [declared name]
+      then mk #some [mk #prim [declared params result]]
+      else call FindPrimitive [rest name]
+    case head :: rest -> call FindPrimitive [rest name]
   }
 
 judgment EnterDefinition [decls found args] =
@@ -360,6 +398,11 @@ judgment StrataApplyValue [decls fn argument] =
         case (#some found) -> call EnterDefinition [decls found filled]
         case (#none) -> fail #eval-error "unknown definition"
       }
+    case (#native declared arity args) ->
+      let filled = prim #snoc [args argument] in
+      if prim #eq [prim #len [filled] arity]
+      then call NativePrimitive [declared filled]
+      else mk #native [declared arity filled]
     case _ -> fail #eval-error "cannot apply a value that is not a function"
   }
 

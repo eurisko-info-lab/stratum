@@ -1,0 +1,11 @@
+; delta-meta for S6 -> S7: Meta gains the crossing -- a primitive is performed
+; by the host, and the set the host provides is decided against the set the
+; module declares.
+(change
+  (kind delta-meta)
+  (name "S6->S7 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (graded strata)
+      (native strata))))

@@ -25,7 +25,7 @@
         (file "languages/foundation/foundation.meta")
         (file "languages/foundation/derive.meta")
         (file "languages/foundation/delta.meta")
-        (file "languages/strata/strata.v3.generated.meta")
+        (file "foundations/S4/surface/strata.generated.meta")
         (file "features/strata/check.generated.meta")
         (file "features/strata/total.generated.meta")
         (file "features/strata/schema.generated.meta")
@@ -35,7 +35,7 @@
         (file "features/strata/resolve.generated.meta")
       ]))
       (grammars {
-        strata (file "languages/strata/strata.v3.generated.grammar")
+        strata (file "foundations/S4/surface/strata.generated.grammar")
         meta (file "languages/meta/meta.generated.grammar")
         grammar (file "languages/grammar/grammar.generated.grammar")
       })

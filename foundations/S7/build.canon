@@ -1,21 +1,19 @@
-; S5: the self-hosting compiler, and the sixth foundation of the second floor.
+; S7: the native boundary, and the eighth foundation of the second floor.
 ;
-; Strata has no primitives: data, definitions, application, `let` and `match`,
-; and nothing else. That is what makes a compiler for it writable in it, and
-; also what stops that compiler resolving its own names -- there is no
-; equality to compare two names with. So the compiler takes a resolved core,
-; the reader produces one, and the machine runs what the compiler emits.
-;
-; The layer is accepted when the compiler's own source, compiled by the
-; reference evaluator and then run on that same source, produces itself.
+; Strata has no primitives, which is what made the compiler writable in it and
+; also what stopped it comparing a character or hashing a byte. Here the
+; boundary is drawn rather than the primitives smuggled in: a primitive is
+; declared, with a name, a type and the capability it needs, and no body. What
+; it does is the host's, and the set the host provides must be the set the
+; module declares.
 (build
-  (name "S5")
+  (name "S7")
   (bootstrap "StratumHost0/1")
-  (predecessor (dir "foundations/S4"))
-  (change (file "changes/S4-S5/change.canon"))
+  (predecessor (dir "foundations/S6"))
+  (change (file "changes/S6-S7/change.canon"))
   (application
     (application
-      (name "strata-s5")
+      (name "strata-s7")
       (host (file "host/core.canon"))
       (meta (program-of [
         (file "languages/meta/prelude.meta")
@@ -25,7 +23,7 @@
         (file "languages/foundation/foundation.meta")
         (file "languages/foundation/derive.meta")
         (file "languages/foundation/delta.meta")
-        (file "foundations/S5/surface/strata.generated.meta")
+        (file "foundations/S7/surface/strata.generated.meta")
         (file "features/strata/check.generated.meta")
         (file "features/strata/total.generated.meta")
         (file "features/strata/schema.generated.meta")
@@ -34,13 +32,15 @@
         (file "features/strata/law.generated.meta")
         (file "features/strata/resolve.generated.meta")
         (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
       ]))
       (grammars {
-        strata (file "foundations/S5/surface/strata.generated.grammar")
+        strata (file "foundations/S7/surface/strata.generated.grammar")
         meta (file "languages/meta/meta.generated.grammar")
         grammar (file "languages/grammar/grammar.generated.grammar")
       })
       (entries {})
-      (checks (include "fixtures/strata/s5-checks.canon"))
+      (checks (include "fixtures/strata/s7-checks.canon"))
       (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print)))
       (resources (budget (steps 400000000) (depth 20000))))))

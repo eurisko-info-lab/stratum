@@ -1,0 +1,98 @@
+# S7 acceptance transcript: the native boundary.
+#
+# S6 |- S7. Strata can reach the host, and only where it says so.
+#
+# Strata has no primitives, which is what makes a compiler for it writable in
+# it and also what stops it comparing a character or hashing a byte. Here the
+# boundary is drawn rather than the primitives smuggled in.
+
+$ foundation verify --dir foundations/S7
+> foundation S7
+> digest 1c0cd1c0d124fc63abbd279687f12fbf5101317db9b77cabaff7bda70a738d2b
+> closure 142 artifacts
+> check strata-the-boundary-surface-prints-exactly ok
+> check strata-modules-without-primitives-still-parse ok
+> check strata-a-primitive-is-a-declaration ok
+> check strata-the-boundary-agrees-with-the-host ok
+> check strata-a-primitive-the-host-lacks-is-rejected ok
+> check strata-a-host-primitive-left-undeclared-is-rejected ok
+> check strata-a-primitive-of-the-wrong-arity-is-rejected ok
+> check strata-a-primitive-needs-its-capability ok
+> check strata-declaring-the-capability-permits-the-primitive ok
+> check strata-a-primitive-is-typed-like-a-definition ok
+> check strata-a-value-crosses-and-returns ok
+> check strata-zero-crosses-and-returns ok
+> check strata-the-host-performs-the-addition ok
+> check strata-the-host-agrees-with-the-language ok
+> check strata-the-host-hashes-what-strata-cannot ok
+> check strata-the-bootstrap-is-still-stable ok
+> check strata-the-vector-still-checks ok
+> check strata-effects-still-check ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S6 --successor foundations/S7
+> predecessor S6
+> successor S7
+> result (valid #d1c87e9324987696378a48ac585bca657add44426cbc5a1996f77ce0075bfbd38)
+
+# Reconstruction in a fresh process from digest plus closure alone.
+$ foundation reconstruct --dir foundations/S7
+> reconstructed S7
+> digest 1c0cd1c0d124fc63abbd279687f12fbf5101317db9b77cabaff7bda70a738d2b
+> stable yes
+> closure 142 artifacts
+> checks 18 ok
+
+# A primitive is a declaration like any other: a name, a type, the capability
+# it needs, and no body.
+$ derive --foundation foundations/S7 --goal '(call Declarations (call ParseStrata (grammar strata) (q "module \"probe.n\"\nversion 1\ntype Bytes\nprim digest [b: Bytes] ! hash: Bytes\n")))'
+> [(abstract Bytes) (prim digest [(Param b (TypeRef Bytes))] (TypeRef Bytes)) (grades digest [(graded b many)]) (uses digest [hash])]
+
+# What the module declares is what the host provides.
+$ derive --foundation foundations/S7 --goal '(call CheckLinkedBoundary (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/system/native.strata")) (q []))) (q "strata.native"))'
+> (bounded ok)
+
+# A primitive the host does not provide is rejected, and named.
+$ derive --foundation foundations/S7 --goal '(call CheckNativeBoundary (call Declarations (call ParseStrata (grammar strata) (q "module \"probe.n\"\nversion 1\ntype Bytes\nprim summon [b: Bytes] ! hash: Bytes\n"))))'
+> error native-error "the module declares the primitive summon, which the host does not provide"
+> exit 1
+
+# A primitive the host provides but the module does not declare is not
+# reachable, because a hole in the boundary is not a boundary.
+$ derive --foundation foundations/S7 --goal '(call CheckNativeBoundary (call Declarations (call ParseStrata (grammar strata) (q "module \"probe.n\"\nversion 1\ntype Bytes\nprim digest [b: Bytes] ! hash: Bytes\n"))))'
+> error native-error "the host provides numberOfNat, which the module does not declare"
+> exit 1
+
+# Using a primitive without declaring its capability is rejected -- by S6's
+# rule, unchanged.
+$ derive --foundation foundations/S7 --goal '(call CheckLinkedCapabilities (grammar strata) (q ["module \"probe.n\"\nversion 1\ndata Nat = | Zero [] | Succ [pred #1: Nat]\ntype Number\nprim numberOfNat [n: Nat] ! arith: Number\ndef quiet [n: Nat]: Number = numberOfNat n\n"]) (q "probe.n"))'
+> error capability-error "quiet calls numberOfNat, which needs arith, and quiet does not declare it"
+> exit 1
+
+# A primitive has a type, so a call to one is checked like any other call.
+$ derive --foundation foundations/S7 --goal '(call CheckLinkedNative (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/system/native.strata")) (q []))) (q "strata.native"))'
+> (checked ok)
+
+# A value that crosses to the host and back is the value that set out.
+$ derive --foundation foundations/S7 --goal '(call CrossingIsFaithful (q (Succ (Succ (Succ (Zero))))))'
+> #t
+
+# The host performs the addition, and hands back a number the language can
+# take apart.
+$ derive --foundation foundations/S7 --goal '(call RunNative (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/system/native.strata")) (q []))) (q "strata.native") (q viaHost))'
+> (Succ (Succ (Succ (Zero))))
+
+# And it works out what the language would have worked out.
+$ derive --foundation foundations/S7 --goal '(call HostAgreesWithStrata (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/system/native.strata")) (q []))) (q "strata.native") (q viaHost) (q viaStrata))'
+> #t
+
+# What no amount of Strata could have worked out: a digest.
+$ derive --foundation foundations/S7 --goal '(call RunNative (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/system/native.strata")) (q []))) (q "strata.native") (q hashed))'
+> "efb12e4d42778332a2efe537f29c2d1f9f718462bad24d90cefeffff6ad5d0e6"
+
+# What the layers below decided, S7 still decides.
+$ derive --foundation foundations/S7 --goal '(call BootstrapIsStable (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))))'
+> #t
+
+$ derive --foundation foundations/S7 --goal '(call CheckLinkedDependent (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/vector.strata")) (q []))) (q "strata.vector"))'
+> (checked ok)
