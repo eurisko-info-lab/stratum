@@ -19,6 +19,10 @@ module strata
 ; What v3 adds is the import line and the export line. Everything v2 could
 ; write still parses, and still prints back byte for byte.
 
+; What v4 adds is a capability clause on a definition and a multiplicity on a
+; parameter. A definition with neither means what it meant before: it requires
+; nothing, and its parameters may be used as often as they like.
+
 ; ---------------------------------------------------------------- surface
 
 judgment ParseStrata [grammar source] = call Parse [grammar source]
@@ -100,7 +104,21 @@ judgment CollectDeclarations [lines] =
     case (#Def name params result body eol) :: rest ->
       prim #cons [
         mk #def [name call ParameterList [params] result body]
-        call CollectDeclarations [rest]
+        prim #cons [
+          mk #grades [name call ParameterGrades [params]]
+          call CollectDeclarations [rest]
+        ]
+      ]
+    case (#DefUses name params uses result body eol) :: rest ->
+      prim #cons [
+        mk #def [name call ParameterList [params] result body]
+        prim #cons [
+          mk #grades [name call ParameterGrades [params]]
+          prim #cons [
+            mk #uses [name call IdentList [uses]]
+            call CollectDeclarations [rest]
+          ]
+        ]
       ]
     case (#Law name params body eol) :: rest ->
       prim #cons [
@@ -123,10 +141,54 @@ judgment IdentList [node] =
   }
 
 judgment ParameterList [node] =
-  match node {
-    case (#NoParams) -> list []
-    case (#Params items) -> call ParameterSeq [items]
-    case _ -> list []
+  call PlainParameters [
+    match node {
+      case (#NoParams) -> list []
+      case (#Params items) -> call ParameterSeq [items]
+      case _ -> list []
+    }
+  ]
+
+; A multiplicity is written on the parameter but it is not part of it. The
+; canonical parameter is what it always was, so nothing that reads a
+; declaration has to learn a second shape; the grades are collected beside it.
+judgment PlainParameters [params] =
+  match params {
+    case [] -> list []
+    case (#ParamGraded grade pname ptype) :: rest ->
+      prim #cons [mk #Param [pname ptype] call PlainParameters [rest]]
+    case head :: rest -> prim #cons [head call PlainParameters [rest]]
+  }
+
+judgment ParameterGrades [node] =
+  call GradesOfParameters [
+    match node {
+      case (#NoParams) -> list []
+      case (#Params items) -> call ParameterSeq [items]
+      case _ -> list []
+    }
+  ]
+
+judgment GradesOfParameters [params] =
+  match params {
+    case [] -> list []
+    case (#ParamGraded grade pname ptype) :: rest ->
+      prim #cons [
+        mk #graded [pname call GradeName [grade]]
+        call GradesOfParameters [rest]
+      ]
+    case (#Param pname ptype) :: rest ->
+      prim #cons [mk #graded [pname #many] call GradesOfParameters [rest]]
+    case head :: rest -> call GradesOfParameters [rest]
+  }
+
+judgment GradeName [grade] =
+  match grade {
+    case (#Erased) -> #erased
+    case (#Once) -> #once
+    case (#Affine) -> #affine
+    case (#Many) -> #many
+    case _ -> fail #grade-error "not a multiplicity"
   }
 
 judgment ParameterSeq [node] =

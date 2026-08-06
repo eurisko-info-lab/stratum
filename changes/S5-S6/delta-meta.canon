@@ -1,0 +1,10 @@
+; delta-meta for S5 -> S6: Meta gains capability checking, multiplicity
+; checking, and erasure as a pass over the compiler's core.
+(change
+  (kind delta-meta)
+  (name "S5->S6 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (self-hosting strata)
+      (graded strata))))

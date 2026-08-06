@@ -13,7 +13,7 @@
     (call ReadProgram
       (call LinkModule
         (call LoadModuleSet
-          (q (file "languages/strata/strata.generated.grammar"))
+          (q (file "languages/strata/strata.v3.generated.grammar"))
           (q ["module \"probe.bit\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"]))
         (q "probe.bit")))
     (value (Def (Succ (Zero))
@@ -29,7 +29,7 @@
     (call ReadProgram
       (call LinkModule
         (call LoadModuleSet
-          (q (file "languages/strata/strata.generated.grammar"))
+          (q (file "languages/strata/strata.v3.generated.grammar"))
           (q ["module \"probe.lit\"\nversion 1\ndata Bit = | On [] | Off []\ndef count []: Bit = 3\n"]))
         (q "probe.lit")))
     (error compile-error))
@@ -40,7 +40,7 @@
   ; held to.
   (check strata-the-compiler-is-well-typed
     (call CheckLinkedModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -52,7 +52,7 @@
   ; Including termination: a compiler that might not stop is not a compiler.
   (check strata-the-compiler-terminates
     (call TotalLinkedModule
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -66,7 +66,7 @@
   (check strata-the-compiler-linearises-a-definition
     (call CompileProgramWith
       (call CompilerDeclarations
-        (q (file "languages/strata/strata.generated.grammar"))
+        (q (file "languages/strata/strata.v3.generated.grammar"))
         (prim cons
           (call SourceText (q (text-file "strata/lib/prelude.strata")))
           (prim cons
@@ -75,7 +75,7 @@
       (call ReadProgram
         (call LinkModule
           (call LoadModuleSet
-            (q (file "languages/strata/strata.generated.grammar"))
+            (q (file "languages/strata/strata.v3.generated.grammar"))
             (q ["module \"probe.bit\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"]))
           (q "probe.bit"))))
     (value (Block
@@ -94,7 +94,7 @@
   ; preserves meaning rather than resembling it.
   (check strata-a-compiled-program-computes
     (call RunCompiled
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -112,7 +112,7 @@
   ; Recursion and matching.
   (check strata-compiling-preserves-recursion
     (call CompilingPreservesMeaning
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -130,7 +130,7 @@
   ; A let binds a value and shifts everything already in scope.
   (check strata-compiling-preserves-let
     (call CompilingPreservesMeaning
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -149,7 +149,7 @@
   ; in the machine as in the evaluator.
   (check strata-compiling-preserves-partial-application
     (call CompilingPreservesMeaning
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -167,7 +167,7 @@
   ; So does a constructor.
   (check strata-compiling-preserves-partial-construction
     (call CompilingPreservesMeaning
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -185,7 +185,7 @@
   ; And a name that crosses a module boundary.
   (check strata-compiling-preserves-imports
     (call CompilingPreservesMeaning
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -208,7 +208,7 @@
   ; about what the compiler means.
   (check strata-the-bootstrap-is-stable
     (call BootstrapIsStable
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons
@@ -220,7 +220,7 @@
   ; made about a digest rather than about a description.
   (check strata-the-bootstrap-has-an-identity
     (call BootstrapDigest
-      (q (file "languages/strata/strata.generated.grammar"))
+      (q (file "languages/strata/strata.v3.generated.grammar"))
       (prim cons
         (call SourceText (q (text-file "strata/lib/prelude.strata")))
         (prim cons

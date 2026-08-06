@@ -20,6 +20,7 @@ category line
   prod Export "export" names : idents eol : eol
   prod DataParams "data" name : ident params : params "=" constructors : constructors eol : eol
   prod Data "data" name : ident "=" constructors : constructors eol : eol
+  prod DefUses "def" name : ident params : params "!" uses : idents ":" result : type "=" body : expr eol : eol
   prod Def "def" name : ident params : params ":" result : type "=" body : expr eol : eol
   prod Law "law" name : ident params : params "=" body : expr eol : eol
 
@@ -53,7 +54,14 @@ category paramseq
   prod ParamOne value : param
 
 category param
+  prod ParamGraded grade : grade name : ident ":" type : type
   prod Param name : ident ":" type : type
+
+category grade
+  prod Erased "erased"
+  prod Once "once"
+  prod Affine "affine"
+  prod Many "many"
 
 category type
   prod TypeDepend params : params "->" to : type
