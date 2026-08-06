@@ -1,6 +1,6 @@
 # Strata rebuild roadmap
 
-## Rebuilding Stratum in Strata, in sixteen commits
+## Rebuilding Stratum in Strata, in seventeen commits
 
 This roadmap starts at `182b7bc` — the commit that completed the first-floor
 landing and defined the second-floor architecture in
@@ -8,8 +8,8 @@ landing and defined the second-floor architecture in
 carried forward.
 
 The plan is the staircase specified in
-[docs/strata.md §24](../docs/strata.md), realized literally: **sixteen
-commits, sixteen foundations, one layer per commit.**
+[docs/strata.md §24](../docs/strata.md), realized literally: **seventeen
+commits, seventeen foundations, one layer per commit.**
 
 $$
 F_{11} \vdash S_0 \qquad S_n \vdash S_{n+1}
@@ -57,10 +57,10 @@ strata/lib/            Strata standard library, written in Strata
 strata/compiler/       Strata compiler, written in Strata
 strata/system/         Stratum itself, written in Strata
 fixtures/strata/       acceptance transcripts
-foundations/S0..S15/   second-floor staircase
+foundations/S0..S16/   second-floor staircase
 ```
 
-## The sixteen commits
+## The seventeen commits
 
 | # | Layer | Constructs | Authority moves to Strata |
 | --- | --- | --- | --- |
@@ -72,14 +72,15 @@ foundations/S0..S15/   second-floor staircase
 | 6 | S5 | self-hosting compiler | the compiler itself |
 | 7 | S6 | effects and multiplicities | what a program may do |
 | 8 | S7 | the native boundary | what Strata may reach |
-| 9 | S8 | Grammar and Meta rewritten | language definitions |
-| 10 | S9 | artifacts and CAS | storage |
-| 11 | S10 | semantic repository | history |
-| 12 | S11 | tooling and studios | editor surface |
-| 13 | S12 | foundation and governance | construction and acceptance |
-| 14 | S13 | ledger, sync, federation | distribution |
-| 15 | S14 | retention and reconstruction | durability |
-| 16 | S15 | investigation agents | the agent substrate |
+| 9 | S8 | grammar definitions rewritten | what a syntax is |
+| 10 | S9 | Meta definitions rewritten | what a meaning is |
+| 11 | S10 | artifacts and CAS | storage |
+| 12 | S11 | semantic repository | history |
+| 13 | S12 | tooling and studios | editor surface |
+| 14 | S13 | foundation and governance | construction and acceptance |
+| 15 | S14 | ledger, sync, federation | distribution |
+| 16 | S15 | retention and reconstruction | durability |
+| 17 | S16 | investigation agents | the agent substrate |
 
 S1 was originally written here as "the total dependent core". It is two
 layers, not one. S1 gives a declaration a type; S2 lets a type depend on a
@@ -91,6 +92,14 @@ primitives at all, so it cannot compare two characters or hash a byte, and
 both of those are needed by the layer that rewrites the machines and the layer
 that takes over storage. Reaching the host is a change to what can be said,
 so it is a layer — and S6's capabilities are already the discipline for it.
+
+S9 was originally part of S8, as "language definitions rewritten". Building S8
+showed the two halves are different work. Grammar elaboration rearranges a
+tree; Meta elaboration derives declarations nobody wrote — a predicate, a set
+of tags, an accessor per field — with names built by concatenating onto the
+type's name. That needs a crossing between name and text that S7's boundary
+does not have. Bundling them would have held the smaller claim hostage to the
+larger one.
 
 S6 was originally part of S5. Self-hosting is a change to what does the
 saying; effects and multiplicities are a change to what can be said. Bundling
@@ -395,40 +404,115 @@ boundary costs no new law family, only a new kind of declaration.
 
 ---
 
-## Commit 9 — S8: Grammar and Meta rewritten
+## Commit 9 — S8: grammar definitions rewritten
 
 **Constructs** $S_7 \vdash S_8$.
 
+A language in this repository is two things: a *definition* — the source that
+says what its syntax and its judgments are — and a *machine* that runs that
+definition over text. This layer moves half the first: what a syntax is. The
+other half is S9, and the machines stay; both reasons are given below.
+
+Grammar elaboration is a tree transformation. It takes a parsed grammar
+source and emits the artifact the machine reads — no names invented, no
+declarations derived, nothing looked up. That is pure structure, which is what
+Strata is for, and it happens once per language rather than once per file.
+
+It needs one thing beyond structure: a text literal has to be unescaped, and
+until S7 Strata could not compare a character. It also needs Strata to stop
+being wrong about text — a literal denoted its own spelling, quotes and
+backslashes included, and had no escapes to spell a newline with. Neither is
+an addition to what Strata can compute.
+
 **Adds**
 
-- `strata/system/grammar.strata`, `strata/system/meta.strata`
-- every `languages/*` declaration re-derived from the Strata definitions
+- `strata/system/grammar.strata` — grammar source to grammar artifact
+- `features/strata/language.meta` — the reader and writer that carry a parse
+  tree into Strata and the result back out
+- a text literal in Strata that has escapes and denotes what it spells
 - `fixtures/strata/s8.transcript`, `foundations/S8/`
 
 **Acceptance**
 
-- all existing language fixtures — Scala, Rust, JSON, YAML, TOML, Markdown,
-  Lean, shell, transcript, and the adversarial sets — round-trip unchanged
-- Grammar0/Meta0 and the Strata implementations agree on every fixture
+- for every grammar in the tree — all nineteen, from the five-line one for
+  plain text to Lean's hundred and thirty-five — the artifact the Strata
+  elaborator produces is the artifact already committed, byte for byte
+- therefore all existing language fixtures — Scala, Rust, JSON, YAML, TOML,
+  Markdown, Lean, shell, transcript, and the adversarial sets — round-trip
+  unchanged, because they are parsed with the same artifacts as before
+- the Strata elaborator's matches are exhaustive over the syntax it accepts,
+  so a source it would reject is one the grammar of grammars rejected first,
+  before either elaborator saw it
 
-**Authority moves** — language definitions. Grammar0 and Meta0 become frozen
-reference.
+**Authority moves** — grammar definitions. What a syntax *is* becomes
+Strata's.
 
-**Exit condition** — languages are defined in Strata; the old machines only
-witness.
+**Exit condition** — a syntax is defined in Strata, and the old grammar
+elaborator only witnesses.
 
 ---
 
-## Commit 10 — S9: artifacts and CAS
+## Commit 10 — S9: Meta definitions rewritten
 
 **Constructs** $S_8 \vdash S_9$.
+
+The other half of what a language is. This was written as part of S8, and
+building S8 showed it is not the same kind of work.
+
+Grammar elaboration rearranges a tree. Meta elaboration *derives* things that
+were not written down: a data declaration becomes a predicate, a set of
+variant tags, and one accessor judgment per field, each with a name built by
+concatenating onto the type's name. That is a code generator, and it needs
+Strata to take a name apart and put one together — symbol and text are not
+the same type, and S7's boundary provides no crossing between them.
+
+So this layer draws that crossing and then uses it. Splitting it from S8 keeps
+the smaller claim — nineteen grammars, byte for byte — from being held up by
+the larger one.
+
+**Adds**
+
+- two primitives at the S7 boundary: a name as text, and a text as a name
+- `strata/system/meta.strata` — Meta source to Meta artifact
+- the reader and writer for Meta's syntax tree
+- `fixtures/strata/s9.transcript`, `foundations/S9/`
+
+**Acceptance**
+
+- for every Meta program in the tree, the artifact the Strata elaborator
+  produces is the artifact already committed, byte for byte
+- including the self-description: elaborating `languages/meta/meta.meta`
+  reaches the same fixpoint it reaches today
+- every name the generator invents — predicates, tags, accessors — is the
+  name the Meta elaborator invents
+
+**Authority moves** — Meta definitions. What a meaning *is* becomes Strata's.
+
+**What does not move, and why.** Grammar0 and Meta0 keep running the
+definitions. Rewriting the machines themselves is not blocked by expressive
+power — S7 gave Strata the boundary it needs to look at a character — but by
+speed. The bootstrap compiles a 2.7 kB compiler and needs a budget of four
+hundred million steps; the language corpus is 273 files and some 700 kB, and
+parsing is heavier per byte than the tree walk the bootstrap does. A Strata
+parser interpreted by Meta0 would take hours per gate run, which is not a
+gate. Moving the machines needs a fast path, and the plan does not have one
+yet.
+
+**Exit condition** — a language is defined in Strata, and the old elaborators
+only witness.
+
+---
+
+## Commit 11 — S10: artifacts and CAS
+
+**Constructs** $S_8 \vdash S_{10}$.
 
 **Adds**
 
 - `strata/system/artifact.strata`, `strata/system/cas.strata`
 - SHA-256 identity, canonical encoding, content-addressed store, typed
   references carrying digest **and** expected schema
-- `fixtures/strata/s9.transcript`, `foundations/S9/`
+- `fixtures/strata/s10.transcript`, `foundations/S10/`
 
 **Acceptance**
 
@@ -441,16 +525,16 @@ first floor.
 
 ---
 
-## Commit 11 — S10: semantic repository
+## Commit 12 — S11: semantic repository
 
-**Constructs** $S_9 \vdash S_{10}$.
+**Constructs** $S_{10} \vdash S_{11}$.
 
 **Adds**
 
 - `strata/system/repository.strata` — init, record, status, verify, branch,
   checkout, materializers
 - transitions expressed as typed changes from S2, not diffs over bytes
-- `fixtures/strata/s10.transcript`, `foundations/S10/`
+- `fixtures/strata/s11.transcript`, `foundations/S11/`
 
 **Acceptance**
 
@@ -465,15 +549,15 @@ first floor.
 
 ---
 
-## Commit 12 — S11: tooling and studios
+## Commit 13 — S12: tooling and studios
 
-**Constructs** $S_{10} \vdash S_{11}$.
+**Constructs** $S_{11} \vdash S_{12}$.
 
 **Adds**
 
 - `strata/system/studio.strata` — profile-derived editor surface
 - LSP service derived from language declarations, replacing `host-scala/lsp`
-- `fixtures/strata/s11.transcript`, `foundations/S11/`
+- `fixtures/strata/s12.transcript`, `foundations/S12/`
 
 **Acceptance**
 
@@ -484,15 +568,15 @@ first floor.
 
 ---
 
-## Commit 13 — S12: foundation and governance
+## Commit 14 — S13: foundation and governance
 
-**Constructs** $S_{11} \vdash S_{12}$.
+**Constructs** $S_{12} \vdash S_{13}$.
 
 **Adds**
 
 - `strata/system/foundation.strata` — construction, closure, attestation
 - `strata/system/governance.strata` — proposal, acceptance, sponsorship
-- `fixtures/strata/s12.transcript`, `foundations/S12/`
+- `fixtures/strata/s13.transcript`, `foundations/S13/`
 
 **Acceptance**
 
@@ -504,15 +588,15 @@ first floor.
 
 ---
 
-## Commit 14 — S13: ledger, sync, federation
+## Commit 15 — S14: ledger, sync, federation
 
-**Constructs** $S_{12} \vdash S_{13}$.
+**Constructs** $S_{13} \vdash S_{14}$.
 
 **Adds**
 
 - `strata/system/ledger.strata`, `sync.strata`, `federation.strata`
 - deterministic state machines: commands in, events out, traces as artifacts
-- `fixtures/strata/s13.transcript`, `foundations/S13/`
+- `fixtures/strata/s14.transcript`, `foundations/S14/`
 
 **Acceptance**
 
@@ -524,15 +608,15 @@ first floor.
 
 ---
 
-## Commit 15 — S14: retention and reconstruction
+## Commit 16 — S15: retention and reconstruction
 
-**Constructs** $S_{13} \vdash S_{14}$.
+**Constructs** $S_{14} \vdash S_{15}$.
 
 **Adds**
 
 - `strata/system/retention.strata` — retention classes, expiry, reconstruction
 - clean-room reconstruction driven by Strata
-- `fixtures/strata/s14.transcript`, `foundations/S14/`
+- `fixtures/strata/s15.transcript`, `foundations/S15/`
 
 **Acceptance**
 
@@ -544,16 +628,16 @@ first floor.
 
 ---
 
-## Commit 16 — S15: investigation agents
+## Commit 17 — S16: investigation agents
 
-**Constructs** $S_{14} \vdash S_{15}$, and closes the floor.
+**Constructs** $S_{15} \vdash S_{16}$, and closes the floor.
 
 **Adds**
 
 - `strata/system/agent.strata` — investigation over declarations: stable
   identities, schemas, field paths, effects, laws, changes, history
 - agent edits as first-class change artifacts with capability limits and budgets
-- `fixtures/strata/s15.transcript`, `foundations/S15/`
+- `fixtures/strata/s16.transcript`, `foundations/S16/`
 
 **Acceptance — the retirement criteria from [docs/strata.md §26](../docs/strata.md)**
 
@@ -577,6 +661,23 @@ $$
 
 When this holds, Scala leaves active implementation and remains as independent
 reference.
+
+## What the plan does not yet provide
+
+Strata runs by being interpreted: Meta0 walks its terms, and S5's machine is
+itself interpreted by Meta0. That is fast enough for everything the floor has
+needed so far — a foundation builds in seconds — and it is not fast enough to
+take over work that is currently done by compiled Scala on the whole
+repository at once. S8 records where that bites first.
+
+The endgame in §24 is that Stratum runs on Strata and the first floor becomes
+reference. That needs an execution path that is not interpretation: Strata
+compiled to something the host runs directly, rather than to a machine another
+interpreter walks. Nothing in these seventeen commits provides one.
+
+This is written down rather than discovered later. Whether it becomes a
+seventeenth layer or a change to S5's target is a decision that should be
+taken with a measurement in hand, not now.
 
 ## Definition of done
 

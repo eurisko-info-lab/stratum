@@ -1,0 +1,51 @@
+; S8: language definitions rewritten, and the ninth foundation of the second
+; floor.
+;
+; Every language in the tree is read with an artifact elaborated from a
+; grammar source, and until now that elaboration was Meta's. Here it is
+; Strata's: `strata/system/grammar.strata` is the same function, and the check
+; is that the artifact it produces is the artifact already committed -- byte
+; for byte, for every grammar, not a sample of them.
+;
+; Two things had to be true first. S7 drew the boundary, without which Strata
+; could not compare a character. And a text literal has to denote what it
+; spells rather than how it spells it, which it now does.
+(build
+  (name "S8")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/S7"))
+  (change (file "changes/S7-S8/change.canon"))
+  (application
+    (application
+      (name "strata-s8")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "foundations/S8/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+      ]))
+      (grammars {
+        strata (file "foundations/S8/surface/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (checks (include "fixtures/strata/s8-checks.canon"))
+      (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print)))
+      (resources (budget (steps 400000000) (depth 20000))))))

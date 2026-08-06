@@ -26,7 +26,7 @@ class HostParitySuite extends munit.FunSuite:
 
   /** Foundations first, then any application deployment built on the platform. */
   private def worlds: Vector[String] =
-    val foundations = Vector("F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7")
+    val foundations = Vector("F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8")
       .map(name => s"foundations/$name")
     val applications =
       val directory = root.resolve("applications")
@@ -116,6 +116,38 @@ class HostParitySuite extends munit.FunSuite:
         scala.lines,
         "the two hosts disagree about what a run did, or about the identity of its record"
       )
+  }
+
+  test("both hosts agree about what a character is") {
+    if requireRust() then
+      // Nothing in the corpus reaches past the basic multilingual plane, so no
+      // foundation exercises this and no digest depends on it. That is exactly
+      // why it needs saying: the two hosts once disagreed here, silently, and
+      // no gate could have caught it.
+      //
+      // A character is a Unicode scalar value. Counting UTF-16 code units
+      // reports two for one character above U+10000, and slicing between them
+      // produces an unpaired surrogate -- a value with no canonical encoding,
+      // which the other host would be right to reject.
+      val grin = String(Character.toChars(0x1f600))
+      val cases = Vector(
+        s"""(prim slen (q "a${grin}b"))""" -> "3",
+        s"""(prim ssub (q "a${grin}b") (q 1) (q 2))""" -> s""""$grin"""",
+        s"""(prim slen (prim ssub (q "$grin$grin") (q 0) (q 1)))""" -> "1"
+      )
+
+      cases.foreach { (goal, answer) =>
+        val scala = Cli.run(root, Vector("derive", "--foundation", "foundations/S8", "--goal", goal))
+        assertEquals(scala.code, 0, s"scala host: ${scala.output}")
+        assertEquals(scala.lines, Vector(answer), s"the scala host is wrong about $goal")
+
+        val (code, output) = runRust("derive", "foundations/S8", "--goal", goal)
+        assertEquals(code, 0, s"rust host failed: ${output.mkString("\n")}")
+        assert(
+          output.headOption.exists(_.startsWith(s"(verdict ok $answer ")),
+          s"the hosts disagree about $goal: scala said $answer, rust said ${output.headOption.getOrElse("")}"
+        )
+      }
   }
 
   test("both hosts accept and reject exactly the same bytes") {

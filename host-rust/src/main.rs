@@ -14,6 +14,7 @@ mod regex;
 mod sha;
 mod store;
 
+use std::rc::Rc;
 use canon::{decode, read_text, write_text, Canon, Digest};
 use meta::{Budget, Kernel, Program};
 use std::env;
@@ -73,9 +74,9 @@ fn load(directory: &Path, cas: &Cas) -> Result<Foundation, String> {
         .and_then(Budget::from_canon)
         .unwrap_or_else(Budget::default_budget);
     let checks = match application.body.field("checks") {
-        Some(Canon::List(items)) => items.clone(),
+        Some(Canon::List(items)) => items.as_ref().clone(),
         Some(Canon::Ref(reference)) => match cas.get(reference)?.body {
-            Canon::List(items) => items,
+            Canon::List(items) => items.as_ref().clone(),
             _ => Vec::new(),
         },
         _ => Vec::new(),
@@ -111,10 +112,10 @@ fn attest(directory: &Path) -> Result<Canon, String> {
             Canon::node("closure", vec![Canon::nat(digests.len() as u128)]),
             Canon::node(
                 "kinds",
-                vec![Canon::Map(
+                vec![Canon::map(
                     counts
                         .into_iter()
-                        .map(|(kind, count)| (Canon::Sym(kind), Canon::nat(count as u128)))
+                        .map(|(kind, count)| (Canon::Sym(Rc::from(kind)), Canon::nat(count as u128)))
                         .collect(),
                 )],
             ),
@@ -132,7 +133,7 @@ fn derivation_report(directory: &Path) -> Result<Canon, String> {
     let mut reported = Vec::new();
     for check in &foundation.checks {
         let (name, goal, budget) = match check {
-            Canon::Node(tag, args) if tag == "check" && args.len() >= 3 => {
+            Canon::Node(tag, args) if &**tag == "check" && args.len() >= 3 => {
                 let name = args[0].as_sym().ok_or("check name must be a symbol")?.to_string();
                 let budget = args
                     .get(3)
@@ -152,14 +153,14 @@ fn derivation_report(directory: &Path) -> Result<Canon, String> {
         );
         reported.push(Canon::node(
             "check",
-            vec![Canon::Sym(name), Canon::Ref(digest_of(&verdict))],
+            vec![Canon::Sym(Rc::from(name)), Canon::Ref(digest_of(&verdict))],
         ));
     }
     Ok(Canon::node(
         "derivation-report",
         vec![
             Canon::node("foundation", vec![Canon::Ref(foundation.digest)]),
-            Canon::node("checks", vec![Canon::List(reported)]),
+            Canon::node("checks", vec![Canon::List(Rc::new(reported))]),
         ],
     ))
 }
@@ -213,7 +214,7 @@ fn field<'a>(value: &'a Canon, key: &str) -> Option<&'a Canon> {
     match value {
         Canon::Map(entries) => entries
             .iter()
-            .find(|(k, _)| matches!(k, Canon::Sym(name) if name == key))
+            .find(|(k, _)| matches!(k, Canon::Sym(name) if &**name == key))
             .map(|(_, v)| v),
         _ => None,
     }
@@ -221,7 +222,7 @@ fn field<'a>(value: &'a Canon, key: &str) -> Option<&'a Canon> {
 
 fn items(value: Option<&Canon>) -> Vec<Canon> {
     match value {
-        Some(Canon::List(items)) => items.clone(),
+        Some(Canon::List(items)) => items.as_ref().clone(),
         _ => Vec::new(),
     }
 }
@@ -250,7 +251,7 @@ fn examine_run(path: &Path) -> Result<Canon, String> {
         // state it replaced is gone, and a record that claimed otherwise would
         // be claiming something unfalsifiable.
         if let Some(Canon::Ref(expected)) = field(&entry, "after") {
-            let found = fs::read(root.join(&name)).ok().map(|bytes| Digest(sha::sha256(&bytes)));
+            let found = fs::read(root.join(&*name)).ok().map(|bytes| Digest(sha::sha256(&bytes)));
             match found {
                 Some(actual) if actual.hex() == expected.hex() => agreed += 1,
                 _ => disagreed.push(Canon::Str(name)),
@@ -261,9 +262,9 @@ fn examine_run(path: &Path) -> Result<Canon, String> {
     let outcome = field(&record, "outcome").cloned().unwrap_or(Canon::sym("unstated"));
     // Written in canonical key order, because a map that is not sorted is not
     // a canonical value and the other host would be right to reject it.
-    Ok(Canon::Map(vec![
+    Ok(Canon::map(vec![
         (Canon::sym("agreed"), Canon::nat(agreed as u128)),
-        (Canon::sym("disagreed"), Canon::List(disagreed)),
+        (Canon::sym("disagreed"), Canon::list(disagreed)),
         (Canon::sym("outcome"), outcome),
         (Canon::sym("read"), Canon::nat(items(field(&record, "read")).len() as u128)),
         (Canon::sym("record"), Canon::Ref(digest_of(&record))),

@@ -1,0 +1,11 @@
+; delta-meta for S7 -> S8: Meta gains the crossing for a whole function --
+; a parse tree read into Strata, `elaborate` run on it, and the result written
+; back out as the artifact the tree already uses.
+(change
+  (kind delta-meta)
+  (name "S7->S8 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (native strata)
+      (elaborating strata))))

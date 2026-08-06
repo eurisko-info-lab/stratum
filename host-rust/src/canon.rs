@@ -6,6 +6,7 @@
 
 use crate::number::{Int, Nat};
 use std::cmp::Ordering;
+use std::rc::Rc;
 
 pub const DIGEST_SIZE: usize = 32;
 
@@ -29,19 +30,32 @@ impl Digest {
     }
 }
 
+/// A value shares its children rather than owning them.
+///
+/// The Scala host holds a `Canon` by reference, so passing one into an
+/// environment, matching on it or returning it costs a pointer. This host used
+/// to hold the children inline, which made the same operations copy the whole
+/// subtree -- and a walk over a structure of size n copy it n times. On the
+/// values the first floor works with that was merely slower; on a list with a
+/// cell per character it is quadratic, and the two hosts stop being
+/// interchangeable in practice even though they still agree on every verdict.
+///
+/// `Rc` is the whole fix. Nothing about what a value *is* changes: equality is
+/// still structural, the canonical order is unchanged, and the bytes a value
+/// encodes to are the bytes it encoded to before.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Canon {
     Unit,
     Bool(bool),
     Nat(Nat),
     Int(Int),
-    Bytes(Vec<u8>),
-    Str(String),
-    Sym(String),
+    Bytes(Rc<Vec<u8>>),
+    Str(Rc<str>),
+    Sym(Rc<str>),
     Ref(Digest),
-    List(Vec<Canon>),
-    Map(Vec<(Canon, Canon)>),
-    Node(String, Vec<Canon>),
+    List(Rc<Vec<Canon>>),
+    Map(Rc<Vec<(Canon, Canon)>>),
+    Node(Rc<str>, Rc<Vec<Canon>>),
 }
 
 impl Canon {
@@ -50,11 +64,39 @@ impl Canon {
     }
 
     pub fn sym(name: &str) -> Canon {
-        Canon::Sym(name.to_string())
+        Canon::Sym(Rc::from(name))
+    }
+
+    pub fn text(value: &str) -> Canon {
+        Canon::Str(Rc::from(value))
+    }
+
+    pub fn string(value: String) -> Canon {
+        Canon::Str(Rc::from(value))
+    }
+
+    pub fn symbol(name: String) -> Canon {
+        Canon::Sym(Rc::from(name))
+    }
+
+    pub fn bytes(value: Vec<u8>) -> Canon {
+        Canon::Bytes(Rc::new(value))
+    }
+
+    pub fn list(items: Vec<Canon>) -> Canon {
+        Canon::List(Rc::new(items))
+    }
+
+    pub fn map(entries: Vec<(Canon, Canon)>) -> Canon {
+        Canon::Map(Rc::new(entries))
     }
 
     pub fn node(tag: &str, args: Vec<Canon>) -> Canon {
-        Canon::Node(tag.to_string(), args)
+        Canon::Node(Rc::from(tag), Rc::new(args))
+    }
+
+    pub fn tagged(tag: Rc<str>, args: Vec<Canon>) -> Canon {
+        Canon::Node(tag, Rc::new(args))
     }
 
     pub fn ordinal(&self) -> u8 {
@@ -90,9 +132,9 @@ impl Canon {
     /// The declared field `(name value)` of a node.
     pub fn field(&self, name: &str) -> Option<&Canon> {
         if let Canon::Node(_, args) = self {
-            for arg in args {
+            for arg in args.iter() {
                 if let Canon::Node(tag, inner) = arg {
-                    if tag == name && inner.len() == 1 {
+                    if &**tag == name && inner.len() == 1 {
                         return Some(&inner[0]);
                     }
                 }
@@ -181,7 +223,7 @@ pub fn canonical_map(entries: Vec<(Canon, Canon)>) -> Canon {
         }
     }
     deduplicated.sort_by(|a, b| compare(&a.0, &b.0));
-    Canon::Map(deduplicated)
+    Canon::Map(Rc::new(deduplicated))
 }
 
 // ------------------------------------------------------------------ binary
@@ -322,17 +364,17 @@ fn read(cursor: &mut Cursor) -> Result<Canon, String> {
         3 => Ok(Canon::Int(Int::from_zigzag(&cursor.varint()?))),
         4 => {
             let length = cursor.length()?;
-            Ok(Canon::Bytes(cursor.take(length)?.to_vec()))
+            Ok(Canon::Bytes(Rc::new(cursor.take(length)?.to_vec())))
         }
         5 => {
             let length = cursor.length()?;
             let bytes = cursor.take(length)?.to_vec();
-            String::from_utf8(bytes).map(Canon::Str).map_err(|_| "invalid utf8".to_string())
+            String::from_utf8(bytes).map(Canon::string).map_err(|_| "invalid utf8".to_string())
         }
         6 => {
             let length = cursor.length()?;
             let bytes = cursor.take(length)?.to_vec();
-            String::from_utf8(bytes).map(Canon::Sym).map_err(|_| "invalid utf8".to_string())
+            String::from_utf8(bytes).map(Canon::symbol).map_err(|_| "invalid utf8".to_string())
         }
         7 => {
             let bytes = cursor.take(DIGEST_SIZE)?;
@@ -346,7 +388,7 @@ fn read(cursor: &mut Cursor) -> Result<Canon, String> {
             for _ in 0..count {
                 items.push(read(cursor)?);
             }
-            Ok(Canon::List(items))
+            Ok(Canon::List(Rc::new(items)))
         }
         9 => {
             let count = cursor.length()?;
@@ -363,7 +405,7 @@ fn read(cursor: &mut Cursor) -> Result<Canon, String> {
                     Ordering::Greater => return Err("unordered map key rejected".to_string()),
                 }
             }
-            Ok(Canon::Map(entries))
+            Ok(Canon::Map(Rc::new(entries)))
         }
         10 => {
             let length = cursor.length()?;
@@ -374,7 +416,7 @@ fn read(cursor: &mut Cursor) -> Result<Canon, String> {
             for _ in 0..count {
                 args.push(read(cursor)?);
             }
-            Ok(Canon::Node(tag, args))
+            Ok(Canon::Node(Rc::from(tag), Rc::new(args)))
         }
         other => Err(format!("unknown canonical tag {}", other)),
     }
@@ -459,7 +501,7 @@ fn write_text_into(value: &Canon, out: &mut String) {
         Canon::Node(tag, args) => {
             out.push('(');
             out.push_str(tag);
-            for arg in args {
+            for arg in args.iter() {
                 out.push(' ');
                 write_text_into(arg, out);
             }
@@ -513,7 +555,7 @@ impl<'a> TextReader<'a> {
             Some(b'(') => self.node(),
             Some(b'[') => self.list(),
             Some(b'{') => self.map(),
-            Some(b'"') => self.string().map(Canon::Str),
+            Some(b'"') => self.string().map(Canon::string),
             Some(b'#') => self.hash(),
             Some(other) if other == b')' || other == b']' || other == b'}' => {
                 Err(format!("unexpected '{}'", other as char))
@@ -539,7 +581,7 @@ impl<'a> TextReader<'a> {
             return Err("unterminated node".to_string());
         }
         self.position += 1;
-        Ok(Canon::Node(tag, args))
+        Ok(Canon::Node(tag, Rc::new(args)))
     }
 
     fn list(&mut self) -> Result<Canon, String> {
@@ -554,7 +596,7 @@ impl<'a> TextReader<'a> {
             return Err("unterminated list".to_string());
         }
         self.position += 1;
-        Ok(Canon::List(items))
+        Ok(Canon::List(Rc::new(items)))
     }
 
     fn map(&mut self) -> Result<Canon, String> {
@@ -642,7 +684,7 @@ impl<'a> TextReader<'a> {
             for index in (0..hex.len()).step_by(2) {
                 bytes.push(u8::from_str_radix(&hex[index..index + 2], 16).map_err(|_| "bad byte literal")?);
             }
-            Ok(Canon::Bytes(bytes))
+            Ok(Canon::Bytes(Rc::new(bytes)))
         } else {
             Err(format!("unknown # literal: #{}", token))
         }
@@ -660,6 +702,6 @@ impl<'a> TextReader<'a> {
             let magnitude = Nat::from_decimal(&token[1..]).ok_or("bad integer")?;
             return Ok(Canon::Int(Int { negative: token.starts_with('-'), magnitude }));
         }
-        Ok(Canon::Sym(token))
+        Ok(Canon::Sym(Rc::from(token)))
     }
 }

@@ -4,6 +4,7 @@
 //! constructors, precedence through category layering and associativity through
 //! `fold` all arrive as canonical data.
 
+use std::rc::Rc;
 use crate::canon::{write_text, Canon};
 use crate::regex::Regex;
 use std::collections::{BTreeMap, BTreeSet};
@@ -87,7 +88,7 @@ fn closure_over(
 
 pub fn load(value: &Canon) -> Result<Grammar, String> {
     let entries = match value {
-        Canon::Node(tag, entries) if tag == "grammar" => entries,
+        Canon::Node(tag, entries) if &**tag == "grammar" => entries,
         other => return Err(format!("not a grammar: {}", write_text(other))),
     };
 
@@ -97,13 +98,13 @@ pub fn load(value: &Canon) -> Result<Grammar, String> {
     let mut skips: Vec<Regex> = Vec::new();
     let mut categories: Vec<(String, Vec<Production>)> = Vec::new();
 
-    for entry in entries {
+    for entry in entries.iter() {
         match entry {
-            Canon::Node(tag, args) if tag == "name" && args.len() == 1 => {}
-            Canon::Node(tag, args) if tag == "start" && args.len() == 1 => {
+            Canon::Node(tag, args) if &**tag == "name" && args.len() == 1 => {}
+            Canon::Node(tag, args) if &**tag == "start" && args.len() == 1 => {
                 start = args[0].as_sym().ok_or("start must be a symbol")?.to_string();
             }
-            Canon::Node(tag, args) if tag == "skip" && args.len() == 1 => match &args[0] {
+            Canon::Node(tag, args) if &**tag == "skip" && args.len() == 1 => match &args[0] {
                 Canon::Str(pattern) => skips.push(Regex::compile(pattern)?),
                 _ => return Err("skip pattern must be a string".to_string()),
             },
@@ -112,11 +113,11 @@ pub fn load(value: &Canon) -> Result<Grammar, String> {
             // for why this rides on existing `token` syntax instead of adding
             // a new declaration to the grammar DSL.
             Canon::Node(tag, args)
-                if tag == "token" && args.len() == 3 && args[0].as_sym() == Some("layout") =>
+                if &**tag == "token" && args.len() == 3 && args[0].as_sym() == Some("layout") =>
             {
                 layout = true;
             }
-            Canon::Node(tag, args) if tag == "token" && args.len() == 3 => {
+            Canon::Node(tag, args) if &**tag == "token" && args.len() == 3 => {
                 let name = args[0].as_sym().ok_or("token name must be a symbol")?.to_string();
                 let kind = args[1].as_sym().ok_or("token kind must be a symbol")?.to_string();
                 if !matches!(kind.as_str(), "sym" | "str" | "nat") {
@@ -128,7 +129,7 @@ pub fn load(value: &Canon) -> Result<Grammar, String> {
                 };
                 tokens.push(TokenDef { name, kind, pattern });
             }
-            Canon::Node(tag, args) if tag == "category" && !args.is_empty() => {
+            Canon::Node(tag, args) if &**tag == "category" && !args.is_empty() => {
                 let name = args[0].as_sym().ok_or("category name must be a symbol")?.to_string();
                 let mut productions = Vec::new();
                 for production in &args[1..] {
@@ -227,7 +228,7 @@ pub fn load(value: &Canon) -> Result<Grammar, String> {
 
 fn load_production(category: &str, value: &Canon) -> Result<Production, String> {
     match value {
-        Canon::Node(tag, args) if tag == "prod" && args.len() == 2 => {
+        Canon::Node(tag, args) if &**tag == "prod" && args.len() == 2 => {
             let name = args[0].as_sym().ok_or("production tag must be a symbol")?.to_string();
             let items = args[1].as_list().ok_or("production elements must be a list")?;
             let mut elements = Vec::new();
@@ -236,16 +237,16 @@ fn load_production(category: &str, value: &Canon) -> Result<Production, String> 
             }
             Ok(Production::Build { tag: name, elements, category: category.to_string() })
         }
-        Canon::Node(tag, args) if tag == "pass" && args.len() == 1 => Ok(Production::Pass {
+        Canon::Node(tag, args) if &**tag == "pass" && args.len() == 1 => Ok(Production::Pass {
             target: args[0].as_sym().ok_or("pass target must be a symbol")?.to_string(),
             category: category.to_string(),
         }),
-        Canon::Node(tag, args) if tag == "fold" && args.len() == 2 => Ok(Production::Fold {
+        Canon::Node(tag, args) if &**tag == "fold" && args.len() == 2 => Ok(Production::Fold {
             tag: args[0].as_sym().ok_or("fold tag must be a symbol")?.to_string(),
             target: args[1].as_sym().ok_or("fold target must be a symbol")?.to_string(),
             category: category.to_string(),
         }),
-        Canon::Node(tag, args) if tag == "paren" && args.len() == 3 => {
+        Canon::Node(tag, args) if &**tag == "paren" && args.len() == 3 => {
             let open = match &args[0] {
                 Canon::Str(text) => text.clone(),
                 _ => return Err("paren opener must be a string".to_string()),
@@ -255,9 +256,9 @@ fn load_production(category: &str, value: &Canon) -> Result<Production, String> 
                 _ => return Err("paren closer must be a string".to_string()),
             };
             Ok(Production::Paren {
-                open,
+                open: open.to_string(),
                 target: args[1].as_sym().ok_or("paren target must be a symbol")?.to_string(),
-                close,
+                close: close.to_string(),
                 category: category.to_string(),
             })
         }
@@ -267,11 +268,11 @@ fn load_production(category: &str, value: &Canon) -> Result<Production, String> 
 
 fn load_element(value: &Canon) -> Result<Element, String> {
     match value {
-        Canon::Node(tag, args) if tag == "kw" && args.len() == 1 => match &args[0] {
-            Canon::Str(text) => Ok(Element::Keyword(text.clone())),
+        Canon::Node(tag, args) if &**tag == "kw" && args.len() == 1 => match &args[0] {
+            Canon::Str(text) => Ok(Element::Keyword(text.clone().to_string())),
             _ => Err("keyword must be a string".to_string()),
         },
-        Canon::Node(tag, args) if tag == "bind" && args.len() == 2 => Ok(Element::Bind(
+        Canon::Node(tag, args) if &**tag == "bind" && args.len() == 2 => Ok(Element::Bind(
             args[0].as_sym().ok_or("bind field must be a symbol")?.to_string(),
             args[1].as_sym().ok_or("bind target must be a symbol")?.to_string(),
         )),
@@ -327,8 +328,8 @@ pub fn lex(grammar: &Grammar, input: &str) -> Result<Vec<Token>, String> {
                     best_length = length;
                     let text: String = characters[index..end].iter().collect();
                     let value = match token.kind.as_str() {
-                        "sym" => Canon::Sym(text.clone()),
-                        "str" => Canon::Str(text.clone()),
+                        "sym" => Canon::Sym(Rc::from(text.clone())),
+                        "str" => Canon::Str(Rc::from(text.clone())),
                         _ => Canon::Nat(
                             crate::number::Nat::from_decimal(&text).ok_or("bad natural token")?,
                         ),
@@ -347,7 +348,7 @@ pub fn lex(grammar: &Grammar, input: &str) -> Result<Vec<Token>, String> {
                 best = Some(Token {
                     kind: "kw".to_string(),
                     text: keyword.clone(),
-                    value: Canon::Str(keyword.clone()),
+                    value: Canon::Str(Rc::from(keyword.clone())),
                     offset: index,
                 });
             }
@@ -391,7 +392,7 @@ fn column_of(characters: &[char], offset: usize) -> usize {
 }
 
 fn layout_token(text: &str, offset: usize) -> Token {
-    Token { kind: "kw".to_string(), text: text.to_string(), value: Canon::Str(text.to_string()), offset }
+    Token { kind: "kw".to_string(), text: text.to_string(), value: Canon::Str(Rc::from(text.to_string())), offset }
 }
 
 fn apply_layout(characters: &[char], tokens: Vec<Token>) -> Vec<Token> {
@@ -537,7 +538,7 @@ impl<'a> Parser<'a> {
                         }
                     }
                 }
-                Some(Canon::Node(tag.clone(), bound))
+                Some(Canon::Node(Rc::from(tag.clone()), Rc::new(bound)))
             }
             Production::Pass { target, .. } => self.target(target),
             Production::Fold { tag, target, .. } => {
@@ -546,7 +547,7 @@ impl<'a> Parser<'a> {
                     let saved = self.position;
                     match self.target(target) {
                         Some(next) => {
-                            accumulator = Canon::Node(tag.clone(), vec![accumulator, next]);
+                            accumulator = Canon::Node(Rc::from(tag.clone()), Rc::new(vec![accumulator, next]));
                         }
                         None => {
                             self.position = saved;
@@ -720,7 +721,7 @@ fn emit(grammar: &Grammar, value: &Canon, category: &str, out: &mut Vec<Piece>) 
         Canon::Node(tag, args) => {
             let production = grammar
                 .tag_production
-                .get(tag)
+                .get(&**tag)
                 .ok_or_else(|| format!("no production prints node tag {}", tag))?;
             let production_category = production.category().to_string();
             let open = grammar.reachable_open.get(category).cloned().unwrap_or_default();
@@ -814,8 +815,8 @@ fn emit_production(
 
 fn primitive_text(value: &Canon) -> Result<String, String> {
     match value {
-        Canon::Sym(text) => Ok(text.clone()),
-        Canon::Str(text) => Ok(text.clone()),
+        Canon::Sym(text) => Ok(text.clone().to_string()),
+        Canon::Str(text) => Ok(text.clone().to_string()),
         Canon::Nat(value) => Ok(value.to_decimal()),
         other => Err(format!("cannot print primitive {}", write_text(other))),
     }

@@ -6,6 +6,7 @@
 //! verdict encoding. For identical inputs it must produce byte identical
 //! verdicts to the reference host.
 
+use std::rc::Rc;
 use crate::canon::{canonical_map, compare, decode, encode, write_text, Canon, Digest};
 use crate::grammar;
 use crate::number::{Int, Nat};
@@ -42,16 +43,16 @@ impl Budget {
 
     pub fn from_canon(value: &Canon) -> Option<Budget> {
         match value {
-            Canon::Node(tag, args) if tag == "budget" => {
+            Canon::Node(tag, args) if &**tag == "budget" => {
                 let mut budget = Budget::default_budget();
-                for arg in args {
+                for arg in args.iter() {
                     match arg {
-                        Canon::Node(name, inner) if name == "steps" && inner.len() == 1 => {
+                        Canon::Node(name, inner) if &**name == "steps" && inner.len() == 1 => {
                             if let Canon::Nat(value) = &inner[0] {
                                 budget.steps = value.to_u128()? as u64;
                             }
                         }
-                        Canon::Node(name, inner) if name == "depth" && inner.len() == 1 => {
+                        Canon::Node(name, inner) if &**name == "depth" && inner.len() == 1 => {
                             if let Canon::Nat(value) = &inner[0] {
                                 budget.depth = value.to_u128()? as u32;
                             }
@@ -68,18 +69,18 @@ impl Budget {
 
 #[derive(Clone, Debug, Default)]
 pub struct Kernel {
-    pub allow: BTreeSet<String>,
+    pub allow: BTreeSet<Rc<str>>,
 }
 
 impl Kernel {
     pub fn from_canon(value: &Canon) -> Option<Kernel> {
         match value {
-            Canon::Node(tag, args) if tag == "kernel" => {
+            Canon::Node(tag, args) if &**tag == "kernel" => {
                 let mut allow = BTreeSet::new();
-                for arg in args {
+                for arg in args.iter() {
                     if let Canon::Node(name, names) = arg {
-                        if name == "allow" {
-                            for entry in names {
+                        if &**name == "allow" {
+                            for entry in names.iter() {
                                 if let Canon::Sym(capability) = entry {
                                     allow.insert(capability.clone());
                                 }
@@ -119,14 +120,14 @@ impl Program {
 
     fn load_with(value: &Canon, cas: &Cas, seen: &mut BTreeSet<Digest>) -> Result<Program, String> {
         let entries = match value {
-            Canon::Node(tag, entries) if tag == "program" => entries,
+            Canon::Node(tag, entries) if &**tag == "program" => entries,
             other => return Err(format!("not a meta program: {}", write_text(other))),
         };
         let mut accumulated = Program::default();
-        for entry in entries {
+        for entry in entries.iter() {
             match entry {
-                Canon::Node(tag, args) if tag == "module" && args.len() == 1 => {}
-                Canon::Node(tag, args) if tag == "judgment" && args.len() == 3 => {
+                Canon::Node(tag, args) if &**tag == "module" && args.len() == 1 => {}
+                Canon::Node(tag, args) if &**tag == "judgment" && args.len() == 3 => {
                     let name = args[0].as_sym().ok_or("judgment name must be a symbol")?.to_string();
                     let declared = args[1].as_list().ok_or("judgment parameters must be a list")?;
                     let mut params = Vec::new();
@@ -142,7 +143,7 @@ impl Program {
                         .judgments
                         .insert(name, Judgment { params, body: args[2].clone() });
                 }
-                Canon::Node(tag, args) if tag == "use" && args.len() == 1 => {
+                Canon::Node(tag, args) if &**tag == "use" && args.len() == 1 => {
                     let reference = match &args[0] {
                         Canon::Ref(digest) => *digest,
                         _ => return Err("use requires a reference".to_string()),
@@ -207,11 +208,11 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 fn ok(value: Canon) -> Canon {
-    Canon::Node("ok".to_string(), vec![value])
+    Canon::Node(Rc::from("ok".to_string()), Rc::new(vec![value]))
 }
 
 fn denied(value: Canon) -> Canon {
-    Canon::Node("denied".to_string(), vec![value])
+    Canon::Node(Rc::from("denied".to_string()), Rc::new(vec![value]))
 }
 
 // ------------------------------------------------------------------ engine
@@ -243,10 +244,10 @@ impl<'a> Engine<'a> {
 
     fn evidence(&self) -> Canon {
         let counts = |source: &BTreeMap<String, u64>| {
-            Canon::Map(
+            Canon::map(
                 source
                     .iter()
-                    .map(|(name, count)| (Canon::Sym(name.clone()), Canon::nat(*count as u128)))
+                    .map(|(name, count)| (Canon::Sym(Rc::from(name.clone())), Canon::nat(*count as u128)))
                     .collect(),
             )
         };
@@ -282,8 +283,8 @@ impl<'a> Engine<'a> {
                 "verdict",
                 vec![
                     Canon::sym("error"),
-                    Canon::Sym(failure.kind),
-                    Canon::Str(failure.message),
+                    Canon::Sym(Rc::from(failure.kind)),
+                    Canon::Str(Rc::from(failure.message)),
                     self.evidence(),
                 ],
             ),
@@ -296,7 +297,7 @@ impl<'a> Engine<'a> {
             return fail("depth-exhausted", format!("depth budget {} exceeded", self.budget.depth));
         }
         let (tag, args) = match expression {
-            Canon::Node(tag, args) => (tag.as_str(), args),
+            Canon::Node(tag, args) => (&**tag, args),
             other => {
                 return fail("bad-expression", format!("not an expression: {}", write_text(other)))
             }
@@ -319,14 +320,14 @@ impl<'a> Engine<'a> {
                 for argument in &args[1..] {
                     built.push(self.eval(argument, bindings, depth + 1)?);
                 }
-                Ok(Canon::Node(node_tag, built))
+                Ok(Canon::Node(Rc::from(node_tag), Rc::new(built)))
             }
             ("lst", _) => {
                 let mut items = Vec::new();
-                for argument in args {
+                for argument in args.iter() {
                     items.push(self.eval(argument, bindings, depth + 1)?);
                 }
-                Ok(Canon::List(items))
+                Ok(Canon::List(Rc::new(items)))
             }
             ("mp", _) => {
                 if args.len() % 2 != 0 {
@@ -403,7 +404,7 @@ impl<'a> Engine<'a> {
             }
             ("cap", _) if !args.is_empty() && args[0].as_sym().is_some() => {
                 let name = args[0].as_sym().unwrap().to_string();
-                if !self.kernel.allow.contains(&name) {
+                if !self.kernel.allow.iter().any(|allowed| &**allowed == name) {
                     return fail(
                         "capability-denied",
                         format!("capability {} is not constituted", name),
@@ -420,7 +421,7 @@ impl<'a> Engine<'a> {
                 let kind = args[0].as_sym().unwrap().to_string();
                 let message = self.eval(&args[1], bindings, depth + 1)?;
                 match message {
-                    Canon::Str(text) => Err(Fail { kind, message: text }),
+                    Canon::Str(text) => Err(Fail { kind, message: text.to_string() }),
                     other => Err(Fail { kind, message: write_text(&other) }),
                 }
             }
@@ -440,7 +441,7 @@ impl<'a> Engine<'a> {
     ) -> Eval {
         for case in cases {
             match case {
-                Canon::Node(tag, args) if tag == "case" && args.len() == 2 => {
+                Canon::Node(tag, args) if &**tag == "case" && args.len() == 2 => {
                     let mut extended = bindings.clone();
                     if self.match_pattern(&args[0], value, &mut extended)? {
                         return self.eval(&args[1], &extended, depth + 1);
@@ -465,24 +466,24 @@ impl<'a> Engine<'a> {
     ) -> Result<bool, Fail> {
         self.tick()?;
         match pattern {
-            Canon::Sym(name) if name == "_" => Ok(true),
-            Canon::Node(tag, args) if tag == "pv" && args.len() == 1 && args[0].as_sym().is_some() => {
+            Canon::Sym(name) if &**name == "_" => Ok(true),
+            Canon::Node(tag, args) if &**tag == "pv" && args.len() == 1 && args[0].as_sym().is_some() => {
                 bindings.insert(args[0].as_sym().unwrap().to_string(), value.clone());
                 Ok(true)
             }
-            Canon::Node(tag, args) if tag == "pq" && args.len() == 1 => Ok(&args[0] == value),
-            Canon::Node(tag, args) if tag == "pm" && !args.is_empty() && args[0].as_sym().is_some() => {
+            Canon::Node(tag, args) if &**tag == "pq" && args.len() == 1 => Ok(&args[0] == value),
+            Canon::Node(tag, args) if &**tag == "pm" && !args.is_empty() && args[0].as_sym().is_some() => {
                 let expected = args[0].as_sym().unwrap();
                 match value {
                     Canon::Node(actual, values)
-                        if actual == expected && values.len() == args.len() - 1 =>
+                        if &**actual == expected && values.len() == args.len() - 1 =>
                     {
                         self.match_all(&args[1..], values, bindings)
                     }
                     _ => Ok(false),
                 }
             }
-            Canon::Node(tag, args) if tag == "pnode" && args.len() == 2 => match value {
+            Canon::Node(tag, args) if &**tag == "pnode" && args.len() == 2 => match value {
                 Canon::Node(actual, values) => {
                     let mut trial = bindings.clone();
                     if !self.match_pattern(&args[0], &Canon::Sym(actual.clone()), &mut trial)? {
@@ -496,19 +497,19 @@ impl<'a> Engine<'a> {
                 }
                 _ => Ok(false),
             },
-            Canon::Node(tag, args) if tag == "pl" => match value {
+            Canon::Node(tag, args) if &**tag == "pl" => match value {
                 Canon::List(items) if items.len() == args.len() => {
                     self.match_all(args, items, bindings)
                 }
                 _ => Ok(false),
             },
-            Canon::Node(tag, args) if tag == "pcons" && args.len() == 2 => match value {
+            Canon::Node(tag, args) if &**tag == "pcons" && args.len() == 2 => match value {
                 Canon::List(items) if !items.is_empty() => {
                     let mut trial = bindings.clone();
                     if !self.match_pattern(&args[0], &items[0], &mut trial)? {
                         return Ok(false);
                     }
-                    let rest = Canon::List(items[1..].to_vec());
+                    let rest = Canon::List(Rc::new(items[1..].to_vec()));
                     if !self.match_pattern(&args[1], &rest, &mut trial)? {
                         return Ok(false);
                     }
@@ -517,7 +518,7 @@ impl<'a> Engine<'a> {
                 }
                 _ => Ok(false),
             },
-            Canon::Node(tag, args) if tag == "pnil" && args.is_empty() => match value {
+            Canon::Node(tag, args) if &**tag == "pnil" && args.is_empty() => match value {
                 Canon::List(items) if items.is_empty() => Ok(true),
                 _ => Ok(false),
             },
@@ -555,27 +556,27 @@ impl<'a> Engine<'a> {
             ("grammar-parse", [Canon::Ref(reference), Canon::Str(text)]) => {
                 match self.grammar_of(reference).and_then(|g| grammar::parse(&g, text)) {
                     Ok(value) => ok(value),
-                    Err(message) => denied(Canon::Str(message)),
+                    Err(message) => denied(Canon::Str(Rc::from(message))),
                 }
             }
             ("grammar-print", [Canon::Ref(reference), value]) => {
                 match self.grammar_of(reference).and_then(|g| grammar::print(&g, value)) {
-                    Ok(text) => ok(Canon::Str(text)),
-                    Err(message) => denied(Canon::Str(message)),
+                    Ok(text) => ok(Canon::Str(Rc::from(text))),
+                    Err(message) => denied(Canon::Str(Rc::from(message))),
                 }
             }
             ("public-key", [Canon::Str(secret)]) => {
-                ok(Canon::Str(self.environment.public_key(secret)))
+                ok(Canon::Str(Rc::from(self.environment.public_key(secret))))
             }
             ("sign", [Canon::Str(secret), message]) => {
                 self.environment.public_key(secret);
-                ok(Canon::Bytes(self.environment.mac(secret, message)))
+                ok(Canon::Bytes(Rc::new(self.environment.mac(secret, message))))
             }
             ("verify", [Canon::Str(key), message, Canon::Bytes(signature)]) => {
-                let secret = self.environment.secrets.borrow().get(key).cloned();
+                let secret = self.environment.secrets.borrow().get(&**key).cloned();
                 match secret {
                     Some(secret) => {
-                        ok(Canon::Bool(&self.environment.mac(&secret, message) == signature))
+                        ok(Canon::Bool(self.environment.mac(&secret, message) == **signature))
                     }
                     None => ok(Canon::Bool(false)),
                 }
@@ -590,21 +591,21 @@ impl<'a> Engine<'a> {
                 let counter = *self.environment.counter.borrow();
                 let digest = sha256(format!("{}:{}", self.environment.seed, counter).as_bytes());
                 let take = count.to_u128().unwrap_or(0) as usize;
-                ok(Canon::Bytes(digest[..take.min(32)].to_vec()))
+                ok(Canon::Bytes(Rc::new(digest[..take.min(32)].to_vec())))
             }
             ("open-connection", [Canon::Str(peer)]) => {
-                self.environment.queues.borrow_mut().entry(peer.clone()).or_default();
+                self.environment.queues.borrow_mut().entry(peer.clone().to_string()).or_default();
                 ok(Canon::Unit)
             }
             ("close-connection", [Canon::Str(peer)]) => {
-                self.environment.queues.borrow_mut().remove(peer);
+                self.environment.queues.borrow_mut().remove(&**peer);
                 ok(Canon::Unit)
             }
             ("send", [Canon::Str(peer), message]) => {
                 self.environment
                     .queues
                     .borrow_mut()
-                    .entry(peer.clone())
+                    .entry(peer.clone().to_string())
                     .or_default()
                     .push_back(message.clone());
                 ok(Canon::Unit)
@@ -614,7 +615,7 @@ impl<'a> Engine<'a> {
                     .environment
                     .queues
                     .borrow_mut()
-                    .entry(peer.clone())
+                    .entry(peer.clone().to_string())
                     .or_default()
                     .len();
                 ok(Canon::nat(size as u128))
@@ -624,7 +625,7 @@ impl<'a> Engine<'a> {
                     .environment
                     .queues
                     .borrow_mut()
-                    .entry(peer.clone())
+                    .entry(peer.clone().to_string())
                     .or_default()
                     .pop_front();
                 match message {
@@ -695,9 +696,9 @@ fn entries_of(value: &Canon) -> Result<&Vec<(Canon, Canon)>, Fail> {
     }
 }
 
-fn string_of(value: &Canon) -> Result<&String, Fail> {
+fn string_of(value: &Canon) -> Result<&str, Fail> {
     match value {
-        Canon::Str(text) => Ok(text),
+        Canon::Str(text) => Ok(&**text),
         other => Err(Fail {
             kind: "type-error".to_string(),
             message: format!("expected a string, found {}", write_text(other)),
@@ -893,7 +894,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         "node" => {
             arity(2)?;
             match &args[0] {
-                Canon::Sym(tag) => Ok(Canon::Node(tag.clone(), list_of(&args[1])?.clone())),
+                Canon::Sym(tag) => Ok(Canon::Node(tag.clone(), Rc::new(list_of(&args[1])?.clone()))),
                 other => fail(
                     "type-error",
                     format!("node expects a symbol tag, found {}", write_text(other)),
@@ -912,13 +913,13 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             arity(2)?;
             let mut items = vec![args[0].clone()];
             items.extend(list_of(&args[1])?.iter().cloned());
-            Ok(Canon::List(items))
+            Ok(Canon::List(Rc::new(items)))
         }
         "snoc" => {
             arity(2)?;
             let mut items = list_of(&args[0])?.clone();
             items.push(args[1].clone());
-            Ok(Canon::List(items))
+            Ok(Canon::List(Rc::new(items)))
         }
         "head" => {
             arity(1)?;
@@ -934,7 +935,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             if items.is_empty() {
                 fail("empty-list", "tail of empty list".to_string())
             } else {
-                Ok(Canon::List(items[1..].to_vec()))
+                Ok(Canon::List(Rc::new(items[1..].to_vec())))
             }
         }
         "nth" => {
@@ -951,31 +952,31 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             arity(2)?;
             let mut items = list_of(&args[0])?.clone();
             items.extend(list_of(&args[1])?.iter().cloned());
-            Ok(Canon::List(items))
+            Ok(Canon::List(Rc::new(items)))
         }
         "rev" => {
             arity(1)?;
             let mut items = list_of(&args[0])?.clone();
             items.reverse();
-            Ok(Canon::List(items))
+            Ok(Canon::List(Rc::new(items)))
         }
         "take" => {
             arity(2)?;
             let items = list_of(&args[0])?;
             let count = index_of(&args[1])?.max(0) as usize;
-            Ok(Canon::List(items.iter().take(count).cloned().collect()))
+            Ok(Canon::list(items.iter().take(count).cloned().collect()))
         }
         "drop" => {
             arity(2)?;
             let items = list_of(&args[0])?;
             let count = index_of(&args[1])?.max(0) as usize;
-            Ok(Canon::List(items.iter().skip(count).cloned().collect()))
+            Ok(Canon::list(items.iter().skip(count).cloned().collect()))
         }
         "sort" => {
             arity(1)?;
             let mut items = list_of(&args[0])?.clone();
             items.sort_by(compare);
-            Ok(Canon::List(items))
+            Ok(Canon::List(Rc::new(items)))
         }
         "distinct" => {
             arity(1)?;
@@ -985,7 +986,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
                     items.push(item.clone());
                 }
             }
-            Ok(Canon::List(items))
+            Ok(Canon::List(Rc::new(items)))
         }
         "contains" => {
             arity(2)?;
@@ -1007,7 +1008,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             } else {
                 let mut updated = items.clone();
                 updated[index as usize] = args[2].clone();
-                Ok(Canon::List(updated))
+                Ok(Canon::List(Rc::new(updated)))
             }
         }
         "insert-at" => {
@@ -1019,7 +1020,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             } else {
                 let mut updated = items.clone();
                 updated.insert(index as usize, args[2].clone());
-                Ok(Canon::List(updated))
+                Ok(Canon::List(Rc::new(updated)))
             }
         }
         "remove-at" => {
@@ -1031,12 +1032,12 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             } else {
                 let mut updated = items.clone();
                 updated.remove(index as usize);
-                Ok(Canon::List(updated))
+                Ok(Canon::List(Rc::new(updated)))
             }
         }
         "mnew" => {
             arity(0)?;
-            Ok(Canon::Map(Vec::new()))
+            Ok(Canon::Map(Rc::new(Vec::new())))
         }
         "msize" => {
             arity(1)?;
@@ -1075,15 +1076,15 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         }
         "mkeys" => {
             arity(1)?;
-            Ok(Canon::List(entries_of(&args[0])?.iter().map(|(key, _)| key.clone()).collect()))
+            Ok(Canon::list(entries_of(&args[0])?.iter().map(|(key, _)| key.clone()).collect()))
         }
         "mvals" => {
             arity(1)?;
-            Ok(Canon::List(entries_of(&args[0])?.iter().map(|(_, value)| value.clone()).collect()))
+            Ok(Canon::list(entries_of(&args[0])?.iter().map(|(_, value)| value.clone()).collect()))
         }
         "mentries" => {
             arity(1)?;
-            Ok(Canon::List(
+            Ok(Canon::list(
                 entries_of(&args[0])?
                     .iter()
                     .map(|(key, value)| Canon::node("entry", vec![key.clone(), value.clone()]))
@@ -1095,7 +1096,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             let mut entries = Vec::new();
             for item in list_of(&args[0])? {
                 match item {
-                    Canon::Node(tag, values) if tag == "entry" && values.len() == 2 => {
+                    Canon::Node(tag, values) if &**tag == "entry" && values.len() == 2 => {
                         entries.push((values[0].clone(), values[1].clone()));
                     }
                     other => {
@@ -1110,7 +1111,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         }
         "scat" => {
             arity(2)?;
-            Ok(Canon::Str(format!("{}{}", string_of(&args[0])?, string_of(&args[1])?)))
+            Ok(Canon::string(format!("{}{}", string_of(&args[0])?, string_of(&args[1])?)))
         }
         "slen" => {
             arity(1)?;
@@ -1124,7 +1125,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             if from < 0 || to > text.len() as i128 || from > to {
                 fail("index-out-of-range", "substring out of range".to_string())
             } else {
-                Ok(Canon::Str(text[from as usize..to as usize].iter().collect()))
+                Ok(Canon::string(text[from as usize..to as usize].iter().collect()))
             }
         }
         "sym->str" => {
@@ -1139,13 +1140,13 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         }
         "str->sym" => {
             arity(1)?;
-            Ok(Canon::Sym(string_of(&args[0])?.clone()))
+            Ok(Canon::Sym(Rc::from(string_of(&args[0])?.clone())))
         }
         "nat->str" => {
             arity(1)?;
             match &args[0] {
-                Canon::Nat(value) => Ok(Canon::Str(value.to_decimal())),
-                Canon::Int(value) => Ok(Canon::Str(value.to_decimal())),
+                Canon::Nat(value) => Ok(Canon::Str(Rc::from(value.to_decimal()))),
+                Canon::Int(value) => Ok(Canon::Str(Rc::from(value.to_decimal()))),
                 other => fail(
                     "type-error",
                     format!("expected a number, found {}", write_text(other)),
@@ -1168,7 +1169,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
             arity(2)?;
             let mut bytes = bytes_of(&args[0])?.clone();
             bytes.extend(bytes_of(&args[1])?.iter());
-            Ok(Canon::Bytes(bytes))
+            Ok(Canon::Bytes(Rc::new(bytes)))
         }
         "digest" => {
             arity(1)?;
@@ -1176,7 +1177,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         }
         "encode" => {
             arity(1)?;
-            Ok(Canon::Bytes(encode(&args[0])))
+            Ok(Canon::Bytes(Rc::new(encode(&args[0]))))
         }
         "decode" => {
             arity(1)?;
@@ -1188,7 +1189,7 @@ pub fn primitive(name: &str, args: &[Canon]) -> Eval {
         "ref->str" => {
             arity(1)?;
             match &args[0] {
-                Canon::Ref(digest) => Ok(Canon::Str(digest.hex())),
+                Canon::Ref(digest) => Ok(Canon::Str(Rc::from(digest.hex()))),
                 other => fail(
                     "type-error",
                     format!("ref->str expects a reference, found {}", write_text(other)),

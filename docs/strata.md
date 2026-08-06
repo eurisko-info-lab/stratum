@@ -323,7 +323,7 @@ Second floor uses `S0 -> S15`:
 - S5: self-hosting compiler
 - S6: effects and multiplicities
 - S7: the native boundary
-- S8: Grammar and Meta rewritten
+- S8: language definitions rewritten
 - S9: artifacts and CAS
 - S10: semantic repository
 - S11: tooling and studios

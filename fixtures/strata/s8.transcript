@@ -1,0 +1,69 @@
+# S8 acceptance transcript: grammar definitions rewritten.
+#
+# S7 |- S8. What a syntax is becomes Strata's.
+#
+# Every language in the tree is read with an artifact elaborated from a
+# grammar source, and that elaboration was Meta's. It is now also Strata's,
+# and the two do not merely agree in shape: for every grammar the artifact
+# Strata produces is the artifact already committed, byte for byte. That is
+# nineteen checks inside the foundation, replayed by the first line here.
+
+$ foundation verify --dir foundations/S8
+> foundation S8
+> digest ca3606aabd014da249cec80a2e03111f82454f32560e83439233d0db3a173887
+> closure 181 artifacts
+> check strata-the-elaborator-prints-exactly ok
+> check strata-the-elaborator-checks ok
+> check strata-the-elaborator-is-total ok
+> check strata-the-elaborator-declares-its-capabilities ok
+> check strata-a-text-literal-denotes-its-value ok
+> check strata-elaborates-the-text-grammar ok
+> check strata-elaborates-the-gitignore-grammar ok
+> check strata-elaborates-the-properties-grammar ok
+> check strata-elaborates-the-lambda-grammar ok
+> check strata-elaborates-the-gitattributes-grammar ok
+> check strata-elaborates-the-json-grammar ok
+> check strata-elaborates-the-toml-grammar ok
+> check strata-elaborates-the-grammar-grammar ok
+> check strata-elaborates-the-transcript-grammar ok
+> check strata-elaborates-the-yaml-grammar ok
+> check strata-elaborates-the-markdown-grammar ok
+> check strata-elaborates-the-html-grammar ok
+> check strata-elaborates-the-meta-grammar ok
+> check strata-elaborates-the-shell-grammar ok
+> check strata-elaborates-the-strata-grammar ok
+> check strata-elaborates-the-scala-grammar ok
+> check strata-elaborates-the-rust-grammar ok
+> check strata-elaborates-the-typescript-grammar ok
+> check strata-elaborates-the-lean-grammar ok
+> verdict ok
+
+# The elaborator is an ordinary Strata module. It type checks against the
+# boundary it imports, every definition in it terminates, and it reaches the
+# host only where it says it does.
+$ derive --foundation foundations/S8 --goal '(call CheckLinkedNative (grammar strata) (call StrataSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/grammar.strata"))) (q "strata.grammar"))'
+> (checked ok)
+
+$ derive --foundation foundations/S8 --goal '(call TotalLinkedModule (grammar strata) (call StrataSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/grammar.strata"))) (q "strata.grammar"))'
+> (total ok)
+
+$ derive --foundation foundations/S8 --goal '(call CheckLinkedCapabilities (grammar strata) (call StrataSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/grammar.strata"))) (q "strata.grammar"))'
+> (permitted ok)
+
+# The smallest grammar in the tree, elaborated in Strata. This is the whole
+# artifact, and it is the file that is committed.
+$ derive --foundation foundations/S8 --goal '(call ElaborateGrammarInStrata (grammar strata) (call StrataSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/grammar.strata"))) (grammar grammar) (call SourceText (source "languages/text/text.grammar")))'
+> (grammar (name "text") (start source) (token body str "[^\\r]+") (category source (prod TextFile [(bind text body)])))
+
+# What made it writable: a text literal now denotes what it spells. Before
+# this layer it denoted how it spells it, quotes and backslashes included,
+# which no language definition survives.
+$ derive --foundation foundations/S8 --goal '(call RunNative (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/system/native.strata")) (q []))) (q "strata.native") (q hashed))'
+> "7ecb666b10f1acdc5ea5997283bc5320347b57e3fc3ee03cea2bbf81ef4c4ce9"
+
+# What the layers below decided, S8 still decides.
+$ derive --foundation foundations/S8 --goal '(call BootstrapIsStable (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))))'
+> #t
+
+$ derive --foundation foundations/S8 --goal '(call CheckLinkedDependent (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/lib/vector.strata")) (q []))) (q "strata.vector"))'
+> (checked ok)

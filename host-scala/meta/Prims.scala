@@ -192,15 +192,27 @@ object Prims:
         })
 
       // ----------------------------------------------------------- strings
+      //
+      // A character is a Unicode scalar value, not a UTF-16 code unit. The
+      // distinction is invisible below U+10000 and decisive above it: counting
+      // code units reports two for one character, and slicing between them
+      // yields an unpaired surrogate, which is not a scalar value and has no
+      // canonical encoding. The other host counts scalars, and a value that
+      // one host cannot encode is not a value.
       case "scat" => arity(2); Canon.S(string(args(0), fail) + string(args(1), fail))
-      case "slen" => arity(1); Canon.N(BigInt(string(args(0), fail).length))
+      case "slen" =>
+        arity(1)
+        val s = string(args(0), fail)
+        Canon.N(BigInt(s.codePointCount(0, s.length)))
       case "ssub" =>
         arity(3)
         val s = string(args(0), fail)
+        val characters = s.codePointCount(0, s.length)
         val from = num(args(1), fail).toInt
         val to = num(args(2), fail).toInt
-        if from < 0 || to > s.length || from > to then fail("index-out-of-range", "substring out of range")
-        else Canon.S(s.substring(from, to))
+        if from < 0 || to > characters || from > to then
+          fail("index-out-of-range", "substring out of range")
+        else Canon.S(s.substring(s.offsetByCodePoints(0, from), s.offsetByCodePoints(0, to)))
       case "sym->str" =>
         arity(1)
         args(0) match
