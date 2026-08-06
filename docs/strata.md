@@ -65,7 +65,7 @@ Strata language
 Strata compiler
 Strata runtime libraries
 Strata implementation of Stratum
-S0 -> S1 -> ... -> S12
+S0 -> S1 -> ... -> S13
 ```
 
 First floor job:
@@ -313,27 +313,35 @@ Stage 3:
 
 ## 24. Second-floor staircase
 
-Second floor uses `S0 -> S12`:
+Second floor uses `S0 -> S13`:
 
 - S0: Strata seed
 - S1: canonical data
 - S2: the dependent core
 - S3: free changes
-- S4: self-hosting compiler
-- S5: Grammar and Meta rewritten
-- S6: artifacts and CAS
-- S7: semantic repository
-- S8: tooling and studios
-- S9: foundation and governance
-- S10: ledger, sync, federation
-- S11: retention and reconstruction
-- S12: investigation agents
+- S4: modules and names
+- S5: self-hosting compiler
+- S6: Grammar and Meta rewritten
+- S7: artifacts and CAS
+- S8: semantic repository
+- S9: tooling and studios
+- S10: foundation and governance
+- S11: ledger, sync, federation
+- S12: retention and reconstruction
+- S13: investigation agents
 
 The dependent core is its own layer because it is a change to what can be
 said, not to what is done with what was already said. S1 gives a declaration
 a type; S2 lets a type depend on a value.
 
-At S12, second floor reconstructs first-floor capability set and extends it
+Modules are their own layer for the same reason. Below S4 a module is closed:
+every name it uses, it declares. S4 lets one module refer to another, and a
+name may then fail to resolve, an import may be ambiguous, a module set may
+contain a cycle, and two modules may disagree about the version of a third.
+That is a law family, and it is kept out of the compiler so that self-hosting
+is one new thing rather than two.
+
+At S13, second floor reconstructs first-floor capability set and extends it
 with agent substrate.
 
 ## 25. Rewrite strategy

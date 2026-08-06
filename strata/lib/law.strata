@@ -1,0 +1,21 @@
+module "strata.law"
+version 1
+; Evidence, graded.
+;
+; A law is a claim; a grade says what is known about it. Writing the grades
+; down as a declared type rather than as a convention means the change
+; language over them is generated like any other, and a claim about a claim is
+; an ordinary value.
+;
+; The order runs from weakest to strongest. Nothing here decides how a grade
+; is earned -- that is `features/strata/law.meta` -- only what the grades are
+; and how they compare.
+data Bool = | True [] | False []
+data Rank = | Zero [] | Succ [pred #1: Rank]
+data Grade = | Declared [] | Tested [] | Generated [] | CrossHost [] | ModelChecked [] | Derived [] | Proved []
+def rank [g: Grade]: Rank = match g of case Declared -> Zero case Tested -> Succ Zero case Generated -> Succ (Succ Zero) case CrossHost -> Succ (Succ (Succ Zero)) case ModelChecked -> Succ (Succ (Succ (Succ Zero))) case Derived -> Succ (Succ (Succ (Succ (Succ Zero)))) case Proved -> Succ (Succ (Succ (Succ (Succ (Succ Zero))))) end
+def atLeast [held: Rank, wanted: Rank]: Bool = match wanted of case Zero -> True case Succ w -> match held of case Zero -> False case Succ h -> atLeast h w end end
+def stronger [left: Rank, right: Rank]: Rank = match atLeast left right of case True -> left case False -> right end
+law RankIsTotal [g: Grade] = rank g
+law GradeMeetsItself [g: Grade] = atLeast (rank g) (rank g)
+def example []: Bool = atLeast (rank Proved) (rank Declared)
