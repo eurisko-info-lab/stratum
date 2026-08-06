@@ -1,0 +1,23 @@
+
+artifactchange
+change
+kind
+foundation
+nameF10->F11
+predecessor
+foundation-offoundations/F10
+
+delta-meta
+file changes/F10-F11/delta-meta.canon
+delta-grammar
+file#changes/F10-F11/delta-grammar.canon
+feature
+feature
+name<profile-guided studios and the complete publication workflow
+programs
+file%features/studio/studio.generated.meta
+sources
+	text-filefeatures/studio/studio.meta
+profiles
+fileprofiles/alpha/profile.canon
+fileprofiles/beta/profile.canon

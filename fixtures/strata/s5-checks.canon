@@ -1,0 +1,230 @@
+; Executable acceptance checks for S5, the self-hosting compiler.
+;
+; Strata has no primitives, which is what makes a compiler for it writable in
+; it, and also what stops that compiler resolving its own names. So the
+; compiler takes a resolved core, the reader produces one, and the machine
+; runs what the compiler emits.
+[
+  ; -------------------------------------------------------------- the reader
+
+  ; A checked module becomes a core in which a variable is an index, a
+  ; constructor is a tag and an arity, and a definition is a position.
+  (check strata-a-module-resolves-into-core
+    (call ReadProgram
+      (call LinkModule
+        (call LoadModuleSet
+          (q (file "languages/strata/strata.generated.grammar"))
+          (q ["module \"probe.bit\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"]))
+        (q "probe.bit")))
+    (value (Def (Succ (Zero))
+      (CCase (CLocal (Zero))
+        (Branch (Zero) (Zero) (CCon (Succ (Zero)) (Zero))
+          (Branch (Succ (Zero)) (Zero) (CCon (Zero) (Zero))
+            (NoBranch))))
+      (NoDef))))
+
+  ; The core describes declared data and nothing else, so a literal has no
+  ; place in it.
+  (check strata-the-core-does-not-describe-literals
+    (call ReadProgram
+      (call LinkModule
+        (call LoadModuleSet
+          (q (file "languages/strata/strata.generated.grammar"))
+          (q ["module \"probe.lit\"\nversion 1\ndata Bit = | On [] | Off []\ndef count []: Bit = 3\n"]))
+        (q "probe.lit")))
+    (error compile-error))
+
+  ; ------------------------------------------------------------ the compiler
+
+  ; The compiler is an ordinary Strata module, held to what every module is
+  ; held to.
+  (check strata-the-compiler-is-well-typed
+    (call CheckLinkedModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (q "strata.compiler"))
+    (value (checked ok)))
+
+  ; Including termination: a compiler that might not stop is not a compiler.
+  (check strata-the-compiler-terminates
+    (call TotalLinkedModule
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (q "strata.compiler"))
+    (value (total ok)))
+
+  ; It emits one block per definition, and a block is a sequence of stack
+  ; instructions rather than a tree of expressions.
+  (check strata-the-compiler-linearises-a-definition
+    (call CompileProgramWith
+      (call CompilerDeclarations
+        (q (file "languages/strata/strata.generated.grammar"))
+        (prim cons
+          (call SourceText (q (text-file "strata/lib/prelude.strata")))
+          (prim cons
+            (call SourceText (q (text-file "strata/compiler/compile.strata")))
+            (q []))))
+      (call ReadProgram
+        (call LinkModule
+          (call LoadModuleSet
+            (q (file "languages/strata/strata.generated.grammar"))
+            (q ["module \"probe.bit\"\nversion 1\ndata Bit = | On [] | Off []\ndef flip [b: Bit]: Bit = match b of case On -> Off case Off -> On end\n"]))
+          (q "probe.bit"))))
+    (value (Block
+      (IStep (ILocal (Zero))
+        (IStep (IMatch
+          (Arm (Zero) (Zero) (IStep (ICon (Succ (Zero)) (Zero)) (IDone))
+            (Arm (Succ (Zero)) (Zero) (IStep (ICon (Zero) (Zero)) (IDone))
+              (NoArm))))
+          (IDone)))
+      (NoBlock))))
+
+  ; ------------------------------------------------------------- the machine
+
+  ; A compiled program computes, and computes the same thing the source
+  ; computes. This is the obligation the compiler carries: the machine
+  ; preserves meaning rather than resembling it.
+  (check strata-a-compiled-program-computes
+    (call RunCompiled
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/example.strata")))
+          (q [])))
+      (q "strata.example")
+      (q four))
+    (value (Succ (Succ (Succ (Succ (Zero)))))))
+
+  ; Recursion and matching.
+  (check strata-compiling-preserves-recursion
+    (call CompilingPreservesMeaning
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/example.strata")))
+          (q [])))
+      (q "strata.example")
+      (q four))
+    (value #t))
+
+  ; A let binds a value and shifts everything already in scope.
+  (check strata-compiling-preserves-let
+    (call CompilingPreservesMeaning
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/example.strata")))
+          (q [])))
+      (q "strata.example")
+      (q viaLet))
+    (value #t))
+
+  ; A definition applied to fewer arguments than it takes waits for the rest,
+  ; in the machine as in the evaluator.
+  (check strata-compiling-preserves-partial-application
+    (call CompilingPreservesMeaning
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/example.strata")))
+          (q [])))
+      (q "strata.example")
+      (q waiting))
+    (value #t))
+
+  ; So does a constructor.
+  (check strata-compiling-preserves-partial-construction
+    (call CompilingPreservesMeaning
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/example.strata")))
+          (q [])))
+      (q "strata.example")
+      (q built))
+    (value #t))
+
+  ; And a name that crosses a module boundary.
+  (check strata-compiling-preserves-imports
+    (call CompilingPreservesMeaning
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/example.strata")))
+          (q [])))
+      (q "strata.example")
+      (q flipped))
+    (value #t))
+
+  ; ----------------------------------------------------------- the bootstrap
+
+  ; The acceptance of the layer. C1 is the compiler's own source compiled by
+  ; the reference evaluator; C2 is C1 -- that compiled compiler -- run on the
+  ; same source. They are the same, or the compiler and the machine disagree
+  ; about what the compiler means.
+  (check strata-the-bootstrap-is-stable
+    (call BootstrapIsStable
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q []))))
+    (value #t))
+
+  ; And the compiler it produces has an identity, so a claim about it can be
+  ; made about a digest rather than about a description.
+  (check strata-the-bootstrap-has-an-identity
+    (call BootstrapDigest
+      (q (file "languages/strata/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q []))))
+    (value "ae7f5cf23ef65feff1c15310ed0a2b5d84ddbbdac1a8d7ccf5b49c0567bdf0af"))
+]

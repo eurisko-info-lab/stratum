@@ -1,0 +1,525 @@
+module stratacompile
+
+; The reader, the machine, and the bootstrap.
+;
+; `strata/compiler/compile.strata` is the compiler, and it is written in
+; Strata. Three things around it are not, and cannot be:
+;
+;   the reader   turns a checked module into the resolved core the compiler
+;                takes -- names become indices, constructors become tags. A
+;                compiler cannot do this for itself, because resolving names
+;                needs to compare them and Strata has no equality.
+;   the machine  runs what the compiler emits.
+;   the driver   runs the compiler, and decides the fixed point.
+;
+; The bootstrap is the ordinary one. C1 is the compiler's own source compiled
+; by the reference evaluator. C2 is C1 -- the compiled compiler -- run on that
+; same source. They are the same, or the compiler and the machine disagree
+; about what the compiler means.
+
+; ------------------------------------------------------------------- names
+;
+; Tags and global indices are assigned by position, so they are a function of
+; the module and not of the order anything was looked up in.
+
+judgment ConstructorTags [decls] = call TagsFrom [decls 0 prim #mnew []]
+
+judgment TagsFrom [decls next table] =
+  match decls {
+    case [] -> table
+    case (#data name ctors) :: rest ->
+      match call TagsOfConstructors [ctors next table] {
+        case (#tagged after filled) -> call TagsFrom [rest after filled]
+        case _ -> fail #compile-error "malformed tag assignment"
+      }
+    case (#family name params ctors) :: rest ->
+      match call TagsOfConstructors [ctors next table] {
+        case (#tagged after filled) -> call TagsFrom [rest after filled]
+        case _ -> fail #compile-error "malformed tag assignment"
+      }
+    case head :: rest -> call TagsFrom [rest next table]
+  }
+
+judgment TagsOfConstructors [ctors next table] =
+  match ctors {
+    case [] -> mk #tagged [next table]
+    case (#Constructor cname fields) :: rest ->
+      call TagsOfConstructors [
+        rest
+        prim #add [next 1]
+        prim #mput [table cname mk #tag [next prim #len [call FieldList [fields]]]]
+      ]
+    case (#ConstructorAt cname fields result) :: rest ->
+      call TagsOfConstructors [
+        rest
+        prim #add [next 1]
+        prim #mput [table cname mk #tag [next prim #len [call FieldList [fields]]]]
+      ]
+    case head :: rest -> call TagsOfConstructors [rest next table]
+  }
+
+judgment GlobalIndexes [decls] = call GlobalsFrom [decls 0 prim #mnew []]
+
+judgment GlobalsFrom [decls next table] =
+  match decls {
+    case [] -> table
+    case (#def name params result body) :: rest ->
+      call GlobalsFrom [
+        rest
+        prim #add [next 1]
+        prim #mput [table name mk #global [next prim #len [params]]]
+      ]
+    case head :: rest -> call GlobalsFrom [rest next table]
+  }
+
+; The tag a constructor was given, read back, so a machine value can be shown
+; as the value it stands for.
+judgment TagNames [tags] = call NamesByTag [prim #mkeys [tags] tags prim #mnew []]
+
+judgment NamesByTag [names tags out] =
+  match names {
+    case [] -> out
+    case name :: rest ->
+      match prim #mget [tags name #unbound] {
+        case (#tag number arity) ->
+          call NamesByTag [rest tags prim #mput [out prim #nat->str [number] name]]
+        case _ -> fail #compile-error "malformed tag"
+      }
+  }
+
+; ------------------------------------------------------------------ values
+;
+; The compiler is an ordinary Strata program, so the core it is handed is an
+; ordinary Strata value. Numbers in it are the numbers Strata has: `Zero` and
+; `Succ`, built here and read back where the machine needs a position.
+
+judgment NatValue [n] =
+  if prim #eq [n 0]
+  then prim #node [#Zero list []]
+  else prim #node [#Succ list [call NatValue [prim #sub [n 1]]]]
+
+judgment NatOf [value] =
+  match value {
+    case (#Zero) -> 0
+    case (#Succ inner) -> prim #add [1 call NatOf [inner]]
+    case _ -> fail #compile-error "a position in the code is not a number"
+  }
+
+judgment ListValue [tag items] =
+  match items {
+    case [] -> prim #node [tag list []]
+    case _ -> fail #compile-error "unused"
+  }
+
+; ------------------------------------------------------------------ reader
+
+judgment ReadProgram [decls] =
+  call ReadDefinitions [
+    decls
+    call ConstructorTags [decls]
+    call GlobalIndexes [decls]
+  ]
+
+judgment ReadDefinitions [decls tags globals] =
+  match decls {
+    case [] -> prim #node [#NoDef list []]
+    case (#def name params result body) :: rest ->
+      prim #node [#Def list [
+        call NatValue [prim #len [params]]
+        call ReadCore [tags globals call ParameterScope [params] body]
+        call ReadDefinitions [rest tags globals]
+      ]]
+    case head :: rest -> call ReadDefinitions [rest tags globals]
+  }
+
+; Parameters are bound in order, so the last one written is nearest.
+judgment ParameterScope [params] =
+  match params {
+    case [] -> list []
+    case (#Param pname ptype) :: rest -> prim #cons [pname call ParameterScope [rest]]
+    case head :: rest -> call ParameterScope [rest]
+  }
+
+judgment ReadCore [tags globals locals expr] =
+  match expr {
+    case (#Var name) -> call ReadName [tags globals locals name]
+    case (#Apply fn argument) ->
+      prim #node [#CApp list [
+        call ReadCore [tags globals locals fn]
+        call ReadCore [tags globals locals argument]
+      ]]
+    case (#Let name value body) ->
+      prim #node [#CLet list [
+        call ReadCore [tags globals locals value]
+        call ReadCore [tags globals prim #cons [name locals] body]
+      ]]
+    case (#Match scrutinee cases) ->
+      prim #node [#CCase list [
+        call ReadCore [tags globals locals scrutinee]
+        call ReadBranches [tags globals locals call CaseList [cases]]
+      ]]
+    case _ ->
+      fail #compile-error "the core does not describe literals, only declared data"
+  }
+
+judgment ReadName [tags globals locals name] =
+  match call LocalIndex [locals name 0] {
+    case (#found index) -> prim #node [#CLocal list [call NatValue [index]]]
+    case _ ->
+      if prim #mhas [tags name]
+      then call ReadConstructor [prim #mget [tags name #unbound]]
+      else
+        if prim #mhas [globals name]
+        then call ReadGlobal [prim #mget [globals name #unbound]]
+        else
+          fail #compile-error prim #scat [
+            "the core cannot resolve the name "
+            prim #sym->str [name]
+          ]
+  }
+
+judgment LocalIndex [locals name index] =
+  match locals {
+    case [] -> mk #absent []
+    case declared :: rest ->
+      if prim #eq [declared name]
+      then mk #found [index]
+      else call LocalIndex [rest name prim #add [index 1]]
+  }
+
+judgment ReadConstructor [entry] =
+  match entry {
+    case (#tag number arity) ->
+      prim #node [#CCon list [call NatValue [number] call NatValue [arity]]]
+    case _ -> fail #compile-error "malformed tag"
+  }
+
+judgment ReadGlobal [entry] =
+  match entry {
+    case (#global index arity) -> prim #node [#CGlobal list [call NatValue [index]]]
+    case _ -> fail #compile-error "malformed global"
+  }
+
+judgment ReadBranches [tags globals locals cases] =
+  match cases {
+    case [] -> prim #node [#NoBranch list []]
+    case (#Case pattern body) :: rest ->
+      call ReadOneBranch [
+        tags
+        globals
+        locals
+        call PatternSpine [pattern]
+        body
+        call ReadBranches [tags globals locals rest]
+      ]
+    case _ -> fail #compile-error "malformed case"
+  }
+
+; A pattern names its constructor and then its fields, and the fields are
+; bound in the order they are written, so the last is nearest.
+judgment ReadOneBranch [tags globals locals spine body rest] =
+  match spine {
+    case (#PatVar head) :: fields ->
+      if prim #mhas [tags head]
+      then call ReadTaggedBranch [
+        tags
+        globals
+        locals
+        prim #mget [tags head #unbound]
+        fields
+        body
+        rest
+      ]
+      else fail #compile-error "the core does not describe a variable pattern"
+    case _ -> fail #compile-error "the core does not describe a wildcard pattern"
+  }
+
+judgment ReadTaggedBranch [tags globals locals entry fields body rest] =
+  match entry {
+    case (#tag number arity) ->
+      if prim #ne [prim #len [fields] arity]
+      then fail #compile-error "a pattern does not name every field of its constructor"
+      else
+        prim #node [#Branch list [
+          call NatValue [number]
+          call NatValue [arity]
+          call ReadCore [
+            tags
+            globals
+            prim #append [call FieldScope [fields] locals]
+            body
+          ]
+          rest
+        ]]
+    case _ -> fail #compile-error "malformed tag"
+  }
+
+judgment FieldScope [fields] =
+  match fields {
+    case [] -> list []
+    case (#PatVar name) :: rest -> prim #cons [name call FieldScope [rest]]
+    case (#PatWild) :: rest -> prim #cons [#_ call FieldScope [rest]]
+    case head :: rest -> fail #compile-error "a field in a pattern must be named"
+  }
+
+; --------------------------------------------------------------- the machine
+;
+; A stack machine over the same values Strata has: a constructor node, a
+; constructor waiting for arguments, and a definition waiting for arguments.
+; Nothing else is representable, because nothing else is.
+
+judgment BlockList [blocks] =
+  match blocks {
+    case (#NoBlock) -> list []
+    case (#Block code rest) -> prim #cons [code call BlockList [rest]]
+    case _ -> fail #machine-error "malformed block list"
+  }
+
+judgment RunBlock [blocks arities index env] =
+  call SoleValue [
+    call RunCode [blocks arities prim #nth [blocks index] list [] env]
+  ]
+
+judgment SoleValue [stack] =
+  match stack {
+    case value :: [] -> value
+    case _ -> fail #machine-error "a block did not leave exactly one value"
+  }
+
+judgment RunCode [blocks arities code stack env] =
+  match code {
+    case (#IDone) -> stack
+    case (#IStep instr rest) ->
+      call RunCode [
+        blocks
+        arities
+        rest
+        call StepMachine [blocks arities instr stack env]
+        env
+      ]
+    case _ -> fail #machine-error "malformed code"
+  }
+
+judgment StepMachine [blocks arities instr stack env] =
+  match instr {
+    case (#ILocal index) -> prim #cons [prim #nth [env call NatOf [index]] stack]
+    case (#IGlobal index) ->
+      let position = call NatOf [index] in
+      let arity = prim #nth [arities position] in
+      if prim #eq [arity 0]
+      then prim #cons [call RunBlock [blocks arities position list []] stack]
+      else prim #cons [mk #waiting [position arity list []] stack]
+    case (#ICon tag arity) ->
+      let width = call NatOf [arity] in
+      if prim #eq [width 0]
+      then prim #cons [mk #built [call NatOf [tag] list []] stack]
+      else prim #cons [mk #building [call NatOf [tag] width list []] stack]
+    case (#IApply) ->
+      match stack {
+        case argument :: (fn :: below) ->
+          prim #cons [call ApplyMachine [blocks arities fn argument] below]
+        case _ -> fail #machine-error "apply needs a function and an argument"
+      }
+    case (#ILet body) ->
+      match stack {
+        case value :: below ->
+          prim #cons [
+            call SoleValue [
+              call RunCode [blocks arities body list [] prim #cons [value env]]
+            ]
+            below
+          ]
+        case _ -> fail #machine-error "let needs a value to bind"
+      }
+    case (#IMatch arms) ->
+      match stack {
+        case value :: below ->
+          prim #cons [call MatchMachine [blocks arities value arms env] below]
+        case _ -> fail #machine-error "a match needs a value"
+      }
+    case _ -> fail #machine-error "unknown instruction"
+  }
+
+judgment ApplyMachine [blocks arities fn argument] =
+  match fn {
+    case (#building tag width args) ->
+      let filled = prim #snoc [args argument] in
+      if prim #eq [prim #len [filled] width]
+      then mk #built [tag filled]
+      else mk #building [tag width filled]
+    case (#waiting position arity args) ->
+      let filled = prim #snoc [args argument] in
+      if prim #eq [prim #len [filled] arity]
+      then call RunBlock [blocks arities position filled]
+      else mk #waiting [position arity filled]
+    case _ -> fail #machine-error "applied a value that is not a function"
+  }
+
+judgment MatchMachine [blocks arities value arms env] =
+  match value {
+    case (#built tag args) -> call SelectArm [blocks arities tag args arms env]
+    case _ -> fail #machine-error "matched a value that is not a constructor"
+  }
+
+judgment SelectArm [blocks arities tag args arms env] =
+  match arms {
+    case (#NoArm) -> fail #machine-error "no arm answers the constructor"
+    case (#Arm armTag arity body rest) ->
+      if prim #eq [call NatOf [armTag] tag]
+      then
+        call SoleValue [
+          call RunCode [
+            blocks
+            arities
+            body
+            list []
+            prim #append [args env]
+          ]
+        ]
+      else call SelectArm [blocks arities tag args rest env]
+    case _ -> fail #machine-error "malformed arm"
+  }
+
+; ---------------------------------------------------------------- crossing
+;
+; The reader hands the compiler a Strata value; the machine works in tags. The
+; two are the same value said two ways, and these say it either way.
+
+judgment ToMachineValue [tags value] =
+  match prim #mget [tags prim #tag [value] #unbound] {
+    case (#tag number arity) ->
+      mk #built [number call ToMachineArgs [tags prim #args [value]]]
+    case _ ->
+      fail #compile-error prim #scat [
+        "no declaration gives a tag to "
+        prim #sym->str [prim #tag [value]]
+      ]
+  }
+
+judgment ToMachineArgs [tags args] =
+  match args {
+    case [] -> list []
+    case arg :: rest ->
+      prim #cons [call ToMachineValue [tags arg] call ToMachineArgs [tags rest]]
+  }
+
+judgment FromMachineValue [names value] =
+  match value {
+    case (#built tag args) ->
+      prim #node [
+        prim #mget [names prim #nat->str [tag] #unnamed]
+        call FromMachineArgs [names args]
+      ]
+    case _ -> fail #machine-error "a machine value is not a constructor"
+  }
+
+judgment FromMachineArgs [names args] =
+  match args {
+    case [] -> list []
+    case arg :: rest ->
+      prim #cons [call FromMachineValue [names arg] call FromMachineArgs [names rest]]
+  }
+
+judgment GlobalArities [decls] =
+  match decls {
+    case [] -> list []
+    case (#def name params result body) :: rest ->
+      prim #cons [prim #len [params] call GlobalArities [rest]]
+    case head :: rest -> call GlobalArities [rest]
+  }
+
+judgment IndexOfGlobal [globals name] =
+  match prim #mget [globals name #unbound] {
+    case (#global index arity) -> index
+    case _ ->
+      fail #compile-error prim #scat [
+        "the module declares no definition named "
+        prim #sym->str [name]
+      ]
+  }
+
+; ----------------------------------------------------------------- driving
+
+judgment LinkedDeclarations [grammar sources name] =
+  call LinkModule [call LoadModuleSet [grammar sources] name]
+
+; The compiler is always the compiler. A module is compiled *with* it, never
+; by itself -- except in the one case where the module is the compiler, which
+; is the bootstrap.
+judgment CompileProgramWith [compiler program] =
+  call EnterDefinition [
+    compiler
+    call RequiredDefinition [compiler #compile]
+    list [program]
+  ]
+
+judgment RequiredDefinition [decls name] =
+  match call FindDefinition [decls name] {
+    case (#some found) -> found
+    case _ ->
+      fail #compile-error prim #scat [
+        "the module declares no definition named "
+        prim #sym->str [name]
+      ]
+  }
+
+; Running compiled code. The code itself is read as it stands -- it is a
+; Strata value and the machine matches on it directly. Only the values a
+; program computes with cross into tags, because only those are compared
+; against a constructor at speed.
+judgment RunBlocksOn [decls compiled entry arguments] =
+  let tags = call ConstructorTags [decls] in
+  call FromMachineValue [
+    call TagNames [tags]
+    call RunBlock [
+      call BlockList [compiled]
+      call GlobalArities [decls]
+      call IndexOfGlobal [call GlobalIndexes [decls] entry]
+      call ToMachineArgs [tags arguments]
+    ]
+  ]
+
+judgment CompilerDeclarations [grammar sources] =
+  call LinkedDeclarations [grammar sources "strata.compiler"]
+
+judgment CompilerBlocks [grammar sources] =
+  let compiler = call CompilerDeclarations [grammar sources] in
+  call CompileProgramWith [compiler call ReadProgram [compiler]]
+
+judgment BootstrapDigest [grammar sources] =
+  prim #ref->str [prim #digest [call CompilerBlocks [grammar sources]]]
+
+; The bootstrap. C1 is the compiler's own source compiled by the reference
+; evaluator; C2 is C1 -- that compiled compiler -- run on the same source. If
+; they differ, the compiler and the machine disagree about what the compiler
+; means.
+judgment BootstrapIsStable [grammar sources] =
+  let compiler = call CompilerDeclarations [grammar sources] in
+  let program = call ReadProgram [compiler] in
+  let first = call CompileProgramWith [compiler program] in
+  prim #eq [first call RunBlocksOn [compiler first #compile list [program]]]
+
+; --------------------------------------------------------------- preserving
+;
+; Compiling is only worth anything if the compiled program means what the
+; source meant. This runs a named definition both ways and compares.
+
+judgment RunCompiled [grammar compilerSources sources name entry] =
+  let compiler = call CompilerDeclarations [grammar compilerSources] in
+  let decls = call LinkedDeclarations [grammar sources name] in
+  call RunBlocksOn [
+    decls
+    call CompileProgramWith [compiler call ReadProgram [decls]]
+    entry
+    list []
+  ]
+
+judgment RunEvaluated [grammar sources name entry] =
+  let decls = call LinkedDeclarations [grammar sources name] in
+  call EnterDefinition [decls call RequiredDefinition [decls entry] list []]
+
+judgment CompilingPreservesMeaning [grammar compilerSources sources name entry] =
+  prim #eq [
+    call RunCompiled [grammar compilerSources sources name entry]
+    call RunEvaluated [grammar sources name entry]
+  ]

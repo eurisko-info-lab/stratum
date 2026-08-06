@@ -1,6 +1,6 @@
 # Strata rebuild roadmap
 
-## Rebuilding Stratum in Strata, in fourteen commits
+## Rebuilding Stratum in Strata, in fifteen commits
 
 This roadmap starts at `182b7bc` — the commit that completed the first-floor
 landing and defined the second-floor architecture in
@@ -8,8 +8,8 @@ landing and defined the second-floor architecture in
 carried forward.
 
 The plan is the staircase specified in
-[docs/strata.md §24](../docs/strata.md), realized literally: **fourteen
-commits, fourteen foundations, one layer per commit.**
+[docs/strata.md §24](../docs/strata.md), realized literally: **fifteen
+commits, fifteen foundations, one layer per commit.**
 
 $$
 F_{11} \vdash S_0 \qquad S_n \vdash S_{n+1}
@@ -57,10 +57,10 @@ strata/lib/            Strata standard library, written in Strata
 strata/compiler/       Strata compiler, written in Strata
 strata/system/         Stratum itself, written in Strata
 fixtures/strata/       acceptance transcripts
-foundations/S0..S13/   second-floor staircase
+foundations/S0..S14/   second-floor staircase
 ```
 
-## The fourteen commits
+## The fifteen commits
 
 | # | Layer | Constructs | Authority moves to Strata |
 | --- | --- | --- | --- |
@@ -70,19 +70,24 @@ foundations/S0..S13/   second-floor staircase
 | 4 | S3 | free changes | change languages |
 | 5 | S4 | modules and names | the module graph |
 | 6 | S5 | self-hosting compiler | the compiler itself |
-| 7 | S6 | Grammar and Meta rewritten | language definitions |
-| 8 | S7 | artifacts and CAS | storage |
-| 9 | S8 | semantic repository | history |
-| 10 | S9 | tooling and studios | editor surface |
-| 11 | S10 | foundation and governance | construction and acceptance |
-| 12 | S11 | ledger, sync, federation | distribution |
-| 13 | S12 | retention and reconstruction | durability |
-| 14 | S13 | investigation agents | the agent substrate |
+| 7 | S6 | effects and multiplicities | what a program may do |
+| 8 | S7 | Grammar and Meta rewritten | language definitions |
+| 9 | S8 | artifacts and CAS | storage |
+| 10 | S9 | semantic repository | history |
+| 11 | S10 | tooling and studios | editor surface |
+| 12 | S11 | foundation and governance | construction and acceptance |
+| 13 | S12 | ledger, sync, federation | distribution |
+| 14 | S13 | retention and reconstruction | durability |
+| 15 | S14 | investigation agents | the agent substrate |
 
 S1 was originally written here as "the total dependent core". It is two
 layers, not one. S1 gives a declaration a type; S2 lets a type depend on a
 value, which is a change to what can be said rather than to what is done with
 what was already said — and it needs surface the seed does not have.
+
+S6 was originally part of S5. Self-hosting is a change to what does the
+saying; effects and multiplicities are a change to what can be said. Bundling
+them would have made the decisive commit decide two things at once.
 
 S4 was originally absent. Building S2 made the gap visible: with no way for
 one module to refer to another, a length-indexed vector had to declare `Nat`
@@ -275,39 +280,84 @@ the module graph is decided rather than assumed.
 
 **Constructs** $S_4 \vdash S_5$. The decisive commit.
 
+Strata is a language with no primitives: data, definitions, application,
+`let` and `match`, and nothing else. A compiler for it can therefore be
+written in it, and this is where that happens.
+
+Names cannot be compared — there is no equality to compare them with — so the
+compiler works on a resolved core in which a variable is an index and a
+constructor is a tag. Resolving is the reader's job, not the compiler's.
+
 **Adds**
 
-- `strata/compiler/` — the Strata compiler, written in Strata, with explicit
-  IRs: Surface → Resolved → Typed Core → Effect Core → A-normal → Machine IR
-- judgments with modes, capability-typed effects, linear multiplicities
-  (`erased`, `once`, `affine`, `many`)
+- `strata/compiler/core.strata` — the resolved core: indices, tags, arities
+- `strata/compiler/machine.strata` — the target: a flat instruction sequence
+- `strata/compiler/compile.strata` — core → machine, written in Strata
+- `features/strata/compile.meta` — the reader that resolves a checked module
+  into core, the driver that runs the compiler, and the machine that runs its
+  output
 - `fixtures/strata/s5.transcript`, `foundations/S5/`
 
 **Acceptance**
 
-- $C_1$ = compiler compiled by the Meta reference implementation
-- $C_2 = C_1(C_{source})$
+- $C_1$ = the compiler compiled by the Meta reference implementation
+- $C_2 = C_1(C_{source})$ — the compiled compiler, run on its own source
 - fixed point holds:
 
 $$
 Digest(C_1) = Digest(C_2)
 $$
 
-- each IR transition carries its preservation obligation as a checked law
+- running a compiled program gives what evaluating the source gives, for
+  every fixture: the machine preserves meaning rather than resembling it
+- the compiler compiles the subset it is written in, and that subset is
+  decided rather than assumed
 
 **Exit condition** — Strata compiles Strata, and the result is stable.
 
 ---
 
-## Commit 7 — S6: Grammar and Meta rewritten
+## Commit 7 — S6: effects and multiplicities
 
 **Constructs** $S_5 \vdash S_6$.
+
+S2 lets a type mention a value. S6 lets a type say what happens: which
+capabilities a judgment needs, and how many times an argument may be used.
+That is a change to what can be said, so it is its own layer rather than part
+of the compiler. A compiler that both compiled itself and introduced a new
+kind of type would be doing two new things at once, and the seam between them
+is where a defect hides.
+
+**Adds**
+
+- surface for modes, capability requirements and multiplicities
+  (`erased`, `once`, `affine`, `many`)
+- `features/strata/effect.meta` — capability-typed effects, checked
+- multiplicity checking: a value declared `once` is used once on every path
+- the compiler's IR chain gains its effect stage, and erasure is checked to
+  remove exactly what is `erased`
+
+**Acceptance**
+
+- a judgment that uses a capability it does not declare is rejected
+- a value declared `once` and used twice is rejected, and says on which path
+- a value declared `erased` does not appear in the compiled output
+- erasure preserves meaning: the erased program and the unerased one agree on
+  every fixture
+
+**Exit condition** — a type says what a program may do, not only what it is.
+
+---
+
+## Commit 8 — S7: Grammar and Meta rewritten
+
+**Constructs** $S_6 \vdash S_7$.
 
 **Adds**
 
 - `strata/system/grammar.strata`, `strata/system/meta.strata`
 - every `languages/*` declaration re-derived from the Strata definitions
-- `fixtures/strata/s6.transcript`, `foundations/S6/`
+- `fixtures/strata/s7.transcript`, `foundations/S7/`
 
 **Acceptance**
 
@@ -323,16 +373,16 @@ witness.
 
 ---
 
-## Commit 8 — S7: artifacts and CAS
+## Commit 9 — S8: artifacts and CAS
 
-**Constructs** $S_6 \vdash S_7$.
+**Constructs** $S_7 \vdash S_8$.
 
 **Adds**
 
 - `strata/system/artifact.strata`, `strata/system/cas.strata`
 - SHA-256 identity, canonical encoding, content-addressed store, typed
   references carrying digest **and** expected schema
-- `fixtures/strata/s7.transcript`, `foundations/S7/`
+- `fixtures/strata/s8.transcript`, `foundations/S8/`
 
 **Acceptance**
 
@@ -345,16 +395,16 @@ first floor.
 
 ---
 
-## Commit 9 — S8: semantic repository
+## Commit 10 — S9: semantic repository
 
-**Constructs** $S_7 \vdash S_8$.
+**Constructs** $S_8 \vdash S_9$.
 
 **Adds**
 
 - `strata/system/repository.strata` — init, record, status, verify, branch,
   checkout, materializers
 - transitions expressed as typed changes from S2, not diffs over bytes
-- `fixtures/strata/s8.transcript`, `foundations/S8/`
+- `fixtures/strata/s9.transcript`, `foundations/S9/`
 
 **Acceptance**
 
@@ -369,15 +419,15 @@ first floor.
 
 ---
 
-## Commit 10 — S9: tooling and studios
+## Commit 11 — S10: tooling and studios
 
-**Constructs** $S_8 \vdash S_9$.
+**Constructs** $S_9 \vdash S_{10}$.
 
 **Adds**
 
 - `strata/system/studio.strata` — profile-derived editor surface
 - LSP service derived from language declarations, replacing `host-scala/lsp`
-- `fixtures/strata/s9.transcript`, `foundations/S9/`
+- `fixtures/strata/s10.transcript`, `foundations/S10/`
 
 **Acceptance**
 
@@ -388,15 +438,15 @@ first floor.
 
 ---
 
-## Commit 11 — S10: foundation and governance
+## Commit 12 — S11: foundation and governance
 
-**Constructs** $S_9 \vdash S_{10}$.
+**Constructs** $S_{10} \vdash S_{11}$.
 
 **Adds**
 
 - `strata/system/foundation.strata` — construction, closure, attestation
 - `strata/system/governance.strata` — proposal, acceptance, sponsorship
-- `fixtures/strata/s10.transcript`, `foundations/S10/`
+- `fixtures/strata/s11.transcript`, `foundations/S11/`
 
 **Acceptance**
 
@@ -408,15 +458,15 @@ first floor.
 
 ---
 
-## Commit 12 — S11: ledger, sync, federation
+## Commit 13 — S12: ledger, sync, federation
 
-**Constructs** $S_{10} \vdash S_{11}$.
+**Constructs** $S_{11} \vdash S_{12}$.
 
 **Adds**
 
 - `strata/system/ledger.strata`, `sync.strata`, `federation.strata`
 - deterministic state machines: commands in, events out, traces as artifacts
-- `fixtures/strata/s11.transcript`, `foundations/S11/`
+- `fixtures/strata/s12.transcript`, `foundations/S12/`
 
 **Acceptance**
 
@@ -428,15 +478,15 @@ first floor.
 
 ---
 
-## Commit 13 — S12: retention and reconstruction
+## Commit 14 — S13: retention and reconstruction
 
-**Constructs** $S_{11} \vdash S_{12}$.
+**Constructs** $S_{12} \vdash S_{13}$.
 
 **Adds**
 
 - `strata/system/retention.strata` — retention classes, expiry, reconstruction
 - clean-room reconstruction driven by Strata
-- `fixtures/strata/s12.transcript`, `foundations/S12/`
+- `fixtures/strata/s13.transcript`, `foundations/S13/`
 
 **Acceptance**
 
@@ -448,16 +498,16 @@ first floor.
 
 ---
 
-## Commit 14 — S13: investigation agents
+## Commit 15 — S14: investigation agents
 
-**Constructs** $S_{12} \vdash S_{13}$, and closes the floor.
+**Constructs** $S_{13} \vdash S_{14}$, and closes the floor.
 
 **Adds**
 
 - `strata/system/agent.strata` — investigation over declarations: stable
   identities, schemas, field paths, effects, laws, changes, history
 - agent edits as first-class change artifacts with capability limits and budgets
-- `fixtures/strata/s13.transcript`, `foundations/S13/`
+- `fixtures/strata/s14.transcript`, `foundations/S14/`
 
 **Acceptance — the retirement criteria from [docs/strata.md §26](../docs/strata.md)**
 
@@ -487,7 +537,7 @@ reference.
 Fully operational means all three hold simultaneously:
 
 $$
-F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 13
+F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 14
 $$
 
 $$

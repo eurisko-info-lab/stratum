@@ -1,0 +1,1544 @@
+; Generated from features/strata/compile.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratacompile)
+  (judgment
+    ConstructorTags
+    [decls]
+    (call
+      TagsFrom
+      (v decls)
+      (q 0)
+      (prim mnew)))
+  (judgment
+    TagsFrom
+    [decls next table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            data
+            (pv name)
+            (pv ctors))
+          (pv rest))
+        (match
+          (call
+            TagsOfConstructors
+            (v ctors)
+            (v next)
+            (v table))
+          (case
+            (pm
+              tagged
+              (pv after)
+              (pv filled))
+            (call
+              TagsFrom
+              (v rest)
+              (v after)
+              (v filled)))
+          (case
+            _
+            (fail
+              compile-error
+              (q "malformed tag assignment")))))
+      (case
+        (pcons
+          (pm
+            family
+            (pv name)
+            (pv params)
+            (pv ctors))
+          (pv rest))
+        (match
+          (call
+            TagsOfConstructors
+            (v ctors)
+            (v next)
+            (v table))
+          (case
+            (pm
+              tagged
+              (pv after)
+              (pv filled))
+            (call
+              TagsFrom
+              (v rest)
+              (v after)
+              (v filled)))
+          (case
+            _
+            (fail
+              compile-error
+              (q "malformed tag assignment")))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TagsFrom
+          (v rest)
+          (v next)
+          (v table)))))
+  (judgment
+    TagsOfConstructors
+    [ctors next table]
+    (match
+      (v ctors)
+      (case
+        (pnil)
+        (mk
+          tagged
+          (v next)
+          (v table)))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv cname)
+            (pv fields))
+          (pv rest))
+        (call
+          TagsOfConstructors
+          (v rest)
+          (prim
+            add
+            (v next)
+            (q 1))
+          (prim
+            mput
+            (v table)
+            (v cname)
+            (mk
+              tag
+              (v next)
+              (prim
+                len
+                (call
+                  FieldList
+                  (v fields)))))))
+      (case
+        (pcons
+          (pm
+            ConstructorAt
+            (pv cname)
+            (pv fields)
+            (pv result))
+          (pv rest))
+        (call
+          TagsOfConstructors
+          (v rest)
+          (prim
+            add
+            (v next)
+            (q 1))
+          (prim
+            mput
+            (v table)
+            (v cname)
+            (mk
+              tag
+              (v next)
+              (prim
+                len
+                (call
+                  FieldList
+                  (v fields)))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          TagsOfConstructors
+          (v rest)
+          (v next)
+          (v table)))))
+  (judgment
+    GlobalIndexes
+    [decls]
+    (call
+      GlobalsFrom
+      (v decls)
+      (q 0)
+      (prim mnew)))
+  (judgment
+    GlobalsFrom
+    [decls next table]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (v table))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (call
+          GlobalsFrom
+          (v rest)
+          (prim
+            add
+            (v next)
+            (q 1))
+          (prim
+            mput
+            (v table)
+            (v name)
+            (mk
+              global
+              (v next)
+              (prim
+                len
+                (v params))))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          GlobalsFrom
+          (v rest)
+          (v next)
+          (v table)))))
+  (judgment
+    TagNames
+    [tags]
+    (call
+      NamesByTag
+      (prim
+        mkeys
+        (v tags))
+      (v tags)
+      (prim mnew)))
+  (judgment
+    NamesByTag
+    [names tags out]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (v out))
+      (case
+        (pcons
+          (pv name)
+          (pv rest))
+        (match
+          (prim
+            mget
+            (v tags)
+            (v name)
+            (q unbound))
+          (case
+            (pm
+              tag
+              (pv number)
+              (pv arity))
+            (call
+              NamesByTag
+              (v rest)
+              (v tags)
+              (prim
+                mput
+                (v out)
+                (prim
+                  nat->str
+                  (v number))
+                (v name))))
+          (case
+            _
+            (fail
+              compile-error
+              (q "malformed tag")))))))
+  (judgment
+    NatValue
+    [n]
+    (if
+      (prim
+        eq
+        (v n)
+        (q 0))
+      (prim
+        node
+        (q Zero)
+        (lst))
+      (prim
+        node
+        (q Succ)
+        (lst
+          (call
+            NatValue
+            (prim
+              sub
+              (v n)
+              (q 1)))))))
+  (judgment
+    NatOf
+    [value]
+    (match
+      (v value)
+      (case
+        (pm Zero)
+        (q 0))
+      (case
+        (pm
+          Succ
+          (pv inner))
+        (prim
+          add
+          (q 1)
+          (call
+            NatOf
+            (v inner))))
+      (case
+        _
+        (fail
+          compile-error
+          (q "a position in the code is not a number")))))
+  (judgment
+    ListValue
+    [tag items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (prim
+          node
+          (v tag)
+          (lst)))
+      (case
+        _
+        (fail
+          compile-error
+          (q "unused")))))
+  (judgment
+    ReadProgram
+    [decls]
+    (call
+      ReadDefinitions
+      (v decls)
+      (call
+        ConstructorTags
+        (v decls))
+      (call
+        GlobalIndexes
+        (v decls))))
+  (judgment
+    ReadDefinitions
+    [decls tags globals]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoDef)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (prim
+          node
+          (q Def)
+          (lst
+            (call
+              NatValue
+              (prim
+                len
+                (v params)))
+            (call
+              ReadCore
+              (v tags)
+              (v globals)
+              (call
+                ParameterScope
+                (v params))
+              (v body))
+            (call
+              ReadDefinitions
+              (v rest)
+              (v tags)
+              (v globals)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ReadDefinitions
+          (v rest)
+          (v tags)
+          (v globals)))))
+  (judgment
+    ParameterScope
+    [params]
+    (match
+      (v params)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (v pname)
+          (call
+            ParameterScope
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          ParameterScope
+          (v rest)))))
+  (judgment
+    ReadCore
+    [tags globals locals expr]
+    (match
+      (v expr)
+      (case
+        (pm
+          Var
+          (pv name))
+        (call
+          ReadName
+          (v tags)
+          (v globals)
+          (v locals)
+          (v name)))
+      (case
+        (pm
+          Apply
+          (pv fn)
+          (pv argument))
+        (prim
+          node
+          (q CApp)
+          (lst
+            (call
+              ReadCore
+              (v tags)
+              (v globals)
+              (v locals)
+              (v fn))
+            (call
+              ReadCore
+              (v tags)
+              (v globals)
+              (v locals)
+              (v argument)))))
+      (case
+        (pm
+          Let
+          (pv name)
+          (pv value)
+          (pv body))
+        (prim
+          node
+          (q CLet)
+          (lst
+            (call
+              ReadCore
+              (v tags)
+              (v globals)
+              (v locals)
+              (v value))
+            (call
+              ReadCore
+              (v tags)
+              (v globals)
+              (prim
+                cons
+                (v name)
+                (v locals))
+              (v body)))))
+      (case
+        (pm
+          Match
+          (pv scrutinee)
+          (pv cases))
+        (prim
+          node
+          (q CCase)
+          (lst
+            (call
+              ReadCore
+              (v tags)
+              (v globals)
+              (v locals)
+              (v scrutinee))
+            (call
+              ReadBranches
+              (v tags)
+              (v globals)
+              (v locals)
+              (call
+                CaseList
+                (v cases))))))
+      (case
+        _
+        (fail
+          compile-error
+          (q "the core does not describe literals, only declared data")))))
+  (judgment
+    ReadName
+    [tags globals locals name]
+    (match
+      (call
+        LocalIndex
+        (v locals)
+        (v name)
+        (q 0))
+      (case
+        (pm
+          found
+          (pv index))
+        (prim
+          node
+          (q CLocal)
+          (lst
+            (call
+              NatValue
+              (v index)))))
+      (case
+        _
+        (if
+          (prim
+            mhas
+            (v tags)
+            (v name))
+          (call
+            ReadConstructor
+            (prim
+              mget
+              (v tags)
+              (v name)
+              (q unbound)))
+          (if
+            (prim
+              mhas
+              (v globals)
+              (v name))
+            (call
+              ReadGlobal
+              (prim
+                mget
+                (v globals)
+                (v name)
+                (q unbound)))
+            (fail
+              compile-error
+              (prim
+                scat
+                (q "the core cannot resolve the name ")
+                (prim
+                  sym->str
+                  (v name)))))))))
+  (judgment
+    LocalIndex
+    [locals name index]
+    (match
+      (v locals)
+      (case
+        (pnil)
+        (mk absent))
+      (case
+        (pcons
+          (pv declared)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            found
+            (v index))
+          (call
+            LocalIndex
+            (v rest)
+            (v name)
+            (prim
+              add
+              (v index)
+              (q 1)))))))
+  (judgment
+    ReadConstructor
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          tag
+          (pv number)
+          (pv arity))
+        (prim
+          node
+          (q CCon)
+          (lst
+            (call
+              NatValue
+              (v number))
+            (call
+              NatValue
+              (v arity)))))
+      (case
+        _
+        (fail
+          compile-error
+          (q "malformed tag")))))
+  (judgment
+    ReadGlobal
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          global
+          (pv index)
+          (pv arity))
+        (prim
+          node
+          (q CGlobal)
+          (lst
+            (call
+              NatValue
+              (v index)))))
+      (case
+        _
+        (fail
+          compile-error
+          (q "malformed global")))))
+  (judgment
+    ReadBranches
+    [tags globals locals cases]
+    (match
+      (v cases)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoBranch)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (call
+          ReadOneBranch
+          (v tags)
+          (v globals)
+          (v locals)
+          (call
+            PatternSpine
+            (v pattern))
+          (v body)
+          (call
+            ReadBranches
+            (v tags)
+            (v globals)
+            (v locals)
+            (v rest))))
+      (case
+        _
+        (fail
+          compile-error
+          (q "malformed case")))))
+  (judgment
+    ReadOneBranch
+    [tags globals locals spine body rest]
+    (match
+      (v spine)
+      (case
+        (pcons
+          (pm
+            PatVar
+            (pv head))
+          (pv fields))
+        (if
+          (prim
+            mhas
+            (v tags)
+            (v head))
+          (call
+            ReadTaggedBranch
+            (v tags)
+            (v globals)
+            (v locals)
+            (prim
+              mget
+              (v tags)
+              (v head)
+              (q unbound))
+            (v fields)
+            (v body)
+            (v rest))
+          (fail
+            compile-error
+            (q "the core does not describe a variable pattern"))))
+      (case
+        _
+        (fail
+          compile-error
+          (q "the core does not describe a wildcard pattern")))))
+  (judgment
+    ReadTaggedBranch
+    [tags globals locals entry fields body rest]
+    (match
+      (v entry)
+      (case
+        (pm
+          tag
+          (pv number)
+          (pv arity))
+        (if
+          (prim
+            ne
+            (prim
+              len
+              (v fields))
+            (v arity))
+          (fail
+            compile-error
+            (q "a pattern does not name every field of its constructor"))
+          (prim
+            node
+            (q Branch)
+            (lst
+              (call
+                NatValue
+                (v number))
+              (call
+                NatValue
+                (v arity))
+              (call
+                ReadCore
+                (v tags)
+                (v globals)
+                (prim
+                  append
+                  (call
+                    FieldScope
+                    (v fields))
+                  (v locals))
+                (v body))
+              (v rest)))))
+      (case
+        _
+        (fail
+          compile-error
+          (q "malformed tag")))))
+  (judgment
+    FieldScope
+    [fields]
+    (match
+      (v fields)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            PatVar
+            (pv name))
+          (pv rest))
+        (prim
+          cons
+          (v name)
+          (call
+            FieldScope
+            (v rest))))
+      (case
+        (pcons
+          (pm PatWild)
+          (pv rest))
+        (prim
+          cons
+          (q _)
+          (call
+            FieldScope
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (fail
+          compile-error
+          (q "a field in a pattern must be named")))))
+  (judgment
+    BlockList
+    [blocks]
+    (match
+      (v blocks)
+      (case
+        (pm NoBlock)
+        (lst))
+      (case
+        (pm
+          Block
+          (pv code)
+          (pv rest))
+        (prim
+          cons
+          (v code)
+          (call
+            BlockList
+            (v rest))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "malformed block list")))))
+  (judgment
+    RunBlock
+    [blocks arities index env]
+    (call
+      SoleValue
+      (call
+        RunCode
+        (v blocks)
+        (v arities)
+        (prim
+          nth
+          (v blocks)
+          (v index))
+        (lst)
+        (v env))))
+  (judgment
+    SoleValue
+    [stack]
+    (match
+      (v stack)
+      (case
+        (pcons
+          (pv value)
+          (pnil))
+        (v value))
+      (case
+        _
+        (fail
+          machine-error
+          (q "a block did not leave exactly one value")))))
+  (judgment
+    RunCode
+    [blocks arities code stack env]
+    (match
+      (v code)
+      (case
+        (pm IDone)
+        (v stack))
+      (case
+        (pm
+          IStep
+          (pv instr)
+          (pv rest))
+        (call
+          RunCode
+          (v blocks)
+          (v arities)
+          (v rest)
+          (call
+            StepMachine
+            (v blocks)
+            (v arities)
+            (v instr)
+            (v stack)
+            (v env))
+          (v env)))
+      (case
+        _
+        (fail
+          machine-error
+          (q "malformed code")))))
+  (judgment
+    StepMachine
+    [blocks arities instr stack env]
+    (match
+      (v instr)
+      (case
+        (pm
+          ILocal
+          (pv index))
+        (prim
+          cons
+          (prim
+            nth
+            (v env)
+            (call
+              NatOf
+              (v index)))
+          (v stack)))
+      (case
+        (pm
+          IGlobal
+          (pv index))
+        (let
+          position
+          (call
+            NatOf
+            (v index))
+          (let
+            arity
+            (prim
+              nth
+              (v arities)
+              (v position))
+            (if
+              (prim
+                eq
+                (v arity)
+                (q 0))
+              (prim
+                cons
+                (call
+                  RunBlock
+                  (v blocks)
+                  (v arities)
+                  (v position)
+                  (lst))
+                (v stack))
+              (prim
+                cons
+                (mk
+                  waiting
+                  (v position)
+                  (v arity)
+                  (lst))
+                (v stack))))))
+      (case
+        (pm
+          ICon
+          (pv tag)
+          (pv arity))
+        (let
+          width
+          (call
+            NatOf
+            (v arity))
+          (if
+            (prim
+              eq
+              (v width)
+              (q 0))
+            (prim
+              cons
+              (mk
+                built
+                (call
+                  NatOf
+                  (v tag))
+                (lst))
+              (v stack))
+            (prim
+              cons
+              (mk
+                building
+                (call
+                  NatOf
+                  (v tag))
+                (v width)
+                (lst))
+              (v stack)))))
+      (case
+        (pm IApply)
+        (match
+          (v stack)
+          (case
+            (pcons
+              (pv argument)
+              (pcons
+                (pv fn)
+                (pv below)))
+            (prim
+              cons
+              (call
+                ApplyMachine
+                (v blocks)
+                (v arities)
+                (v fn)
+                (v argument))
+              (v below)))
+          (case
+            _
+            (fail
+              machine-error
+              (q "apply needs a function and an argument")))))
+      (case
+        (pm
+          ILet
+          (pv body))
+        (match
+          (v stack)
+          (case
+            (pcons
+              (pv value)
+              (pv below))
+            (prim
+              cons
+              (call
+                SoleValue
+                (call
+                  RunCode
+                  (v blocks)
+                  (v arities)
+                  (v body)
+                  (lst)
+                  (prim
+                    cons
+                    (v value)
+                    (v env))))
+              (v below)))
+          (case
+            _
+            (fail
+              machine-error
+              (q "let needs a value to bind")))))
+      (case
+        (pm
+          IMatch
+          (pv arms))
+        (match
+          (v stack)
+          (case
+            (pcons
+              (pv value)
+              (pv below))
+            (prim
+              cons
+              (call
+                MatchMachine
+                (v blocks)
+                (v arities)
+                (v value)
+                (v arms)
+                (v env))
+              (v below)))
+          (case
+            _
+            (fail
+              machine-error
+              (q "a match needs a value")))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "unknown instruction")))))
+  (judgment
+    ApplyMachine
+    [blocks arities fn argument]
+    (match
+      (v fn)
+      (case
+        (pm
+          building
+          (pv tag)
+          (pv width)
+          (pv args))
+        (let
+          filled
+          (prim
+            snoc
+            (v args)
+            (v argument))
+          (if
+            (prim
+              eq
+              (prim
+                len
+                (v filled))
+              (v width))
+            (mk
+              built
+              (v tag)
+              (v filled))
+            (mk
+              building
+              (v tag)
+              (v width)
+              (v filled)))))
+      (case
+        (pm
+          waiting
+          (pv position)
+          (pv arity)
+          (pv args))
+        (let
+          filled
+          (prim
+            snoc
+            (v args)
+            (v argument))
+          (if
+            (prim
+              eq
+              (prim
+                len
+                (v filled))
+              (v arity))
+            (call
+              RunBlock
+              (v blocks)
+              (v arities)
+              (v position)
+              (v filled))
+            (mk
+              waiting
+              (v position)
+              (v arity)
+              (v filled)))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "applied a value that is not a function")))))
+  (judgment
+    MatchMachine
+    [blocks arities value arms env]
+    (match
+      (v value)
+      (case
+        (pm
+          built
+          (pv tag)
+          (pv args))
+        (call
+          SelectArm
+          (v blocks)
+          (v arities)
+          (v tag)
+          (v args)
+          (v arms)
+          (v env)))
+      (case
+        _
+        (fail
+          machine-error
+          (q "matched a value that is not a constructor")))))
+  (judgment
+    SelectArm
+    [blocks arities tag args arms env]
+    (match
+      (v arms)
+      (case
+        (pm NoArm)
+        (fail
+          machine-error
+          (q "no arm answers the constructor")))
+      (case
+        (pm
+          Arm
+          (pv armTag)
+          (pv arity)
+          (pv body)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (call
+              NatOf
+              (v armTag))
+            (v tag))
+          (call
+            SoleValue
+            (call
+              RunCode
+              (v blocks)
+              (v arities)
+              (v body)
+              (lst)
+              (prim
+                append
+                (v args)
+                (v env))))
+          (call
+            SelectArm
+            (v blocks)
+            (v arities)
+            (v tag)
+            (v args)
+            (v rest)
+            (v env))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "malformed arm")))))
+  (judgment
+    ToMachineValue
+    [tags value]
+    (match
+      (prim
+        mget
+        (v tags)
+        (prim
+          tag
+          (v value))
+        (q unbound))
+      (case
+        (pm
+          tag
+          (pv number)
+          (pv arity))
+        (mk
+          built
+          (v number)
+          (call
+            ToMachineArgs
+            (v tags)
+            (prim
+              args
+              (v value)))))
+      (case
+        _
+        (fail
+          compile-error
+          (prim
+            scat
+            (q "no declaration gives a tag to ")
+            (prim
+              sym->str
+              (prim
+                tag
+                (v value))))))))
+  (judgment
+    ToMachineArgs
+    [tags args]
+    (match
+      (v args)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv arg)
+          (pv rest))
+        (prim
+          cons
+          (call
+            ToMachineValue
+            (v tags)
+            (v arg))
+          (call
+            ToMachineArgs
+            (v tags)
+            (v rest))))))
+  (judgment
+    FromMachineValue
+    [names value]
+    (match
+      (v value)
+      (case
+        (pm
+          built
+          (pv tag)
+          (pv args))
+        (prim
+          node
+          (prim
+            mget
+            (v names)
+            (prim
+              nat->str
+              (v tag))
+            (q unnamed))
+          (call
+            FromMachineArgs
+            (v names)
+            (v args))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "a machine value is not a constructor")))))
+  (judgment
+    FromMachineArgs
+    [names args]
+    (match
+      (v args)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv arg)
+          (pv rest))
+        (prim
+          cons
+          (call
+            FromMachineValue
+            (v names)
+            (v arg))
+          (call
+            FromMachineArgs
+            (v names)
+            (v rest))))))
+  (judgment
+    GlobalArities
+    [decls]
+    (match
+      (v decls)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (prim
+          cons
+          (prim
+            len
+            (v params))
+          (call
+            GlobalArities
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          GlobalArities
+          (v rest)))))
+  (judgment
+    IndexOfGlobal
+    [globals name]
+    (match
+      (prim
+        mget
+        (v globals)
+        (v name)
+        (q unbound))
+      (case
+        (pm
+          global
+          (pv index)
+          (pv arity))
+        (v index))
+      (case
+        _
+        (fail
+          compile-error
+          (prim
+            scat
+            (q "the module declares no definition named ")
+            (prim
+              sym->str
+              (v name)))))))
+  (judgment
+    LinkedDeclarations
+    [grammar sources name]
+    (call
+      LinkModule
+      (call
+        LoadModuleSet
+        (v grammar)
+        (v sources))
+      (v name)))
+  (judgment
+    CompileProgramWith
+    [compiler program]
+    (call
+      EnterDefinition
+      (v compiler)
+      (call
+        RequiredDefinition
+        (v compiler)
+        (q compile))
+      (lst
+        (v program))))
+  (judgment
+    RequiredDefinition
+    [decls name]
+    (match
+      (call
+        FindDefinition
+        (v decls)
+        (v name))
+      (case
+        (pm
+          some
+          (pv found))
+        (v found))
+      (case
+        _
+        (fail
+          compile-error
+          (prim
+            scat
+            (q "the module declares no definition named ")
+            (prim
+              sym->str
+              (v name)))))))
+  (judgment
+    RunBlocksOn
+    [decls compiled entry arguments]
+    (let
+      tags
+      (call
+        ConstructorTags
+        (v decls))
+      (call
+        FromMachineValue
+        (call
+          TagNames
+          (v tags))
+        (call
+          RunBlock
+          (call
+            BlockList
+            (v compiled))
+          (call
+            GlobalArities
+            (v decls))
+          (call
+            IndexOfGlobal
+            (call
+              GlobalIndexes
+              (v decls))
+            (v entry))
+          (call
+            ToMachineArgs
+            (v tags)
+            (v arguments))))))
+  (judgment
+    CompilerDeclarations
+    [grammar sources]
+    (call
+      LinkedDeclarations
+      (v grammar)
+      (v sources)
+      (q "strata.compiler")))
+  (judgment
+    CompilerBlocks
+    [grammar sources]
+    (let
+      compiler
+      (call
+        CompilerDeclarations
+        (v grammar)
+        (v sources))
+      (call
+        CompileProgramWith
+        (v compiler)
+        (call
+          ReadProgram
+          (v compiler)))))
+  (judgment
+    BootstrapDigest
+    [grammar sources]
+    (prim
+      ref->str
+      (prim
+        digest
+        (call
+          CompilerBlocks
+          (v grammar)
+          (v sources)))))
+  (judgment
+    BootstrapIsStable
+    [grammar sources]
+    (let
+      compiler
+      (call
+        CompilerDeclarations
+        (v grammar)
+        (v sources))
+      (let
+        program
+        (call
+          ReadProgram
+          (v compiler))
+        (let
+          first
+          (call
+            CompileProgramWith
+            (v compiler)
+            (v program))
+          (prim
+            eq
+            (v first)
+            (call
+              RunBlocksOn
+              (v compiler)
+              (v first)
+              (q compile)
+              (lst
+                (v program))))))))
+  (judgment
+    RunCompiled
+    [grammar compilerSources sources name entry]
+    (let
+      compiler
+      (call
+        CompilerDeclarations
+        (v grammar)
+        (v compilerSources))
+      (let
+        decls
+        (call
+          LinkedDeclarations
+          (v grammar)
+          (v sources)
+          (v name))
+        (call
+          RunBlocksOn
+          (v decls)
+          (call
+            CompileProgramWith
+            (v compiler)
+            (call
+              ReadProgram
+              (v decls)))
+          (v entry)
+          (lst)))))
+  (judgment
+    RunEvaluated
+    [grammar sources name entry]
+    (let
+      decls
+      (call
+        LinkedDeclarations
+        (v grammar)
+        (v sources)
+        (v name))
+      (call
+        EnterDefinition
+        (v decls)
+        (call
+          RequiredDefinition
+          (v decls)
+          (v entry))
+        (lst))))
+  (judgment
+    CompilingPreservesMeaning
+    [grammar compilerSources sources name entry]
+    (prim
+      eq
+      (call
+        RunCompiled
+        (v grammar)
+        (v compilerSources)
+        (v sources)
+        (v name)
+        (v entry))
+      (call
+        RunEvaluated
+        (v grammar)
+        (v sources)
+        (v name)
+        (v entry)))))
