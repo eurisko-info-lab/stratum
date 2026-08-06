@@ -23,6 +23,7 @@ trap 'rm -rf "$work"' EXIT
 # Foundations first, then any application deployment built on the platform.
 worlds() {
   ls -d foundations/F* | sort -V
+  ls -d foundations/S* 2>/dev/null | sort -V
   ls -d applications/*/ 2>/dev/null | sed 's|/$||'
 }
 

@@ -1,0 +1,10 @@
+; delta-grammar for F11 -> S0: Grammar gains the Strata surface -- modules,
+; versions, data declarations with numbered fields, definitions and laws.
+(change
+  (kind delta-grammar)
+  (name "F11->S0 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (absent)
+      (present [module version data def law match case let end]))))

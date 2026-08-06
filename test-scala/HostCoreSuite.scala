@@ -107,10 +107,10 @@ class HostCoreSuite extends munit.FunSuite:
     val budgetGraph = summon[DerivationGraph[Budget, Canon]]
     val budgetLanguage = summon[DerivationLanguage[Budget, Canon]]
     val budgetDelta = budgetChange.delta(Budget(1234L, 8), Budget(2345L, 9))
-    assertEquals(budgetChange.patch(Budget(1234L, 8), budgetDelta), Right(Budget(2345L, 9)), "budget change algebra")
-    assertEquals(budgetChangeLaws.deltaPatchRoundTrip(Budget(1234L, 8), Budget(2345L, 9)), Right(()), "budget change law")
+    assertEquals(budgetChange.applyChange(Budget(1234L, 8), budgetDelta), Right(Budget(2345L, 9)), "budget change algebra")
+    assertEquals(budgetChangeLaws.deltaRoundTrip(Budget(1234L, 8), Budget(2345L, 9)), Right(()), "budget change law")
     assertEquals(genericChange.delta(7L, 11L), Canon.node("replace", Canon.N(BigInt(7L)), Canon.N(BigInt(11L))), "generic change delta")
-    assertEquals(genericChange.patch(7L, genericChange.delta(7L, 11L)), Right(11L), "generic change patch")
+    assertEquals(genericChange.applyChange(7L, genericChange.delta(7L, 11L)), Right(11L), "generic change patch")
     val composite = Canon.Node("compose", Vector(genericChange.delta(1L, 3L), genericChange.delta(3L, 8L)))
     assertEquals(genericChangeComposer.compose(Vector(genericChange.delta(1L, 3L), genericChange.delta(3L, 8L))), Right(composite), "generic change composition")
     assertEquals(genericChangeUpdater.update(1L, composite), Right(8L), "generic change replay")
@@ -128,7 +128,7 @@ class HostCoreSuite extends munit.FunSuite:
     val containerChange = summon[ChangeAlgebra[Vector[String]]]
     val containerDelta = containerChange.delta(Vector("alpha"), Vector("alpha", "beta"))
     assertEquals(containerSchema.decode(containerSchema.encode(container)), Right(container), "container schema round-trip")
-    assertEquals(containerChange.patch(Vector("alpha"), containerDelta), Right(container), "container change patch")
+    assertEquals(containerChange.applyChange(Vector("alpha"), containerDelta), Right(container), "container change patch")
     assertEquals(containerChange.delta(Vector("alpha"), Vector("alpha")), Canon.node("replace", containerSchema.encode(Vector("alpha")), containerSchema.encode(Vector("alpha"))), "container change delta")
 
     val mapValue = Map("alpha" -> 1, "beta" -> 2)
@@ -136,7 +136,7 @@ class HostCoreSuite extends munit.FunSuite:
     val mapChange = summon[ChangeAlgebra[Map[String, Int]]]
     val mapDelta = mapChange.delta(Map("alpha" -> 1), mapValue)
     assertEquals(mapSchema.decode(mapSchema.encode(mapValue)), Right(mapValue), "map schema round-trip")
-    assertEquals(mapChange.patch(Map("alpha" -> 1), mapDelta), Right(mapValue), "map change patch")
+    assertEquals(mapChange.applyChange(Map("alpha" -> 1), mapDelta), Right(mapValue), "map change patch")
 
     val setValue = Set("alpha", "beta")
     val setSchema = summon[Schema[Set[String]]]
@@ -147,9 +147,9 @@ class HostCoreSuite extends munit.FunSuite:
     val eitherChange = summon[ChangeAlgebra[Either[String, Int]]]
     val eitherDelta = eitherChange.delta(Left("old"), eitherValue)
     assertEquals(eitherSchema.decode(eitherSchema.encode(eitherValue)), Right(eitherValue), "either schema round-trip")
-    assertEquals(eitherChange.patch(Left("old"), eitherDelta), Right(eitherValue), "either change patch")
+    assertEquals(eitherChange.applyChange(Left("old"), eitherDelta), Right(eitherValue), "either change patch")
     assertEquals(budgetGraph.projection.project(budget), Right(budgetSchema.encode(budget)), "budget graph projection")
-    assertEquals(budgetGraph.change.patch(Budget(1234L, 8), budgetDelta), Right(Budget(2345L, 9)), "budget graph change")
+    assertEquals(budgetGraph.change.applyChange(Budget(1234L, 8), budgetDelta), Right(Budget(2345L, 9)), "budget graph change")
     assertEquals(budgetLanguage.run(budget), Right(budgetSchema.encode(budget)), "budget derivation language")
 
     val compositeGraph = DerivationGraph.instance[
@@ -196,7 +196,7 @@ class HostCoreSuite extends munit.FunSuite:
       Canon.node("program", summon[ChangeAlgebra[Program]].delta(program, nextProgram)),
       Canon.node("budget", summon[ChangeAlgebra[Budget]].delta(Budget(9L, 2), Budget(12L, 4)))
     )
-    assertEquals(summon[ChangeAlgebra[DerivationState]].patch(state, stateChange), Right(state.copy(program = nextProgram, budget = Budget(12L, 4))), "derivation state partial patch")
+    assertEquals(summon[ChangeAlgebra[DerivationState]].applyChange(state, stateChange), Right(state.copy(program = nextProgram, budget = Budget(12L, 4))), "derivation state partial patch")
     val composedChange = summon[ChangeComposer[DerivationState]].compose(Vector(
       Canon.node("program", summon[ChangeAlgebra[Program]].delta(program, nextProgram)),
       Canon.node("budget", summon[ChangeAlgebra[Budget]].delta(Budget(9L, 2), Budget(12L, 4)))
@@ -208,76 +208,78 @@ class HostCoreSuite extends munit.FunSuite:
     assertEquals(stateDelta, Canon.node("state-change", Canon.node("evidence", summon[ChangeAlgebra[Evidence]].delta(state.evidence, derivedState.evidence))), "derivation state delta")
     assertEquals(summon[ChangeUpdater[DerivationState]].update(state, stateDelta), Right(derivedState), "derivation state delta replay")
     assertEquals(MetaMachine0.replayState(state, derivedState), Right(derivedState), "meta-machine state replay")
-    val verdict = MetaMachine0.ok(Canon.S("done"), state)
-    val tracedVerdict = MetaMachine0.ok(Canon.S("done"), state, Vector(Canon.S("step-1")))
+    val sampleEvidence = Evidence(7L, Map("hash" -> 3L), Map("fs-read" -> 2L))
+    val verdict = MetaMachine0.ok(Canon.S("done"), sampleEvidence)
+    assertEquals(
+      verdict,
+      Canon.node("verdict", Canon.Sym("ok"), Canon.S("done"), sampleEvidence.toCanon),
+      "an ok verdict is exactly (verdict ok value evidence)"
+    )
+    assertEquals(MetaMachine0.isOk(verdict), true)
     assertEquals(MetaMachine0.result(verdict), Some(Canon.S("done")))
-    assertEquals(MetaMachine0.state(verdict), Some(state))
-    assertEquals(MetaMachine0.result(tracedVerdict), Some(Canon.S("done")))
-    assertEquals(MetaMachine0.state(tracedVerdict), Some(state))
-    assertEquals(MetaMachine0.trace(tracedVerdict), Some(Vector(Canon.S("step-1"))))
-    assertEquals(MetaMachine0.traceEntries(tracedVerdict), Some(Vector(MetaMachine0.TraceEntry("step", Canon.S("step-1"), state, state, Canon.Sym("noop"), MetaMachine0.MachineFrame(state, state.summary)))))
-    assertEquals(MetaMachine0.traceLines(tracedVerdict).head, "step: \"step-1\" [state: steps=7; calls=hash=3; caps=fs-read=2; budget=9/2; modules=mod -> steps=7; calls=hash=3; caps=fs-read=2; budget=9/2; modules=mod]")
-    assertEquals(MetaMachine0.replayTrace(state, Vector(MetaMachine0.TraceEntry("step", Canon.S("step-1"), state, state, Canon.Sym("noop"), MetaMachine0.MachineFrame(state, state.summary)))), Right(state))
+    assertEquals(MetaMachine0.failure(verdict), None)
+
+    val failedVerdict = MetaMachine0.error("resource-exhausted", "budget spent", sampleEvidence)
+    assertEquals(
+      failedVerdict,
+      Canon.node("verdict", Canon.Sym("error"), Canon.Sym("resource-exhausted"), Canon.S("budget spent"), sampleEvidence.toCanon),
+      "an error verdict is exactly (verdict error kind message evidence)"
+    )
+    assertEquals(MetaMachine0.isOk(failedVerdict), false)
+    assertEquals(MetaMachine0.result(failedVerdict), None)
+    assertEquals(MetaMachine0.failure(failedVerdict), Some(("resource-exhausted", "budget spent")))
 
     val derivedVerdict = MetaMachine0.derive(
-      Program(Map("demo" -> Judgment("demo", Vector.empty, Canon.Node("let", Vector(Canon.Sym("x"), Canon.Node("q", Vector(Canon.S("done"))), Canon.Node("q", Vector(Canon.Sym("x"))))))), Vector("mod")),
+      Program(Map("demo" -> Judgment("demo", Vector.empty, Canon.Node("let", Vector(Canon.Sym("x"), Canon.Node("q", Vector(Canon.S("done"))), Canon.Node("v", Vector(Canon.Sym("x"))))))), Vector("mod")),
       new MemoryCas(),
       Kernel.pure,
       Budget(100L, 5),
       Canon.Node("call", Vector(Canon.Sym("demo"))),
       CapabilityHandler.empty
     )
-    val derivedTraceEntries = MetaMachine0.traceEntries(derivedVerdict).getOrElse(Vector.empty)
-    assertEquals(derivedTraceEntries.nonEmpty, true, "derived verdict should expose evaluation trace entries")
-    assertEquals(derivedTraceEntries.exists(entry => entry.kind == "eval"), true, "evaluation should record explicit step transitions")
-    assertEquals(derivedTraceEntries.exists(entry => entry.kind == "eval" && (entry.value match
-      case Canon.Node("eval", Vector(_, _, _)) => true
-      case _ => false)), true, "eval trace entries should capture both the expression and its result")
-    assertEquals(derivedTraceEntries.exists(entry => entry.kind == "judgment" && entry.change != Canon.Sym("noop")), true, "judgment transitions should carry concrete change payloads")
-    assertEquals(derivedTraceEntries.exists(entry => entry.kind == "judgment" && entry.frame.summary.contains("budget=")), true, "judgment transitions should carry a semantic frame")
-    assertEquals(MetaMachine0.traceLines(derivedVerdict).exists(_.contains("change")), true, "trace lines should surface concrete change payloads")
-    assertEquals(MetaMachine0.traceLines(derivedVerdict).exists(_.contains("=>")), true, "eval trace lines should render expression-to-result transitions")
-    assertEquals(derivedTraceEntries.exists(entry => entry.kind == "eval" && (entry.value match
-      case Canon.Node("eval", Vector(_, _, Canon.Node("machine-frame", frameFields))) =>
-        frameFields.exists {
-          case Canon.Node("state-summary", _) => true
-          case Canon.Node("state", _) => true
-          case _ => false
-        }
-      case _ => false)), true, "eval trace entries should expose a machine frame with state and summary")
-    assertEquals(derivedTraceEntries.forall(entry => entry.frame.summary.nonEmpty), true, "trace entries should carry a machine-frame payload")
-    assertEquals(MetaMachine0.traceLines(derivedVerdict).exists(_.contains("frame:")), true, "trace lines should surface the structured machine frame")
-    assertEquals(derivedTraceEntries.exists(entry => entry.frame.summary.contains("budget=")), true, "machine frames should expose a reusable semantic summary")
-    assertEquals(derivedTraceEntries.exists(entry => entry.kind == "eval" && entry.frame.summary.contains("modules=")), true, "eval entries should carry a semantic context summary")
-    assertEquals(derivedTraceEntries.exists(entry => entry.kind == "eval" && entry.frame.summary.contains("budget=")), true, "eval entries should carry a semantic snapshot summary")
-    val semanticTrace = MetaMachine0.traceSemantics(derivedVerdict).getOrElse(Vector.empty)
-    assertEquals(semanticTrace.nonEmpty, true, "derived verdicts should expose a unified semantic trace view")
-    assertEquals(semanticTrace.exists(step => step.kind == "judgment" && step.judgment.exists(_.name == "demo")), true, "semantic trace should connect judgment steps to their semantic payload")
-    assertEquals(semanticTrace.exists(step => step.kind == "eval" && step.evaluation.exists(_.depth > 0)), true, "eval semantics should preserve the runtime evaluation depth")
-    val evaluationStack = MetaMachine0.evaluationStack(derivedVerdict).getOrElse(Vector.empty)
-    assertEquals(evaluationStack.nonEmpty, true, "derived verdicts should expose their semantic evaluation stack")
-    assertEquals(evaluationStack.exists(_.env.nonEmpty), true, "semantic evaluation stack should preserve runtime environment bindings")
-    val evaluationSemantics = MetaMachine0.evaluationSemantics(derivedVerdict).getOrElse(MetaMachine0.EvaluationSemantics(Vector.empty, MetaMachine0.EvaluationTree(MetaMachine0.EvaluationResult(Canon.Sym("noop"), Canon.Sym("noop"), Map.empty, 0, state, state, MetaMachine0.MachineFrame(state, state.summary), MetaMachine0.SemanticSnapshot.fromState(state)))))
-    assertEquals(evaluationSemantics.stack.nonEmpty, true, "evaluation semantics should expose the evaluation stack")
-    assertEquals(evaluationSemantics.tree.children.nonEmpty, true, "evaluation semantics should expose the evaluation tree")
-    val evaluationTree = MetaMachine0.evaluationTree(derivedVerdict).getOrElse(MetaMachine0.EvaluationTree(MetaMachine0.EvaluationResult(Canon.Sym("noop"), Canon.Sym("noop"), Map.empty, 0, state, state, MetaMachine0.MachineFrame(state, state.summary), MetaMachine0.SemanticSnapshot.fromState(state))))
-    assertEquals(evaluationTree.children.nonEmpty, true, "evaluation trees should expose nested child evaluations")
-    assertEquals(MetaMachine0.evaluationTreeLines(derivedVerdict).exists(_.contains("eval-tree")), true, "evaluation trees should render as inspectable semantic lines")
-    assertEquals(evaluationStack.headOption.exists(_.toCanon match
-      case Canon.Node("eval-result", _) => true
-      case _ => false), true, "evaluation results should expose a canonical semantic value")
+    assertEquals(MetaMachine0.result(derivedVerdict), Some(Canon.S("done")), "a derivation reports its value")
     assertEquals(
-      evaluationTree.toCanon match
-        case Canon.Node("eval-tree", _) => true
-        case _ => false,
+      derivedVerdict match
+        case Canon.Node("verdict", Vector(Canon.Sym("ok"), _, Canon.Node("evidence", _))) => true
+        case _                                                                            => false,
       true,
-      "evaluation trees should be canonicalizable for meta-programming"
+      "a derived verdict carries the value and its evidence, and nothing else"
     )
-    val roundTripTree = MetaMachine0.EvaluationTree.fromCanon(evaluationTree.toCanon, state)
-    assertEquals(roundTripTree.exists(_.flatten.size == evaluationTree.flatten.size), true, "evaluation trees should round-trip through canon for meta-programming")
-    assertEquals(MetaMachine0.state(derivedVerdict).exists(_.machineView.contains("modules=mod")), true, "derived verdicts should expose a compact semantic state summary")
-    assertEquals(MetaMachine0.state(derivedVerdict).exists(_.summary.contains("budget=")), true, "derived verdicts should expose a reusable semantic summary")
-    assertEquals(MetaMachine0.result(derivedVerdict).exists(_ => true), true, "derived verdicts should still expose their result value")
+    assertEquals(
+      MetaMachine0.derive(
+        Program(Map("demo" -> Judgment("demo", Vector.empty, Canon.Node("q", Vector(Canon.S("done"))))), Vector("mod")),
+        new MemoryCas(),
+        Kernel.pure,
+        Budget(1L, 5),
+        Canon.Node("call", Vector(Canon.Sym("demo"))),
+        CapabilityHandler.empty
+      ) match
+        case Canon.Node("verdict", Vector(Canon.Sym("error"), Canon.Sym(kind), Canon.S(_), Canon.Node("evidence", _))) => kind
+        case other => CanonText.write(other),
+      "resource-exhausted",
+      "an exhausted derivation still yields a canonical error verdict"
+    )
+
+    // A verdict records the value and bounded resource accounting, never a step
+    // by step trace. Embedding one here made a single verdict exceed the
+    // largest encodable array, so this bound is the regression guard.
+    val bigger = MetaMachine0.derive(
+      Program(Map("demo" -> Judgment("demo", Vector.empty, Canon.Node("let", Vector(Canon.Sym("x"), Canon.Node("q", Vector(Canon.S("done"))), Canon.Node("v", Vector(Canon.Sym("x"))))))), Vector("mod")),
+      new MemoryCas(),
+      Kernel.pure,
+      Budget(100000L, 64),
+      Canon.Node("call", Vector(Canon.Sym("demo"))),
+      CapabilityHandler.empty
+    )
+    assertEquals(
+      Canon.encode(bigger).length == Canon.encode(derivedVerdict).length,
+      true,
+      "a verdict must not grow with the budget it was allowed to spend"
+    )
+    assert(
+      Canon.encode(derivedVerdict).length < 4096,
+      "a verdict must stay small: it carries evidence, not a trace of every step"
+    )
 
     val evidence = Evidence(7L, Map("hash" -> 3L), Map("fs-read" -> 2L))
     val evidenceCodec = summon[CanonCodec[Evidence]]

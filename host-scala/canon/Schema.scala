@@ -15,7 +15,7 @@ trait Schema[A] extends CanonCodec[A] with References[A]
 
 trait ChangeAlgebra[A]:
   def delta(previous: A, next: A): Canon
-  def patch(current: A, change: Canon): Either[String, A]
+  def applyChange(current: A, change: Canon): Either[String, A]
 
 trait ChangeComposer[A]:
   def compose(changes: Vector[Canon]): Either[String, Canon]
@@ -70,9 +70,9 @@ object ChangeUpdater:
     def update(current: A, change: Canon): Either[String, A] = change match
       case Canon.Node("compose", steps) =>
         steps.foldLeft[Either[String, A]](Right(current)) { (acc, step) =>
-          acc.flatMap(value => algebra.patch(value, step))
+          acc.flatMap(value => algebra.applyChange(value, step))
         }
-      case other => algebra.patch(current, other)
+      case other => algebra.applyChange(current, other)
 
 object Relation:
   given [A](using schema: Schema[A]): Relation[A, Canon] with
@@ -109,14 +109,14 @@ object DerivationLanguage:
       }
 
 trait ChangeAlgebraLaws[A]:
-  def deltaPatchRoundTrip(previous: A, next: A): Either[String, Unit]
+  def deltaRoundTrip(previous: A, next: A): Either[String, Unit]
 
 object ChangeAlgebraLaws:
   given [A](using algebra: ChangeAlgebra[A]): ChangeAlgebraLaws[A] with
-    def deltaPatchRoundTrip(previous: A, next: A): Either[String, Unit] =
-      algebra.patch(previous, algebra.delta(previous, next)) match
-        case Right(patched) if patched == next => Right(())
-        case Right(patched) => Left(s"delta patch mismatch: $patched")
+    def deltaRoundTrip(previous: A, next: A): Either[String, Unit] =
+      algebra.applyChange(previous, algebra.delta(previous, next)) match
+        case Right(applied) if applied == next => Right(())
+        case Right(applied) => Left(s"delta round trip mismatch: $applied")
         case Left(error) => Left(error)
 
 trait SchemaLaws[A]:
@@ -139,19 +139,19 @@ object SchemaLaws:
 object ChangeAlgebra:
   given ChangeAlgebra[Canon] with
     def delta(previous: Canon, next: Canon): Canon = Canon.node("replace", previous, next)
-    def patch(current: Canon, change: Canon): Either[String, Canon] = change match
+    def applyChange(current: Canon, change: Canon): Either[String, Canon] = change match
       case Canon.Node("replace", Vector(_, next)) => Right(next)
       case other => Left(s"not a canon change: ${CanonText.write(other)}")
 
   given [A](using schema: Schema[A]): ChangeAlgebra[A] with
     def delta(previous: A, next: A): Canon = Canon.node("replace", schema.encode(previous), schema.encode(next))
-    def patch(current: A, change: Canon): Either[String, A] = change match
+    def applyChange(current: A, change: Canon): Either[String, A] = change match
       case Canon.Node("replace", Vector(_, next)) => schema.decode(next)
       case other => Left(s"not a schema change: ${CanonText.write(other)}")
 
   given ChangeAlgebra[Long] with
     def delta(previous: Long, next: Long): Canon = Canon.node("replace", Canon.N(BigInt(previous)), Canon.N(BigInt(next)))
-    def patch(current: Long, change: Canon): Either[String, Long] = change match
+    def applyChange(current: Long, change: Canon): Either[String, Long] = change match
       case Canon.Node("replace", Vector(Canon.N(_), Canon.N(next))) => Right(next.toLong)
       case other => Left(s"not a long change: ${CanonText.write(other)}")
 

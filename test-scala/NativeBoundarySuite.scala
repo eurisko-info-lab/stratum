@@ -56,7 +56,10 @@ class NativeBoundarySuite extends munit.FunSuite:
       "text-file", "program-of", "foundation-of", "source", "path", "text", "none", "some", "check",
       "value", "error", "entry", "bootstrap", "meta", "grammars", "entries", "checks", "resources",
       "schema", "profile", "data", "verdict-error", "empty", "message", "dir", "derived",
-      "host-core", "derivation-report", "attestation", "canon"
+      "host-core", "derivation-report", "attestation", "canon",
+      // The generic change algebra. These tags describe how any schema-carrying
+      // value changes, so they say nothing about the features built above.
+      "replace", "compose", "option", "either", "state-change", "budget-change"
     )
     val pattern = """Canon\.Node\("([a-zA-Z0-9\-]+)"""".r
     val violations = hostSources.flatMap { p =>

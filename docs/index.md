@@ -69,6 +69,7 @@ to a settled publication.
 | | |
 | --- | --- |
 | [The staircase](staircase.md) | how one foundation constructs the next, and what a change is |
+| [Strata second floor](strata.md) | language and bootstrap architecture for the post-F11 implementation staircase |
 | [The publication workflow](publication-workflow.md) | the whole cycle: branch, patch, accept, publish, settle, reconstruct |
 | [Invariants](invariants.md) | the properties every layer must hold, and where each is enforced |
 | [The native boundary](native-boundary.md) | what the host is allowed to know, and why it is so little |

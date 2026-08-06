@@ -15,7 +15,8 @@ run() {
 
 previous=""
 previous_name=""
-for dir in $(ls -d foundations/F* | sort -V); do
+# The first floor in order, then the second floor it constructs.
+for dir in $(ls -d foundations/F* | sort -V; ls -d foundations/S* 2>/dev/null | sort -V); do
   name=$(basename "$dir")
   golden=$(cat "$dir/digest.txt")
 

@@ -214,14 +214,14 @@ object FoundationCommands:
         case Canon.Node("check", Canon.Sym(name) +: goal +: expected +: rest) =>
           val budget = rest.headOption.flatMap(Budget.fromCanon(_).toOption).getOrElse(f.budget)
           val verdict = Cli.deriveIn(f, root, goal, budget)
-          val outcome = (expected, verdict) match
-            case (Canon.Node("value", Vector(exp)), Canon.Node("verdict", Vector(Canon.Sym("ok"), got, _))) =>
+          val outcome = (expected, MetaMachine0.result(verdict), MetaMachine0.failure(verdict)) match
+            case (Canon.Node("value", Vector(exp)), Some(got), _) =>
               if exp == got then "ok" else s"expected ${CanonText.write(exp)} got ${CanonText.write(got)}"
-            case (Canon.Node("error", Vector(Canon.Sym(kind))), Canon.Node("verdict", Vector(Canon.Sym("error"), Canon.Sym(k), _, _))) =>
+            case (Canon.Node("error", Vector(Canon.Sym(kind))), _, Some((k, _))) =>
               if kind == k then "ok" else s"expected error $kind got error $k"
-            case (Canon.Node("value", Vector(exp)), Canon.Node("verdict", Vector(Canon.Sym("error"), Canon.Sym(k), Canon.S(m), _))) =>
+            case (Canon.Node("value", Vector(exp)), _, Some((k, m))) =>
               s"expected ${CanonText.write(exp)} got error $k $m"
-            case (Canon.Node("error", Vector(Canon.Sym(kind))), Canon.Node("verdict", Vector(Canon.Sym("ok"), got, _))) =>
+            case (Canon.Node("error", Vector(Canon.Sym(kind))), Some(got), _) =>
               s"expected error $kind got ${CanonText.write(got)}"
             case _ => "malformed check"
           (name, outcome)
@@ -365,11 +365,12 @@ object FoundationCommands:
       val caps = stratum.cap.Capabilities.standard(f.cas, f.dir, f.foundationDigest.hex)
       val goal = Canon.Node("call", Canon.Sym(judgment) +: arguments.map(a => Canon.node("q", a)))
       val verdict = MetaMachine0.derive(f.program, f.cas, f.kernel, f.budget, goal, caps)
-      verdict match
-        case Canon.Node("verdict", Vector(Canon.Sym("ok"), value, _)) => Right(value)
-        case Canon.Node("verdict", Vector(Canon.Sym("error"), Canon.Sym(kind), Canon.S(message), _)) =>
-          Left(s"$kind: $message")
-        case other => Left(CanonText.write(other))
+      MetaMachine0.result(verdict) match
+        case Some(value) => Right(value)
+        case None =>
+          MetaMachine0.failure(verdict) match
+            case Some((kind, message)) => Left(s"$kind: $message")
+            case None                  => Left(CanonText.write(verdict))
 
   /**
    * Generates the canonical foundation change between two foundations.
@@ -531,10 +532,12 @@ object FoundationCommands:
                 Canon.node("q", Canon.R(pred.foundationDigest))
               )
               val verdict = MetaMachine0.derive(pred.program, merged, pred.kernel, pred.budget, goal, caps)
-              val resultLine = verdict match
-                case Canon.Node("verdict", Vector(Canon.Sym("ok"), v, _)) => CanonText.write(v)
-                case Canon.Node("verdict", Vector(Canon.Sym("error"), Canon.Sym(k), Canon.S(m), _)) => s"error $k $m"
-                case other                                                => CanonText.write(other)
+              val resultLine = MetaMachine0.result(verdict) match
+                case Some(v) => CanonText.write(v)
+                case None =>
+                  MetaMachine0.failure(verdict) match
+                    case Some((k, m)) => s"error $k $m"
+                    case None         => CanonText.write(verdict)
               val valid = resultLine.startsWith("(valid")
               CommandResult(
                 if valid then 0 else 1,

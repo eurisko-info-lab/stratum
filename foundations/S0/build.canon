@@ -1,0 +1,35 @@
+; S0: the Strata seed, and the first foundation of the second floor.
+;
+; F11 is the completed first-floor landing. S0 adds exactly one thing to it:
+; Strata as a language the system can read, print, elaborate and evaluate.
+; Nothing here is written in Strata yet -- the seed is described in Meta, the
+; way every first-floor language was, so that the floor it starts has a
+; legitimate origin.
+(build
+  (name "S0")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/F11"))
+  (change (file "changes/F11-S0/change.canon"))
+  (application
+    (application
+      (name "strata-s0")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "languages/strata/strata.generated.meta")
+      ]))
+      (grammars {
+        strata (file "languages/strata/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (checks (include "fixtures/strata/s0-checks.canon"))
+      (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print)))
+      (resources (budget (steps 20000000) (depth 20000))))))

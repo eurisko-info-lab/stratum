@@ -2,6 +2,7 @@ package stratum.lsp
 
 import stratum.canon.{Canon, CanonText}
 import stratum.cli.{Cli, LoadedFoundation}
+import stratum.meta.MetaMachine0
 
 import java.nio.file.Path
 import scala.collection.mutable
@@ -58,11 +59,13 @@ final class Service(val root: Path, val worldDir: Path, val world: LoadedFoundat
       Canon.Sym(judgment) +: Canon.node("grammar", Canon.Sym(language)) +: args
     )
     val key = Canon.digest(goal).hex
-    cache.getOrElseUpdate(key, Cli.deriveIn(world, root, goal, world.budget)) match
-      case Canon.Node("verdict", Vector(Canon.Sym("ok"), value, _)) => Right(value)
-      case Canon.Node("verdict", Vector(Canon.Sym("error"), Canon.Sym(kind), Canon.S(m), _)) =>
-        Left(s"$kind: $m")
-      case other => Left(CanonText.write(other))
+    val verdict = cache.getOrElseUpdate(key, Cli.deriveIn(world, root, goal, world.budget))
+    MetaMachine0.result(verdict) match
+      case Some(value) => Right(value)
+      case None =>
+        MetaMachine0.failure(verdict) match
+          case Some((kind, m)) => Left(s"$kind: $m")
+          case None            => Left(CanonText.write(verdict))
 
   private def buffer(t: String): Canon = Canon.node("q", Canon.S(t))
 

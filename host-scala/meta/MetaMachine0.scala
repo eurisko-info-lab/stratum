@@ -23,12 +23,12 @@ object Budget:
     Right(summon[Schema[Budget]].encode(value))
 
   def applyChange(current: Budget, change: Canon): Either[String, Budget] =
-    summon[ChangeAlgebra[Budget]].patch(current, change)
+    summon[ChangeAlgebra[Budget]].applyChange(current, change)
 
   given ChangeAlgebra[Budget] with
     def delta(previous: Budget, next: Budget): Canon =
       Canon.node("budget-change", Canon.node("steps", Canon.N(BigInt(next.steps - previous.steps))), Canon.node("depth", Canon.nat(next.depth - previous.depth)))
-    def patch(current: Budget, change: Canon): Either[String, Budget] = change match
+    def applyChange(current: Budget, change: Canon): Either[String, Budget] = change match
       case Canon.Node("budget-change", Vector(Canon.Node("steps", Vector(Canon.N(steps))), Canon.Node("depth", Vector(Canon.N(depth))))) =>
         Right(Budget(current.steps + steps.toLong, current.depth + depth.toInt))
       case other => Left(s"not a budget change: ${CanonText.write(other)}")
@@ -59,7 +59,7 @@ object Kernel:
   given ChangeAlgebra[Kernel] with
     def delta(previous: Kernel, next: Kernel): Canon =
       Canon.node("replace", previous.toCanon, next.toCanon)
-    def patch(current: Kernel, change: Canon): Either[String, Kernel] = change match
+    def applyChange(current: Kernel, change: Canon): Either[String, Kernel] = change match
       case Canon.Node("replace", Vector(_, next)) => summon[Schema[Kernel]].decode(next)
       case value if value == current.toCanon => Right(current)
       case other => Left(s"not a kernel change: ${CanonText.write(other)}")
@@ -68,7 +68,7 @@ object Kernel:
     Right(summon[Schema[Kernel]].encode(value))
 
   def applyChange(current: Kernel, change: Canon): Either[String, Kernel] =
-    summon[ChangeAlgebra[Kernel]].patch(current, change)
+    summon[ChangeAlgebra[Kernel]].applyChange(current, change)
 
   val pure: Kernel = Kernel(Set.empty)
   val readOnly: Kernel = Kernel(Set("cas-get", "cas-has", "hash", "digest-of-bytes", "fs-read", "fs-exists"))
@@ -126,7 +126,7 @@ object Program:
   given ChangeAlgebra[Program] with
     def delta(previous: Program, next: Program): Canon =
       Canon.node("replace", summon[Schema[Program]].encode(previous), summon[Schema[Program]].encode(next))
-    def patch(current: Program, change: Canon): Either[String, Program] = change match
+    def applyChange(current: Program, change: Canon): Either[String, Program] = change match
       case Canon.Node("replace", Vector(_, next)) => summon[Schema[Program]].decode(next)
       case value if value == summon[Schema[Program]].encode(current) => Right(current)
       case other => Left(s"not a program change: ${CanonText.write(other)}")
@@ -135,7 +135,7 @@ object Program:
     Right(summon[Schema[Program]].encode(value))
 
   def applyChange(current: Program, change: Canon): Either[String, Program] =
-    summon[ChangeAlgebra[Program]].patch(current, change)
+    summon[ChangeAlgebra[Program]].applyChange(current, change)
 
   /** Loads a program artifact, resolving `(use <ref>)` imports through the closure. */
   def load(c: Canon, cas: Cas): Either[String, Program] =
@@ -234,20 +234,20 @@ object DerivationState:
         case (name, prev, nextValue, change) if prev != nextValue => Canon.node(name, change)
       }
       if changes.isEmpty then Canon.Sym("noop") else Canon.node("state-change", changes*)
-    def patch(current: DerivationState, change: Canon): Either[String, DerivationState] = change match
+    def applyChange(current: DerivationState, change: Canon): Either[String, DerivationState] = change match
       case Canon.Node("replace", Vector(_, next)) => summon[Schema[DerivationState]].decode(next)
       case Canon.Node("state-change", entries) =>
         entries.foldLeft[Either[String, DerivationState]](Right(current)) { (acc, entry) =>
           acc.flatMap { state =>
             entry match
               case Canon.Node("program", Vector(programChange)) =>
-                summon[ChangeAlgebra[Program]].patch(state.program, programChange).map(updatedProgram => state.copy(program = updatedProgram))
+                summon[ChangeAlgebra[Program]].applyChange(state.program, programChange).map(updatedProgram => state.copy(program = updatedProgram))
               case Canon.Node("budget", Vector(budgetChange)) =>
-                summon[ChangeAlgebra[Budget]].patch(state.budget, budgetChange).map(updatedBudget => state.copy(budget = updatedBudget))
+                summon[ChangeAlgebra[Budget]].applyChange(state.budget, budgetChange).map(updatedBudget => state.copy(budget = updatedBudget))
               case Canon.Node("kernel", Vector(kernelChange)) =>
-                summon[ChangeAlgebra[Kernel]].patch(state.kernel, kernelChange).map(updatedKernel => state.copy(kernel = updatedKernel))
+                summon[ChangeAlgebra[Kernel]].applyChange(state.kernel, kernelChange).map(updatedKernel => state.copy(kernel = updatedKernel))
               case Canon.Node("evidence", Vector(evidenceChange)) =>
-                summon[ChangeAlgebra[Evidence]].patch(state.evidence, evidenceChange).map(updatedEvidence => state.copy(evidence = updatedEvidence))
+                summon[ChangeAlgebra[Evidence]].applyChange(state.evidence, evidenceChange).map(updatedEvidence => state.copy(evidence = updatedEvidence))
               case other => Left(s"not a derivation-state field change: ${CanonText.write(other)}")
           }
         }
@@ -269,15 +269,15 @@ object DerivationState:
     def update(current: DerivationState, change: Canon): Either[String, DerivationState] = change match
       case Canon.Node("compose", steps) =>
         steps.foldLeft[Either[String, DerivationState]](Right(current)) { (acc, step) =>
-          acc.flatMap(value => summon[ChangeAlgebra[DerivationState]].patch(value, step))
+          acc.flatMap(value => summon[ChangeAlgebra[DerivationState]].applyChange(value, step))
         }
-      case other => summon[ChangeAlgebra[DerivationState]].patch(current, other)
+      case other => summon[ChangeAlgebra[DerivationState]].applyChange(current, other)
 
   def deriveCanon(value: DerivationState): Either[String, Canon] =
     Right(summon[Schema[DerivationState]].encode(value))
 
   def applyChange(current: DerivationState, change: Canon): Either[String, DerivationState] =
-    summon[ChangeAlgebra[DerivationState]].patch(current, change)
+    summon[ChangeAlgebra[DerivationState]].applyChange(current, change)
 
 object Evidence:
   given Schema[Evidence] with
@@ -304,7 +304,7 @@ object Evidence:
   given ChangeAlgebra[Evidence] with
     def delta(previous: Evidence, next: Evidence): Canon =
       Canon.node("replace", previous.toCanon, next.toCanon)
-    def patch(current: Evidence, change: Canon): Either[String, Evidence] = change match
+    def applyChange(current: Evidence, change: Canon): Either[String, Evidence] = change match
       case Canon.Node("replace", Vector(_, next)) => summon[Schema[Evidence]].decode(next)
       case value if value == current.toCanon => Right(current)
       case other => Left(s"not an evidence change: ${CanonText.write(other)}")
@@ -313,275 +313,29 @@ object Evidence:
     Right(summon[Schema[Evidence]].encode(value))
 
   def applyChange(current: Evidence, change: Canon): Either[String, Evidence] =
-    summon[ChangeAlgebra[Evidence]].patch(current, change)
+    summon[ChangeAlgebra[Evidence]].applyChange(current, change)
 
 object MetaMachine0:
 
   final case class MetaFail(kind: String, message: String) extends RuntimeException(message)
 
-  final case class MachineFrame(state: DerivationState, summary: String):
-    def toCanon: Canon =
-      Canon.node("machine-frame", Canon.node("state", state.toCanon), Canon.node("state-summary", Canon.S(summary)))
-
-  object MachineFrame:
-    def fromCanon(value: Canon, fallback: DerivationState): MachineFrame = value match
-      case Canon.Node("machine-frame", Vector(Canon.Node("state", Vector(stateCanon)), Canon.Node("state-summary", Vector(Canon.S(summary))))) =>
-        summon[Schema[DerivationState]].decode(stateCanon).toOption match
-          case Some(state) => MachineFrame(state, summary)
-          case None        => MachineFrame(fallback, summary)
-      case other => MachineFrame(fallback, fallback.summary)
-
-  final case class SemanticSnapshot(state: DerivationState, summary: String, machineView: String):
-    def toCanon: Canon =
-      Canon.node("semantic-snapshot", Canon.node("state", state.toCanon), Canon.node("summary", Canon.S(summary)), Canon.node("machine-view", Canon.S(machineView)))
-
-  object SemanticSnapshot:
-    def fromState(state: DerivationState): SemanticSnapshot = SemanticSnapshot(state, state.summary, state.machineView)
-
-    def fromCanon(value: Canon, fallback: DerivationState): SemanticSnapshot = value match
-      case Canon.Node("semantic-snapshot", Vector(Canon.Node("state", Vector(stateCanon)), Canon.Node("summary", Vector(Canon.S(summary))), Canon.Node("machine-view", Vector(Canon.S(machineView))))) =>
-        summon[Schema[DerivationState]].decode(stateCanon).toOption match
-          case Some(state) => SemanticSnapshot(state, summary, machineView)
-          case None        => SemanticSnapshot.fromState(fallback)
-      case other => SemanticSnapshot.fromState(fallback)
-
-  final case class EvaluationContext(env: Map[String, Canon], depth: Int, frame: MachineFrame, snapshot: SemanticSnapshot):
-    def toCanon: Canon =
-      Canon.node("eval-context", Canon.node("env", Canon.M(env.toVector.sortBy(_._1).map((k, v) => Canon.Sym(k) -> v))), Canon.node("depth", Canon.N(BigInt(depth))), frame.toCanon, snapshot.toCanon)
-
-  object EvaluationContext:
-    def fromCanon(value: Canon, fallback: DerivationState): EvaluationContext = value match
-      case Canon.Node("eval-context", Vector(Canon.Node("env", Vector(Canon.M(entries))), Canon.Node("depth", Vector(Canon.N(depth))), frameCanon, snapshotCanon)) =>
-        val env = entries.collect { case (Canon.Sym(k), v) => k -> v }.toMap
-        val frame = MachineFrame.fromCanon(frameCanon, fallback)
-        val snapshot = SemanticSnapshot.fromCanon(snapshotCanon, fallback)
-        EvaluationContext(env, depth.toInt, frame, snapshot)
-      case other => EvaluationContext(Map.empty, 0, machineFrame(fallback), SemanticSnapshot.fromState(fallback))
-
-  final case class EvaluationResult(
-      expr: Canon,
-      value: Canon,
-      env: Map[String, Canon],
-      depth: Int,
-      before: DerivationState,
-      after: DerivationState,
-      frame: MachineFrame,
-      snapshot: SemanticSnapshot,
-      parent: Option[EvaluationResult] = None,
-      parentIndex: Option[Int] = None
-  ):
-    def context: EvaluationContext = EvaluationContext(env, depth, frame, snapshot)
-    def traceValue: Canon = Canon.node("eval", expr, value, frame.toCanon)
-    def traceEntry(change: Canon): TraceEntry = TraceEntry("eval", traceValue, before, after, change, frame)
-    def semanticStep: SemanticTraceStep = SemanticTraceStep("eval", traceValue, before, after, frame, None, Some(context))
-    def stack: Vector[EvaluationResult] = parent match
-      case Some(p) => p.stack :+ this
-      case None    => Vector(this)
-    def summary: String = s"${CanonText.write(expr)} => ${CanonText.write(value)} [depth=$depth]"
-    def toCanon: Canon =
-      Canon.node(
-        "eval-result",
-        Canon.Sym("eval"),
-        expr,
-        value,
-        Canon.N(BigInt(depth)),
-        frame.toCanon,
-        context.toCanon,
-        before.toCanon,
-        after.toCanon,
-        parentIndex match
-          case Some(index) => Canon.N(BigInt(index))
-          case None        => Canon.Sym("root")
-      )
-
-  final case class EvaluationTree(result: EvaluationResult, children: Vector[EvaluationTree] = Vector.empty):
-    def flatten: Vector[EvaluationResult] = Vector(result) ++ children.flatMap(_.flatten)
-    def lines: Vector[String] =
-      def render(node: EvaluationTree, prefix: String): Vector[String] =
-        val label = s"eval-tree: ${CanonText.write(node.result.expr)} => ${CanonText.write(node.result.value)} [depth=${node.result.depth}]"
-        val children = node.children.flatMap(child => render(child, prefix + "  "))
-        label +: children
-      render(this, "")
-    def toCanon: Canon =
-      Canon.node(
-        "eval-tree",
-        Canon.node(
-          "result",
-          result.expr,
-          result.value,
-          Canon.N(BigInt(result.depth)),
-          result.frame.toCanon,
-          result.context.toCanon,
-          result.before.toCanon,
-          result.after.toCanon,
-          result.parentIndex match
-            case Some(index) => Canon.N(BigInt(index))
-            case None        => Canon.Sym("root")
-        ),
-        Canon.L(children.map(_.toCanon))
-      )
-
-  object EvaluationTree:
-    def fromCanon(value: Canon, fallbackState: DerivationState): Option[EvaluationTree] = value match
-      case Canon.Node("eval-tree", Vector(Canon.Node("result", args), Canon.L(children))) =>
-        val result = args match
-          case Vector(expr, valueCanon, depthCanon, frameCanon, contextCanon, beforeCanon, afterCanon, parentCanon) =>
-            val frame = MachineFrame.fromCanon(frameCanon, fallbackState)
-            val context = EvaluationContext.fromCanon(contextCanon, fallbackState)
-            val before = summon[Schema[DerivationState]].decode(beforeCanon).getOrElse(fallbackState)
-            val after = summon[Schema[DerivationState]].decode(afterCanon).getOrElse(fallbackState)
-            val parentIndex = parentCanon match
-              case Canon.N(n) => Some(n.toInt)
-              case Canon.Sym("root") => None
-              case _ => None
-            val depthValue = depthCanon match
-              case Canon.N(n) => n.toInt
-              case _ => context.depth
-            EvaluationResult(expr, valueCanon, context.env, depthValue, before, after, frame, context.snapshot, None, parentIndex)
-          case _ =>
-            EvaluationResult(Canon.Sym("noop"), Canon.Sym("noop"), Map.empty, 0, fallbackState, fallbackState, machineFrame(fallbackState), SemanticSnapshot.fromState(fallbackState))
-        val childTrees = children.flatMap(tree => EvaluationTree.fromCanon(tree, fallbackState).toVector)
-        Some(EvaluationTree(result, childTrees))
-      case _ => None
-
-  final case class EvaluationSemantics(stack: Vector[EvaluationResult], tree: EvaluationTree):
-    def lines: Vector[String] = stack.map(result => s"eval-stack: ${result.summary}") ++ tree.lines
-
-  object EvaluationSemantics:
-    def fromCanon(value: Canon, fallbackState: DerivationState): Option[EvaluationSemantics] = value match
-      case Canon.Node("eval-semantics", Vector(Canon.L(stackItems), treeCanon)) =>
-        val stack = stackItems.flatMap { item =>
-          item match
-            case Canon.Node("eval-result", Vector(Canon.Sym("eval"), expr, value, depth, frameCanon, contextCanon, beforeCanon, afterCanon, parentCanon)) =>
-              val frame = MachineFrame.fromCanon(frameCanon, fallbackState)
-              val context = EvaluationContext.fromCanon(contextCanon, frame.state)
-              val before = summon[Schema[DerivationState]].decode(beforeCanon).getOrElse(frame.state)
-              val after = summon[Schema[DerivationState]].decode(afterCanon).getOrElse(frame.state)
-              val depthValue = depth match
-                case Canon.N(n) => n.toInt
-                case _          => context.depth
-              val parentIndex = parentCanon match
-                case Canon.N(n) => Some(n.toInt)
-                case Canon.Sym("root") => None
-                case _ => None
-              Some(EvaluationResult(expr, value, context.env, depthValue, before, after, frame, context.snapshot, None, parentIndex))
-            case _ => None
-        }
-        val tree = EvaluationTree.fromCanon(treeCanon, fallbackState)
-        tree.map(EvaluationSemantics(stack, _))
-      case _ => None
-
-  final case class JudgmentStep(name: String, args: Vector[Canon], state: DerivationState, frame: MachineFrame):
-    def toCanon: Canon =
-      Canon.node("judgment-step", Canon.Sym(name), Canon.L(args), state.toCanon, frame.toCanon)
-
-  object JudgmentStep:
-    def fromCanon(value: Canon, fallback: DerivationState): JudgmentStep = value match
-      case Canon.Node("judgment-step", Vector(Canon.Sym(name), Canon.L(args), stateCanon, frameCanon)) =>
-        summon[Schema[DerivationState]].decode(stateCanon).toOption match
-          case Some(state) => JudgmentStep(name, args, state, MachineFrame.fromCanon(frameCanon, state))
-          case None        => JudgmentStep(name, args, fallback, machineFrame(fallback))
-      case other => JudgmentStep("unknown", Vector.empty, fallback, machineFrame(fallback))
-
-  final case class TraceEntry(kind: String, value: Canon, before: DerivationState, after: DerivationState, change: Canon, frame: MachineFrame)
-
-  final case class SemanticTraceStep(
-      kind: String,
-      value: Canon,
-      before: DerivationState,
-      after: DerivationState,
-      frame: MachineFrame,
-      judgment: Option[JudgmentStep] = None,
-      evaluation: Option[EvaluationContext] = None
-  )
-
-  private def machineFrame(state: DerivationState): MachineFrame = MachineFrame(state, state.summary)
-
-  private def semanticStep(entry: TraceEntry): SemanticTraceStep =
-    val judgment = entry.kind match
-      case "judgment" =>
-        entry.value match
-          case Canon.Node("judgment", Vector(Canon.Sym(name), Canon.L(args))) =>
-            Some(JudgmentStep(name, args, entry.after, entry.frame))
-          case _ => None
-      case _ => None
-    val evaluation = entry.kind match
-      case "eval" =>
-        entry.value match
-          case Canon.Node("eval", Vector(_, _, Canon.Node("machine-frame", Vector(Canon.Node("env", Vector(Canon.M(entries))), Canon.Node("depth", Vector(Canon.N(depth))), _, _)))) =>
-            val env = entries.collect { case (Canon.Sym(k), v) => k -> v }.toMap
-            Some(EvaluationContext(env, depth.toInt, entry.frame, SemanticSnapshot.fromState(entry.after)))
-          case Canon.Node("eval", Vector(_, _, _)) =>
-            Some(EvaluationContext(Map.empty, 0, entry.frame, SemanticSnapshot.fromState(entry.after)))
-          case _ => None
-      case _ => None
-    SemanticTraceStep(entry.kind, entry.value, entry.before, entry.after, entry.frame, judgment, evaluation)
-
-  private def traceEntryCanon(entry: TraceEntry): Canon =
-    Canon.node("trace-entry", Canon.Sym(entry.kind), entry.value, entry.before.toCanon, entry.after.toCanon, entry.change, entry.frame.toCanon)
-
-  private def evalResultCanon(result: EvaluationResult): Canon =
-    Canon.node(
-      "eval-result",
-      Canon.Sym("eval"),
-      result.expr,
-      result.value,
-      Canon.N(BigInt(result.depth)),
-      result.frame.toCanon,
-      result.context.toCanon,
-      result.before.toCanon,
-      result.after.toCanon,
-      result.parentIndex match
-        case Some(index) => Canon.N(BigInt(index))
-        case None        => Canon.Sym("root")
-    )
-
+  /**
+   * The canonical verdict: `(verdict ok <value> <evidence>)`.
+   *
+   * The shape is constitutional. The independent host derives the same bytes,
+   * and `foundation report` digests exactly this value, so the two hosts agree
+   * only while both keep to it.
+   *
+   * Diagnostic material is deliberately absent. A trace of the derivation grows
+   * with the number of steps, and each entry would carry a whole program-sized
+   * state, so embedding it here made verdicts too large to encode at all.
+   */
   def ok(value: Canon, evidence: Evidence): Canon =
-    ok(value, DerivationState(Program.empty, Kernel.pure, Budget.default, evidence))
+    Canon.node("verdict", Canon.Sym("ok"), value, evidence.toCanon)
 
-  def ok(value: Canon, state: DerivationState): Canon =
-    Canon.node("verdict", Canon.Sym("ok"), value, state.toCanon, Canon.S(state.summary))
-
-  def ok(value: Canon, state: DerivationState, trace: Vector[Canon]): Canon =
-    okWithTrace(value, state, trace.map(step => TraceEntry("step", step, state, state, Canon.Sym("noop"), machineFrame(state))))
-
-  def okWithTrace(value: Canon, state: DerivationState, trace: Vector[TraceEntry]): Canon =
-    Canon.node("verdict", Canon.Sym("ok"), value, state.toCanon, Canon.S(state.summary), Canon.L(trace.map(traceEntryCanon)))
-
-  def okWithSemantics(value: Canon, state: DerivationState, trace: Vector[TraceEntry], stack: Vector[EvaluationResult]): Canon =
-    Canon.node(
-      "verdict",
-      Canon.Sym("ok"),
-      value,
-      state.toCanon,
-      Canon.S(state.summary),
-      Canon.L(trace.map(traceEntryCanon)),
-      Canon.L(stack.map(evalResultCanon))
-    )
-
+  /** The canonical verdict: `(verdict error <kind> <message> <evidence>)`. */
   def error(kind: String, message: String, evidence: Evidence): Canon =
-    error(kind, message, DerivationState(Program.empty, Kernel.pure, Budget.default, evidence))
-
-  def error(kind: String, message: String, state: DerivationState): Canon =
-    Canon.node("verdict", Canon.Sym("error"), Canon.Sym(kind), Canon.S(message), state.toCanon, Canon.S(state.summary))
-
-  def error(kind: String, message: String, state: DerivationState, trace: Vector[Canon]): Canon =
-    errorWithTrace(kind, message, state, trace.map(step => TraceEntry("step", step, state, state, Canon.Sym("noop"), machineFrame(state))))
-
-  def errorWithTrace(kind: String, message: String, state: DerivationState, trace: Vector[TraceEntry]): Canon =
-    Canon.node("verdict", Canon.Sym("error"), Canon.Sym(kind), Canon.S(message), state.toCanon, Canon.S(state.summary), Canon.L(trace.map(traceEntryCanon)))
-
-  def errorWithSemantics(kind: String, message: String, state: DerivationState, trace: Vector[TraceEntry], stack: Vector[EvaluationResult]): Canon =
-    Canon.node(
-      "verdict",
-      Canon.Sym("error"),
-      Canon.Sym(kind),
-      Canon.S(message),
-      state.toCanon,
-      Canon.S(state.summary),
-      Canon.L(trace.map(traceEntryCanon)),
-      Canon.L(stack.map(evalResultCanon))
-    )
+    Canon.node("verdict", Canon.Sym("error"), Canon.Sym(kind), Canon.S(message), evidence.toCanon)
 
   def isOk(verdict: Canon): Boolean = verdict match
     case Canon.Node("verdict", Canon.Sym("ok") +: _) => true
@@ -592,235 +346,21 @@ object MetaMachine0:
       args.drop(1).headOption
     case _ => None
 
-  def state(verdict: Canon): Option[DerivationState] = verdict match
-    case Canon.Node("verdict", args) if args.nonEmpty && args.head == Canon.Sym("ok") && args.length >= 3 =>
-      summon[Schema[DerivationState]].decode(args(2)).toOption
-    case Canon.Node("verdict", args) if args.nonEmpty && args.head == Canon.Sym("error") && args.length >= 4 =>
-      summon[Schema[DerivationState]].decode(args(3)).toOption
+  /**
+   * Extracts `(kind, message)` from an error verdict.
+   *
+   * Like [[result]], this reads by position rather than by exact arity, so a
+   * consumer cannot be broken by a change in the trailing evidence field.
+   */
+  def failure(verdict: Canon): Option[(String, String)] = verdict match
+    case Canon.Node("verdict", args) if args.length >= 3 && args.head == Canon.Sym("error") =>
+      (args(1), args(2)) match
+        case (Canon.Sym(kind), Canon.S(message)) => Some((kind, message))
+        case _                                   => None
     case _ => None
-
-  def trace(verdict: Canon): Option[Vector[Canon]] = verdict match
-    case Canon.Node("verdict", args) if args.nonEmpty && args.length >= 4 =>
-      val tracePayload = if args.length >= 5 && args(4) == Canon.L(Vector.empty) then None else if args.length >= 5 then Some(args(4)) else None
-      val traceCanon = tracePayload.orElse(args.lastOption)
-      traceCanon match
-        case Some(Canon.L(items)) =>
-          val entries = items.foldLeft[Either[String, Vector[Canon]]](Right(Vector.empty)) { (acc, item) =>
-            acc.flatMap { values =>
-              item match
-                case Canon.Node("trace-entry", args) =>
-                  Right(values :+ args.drop(1).headOption.getOrElse(item))
-                case other => Right(values :+ other)
-            }
-          }
-          entries.toOption
-        case _ => None
-    case _ => None
-
-  def traceEntries(verdict: Canon): Option[Vector[TraceEntry]] =
-    val fallbackState = state(verdict).getOrElse(DerivationState(Program.empty, Kernel.pure, Budget.default, Evidence(0L, Map.empty, Map.empty)))
-    verdict match
-      case Canon.Node("verdict", args) if args.nonEmpty && args.length >= 4 =>
-        val payload = args.findLast {
-          case Canon.L(items) => items.exists {
-              case Canon.Node("trace-entry", _) => true
-              case _ => false
-            }
-          case _ => false
-        }
-        payload match
-          case Some(Canon.L(items)) =>
-            val parsed = items.foldLeft[Either[String, Vector[TraceEntry]]](Right(Vector.empty)) { (acc, item) =>
-              acc.flatMap { entries =>
-                item match
-                  case Canon.Node("trace-entry", childArgs) if childArgs.nonEmpty =>
-                    val kind = childArgs.head match
-                      case Canon.Sym(value) => value
-                      case other            => CanonText.write(other)
-                    val value = childArgs.lift(1).getOrElse(Canon.Sym("unknown"))
-                    val beforeCanon = childArgs.lift(2)
-                    val afterCanon = childArgs.lift(3)
-                    val changeCanon = childArgs.lift(4).getOrElse(Canon.Sym("noop"))
-                    val frameCanon = childArgs.lift(5)
-                    val before = beforeCanon.flatMap(c => summon[Schema[DerivationState]].decode(c).toOption).getOrElse(fallbackState)
-                    val after = afterCanon.flatMap(c => summon[Schema[DerivationState]].decode(c).toOption).getOrElse(before)
-                    val frame = frameCanon match
-                      case Some(canon) => MachineFrame.fromCanon(canon, after)
-                      case None        => machineFrame(after)
-                    Right(entries :+ TraceEntry(kind, value, before, after, changeCanon, frame))
-                  case other => Right(entries :+ TraceEntry("step", other, fallbackState, fallbackState, Canon.Sym("noop"), machineFrame(fallbackState)))
-              }
-            }
-            parsed.toOption
-          case _ => None
-      case _ => None
-
-  def traceLines(verdict: Canon): Vector[String] =
-    traceEntries(verdict).getOrElse(Vector.empty).map { entry =>
-      val renderedValue = entry.value match
-        case Canon.Node("eval", args) if args.length >= 3 =>
-          val expr = args(0)
-          val result = args(1)
-          val frameSuffix = s" [frame: ${entry.frame.summary}]"
-          s"${CanonText.write(expr)} => ${CanonText.write(result)}$frameSuffix"
-        case other => CanonText.write(other)
-      val changeSuffix =
-        if entry.change == Canon.Sym("noop") then ""
-        else s" [change: ${CanonText.write(entry.change)}]"
-      val stateSuffix = s" [state: ${entry.before.machineView} -> ${entry.after.machineView}]"
-      s"${entry.kind}: $renderedValue$changeSuffix$stateSuffix"
-    }
-
-  def traceSemantics(verdict: Canon): Option[Vector[SemanticTraceStep]] =
-    traceEntries(verdict).map(_.map(semanticStep))
-
-  def evaluationStack(verdict: Canon): Option[Vector[EvaluationResult]] =
-    verdict match
-      case Canon.Node("verdict", args) if args.nonEmpty && args.length >= 4 =>
-        val stackPayload = if args.length >= 6 then Some(args(5)) else None
-        stackPayload.orElse(args.lastOption) match
-          case Some(Canon.L(items)) =>
-            val steps = items.foldLeft[Either[String, Vector[EvaluationResult]]](Right(Vector.empty)) { (acc, item) =>
-              acc.flatMap { results =>
-                item match
-                  case Canon.Node("eval-result", Vector(Canon.Sym("eval"), expr, value, depth, frameCanon, contextCanon, beforeCanon, afterCanon, parentCanon)) =>
-                    val fallbackState = DerivationState(Program.empty, Kernel.pure, Budget.default, Evidence(0L, Map.empty, Map.empty))
-                    val frame = MachineFrame.fromCanon(frameCanon, fallbackState)
-                    val context = EvaluationContext.fromCanon(contextCanon, frame.state)
-                    val before = summon[Schema[DerivationState]].decode(beforeCanon).getOrElse(frame.state)
-                    val after = summon[Schema[DerivationState]].decode(afterCanon).getOrElse(frame.state)
-                    val depthValue = depth match
-                      case Canon.N(n) => n.toInt
-                      case _          => context.depth
-                    val parentIndex = parentCanon match
-                      case Canon.N(n) => Some(n.toInt)
-                      case Canon.Sym("root") => None
-                      case _ => None
-                    val result = EvaluationResult(
-                      expr,
-                      value,
-                      context.env,
-                      depthValue,
-                      before,
-                      after,
-                      frame,
-                      context.snapshot,
-                      None,
-                      parentIndex
-                    )
-                    Right(results :+ result)
-                  case Canon.Node("eval-result", Vector(Canon.Sym("eval"), expr, value, depth, frameCanon, contextCanon, beforeCanon, afterCanon)) =>
-                    val fallbackState = DerivationState(Program.empty, Kernel.pure, Budget.default, Evidence(0L, Map.empty, Map.empty))
-                    val frame = MachineFrame.fromCanon(frameCanon, fallbackState)
-                    val context = EvaluationContext.fromCanon(contextCanon, frame.state)
-                    val before = summon[Schema[DerivationState]].decode(beforeCanon).getOrElse(frame.state)
-                    val after = summon[Schema[DerivationState]].decode(afterCanon).getOrElse(frame.state)
-                    val depthValue = depth match
-                      case Canon.N(n) => n.toInt
-                      case _          => context.depth
-                    val result = EvaluationResult(
-                      expr,
-                      value,
-                      context.env,
-                      depthValue,
-                      before,
-                      after,
-                      frame,
-                      context.snapshot,
-                      None,
-                      None
-                    )
-                    Right(results :+ result)
-                  case Canon.Node("eval-result", Vector(Canon.Sym("eval"), expr, value, depth, frameCanon, contextCanon)) =>
-                    val fallbackState = DerivationState(Program.empty, Kernel.pure, Budget.default, Evidence(0L, Map.empty, Map.empty))
-                    val frame = MachineFrame.fromCanon(frameCanon, fallbackState)
-                    val context = EvaluationContext.fromCanon(contextCanon, frame.state)
-                    val depthValue = depth match
-                      case Canon.N(n) => n.toInt
-                      case _          => context.depth
-                    val result = EvaluationResult(
-                      expr,
-                      value,
-                      context.env,
-                      depthValue,
-                      frame.state,
-                      frame.state,
-                      frame,
-                      context.snapshot,
-                      None,
-                      None
-                    )
-                    Right(results :+ result)
-                  case Canon.Node("eval-result", Vector(Canon.Sym("eval"), expr, value, depth, frameCanon)) =>
-                    val fallbackState = DerivationState(Program.empty, Kernel.pure, Budget.default, Evidence(0L, Map.empty, Map.empty))
-                    val frame = MachineFrame.fromCanon(frameCanon, fallbackState)
-                    val context = EvaluationContext(Map.empty, 0, frame, SemanticSnapshot.fromState(frame.state))
-                    val depthValue = depth match
-                      case Canon.N(n) => n.toInt
-                      case _          => context.depth
-                    val result = EvaluationResult(
-                      expr,
-                      value,
-                      context.env,
-                      depthValue,
-                      frame.state,
-                      frame.state,
-                      frame,
-                      context.snapshot,
-                      None,
-                      None
-                    )
-                    Right(results :+ result)
-                  case _ => Right(results)
-              }
-            }
-            steps.toOption
-          case _ => None
-      case _ => None
-
-  def evaluationTree(verdict: Canon): Option[EvaluationTree] =
-    evaluationStack(verdict).flatMap { stack =>
-      val childrenByParent = stack.zipWithIndex.flatMap { case (result, index) =>
-        result.parentIndex.toVector.map(parentIndex => parentIndex -> index)
-      }.groupMap(_._1)(_._2)
-      def build(index: Int): EvaluationTree =
-        val result = stack(index)
-        val childIndices = childrenByParent.getOrElse(index, Vector.empty).sorted
-        EvaluationTree(result, childIndices.map(build))
-      val roots = stack.indices.filter(i => stack(i).parentIndex.isEmpty).toVector
-      roots.headOption.map(build).orElse(stack.headOption.map(result => EvaluationTree(result, Vector.empty)))
-    }
-
-  def evaluationSemantics(verdict: Canon): Option[EvaluationSemantics] =
-    for
-      stack <- evaluationStack(verdict)
-      tree <- evaluationTree(verdict)
-    yield EvaluationSemantics(stack, tree)
-
-  def evaluationTreeLines(verdict: Canon): Vector[String] =
-    evaluationTree(verdict).toVector.flatMap(_.lines)
 
   def replayState(current: DerivationState, next: DerivationState): Either[String, DerivationState] =
     summon[ChangeUpdater[DerivationState]].update(current, summon[ChangeAlgebra[DerivationState]].delta(current, next))
-
-  def replayTrace(current: DerivationState, trace: Vector[TraceEntry]): Either[String, DerivationState] =
-    trace.foldLeft[Either[String, DerivationState]](Right(current)) { (acc, entry) =>
-      acc.flatMap { state =>
-        if entry.change == Canon.Sym("noop") then Right(state)
-        else summon[ChangeUpdater[DerivationState]].update(state, entry.change)
-      }
-    }
-
-  def replayTraceToState(current: DerivationState, trace: Vector[TraceEntry]): Either[String, DerivationState] =
-    trace.foldLeft[Either[String, DerivationState]](Right(current)) { (acc, entry) =>
-      acc.flatMap { state =>
-        val fromBefore = if state == entry.before then Right(state) else Left(s"trace entry expected state $state but found ${entry.before}")
-        fromBefore.flatMap { _ =>
-          if entry.change == Canon.Sym("noop") then Right(entry.after)
-          else summon[ChangeUpdater[DerivationState]].update(state, entry.change).map(_.copy())
-        }
-      }
-    }
 
   /**
    * derive(P, Sigma, K, B, G) = V
@@ -833,8 +373,7 @@ object MetaMachine0:
       kernel: Kernel,
       budget: Budget,
       goal: Canon,
-      capabilities: CapabilityHandler,
-      includeSemantics: Boolean = true
+      capabilities: CapabilityHandler
   ): Canon =
     val graph = DerivationGraph.instance[DerivationState](
       summon[Schema[DerivationState]],
@@ -851,58 +390,41 @@ object MetaMachine0:
     try
       val value = engine.eval(goal, Map.empty, 0)
       val state = engine.stateSnapshot
-      val trace = engine.traceEntries
-      val derived = language.run(state)
-      derived match
-        case Right(canon) =>
-          if includeSemantics then okWithSemantics(value, state, trace, engine.evaluationStack)
-          else ok(value, state)
-        case Left(message) =>
-          if includeSemantics then errorWithSemantics("derivation-graph", message, state, trace, engine.evaluationStack)
-          else error("derivation-graph", message, state)
+      language.run(state) match
+        case Right(_)      => ok(value, state.evidence)
+        case Left(message) => error("derivation-graph", message, state.evidence)
     catch
-      case f: MetaFail          =>
-        val state = engine.stateSnapshot
-        if includeSemantics then errorWithSemantics(f.kind, f.message, state, engine.traceEntries, engine.evaluationStack)
-        else error(f.kind, f.message, state)
+      case f: MetaFail =>
+        error(f.kind, f.message, engine.stateSnapshot.evidence)
       case _: StackOverflowError =>
-        val state = engine.stateSnapshot
-        if includeSemantics then errorWithSemantics("depth-exhausted", "derivation exceeded host stack", state, engine.traceEntries, engine.evaluationStack)
-        else error("depth-exhausted", "derivation exceeded host stack", state)
+        error("depth-exhausted", "derivation exceeded host stack", engine.stateSnapshot.evidence)
 
   private final class Engine(program: Program, kernel: Kernel, budget: Budget, capabilities: CapabilityHandler):
     private var steps: Long = 0
     private val calls = mutable.LinkedHashMap.empty[String, Long]
     private val caps = mutable.LinkedHashMap.empty[String, Long]
-    private val transitions = mutable.ArrayBuffer.empty[TraceEntry]
-    private var state: DerivationState = DerivationState(program, kernel, budget, Evidence(0L, Map.empty, Map.empty))
 
     def evidence: Evidence = Evidence(steps, calls.toMap, caps.toMap)
-    def stateSnapshot: DerivationState = state
-    def trace: Vector[Canon] = transitions.toVector.map(entry => Canon.node("trace-entry", Canon.Sym(entry.kind), entry.value, entry.before.toCanon, entry.after.toCanon))
-    def traceEntries: Vector[TraceEntry] = transitions.toVector
-    def evaluationStack: Vector[EvaluationResult] = evalStack
 
-    private def syncState(): Unit =
-      val next = DerivationState(program, kernel, budget, evidence)
-      val delta = summon[ChangeAlgebra[DerivationState]].delta(state, next)
-      transitions.append(TraceEntry("state-change", delta, state, next, delta, machineFrame(next)))
-      state = replayState(state, next).getOrElse(state)
+    /**
+     * The state is rebuilt on demand rather than kept in a field.
+     *
+     * It embeds the whole program, so materialising one per step — as the
+     * retired trace did — costs memory proportional to steps times program
+     * size. Only the final state is ever needed.
+     */
+    def stateSnapshot: DerivationState = DerivationState(program, kernel, budget, evidence)
 
     private def tick(): Unit =
       steps += 1
-      syncState()
       if steps > budget.steps then throw MetaFail("resource-exhausted", s"budget of ${budget.steps} steps exhausted")
 
     private def fail(kind: String, msg: String): Nothing = throw MetaFail(kind, msg)
 
-    private var evalStack: Vector[EvaluationResult] = Vector.empty
-
     def eval(expr: Canon, env: Map[String, Canon], depth: Int): Canon =
       tick()
       if depth > budget.depth then fail("depth-exhausted", s"depth budget ${budget.depth} exceeded")
-      val beforeState = stateSnapshot
-      val result = expr match
+      expr match
         case Canon.Node("q", Vector(v)) => v
 
         case Canon.Node("v", Vector(Canon.Sym(name))) =>
@@ -935,11 +457,6 @@ object MetaMachine0:
             fail("arity-error", s"judgment $name expects ${j.params.length} arguments, got ${argExprs.length}")
           val args = argExprs.map(eval(_, env, depth + 1))
           calls.updateWith(name)(c => Some(c.getOrElse(0L) + 1))
-          val previousState = stateSnapshot
-          val transition = Canon.node("judgment", Canon.Sym(name), Canon.L(args))
-          syncState()
-          val change = summon[ChangeAlgebra[DerivationState]].delta(previousState, stateSnapshot)
-          transitions.append(TraceEntry("judgment", transition, previousState, stateSnapshot, change, machineFrame(stateSnapshot)))
           eval(j.body, j.params.zip(args).toMap, depth + 1)
 
         case Canon.Node("match", scrutinee +: cases) =>
@@ -953,10 +470,6 @@ object MetaMachine0:
           if !kernel.allow.contains(name) then fail("capability-denied", s"capability $name is not constituted")
           caps.updateWith(name)(c => Some(c.getOrElse(0L) + 1))
           val args = argExprs.map(eval(_, env, depth + 1))
-          val previousState = stateSnapshot
-          syncState()
-          val change = summon[ChangeAlgebra[DerivationState]].delta(previousState, stateSnapshot)
-          transitions.append(TraceEntry("capability", Canon.node("cap", Canon.Sym(name), Canon.L(args)), previousState, stateSnapshot, change, machineFrame(stateSnapshot)))
           val response = capabilities.handle(CapabilityRequest(name, args))
           response.toCanon
 
@@ -966,38 +479,6 @@ object MetaMachine0:
             case other      => fail(kind, CanonText.write(other))
 
         case other => fail("bad-expression", s"not an expression: ${CanonText.write(other)}")
-      val afterState = stateSnapshot
-      val change = summon[ChangeAlgebra[DerivationState]].delta(beforeState, afterState)
-      val frame = Canon.node(
-        "machine-frame",
-        Canon.node("env", Canon.M(env.toVector.sortBy(_._1).map((k, v) => Canon.Sym(k) -> v))),
-        Canon.node("depth", Canon.N(BigInt(depth))),
-        Canon.node("state", state.toCanon),
-        Canon.node("state-summary", Canon.S(state.summary))
-      )
-      val context = Canon.node(
-        "eval",
-        expr,
-        result,
-        frame
-      )
-      val parentResult = evalStack.lastOption
-      val parentIndex = parentResult.map(_ => evalStack.length - 1)
-      val evaluationResult = EvaluationResult(
-        expr,
-        result,
-        env,
-        depth,
-        beforeState,
-        afterState,
-        machineFrame(afterState),
-        SemanticSnapshot.fromState(afterState),
-        parentResult,
-        parentIndex
-      )
-      evalStack = evalStack :+ evaluationResult
-      transitions.append(TraceEntry("eval", context, beforeState, afterState, change, machineFrame(afterState)))
-      result
 
     private def matchCases(value: Canon, cases: Vector[Canon], env: Map[String, Canon], depth: Int): Canon =
       var i = 0
