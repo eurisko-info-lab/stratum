@@ -48,7 +48,7 @@ class StratumRepoSuite extends munit.FunSuite:
     assertEquals(run("status", repository, source).output, "clean 1 files")
 
     Files.writeString(source.resolve("Good.scala"), "object Good { def value = 2 }\n")
-    Files.writeString(source.resolve("good.rust"), "fn value() -> i32 { 3 }\n")
+    Files.writeString(source.resolve("good.rs"), "fn value() -> i32 { 3 }\n")
     assertEquals(run("status", repository, source).output, "changed 2 files")
     val second = run("record", repository, source, "--message", "second")
     assertEquals(second.code, 0, second.output)
@@ -287,7 +287,7 @@ class StratumRepoSuite extends munit.FunSuite:
     val repository = temp.resolve("chain")
     Files.createDirectories(source)
     Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
-    Files.writeString(source.resolve("good.rust"), "fn value() -> i32 { 1 }\n")
+    Files.writeString(source.resolve("good.rs"), "fn value() -> i32 { 1 }\n")
     Files.writeString(source.resolve("Reference.canon"), "#d" + "00" * 32 + "\n")
     val declarations = LanguageDeclarations.load(projectRoot).fold(error => fail(error), identity)
     val scala = declarations.find(_.name == "scala").getOrElse(fail("missing Scala language"))

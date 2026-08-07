@@ -1,0 +1,416 @@
+
+artifactsource
+source
+pathlanguages/lean/lean.meta
+text�|module lean
+
+record LeanDocument [items]
+record Brace [body]
+record EmptyBrace []
+record Paren [body]
+record EmptyParen []
+record Bracket [body]
+record EmptyBracket []
+record InductiveDecl [name ctors]
+record InductiveDeclDeriving [name ctors derives]
+record InductiveDeclTyped [name indexType ctors]
+record InductiveDeclTypedDeriving [name indexType ctors derives]
+record DQuoted [value]
+record Number [value]
+record Namespace []
+record End []
+record Inductive []
+record Structure []
+record ClassKw []
+record Instance []
+record Def []
+record Abbrev []
+record Theorem []
+record Lemma []
+record Example []
+record Where []
+record Deriving []
+record Do []
+record Let []
+record Fun []
+record Match []
+record With []
+record If []
+record Then []
+record Else []
+record By []
+record Have []
+record Show []
+record From []
+record Suffices []
+record Sorry []
+record Import []
+record Open []
+record Section []
+record Variable []
+record Variables []
+record Universe []
+record Mutual []
+record Partial []
+record Noncomputable []
+record Private []
+record Protected []
+record Macro []
+record Syntax []
+record Notation []
+record Attribute []
+record SetOption []
+record TerminationBy []
+record In []
+record Cons []
+record Assign []
+record DoubleArrow []
+record ArrowAscii []
+record Arrow []
+record Iff []
+record Forall []
+record Exists []
+record Not []
+record AndOp []
+record OrOp []
+record Le []
+record Ge []
+record Ne []
+record Times []
+record Colon []
+record Comma []
+record Semicolon []
+record Bar []
+record Dot []
+record Eq []
+record Less []
+record Greater []
+record Slash []
+record Minus []
+record Word [value]
+record CtorList [items]
+record Constructor [name type]
+record ConstructorNoType [name]
+record CtorTypeDocument [items]
+record CtorParen [body]
+record CtorEmptyParen []
+record CtorWord [value]
+record CtorNumber [value]
+record CtorDQuoted [value]
+record CtorArrow []
+record CtorArrowAscii []
+record CtorDoubleArrow []
+record CtorIff []
+record CtorForall []
+record CtorExists []
+record CtorNot []
+record CtorAndOp []
+record CtorOrOp []
+record CtorLe []
+record CtorGe []
+record CtorNe []
+record CtorTimes []
+record CtorComma []
+record CtorDot []
+record CtorEq []
+record CtorLess []
+record CtorGreater []
+record CtorMinus []
+record CtorAssign []
+record CtorCons []
+
+judgment ParseLean [grammar source] = call Parse [grammar source]
+judgment PrintLean [grammar syntax] = call Print [grammar syntax]
+judgment LeanWellFormed [grammar source] =
+  match call ParseLean [grammar source] {
+    case (#LeanDocument items) -> mk #valid [items]
+    case _ -> mk #invalid [#parse]
+  }
+
+; ------------------------------------------------------------ name resolution
+;
+; Same design as TypeScript/Rust: a second pass over the already-parsed tree
+; (never mutates it) reporting a #binding for every `def`/`abbrev`/`theorem`/
+; `lemma`/`structure`/`class`/`instance`/`let` name and every `inductive`
+; type and constructor name, and a #reference, resolved against scope built
+; left to right, for every other bare `Word`. `.` is skipped the way it is
+; for TypeScript/Rust, since Lean uses it for both qualified-name projection
+; (`Namespace.member`) and anonymous-constructor notation (`.lit n`) -- in
+; neither case is the word after it a fresh reference to resolve.
+;
+; Known scope cut, deliberately not attempted, and a materially bigger one
+; than TypeScript's or Rust's: Lean's real binding sites are its proof and
+; type layer -- implicit/explicit binders in a declaration's own signature
+; (`theorem foo {e : Expr} (h : P e) : Q e := ...`), tactic-introduced
+; hypotheses (`intro v₁ v₂`, `induction e with | add a b iha ihb => ...`,
+; `have h := ...`), and constructor argument types. None of that is captured
+; as a dedicated production in this grammar (only the `inductive` header
+; itself is structured), and modelling tactic state correctly is a
+; different-in-kind problem from lexical scoping over statements -- it is
+; not attempted here. `let name := ...` and `fun name => ...` are recognized
+; because they are unambiguous and match the same shape already used
+; elsewhere; binder and tactic-introduced names resolve as free.
+
+judgment LeanBody [node] = call FlattenSeq [node #LeanDocument]
+judgment LeanCtorItems [node] = call FlattenSeq [node #CtorList]
+
+judgment LeanCtorNames [ctors] =
+  match ctors {
+    case [] -> list []
+    case (#Constructor name type) :: rest -> prim #cons [name call LeanCtorNames [rest]]
+    case (#ConstructorNoType name) :: rest -> prim #cons [name call LeanCtorNames [rest]]
+    case head :: rest -> call LeanCtorNames [rest]
+  }
+
+judgment LeanMkBindings [names kind] =
+  match names {
+    case [] -> list []
+    case head :: rest -> prim #cons [mk #binding [head kind] call LeanMkBindings [rest kind]]
+  }
+
+; Recognizes the `word* =>` prefix right after `fun`. Returns
+; `(#some params remaining)` when it holds, `(#none)` otherwise (for example
+; `fun (x : T) => ...`, which this does not attempt to parse).
+judgment LeanFunParams [items] =
+  match items {
+    case (#DoubleArrow) :: rest -> mk #some [list [] rest]
+    case (#Word name) :: rest ->
+      match call LeanFunParams [rest] {
+        case (#some params remaining) -> mk #some [prim #cons [name params] remaining]
+        case (#none) -> mk #none []
+      }
+    case _ -> mk #none []
+  }
+
+judgment LeanResolveItems [items scope] =
+  match items {
+    case [] -> list []
+    case (#Dot) :: (#Word name) :: rest ->
+      call LeanResolveItems [rest scope]
+    case (#Def) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #def] call LeanResolveItems [rest prim #snoc [scope name]]]
+    case (#Abbrev) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #abbrev] call LeanResolveItems [rest prim #snoc [scope name]]]
+    case (#Theorem) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #theorem] call LeanResolveItems [rest prim #snoc [scope name]]]
+    case (#Lemma) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #lemma] call LeanResolveItems [rest prim #snoc [scope name]]]
+    case (#Structure) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #structure] call LeanResolveItems [rest prim #snoc [scope name]]]
+    case (#ClassKw) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #class] call LeanResolveItems [rest prim #snoc [scope name]]]
+    case (#Instance) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #instance] call LeanResolveItems [rest prim #snoc [scope name]]]
+    case (#Let) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #let] call LeanResolveItems [rest prim #snoc [scope name]]]
+    case (#Fun) :: rest ->
+      match call LeanFunParams [rest] {
+        case (#some params remaining) -> call LeanResolveItems [remaining prim #append [scope params]]
+        case (#none) -> call LeanResolveItems [rest scope]
+      }
+    case (#InductiveDecl name ctors) :: rest ->
+      let ctorNames = call LeanCtorNames [call LeanCtorItems [ctors]] in
+      prim #append [
+        prim #cons [mk #binding [name #inductive] call LeanMkBindings [ctorNames #constructor]]
+        call LeanResolveItems [rest prim #append [prim #snoc [scope name] ctorNames]]
+      ]
+    case (#InductiveDeclDeriving name ctors derives) :: rest ->
+      let ctorNames = call LeanCtorNames [call LeanCtorItems [ctors]] in
+      prim #append [
+        prim #cons [mk #binding [name #inductive] call LeanMkBindings [ctorNames #constructor]]
+        call LeanResolveItems [rest prim #append [prim #snoc [scope name] ctorNames]]
+      ]
+    case (#InductiveDeclTyped name indexType ctors) :: rest ->
+      let ctorNames = call LeanCtorNames [call LeanCtorItems [ctors]] in
+      prim #append [
+        prim #cons [mk #binding [name #inductive] call LeanMkBindings [ctorNames #constructor]]
+        call LeanResolveItems [rest prim #append [prim #snoc [scope name] ctorNames]]
+      ]
+    case (#InductiveDeclTypedDeriving name indexType ctors derives) :: rest ->
+      let ctorNames = call LeanCtorNames [call LeanCtorItems [ctors]] in
+      prim #append [
+        prim #cons [mk #binding [name #inductive] call LeanMkBindings [ctorNames #constructor]]
+        call LeanResolveItems [rest prim #append [prim #snoc [scope name] ctorNames]]
+      ]
+    case (#Brace body) :: rest ->
+      prim #append [call LeanResolveItems [call LeanBody [body] scope] call LeanResolveItems [rest scope]]
+    case (#Paren body) :: rest ->
+      prim #append [call LeanResolveItems [call LeanBody [body] scope] call LeanResolveItems [rest scope]]
+    case (#Bracket body) :: rest ->
+      prim #append [call LeanResolveItems [call LeanBody [body] scope] call LeanResolveItems [rest scope]]
+    case (#Word name) :: rest ->
+      if prim #contains [scope name]
+      then prim #cons [mk #reference [name #resolved] call LeanResolveItems [rest scope]]
+      else prim #cons [mk #reference [name #free] call LeanResolveItems [rest scope]]
+    case head :: rest ->
+      call LeanResolveItems [rest scope]
+  }
+
+judgment ResolveLean [grammar source] =
+  call LeanResolveItems [call LeanBody [call ParseLean [grammar source]] list []]
+
+; ---------------------------------------------------- type inference/checking
+
+judgment LeanTypeWords [tokens] =
+  match tokens {
+    case [] -> list []
+    case (#Word w) :: rest -> prim #cons [w call LeanTypeWords [rest]]
+    case head :: rest -> call LeanTypeWords [rest]
+  }
+
+judgment LeanTakeTypeUntilAssign [items] =
+  match items {
+    case [] -> mk #taken [list [] list []]
+    case (#Assign) :: rest -> mk #taken [list [] rest]
+    case (#Semicolon) :: rest -> mk #taken [list [] rest]
+    case head :: rest ->
+      match call LeanTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) -> mk #taken [prim #cons [head typeToks] remaining]
+      }
+  }
+
+judgment LeanPrimaryType [typeWords] =
+  match typeWords {
+    case [] -> #unknown
+    case t :: rest ->
+      if prim #eq [t "Nat"]
+      then #number
+      else if prim #eq [t "Int"]
+      then #number
+      else if prim #eq [t "Float"]
+      then #number
+      else if prim #eq [t "Bool"]
+      then #boolean
+      else if prim #eq [t "String"]
+      then #string
+      else if prim #eq [t "Char"]
+      then #char
+      else if prim #eq [t "Prop"]
+      then #proposition
+      else if prim #eq [t "Type"]
+      then #type
+      else call LeanPrimaryType [rest]
+  }
+
+judgment LeanLookupType [env name] =
+  match env {
+    case [] -> #unknown
+    case (#typed key t) :: rest ->
+      if prim #eq [key name]
+      then t
+      else call LeanLookupType [rest name]
+  }
+
+judgment LeanInferExprType [items env] =
+  match items {
+    case [] -> #unknown
+    case (#Number n) :: rest -> #number
+    case (#DQuoted s) :: rest -> #string
+    case (#True) :: rest -> #boolean
+    case (#False) :: rest -> #boolean
+    case (#Word name) :: rest -> call LeanLookupType [env name]
+    case head :: rest -> call LeanInferExprType [rest env]
+  }
+
+judgment LeanCompatibleType [declared inferred] =
+  if prim #eq [declared #unknown]
+  then #true
+  else if prim #eq [inferred #unknown]
+  then #true
+  else if prim #eq [declared inferred]
+  then #true
+  else #false
+
+judgment LeanInferItems [items env] =
+  match items {
+    case [] -> list []
+    case (#Let) :: (#Word name) :: (#Colon) :: rest ->
+      match call LeanTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) ->
+          let declared = call LeanPrimaryType [call LeanTypeWords [typeToks]] in
+          let inferred = call LeanInferExprType [remaining env] in
+          let entry = mk #typed [name declared] in
+          prim #cons [
+            mk #type [name declared #declared inferred]
+            call LeanInferItems [remaining prim #snoc [env entry]]
+          ]
+      }
+    case (#Let) :: (#Word name) :: rest ->
+      let inferred = call LeanInferExprType [rest env] in
+      let entry = mk #typed [name inferred] in
+      prim #cons [mk #type [name inferred #inferred inferred] call LeanInferItems [rest prim #snoc [env entry]]]
+    case (#Def) :: (#Word name) :: rest ->
+      let own = mk #typed [name #definition] in
+      prim #cons [mk #type [name #definition #declared #definition] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#Abbrev) :: (#Word name) :: rest ->
+      let own = mk #typed [name #definition] in
+      prim #cons [mk #type [name #definition #declared #definition] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#Theorem) :: (#Word name) :: rest ->
+      let own = mk #typed [name #proposition] in
+      prim #cons [mk #type [name #proposition #declared #proposition] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#Lemma) :: (#Word name) :: rest ->
+      let own = mk #typed [name #proposition] in
+      prim #cons [mk #type [name #proposition #declared #proposition] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#Structure) :: (#Word name) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #cons [mk #type [name #type #declared #type] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#ClassKw) :: (#Word name) :: rest ->
+      let own = mk #typed [name #typeclass] in
+      prim #cons [mk #type [name #typeclass #declared #typeclass] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#Instance) :: (#Word name) :: rest ->
+      let own = mk #typed [name #instance] in
+      prim #cons [mk #type [name #instance #declared #instance] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#InductiveDecl name ctors) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #append [
+        call LeanInferItems [call LeanCtorItems [ctors] prim #snoc [env own]]
+        call LeanInferItems [rest prim #snoc [env own]]
+      ]
+    case (#InductiveDeclDeriving name ctors derives) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #append [
+        call LeanInferItems [call LeanCtorItems [ctors] prim #snoc [env own]]
+        call LeanInferItems [rest prim #snoc [env own]]
+      ]
+    case (#InductiveDeclTyped name indexType ctors) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #append [
+        call LeanInferItems [call LeanCtorItems [ctors] prim #snoc [env own]]
+        call LeanInferItems [rest prim #snoc [env own]]
+      ]
+    case (#InductiveDeclTypedDeriving name indexType ctors derives) :: rest ->
+      let own = mk #typed [name #type] in
+      prim #append [
+        call LeanInferItems [call LeanCtorItems [ctors] prim #snoc [env own]]
+        call LeanInferItems [rest prim #snoc [env own]]
+      ]
+    case (#Constructor name type) :: rest ->
+      let own = mk #typed [name #constructor] in
+      prim #cons [mk #type [name #constructor #declared #constructor] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#ConstructorNoType name) :: rest ->
+      let own = mk #typed [name #constructor] in
+      prim #cons [mk #type [name #constructor #declared #constructor] call LeanInferItems [rest prim #snoc [env own]]]
+    case (#Brace body) :: rest ->
+      prim #append [call LeanInferItems [call LeanBody [body] env] call LeanInferItems [rest env]]
+    case (#Paren body) :: rest ->
+      prim #append [call LeanInferItems [call LeanBody [body] env] call LeanInferItems [rest env]]
+    case (#Bracket body) :: rest ->
+      prim #append [call LeanInferItems [call LeanBody [body] env] call LeanInferItems [rest env]]
+    case head :: rest -> call LeanInferItems [rest env]
+  }
+
+judgment LeanTypeErrors [typed] =
+  match typed {
+    case [] -> list []
+    case (#type name declared #declared inferred) :: rest ->
+      if call LeanCompatibleType [declared inferred]
+      then call LeanTypeErrors [rest]
+      else prim #cons [mk #type-error [name declared inferred] call LeanTypeErrors [rest]]
+    case head :: rest -> call LeanTypeErrors [rest]
+  }
+
+judgment InferLean [grammar source] =
+  call LeanInferItems [call LeanBody [call ParseLean [grammar source]] list []]
+
+judgment TypeCheckLean [grammar source] =
+  call LeanTypeErrors [call InferLean [grammar source]]

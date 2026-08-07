@@ -4,13 +4,15 @@
   (start document)
   (skip "//[^\\r\\n]*")
   (skip "/\\*([^*]|\\*+[^*/])*\\*+/")
-  (token dquoted str "\"(\\\\.|[^\"\\\\])*\"")
-  (token bytestring str "b\"(\\\\.|[^\"\\\\])*\"")
-  (token bytechar str "b'(\\\\.|[^'\\\\])'")
+  (token dquoted str "\"(\\\\\r?\n[ \t]*|\\\\.|[^\"\\\\])*\"")
+  (token bytestring str "b\"(\\\\x[0-9a-fA-F]{2}|\\\\\r?\n[ \t]*|\\\\.|[^\"\\\\])*\"")
+  (token rawbytestring str "(br\"[^\"]*\"|br#\"[\\s\\S]*\"#|br##\"[\\s\\S]*\"##|br###\"[\\s\\S]*\"###)")
+  (token bytechar str "b'(\\\\x[0-9a-fA-F]{2}|\\\\.|[^'\\\\])'")
   (token charlit str "'(\\\\.|[^'\\\\])'")
-  (token lifetime sym "'[A-Za-z_][A-Za-z0-9_]*")
+  (token lifetime sym "'[A-Za-z_][A-Za-z0-9_̀-ͯ]*")
+  (token dollar sym "\\$")
   (token number str "(0x[0-9a-fA-F_]+|0o[0-7_]+|0b[01_]+|[0-9][0-9_]*(\\.[0-9_]+)?)([a-zA-Z][0-9]*)?")
-  (token word str "[A-Za-z_][A-Za-z0-9_]*")
+  (token word str "(r#)?[_\\p{L}][_0-9\\p{L}\\p{M}]*")
   (category
     document
     (fold RustDocument item))
@@ -27,6 +29,59 @@
       [
         (kw "{")
         (kw "}")])
+    (prod
+      MacroRules
+      [
+        (kw "macro_rules")
+        (kw "!")
+        (bind name word)
+        (kw "{")
+        (bind body document)
+        (kw "}")])
+    (prod
+      EmptyMacroRules
+      [
+        (kw "macro_rules")
+        (kw "!")
+        (bind name word)
+        (kw "{")
+        (kw "}")])
+    (prod
+      MacroRulesBracket
+      [
+        (kw "macro_rules")
+        (kw "!")
+        (bind name word)
+        (kw "[")
+        (bind body document)
+        (kw "]")])
+    (prod
+      EmptyMacroRulesBracket
+      [
+        (kw "macro_rules")
+        (kw "!")
+        (bind name word)
+        (kw "[")
+        (kw "]")])
+    (prod
+      MacroRulesParen
+      [
+        (kw "macro_rules")
+        (kw "!")
+        (bind name word)
+        (kw "(")
+        (bind body document)
+        (kw ")")
+        (kw ";")])
+    (prod
+      EmptyMacroRulesParen
+      [
+        (kw "macro_rules")
+        (kw "!")
+        (bind name word)
+        (kw "(")
+        (kw ")")
+        (kw ";")])
     (prod
       FunctionDecl
       [
@@ -154,6 +209,10 @@
       [
         (bind value bytestring)])
     (prod
+      RawByteString
+      [
+        (bind value rawbytestring)])
+    (prod
       ByteChar
       [
         (bind value bytechar)])
@@ -189,10 +248,6 @@
       Crate
       [
         (kw "crate")])
-    (prod
-      Dyn
-      [
-        (kw "dyn")])
     (prod
       Else
       [
@@ -318,10 +373,6 @@
       [
         (kw "async")])
     (prod
-      Await
-      [
-        (kw "await")])
-    (prod
       PathSep
       [
         (kw "::")])
@@ -422,6 +473,10 @@
       [
         (kw "-")])
     (prod
+      UnicodeMinus
+      [
+        (kw "−")])
+    (prod
       Star
       [
         (kw "*")])
@@ -473,6 +528,35 @@
       Assign
       [
         (kw "=")])
+    (prod
+      MacroCall
+      [
+        (bind name word)
+        (kw "!")
+        (kw "(")
+        (bind body document)
+        (kw ")")
+        (kw ";")])
+    (prod
+      MacroCallExpr
+      [
+        (bind name word)
+        (kw "!")
+        (kw "(")
+        (bind body document)
+        (kw ")")])
+    (prod
+      MacroCallBracket
+      [
+        (bind name word)
+        (kw "!")
+        (kw "[")
+        (bind body document)
+        (kw "]")])
+    (prod
+      Dollar
+      [
+        (kw "$")])
     (prod
       Word
       [

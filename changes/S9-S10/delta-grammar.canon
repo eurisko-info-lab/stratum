@@ -1,0 +1,11 @@
+; delta-grammar for S9 -> S10: the Strata surface is unchanged. Saying what an
+; artifact weighs needed no new syntax -- `prim` and `type` were drawn at S7,
+; and this layer declares four more of the first and none of the second.
+(change
+  (kind delta-grammar)
+  (name "S9->S10 delta-grammar")
+  (replace
+    (ReplaceChange
+      strata-syntax
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many prim type escape])
+      (present [module version data def law match case let end telescope index bind import export uses erased once affine many prim type escape]))))

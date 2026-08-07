@@ -1,0 +1,36 @@
+
+artifactmeta-program
+program
+moduledelta
+judgment
+ApplyDelta	referencecurrent
+match
+callFetch
+v	reference
+qchange
+case
+pmnone
+mkrejected
+qchange-missing
+case
+pmsome
+pvchange
+callApplyReplace
+callRequire
+vchange
+qreplace
+vcurrent
+judgment	DeltaKind	reference
+match
+callFetch
+v	reference
+qchange
+case
+pmnone
+mknone
+case
+pmsome
+pvchange
+callField
+vchange
+qkind

@@ -1,0 +1,23 @@
+
+artifactsource
+source
+pathstrata/lib/prelude.strata
+textùmodule "strata.prelude"
+version 1
+; The prelude, declared once.
+;
+; Below S4 every module had to declare what it used, so `Nat` and `add`
+; appeared in three files that meant the same thing by them. Here they are
+; declared once and exposed, and the modules that need them say so.
+;
+; `Type` is not declared. It is what a type parameter is written with, and it
+; belongs to the language rather than to a module.
+export Bool True False not and or Nat Zero Succ add mul
+data Bool = | True [] | False []
+def not [b: Bool]: Bool = match b of case True -> False case False -> True end
+def and [a: Bool, b: Bool]: Bool = match a of case True -> b case False -> False end
+def or [a: Bool, b: Bool]: Bool = match a of case True -> True case False -> b end
+data Nat = | Zero [] | Succ [pred #1: Nat]
+def add [m: Nat, n: Nat]: Nat = match m of case Zero -> n case Succ p -> Succ (add p n) end
+def mul [m: Nat, n: Nat]: Nat = match m of case Zero -> Zero case Succ p -> add n (mul p n) end
+law AddZeroLeft [n: Nat] = add Zero n

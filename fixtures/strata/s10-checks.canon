@@ -1,0 +1,426 @@
+; Executable acceptance checks for S10, artifacts and the content addressed store.
+[
+  (check strata-the-octets-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/octets.strata"))))
+    (value #t))
+
+  (check strata-the-artifact-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/artifact.strata"))))
+    (value #t))
+
+  (check strata-the-store-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/cas.strata"))))
+    (value #t))
+
+  (check strata-the-store-checks
+    (call CheckLinkedNative
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q "strata.cas"))
+    (value (checked ok)))
+
+  (check strata-the-store-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q "strata.cas"))
+    (value (total ok)))
+
+  (check strata-the-store-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q "strata.cas"))
+    (value (permitted ok)))
+
+  (check strata-the-store-agrees-with-the-host-set
+    (call CheckLinkedBoundary
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q "strata.cas"))
+    (value (bounded ok)))
+
+  (check strata-names-the-f0-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F0/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f1-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F1/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f2-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F2/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f3-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F3/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f4-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F4/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f5-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F5/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f6-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F6/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f7-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F7/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f8-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F8/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f9-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F9/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f10-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F10/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-the-f11-foundation-record
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F11/foundation.canon")))
+    (value (named ok)))
+
+  (check strata-names-a-source-artifact
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F3/closure/d3fae2d236be751f0f55091ac6ae620b1848f93c0901ad6065d01064a59dc05d.canon")))
+    (value (named ok)))
+
+  (check strata-names-a-change-artifact
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F0/closure/f7c65071eff3278ac9debb2ee08dd66de716f1fc3f0d121b5efff97ad7c397e2.canon")))
+    (value (named ok)))
+
+  (check strata-names-a-meta-program-artifact
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F11/closure/9f9e98e51828e645774ccb75926100c2104794d5d8556575652f4e17f8c573c1.canon")))
+    (value (named ok)))
+
+  (check strata-names-a-four-kilobyte-artifact
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F11/closure/eff33f3cfca55a0554d3ed41c243707fc6c0b2c79517f5b4b753ada1c8786fa2.canon")))
+    (value (named ok)))
+
+  (check strata-names-a-larger-closure-artifact
+    (call StrataNamesArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (q (file "foundations/F11/closure/af1bb76d8555af18ddba17e3582b5f1d17bc9b4236dfff98f17b51e2609e0594.canon")))
+    (value (named ok)))
+
+  (check strata-weighs-the-f1-foundation-record
+    (call StrataWeighsArtifact
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call StrataArtifactOf (q (file "foundations/F1/foundation.canon"))))
+    (value 218))
+
+  (check strata-admits-an-artifact-it-can-name
+    (call StrataAnswersFor
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call AscendingKeyArtifact)
+      (q admissionOf))
+    (value "admitted"))
+
+  (check strata-refuses-an-artifact-whose-map-keys-descend
+    (call StrataAnswersFor
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call DescendingKeyArtifact)
+      (q admissionOf))
+    (value "refused"))
+
+  (check strata-a-map-whose-keys-ascend-is-canonical
+    (call StrataSaysYes
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call AscendingKeyArtifact)
+      (q isCanonicalArtifact))
+    (value #t))
+
+  (check strata-a-map-whose-keys-descend-is-not-canonical
+    (call StrataSaysYes
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call DescendingKeyArtifact)
+      (q isCanonicalArtifact))
+    (value #f))
+
+  (check strata-holds-what-it-admits
+    (call StrataSaysYes
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call AscendingKeyArtifact)
+      (q storeHoldsIt))
+    (value #t))
+
+  (check strata-admitting-twice-keeps-one
+    (call StrataSaysYes
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call AscendingKeyArtifact)
+      (q admittingTwiceKeepsOne))
+    (value #t))
+
+  (check strata-answers-a-reference-of-the-right-schema
+    (call StrataAnswersFor
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call AscendingKeyArtifact)
+      (q answerForOwnReference))
+    (value "answered"))
+
+  (check strata-refuses-a-reference-of-another-schema
+    (call StrataAnswersFor
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call AscendingKeyArtifact)
+      (q answerForOtherSchema))
+    (value "wrong-schema"))
+
+  (check strata-knows-nothing-of-a-name-it-never-issued
+    (call StrataAnswersFor
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call AscendingKeyArtifact)
+      (q answerForUnknownName))
+    (value "unknown"))
+
+  (check strata-knows-a-foundation-record-is-not-its-own-closure
+    (call StrataSaysYes
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call StrataArtifactOf (q (file "foundations/F1/foundation.canon")))
+      (q isCompleteInOwnStore))
+    (value #f))
+
+  (check strata-names-a-value-nobody-has-stored
+    (call StrataNamesItself
+      (q (file "foundations/S10/surface/strata.generated.grammar"))
+      (call StrataStoreSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata"))))
+      (call AscendingKeyArtifact))
+    (value (named ok)))
+]

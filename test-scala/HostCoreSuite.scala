@@ -295,8 +295,8 @@ class HostCoreSuite extends munit.FunSuite:
       Set.empty,
       None,
       None,
-      "grammar",
-      Vector.empty
+      Vector.empty,
+      "grammar"
     )
     val declaredSchema = summon[Schema[DeclaredLanguage]]
     val declaredLaws = summon[SchemaLaws[DeclaredLanguage]]

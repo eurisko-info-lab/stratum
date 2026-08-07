@@ -1,0 +1,908 @@
+; Generated from features/strata/store.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratastore)
+  (judgment
+    HostNames
+    []
+    (lst
+      (q numberOfNat)
+      (q natOfNumber)
+      (q numberAdd)
+      (q numberEq)
+      (q numberLess)
+      (q numberMonus)
+      (q numberQuotient)
+      (q numberRemainder)
+      (q textBytes)
+      (q bytesText)
+      (q bytesEq)
+      (q digest)
+      (q textCharacters)
+      (q textConcat)
+      (q textEq)
+      (q textOctets)
+      (q octetsOfBytes)
+      (q bytesOfOctets)
+      (q bytesDigest)))
+  (judgment
+    ArityOfHost
+    [name]
+    (if
+      (prim
+        eq
+        (v name)
+        (q numberAdd))
+      (q 2)
+      (if
+        (prim
+          eq
+          (v name)
+          (q numberEq))
+        (q 2)
+        (if
+          (prim
+            eq
+            (v name)
+            (q numberLess))
+          (q 2)
+          (if
+            (prim
+              eq
+              (v name)
+              (q numberMonus))
+            (q 2)
+            (if
+              (prim
+                eq
+                (v name)
+                (q numberQuotient))
+              (q 2)
+              (if
+                (prim
+                  eq
+                  (v name)
+                  (q numberRemainder))
+                (q 2)
+                (if
+                  (prim
+                    eq
+                    (v name)
+                    (q bytesEq))
+                  (q 2)
+                  (if
+                    (prim
+                      eq
+                      (v name)
+                      (q textConcat))
+                    (q 2)
+                    (if
+                      (prim
+                        eq
+                        (v name)
+                        (q textEq))
+                      (q 2)
+                      (q 1)))))))))))
+  (judgment
+    NativePrimitive
+    [name args]
+    (if
+      (prim
+        ne
+        (prim
+          len
+          (v args))
+        (call
+          HostArity
+          (v name)))
+      (fail
+        native-error
+        (prim
+          scat
+          (prim
+            scat
+            (q "the primitive ")
+            (prim
+              sym->str
+              (v name)))
+          (q " was given the wrong number of arguments")))
+      (if
+        (prim
+          eq
+          (v name)
+          (q textOctets))
+        (call
+          HostToOctets
+          (call
+            OctetsOfText
+            (prim
+              nth
+              (v args)
+              (q 0))))
+        (if
+          (prim
+            eq
+            (v name)
+            (q octetsOfBytes))
+          (call
+            HostToOctets
+            (call
+              OctetsOfBytes
+              (prim
+                nth
+                (v args)
+                (q 0))))
+          (if
+            (prim
+              eq
+              (v name)
+              (q bytesOfOctets))
+            (call
+              BytesOfOctets
+              (call
+                OctetsToHost
+                (prim
+                  nth
+                  (v args)
+                  (q 0))))
+            (if
+              (prim
+                eq
+                (v name)
+                (q bytesDigest))
+              (call
+                DigestOfBytes
+                (prim
+                  nth
+                  (v args)
+                  (q 0)))
+              (if
+                (prim
+                  eq
+                  (v name)
+                  (q numberMonus))
+                (call
+                  TakenAway
+                  (prim
+                    nth
+                    (v args)
+                    (q 0))
+                  (prim
+                    nth
+                    (v args)
+                    (q 1)))
+                (if
+                  (prim
+                    eq
+                    (v name)
+                    (q numberQuotient))
+                  (call
+                    Quotient
+                    (prim
+                      nth
+                      (v args)
+                      (q 0))
+                    (prim
+                      nth
+                      (v args)
+                      (q 1)))
+                  (if
+                    (prim
+                      eq
+                      (v name)
+                      (q numberRemainder))
+                    (call
+                      Remainder
+                      (prim
+                        nth
+                        (v args)
+                        (q 0))
+                      (prim
+                        nth
+                        (v args)
+                        (q 1)))
+                    (call
+                      PerformPrimitive
+                      (v name)
+                      (v args)))))))))))
+  (judgment
+    TakenAway
+    [a b]
+    (if
+      (prim
+        lt
+        (v a)
+        (v b))
+      (q 0)
+      (prim
+        sub
+        (v a)
+        (v b))))
+  (judgment
+    Quotient
+    [a b]
+    (if
+      (prim
+        eq
+        (v b)
+        (q 0))
+      (q 0)
+      (prim
+        div
+        (v a)
+        (v b))))
+  (judgment
+    Remainder
+    [a b]
+    (if
+      (prim
+        eq
+        (v b)
+        (q 0))
+      (v a)
+      (prim
+        mod
+        (v a)
+        (v b))))
+  (judgment
+    OctetsOfText
+    [text]
+    (match
+      (cap
+        text-octets
+        (v text))
+      (case
+        (pm
+          ok
+          (pv numbers))
+        (v numbers))
+      (case
+        _
+        (fail
+          store-error
+          (q "the host will not say which octets spell that text")))))
+  (judgment
+    OctetsOfBytes
+    [bytes]
+    (match
+      (cap
+        octets-of-bytes
+        (v bytes))
+      (case
+        (pm
+          ok
+          (pv numbers))
+        (v numbers))
+      (case
+        _
+        (fail
+          store-error
+          (q "the host will not say which octets those bytes are")))))
+  (judgment
+    BytesOfOctets
+    [numbers]
+    (match
+      (cap
+        bytes-of-octets
+        (v numbers))
+      (case
+        (pm
+          ok
+          (pv bytes))
+        (v bytes))
+      (case
+        _
+        (fail
+          store-error
+          (q "the host will not make bytes of those numbers")))))
+  (judgment
+    DigestOfBytes
+    [bytes]
+    (match
+      (cap
+        digest-of-bytes
+        (v bytes))
+      (case
+        (pm
+          ok
+          (pv reference))
+        (prim
+          ref->str
+          (v reference)))
+      (case
+        _
+        (fail
+          store-error
+          (q "the host will not hash those bytes")))))
+  (judgment
+    HostToOctets
+    [numbers]
+    (match
+      (v numbers)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoOctet)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (mk
+          MoreOctet
+          (v head)
+          (call
+            HostToOctets
+            (v rest))))))
+  (judgment
+    OctetsToHost
+    [value]
+    (match
+      (v value)
+      (case
+        (pm NoOctet)
+        (lst))
+      (case
+        (pm
+          MoreOctet
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (v head)
+          (call
+            OctetsToHost
+            (v tail))))
+      (case
+        _
+        (fail
+          store-error
+          (q "a value crossing as octets is not one")))))
+  (judgment
+    ReadCanonValue
+    [value]
+    (if
+      (prim
+        is-unit
+        (v value))
+      (prim
+        node
+        (q VUnit)
+        (lst))
+      (if
+        (prim
+          is-bool
+          (v value))
+        (mk
+          VBool
+          (call
+            HostToBool
+            (v value)))
+        (if
+          (prim
+            is-nat
+            (v value))
+          (mk
+            VNat
+            (v value))
+          (if
+            (prim
+              is-int
+              (v value))
+            (call
+              ReadCanonInt
+              (v value))
+            (if
+              (prim
+                is-bytes
+                (v value))
+              (mk
+                VBytes
+                (call
+                  HostToOctets
+                  (call
+                    OctetsOfBytes
+                    (v value))))
+              (if
+                (prim
+                  is-str
+                  (v value))
+                (mk
+                  VText
+                  (v value))
+                (if
+                  (prim
+                    is-sym
+                    (v value))
+                  (mk
+                    VName
+                    (prim
+                      sym->str
+                      (v value)))
+                  (if
+                    (prim
+                      is-ref
+                      (v value))
+                    (mk
+                      VRef
+                      (prim
+                        ref->str
+                        (v value)))
+                    (if
+                      (prim
+                        is-list
+                        (v value))
+                      (mk
+                        VList
+                        (call
+                          ReadCanonValues
+                          (v value)))
+                      (if
+                        (prim
+                          is-map
+                          (v value))
+                        (mk
+                          VMap
+                          (call
+                            ReadCanonPairs
+                            (prim
+                              mentries
+                              (v value))))
+                        (if
+                          (prim
+                            is-node
+                            (v value))
+                          (mk
+                            VNode
+                            (prim
+                              sym->str
+                              (prim
+                                tag
+                                (v value)))
+                            (call
+                              ReadCanonValues
+                              (prim
+                                args
+                                (v value))))
+                          (fail
+                            store-error
+                            (q "a value the reader does not know"))))))))))))))
+  (judgment
+    ReadCanonInt
+    [value]
+    (if
+      (prim
+        lt
+        (v value)
+        (q 0))
+      (mk
+        VInt
+        (prim
+          sub
+          (q 0)
+          (v value))
+        (q #t))
+      (mk
+        VInt
+        (v value)
+        (q #f))))
+  (judgment
+    ReadCanonValues
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoValue)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (mk
+          MoreValue
+          (call
+            ReadCanonValue
+            (v head))
+          (call
+            ReadCanonValues
+            (v rest))))))
+  (judgment
+    ReadCanonPairs
+    [entries]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoPair)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            entry
+            (pv key)
+            (pv value))
+          (pv rest))
+        (mk
+          MorePair
+          (call
+            ReadCanonValue
+            (v key))
+          (call
+            ReadCanonValue
+            (v value))
+          (call
+            ReadCanonPairs
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (fail
+          store-error
+          (q "a map entry the reader does not know")))))
+  (judgment
+    StrataStoreSystem
+    [prelude native octets artifact cas]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)))
+  (judgment
+    RunStrataWith
+    [grammar sources name entry arguments]
+    (let
+      decls
+      (call
+        IndexedDeclarations
+        (call
+          NativeModule
+          (v grammar)
+          (v sources)
+          (v name)))
+      (call
+        EnterDefinition
+        (v decls)
+        (call
+          RequiredDefinition
+          (v decls)
+          (v entry))
+        (v arguments))))
+  (judgment
+    StrataArtifactOf
+    [reference]
+    (match
+      (cap
+        cas-get
+        (v reference))
+      (case
+        (pm
+          ok
+          (pm
+            artifact
+            (pv kind)
+            (pv body)))
+        (mk
+          Artifact
+          (prim
+            sym->str
+            (v kind))
+          (call
+            ReadCanonValue
+            (v body))))
+      (case
+        _
+        (fail
+          store-error
+          (q "no artifact is stored under that reference")))))
+  (judgment
+    StrataNamesArtifact
+    [grammar sources reference]
+    (if
+      (prim
+        eq
+        (prim
+          ref->str
+          (v reference))
+        (call
+          RunStrataWith
+          (v grammar)
+          (v sources)
+          (q "strata.cas")
+          (q nameOfArtifact)
+          (lst
+            (call
+              StrataArtifactOf
+              (v reference)))))
+      (mk
+        named
+        (q ok))
+      (mk
+        named
+        (q mismatch))))
+  (judgment
+    StrataWeighsArtifact
+    [grammar sources artifact]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.cas")
+      (q weightOfArtifact)
+      (lst
+        (v artifact))))
+  (judgment
+    StrataAnswersFor
+    [grammar sources artifact entry]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.cas")
+      (v entry)
+      (lst
+        (v artifact))))
+  (judgment
+    StrataSaysYes
+    [grammar sources artifact entry]
+    (match
+      (call
+        StrataAnswersFor
+        (v grammar)
+        (v sources)
+        (v artifact)
+        (v entry))
+      (case
+        (pm True)
+        (q #t))
+      (case
+        _
+        (q #f))))
+  (judgment
+    DescendingKeyArtifact
+    []
+    (mk
+      Artifact
+      (q "data")
+      (mk
+        VMap
+        (mk
+          MorePair
+          (mk
+            VName
+            (q "second"))
+          (prim
+            node
+            (q VUnit)
+            (lst))
+          (mk
+            MorePair
+            (mk
+              VName
+              (q "first"))
+            (prim
+              node
+              (q VUnit)
+              (lst))
+            (prim
+              node
+              (q NoPair)
+              (lst)))))))
+  (judgment
+    AscendingKeyArtifact
+    []
+    (mk
+      Artifact
+      (q "data")
+      (mk
+        VMap
+        (mk
+          MorePair
+          (mk
+            VName
+            (q "first"))
+          (prim
+            node
+            (q VUnit)
+            (lst))
+          (mk
+            MorePair
+            (mk
+              VName
+              (q "second"))
+            (prim
+              node
+              (q VUnit)
+              (lst))
+            (prim
+              node
+              (q NoPair)
+              (lst)))))))
+  (judgment
+    StrataNamesItself
+    [grammar sources artifact]
+    (if
+      (prim
+        eq
+        (prim
+          ref->str
+          (prim
+            digest
+            (call
+              WriteEnvelope
+              (v artifact))))
+        (call
+          RunStrataWith
+          (v grammar)
+          (v sources)
+          (q "strata.cas")
+          (q nameOfArtifact)
+          (lst
+            (v artifact))))
+      (mk
+        named
+        (q ok))
+      (mk
+        named
+        (q mismatch))))
+  (judgment
+    WriteEnvelope
+    [artifact]
+    (match
+      (v artifact)
+      (case
+        (pm
+          Artifact
+          (pv kind)
+          (pv body))
+        (prim
+          node
+          (q artifact)
+          (lst
+            (prim
+              str->sym
+              (v kind))
+            (call
+              WriteCanonValue
+              (v body)))))
+      (case
+        _
+        (fail
+          store-error
+          (q "not an artifact")))))
+  (judgment
+    WriteCanonValue
+    [value]
+    (match
+      (v value)
+      (case
+        (pm VUnit)
+        (q #unit))
+      (case
+        (pm
+          VBool
+          (pv flag))
+        (call
+          WriteFlag
+          (v flag)))
+      (case
+        (pm
+          VNat
+          (pv size))
+        (v size))
+      (case
+        (pm
+          VBytes
+          (pv content))
+        (call
+          BytesOfOctets
+          (call
+            OctetsToHost
+            (v content))))
+      (case
+        (pm
+          VText
+          (pv spelling))
+        (v spelling))
+      (case
+        (pm
+          VName
+          (pv naming))
+        (prim
+          str->sym
+          (v naming)))
+      (case
+        (pm
+          VList
+          (pv items))
+        (call
+          WriteCanonValues
+          (v items)))
+      (case
+        (pm
+          VMap
+          (pv pairs))
+        (prim
+          mfrom
+          (call
+            WriteCanonPairs
+            (v pairs))))
+      (case
+        (pm
+          VNode
+          (pv tag)
+          (pv arguments))
+        (prim
+          node
+          (prim
+            str->sym
+            (v tag))
+          (call
+            WriteCanonValues
+            (v arguments))))
+      (case
+        _
+        (fail
+          store-error
+          (q "a value the writer does not know")))))
+  (judgment
+    WriteFlag
+    [flag]
+    (match
+      (v flag)
+      (case
+        (pm True)
+        (q #t))
+      (case
+        _
+        (q #f))))
+  (judgment
+    WriteCanonValues
+    [values]
+    (match
+      (v values)
+      (case
+        (pm
+          MoreValue
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (call
+            WriteCanonValue
+            (v head))
+          (call
+            WriteCanonValues
+            (v tail))))
+      (case _ (lst))))
+  (judgment
+    WriteCanonPairs
+    [pairs]
+    (match
+      (v pairs)
+      (case
+        (pm
+          MorePair
+          (pv key)
+          (pv value)
+          (pv tail))
+        (prim
+          cons
+          (mk
+            entry
+            (call
+              WriteCanonValue
+              (v key))
+            (call
+              WriteCanonValue
+              (v value)))
+          (call
+            WriteCanonPairs
+            (v tail))))
+      (case _ (lst)))))

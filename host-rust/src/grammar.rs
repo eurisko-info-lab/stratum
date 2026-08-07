@@ -296,6 +296,10 @@ pub fn lex(grammar: &Grammar, input: &str) -> Result<Vec<Token>, String> {
     let mut out = Vec::new();
     let mut index = 0usize;
     while index < characters.len() {
+        if index == 0 && characters[index] == '\u{feff}' {
+            index += 1;
+            continue;
+        }
         let explicit_whitespace_token = characters[index].is_whitespace()
             && grammar.tokens.iter().any(|token| {
                 token.pattern
@@ -306,7 +310,7 @@ pub fn lex(grammar: &Grammar, input: &str) -> Result<Vec<Token>, String> {
             index += 1;
             continue;
         }
-        let mut skipped = 0usize;
+        let mut skipped = nested_block_comment_length(grammar, &characters, index).unwrap_or(0usize);
         for skip in &grammar.skips {
             if let Some(end) = skip.match_at(&characters, index) {
                 if end - index > skipped {
@@ -370,12 +374,39 @@ pub fn lex(grammar: &Grammar, input: &str) -> Result<Vec<Token>, String> {
     Ok(if grammar.layout { apply_layout(&characters, out) } else { out })
 }
 
+fn nested_block_comment_length(grammar: &Grammar, characters: &[char], offset: usize) -> Option<usize> {
+    let has_block_comment_skip = grammar.skips.iter().any(|skip| {
+        let sample: Vec<char> = "/*x*/".chars().collect();
+        skip.match_at(&sample, 0) == Some(sample.len())
+    });
+    if !has_block_comment_skip || offset + 1 >= characters.len() || characters[offset] != '/' || characters[offset + 1] != '*' {
+        return None;
+    }
+
+    let mut index = offset + 2;
+    let mut depth = 1usize;
+    while index + 1 < characters.len() && depth > 0 {
+        if characters[index] == '/' && characters[index + 1] == '*' {
+            depth += 1;
+            index += 2;
+        } else if characters[index] == '*' && characters[index + 1] == '/' {
+            depth -= 1;
+            index += 2;
+        } else {
+            index += 1;
+        }
+    }
+    if depth == 0 { Some(index - offset) } else { None }
+}
+
 /// The off-side rule, mirroring host-scala/grammar/GrammarMachine0.scala's
 /// `applyLayout` exactly: see the comment there for the design. Offsets here
 /// are character indices into `characters`, matching how this lexer already
 /// counts them (not UTF-8 byte offsets).
 const INDENT_TEXT: &str = "INDENT";
 const DEDENT_TEXT: &str = "DEDENT";
+const LAYOUT_OPENERS: [&str; 2] = ["(", "["];
+const LAYOUT_CLOSERS: [&str; 2] = [")", "]"];
 
 fn column_of(characters: &[char], offset: usize) -> usize {
     if offset == 0 {
@@ -398,6 +429,7 @@ fn layout_token(text: &str, offset: usize) -> Token {
 fn apply_layout(characters: &[char], tokens: Vec<Token>) -> Vec<Token> {
     let mut out = Vec::new();
     let mut stack: Vec<usize> = vec![0];
+    let mut bracket_depth = 0usize;
 
     if let Some(first) = tokens.first() {
         let col = column_of(characters, first.offset);
@@ -416,6 +448,13 @@ fn apply_layout(characters: &[char], tokens: Vec<Token>) -> Vec<Token> {
         // consecutive comments from merging when the printer re-joins them).
         let ends_line = tokens[i].text.ends_with('\n');
         out.push(tokens[i].clone());
+        if tokens[i].kind == "kw" {
+            if LAYOUT_OPENERS.contains(&tokens[i].text.as_str()) {
+                bracket_depth += 1;
+            } else if LAYOUT_CLOSERS.contains(&tokens[i].text.as_str()) && bracket_depth > 0 {
+                bracket_depth -= 1;
+            }
+        }
         if ends_line {
             let mut j = i + 1;
             // Blank lines carry no structure of their own -- only the line
@@ -426,7 +465,7 @@ fn apply_layout(characters: &[char], tokens: Vec<Token>) -> Vec<Token> {
             while j < tokens.len() && tokens[j].kind == "newline" {
                 j += 1;
             }
-            if j < tokens.len() {
+            if j < tokens.len() && bracket_depth == 0 {
                 let col = column_of(characters, tokens[j].offset);
                 if col > *stack.last().unwrap() {
                     stack.push(col);

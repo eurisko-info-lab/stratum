@@ -1,0 +1,88 @@
+# S10 acceptance transcript: artifacts and the content addressed store.
+#
+# S9 |- S10. Storage becomes Strata's.
+#
+# Every authoritative value in the system is named by the SHA-256 of the
+# octets it canonically encodes to, and working out which octets was the
+# host's. It is now Strata's: `strata/system/artifact.strata` decides the
+# eleven shapes, the order they compare in, the rule that says which values
+# are canonical, and the encoding, and `strata/system/cas.strata` decides what
+# a store does with one. The claim is not that the two agree in shape. For the
+# foundation record of every foundation on the first floor, and for four other
+# artifacts up to four kilobytes, the name Strata works out is the name that
+# artifact has been stored under since the day it was written.
+
+$ foundation verify --dir foundations/S10
+> foundation S10
+> digest 7d28e98c0d295fba2d0aa54d36ede01e8359440eac778a9a3f080da7487361aa
+> closure 255 artifacts
+> check strata-the-octets-module-prints-exactly ok
+> check strata-the-artifact-module-prints-exactly ok
+> check strata-the-store-module-prints-exactly ok
+> check strata-the-store-checks ok
+> check strata-the-store-is-total ok
+> check strata-the-store-declares-its-capabilities ok
+> check strata-the-store-agrees-with-the-host-set ok
+> check strata-names-the-f0-foundation-record ok
+> check strata-names-the-f1-foundation-record ok
+> check strata-names-the-f2-foundation-record ok
+> check strata-names-the-f3-foundation-record ok
+> check strata-names-the-f4-foundation-record ok
+> check strata-names-the-f5-foundation-record ok
+> check strata-names-the-f6-foundation-record ok
+> check strata-names-the-f7-foundation-record ok
+> check strata-names-the-f8-foundation-record ok
+> check strata-names-the-f9-foundation-record ok
+> check strata-names-the-f10-foundation-record ok
+> check strata-names-the-f11-foundation-record ok
+> check strata-names-a-source-artifact ok
+> check strata-names-a-change-artifact ok
+> check strata-names-a-meta-program-artifact ok
+> check strata-names-a-four-kilobyte-artifact ok
+> check strata-names-a-larger-closure-artifact ok
+> check strata-weighs-the-f1-foundation-record ok
+> check strata-admits-an-artifact-it-can-name ok
+> check strata-refuses-an-artifact-whose-map-keys-descend ok
+> check strata-a-map-whose-keys-ascend-is-canonical ok
+> check strata-a-map-whose-keys-descend-is-not-canonical ok
+> check strata-holds-what-it-admits ok
+> check strata-admitting-twice-keeps-one ok
+> check strata-answers-a-reference-of-the-right-schema ok
+> check strata-refuses-a-reference-of-another-schema ok
+> check strata-knows-nothing-of-a-name-it-never-issued ok
+> check strata-knows-a-foundation-record-is-not-its-own-closure ok
+> check strata-names-a-value-nobody-has-stored ok
+> verdict ok
+
+# The store is an ordinary Strata module set. It type checks, every definition
+# in it terminates, it reaches the host only where it says it does, and what
+# it declares of the host is exactly what the host provides -- which is the
+# same boundary discipline S7 drew, applied to a wider boundary.
+$ derive --foundation foundations/S10 --goal '(call CheckLinkedBoundary (grammar strata) (call StrataStoreSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata"))) (q "strata.cas"))'
+> (bounded ok)
+
+# What the layer actually does, one artifact at a time. The foundation record
+# of F0 is one hundred and fifty nine octets long, and Strata says so by
+# encoding it rather than by asking how big the file is.
+$ derive --foundation foundations/S10 --goal '(call StrataWeighsArtifact (grammar strata) (call StrataStoreSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata"))) (call StrataArtifactOf (file "foundations/F0/foundation.canon")))'
+> 159
+
+# And the hash of those octets is the name the first floor has been keeping it
+# under.
+$ derive --foundation foundations/S10 --goal '(call StrataNamesArtifact (grammar strata) (call StrataStoreSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata"))) (file "foundations/F0/foundation.canon"))'
+> (named ok)
+
+# A map whose keys descend encodes to octets the first floor will not decode,
+# so the store will not issue a name for it. Refusing is an answer; there is
+# no operation that would have stored it anyway.
+$ derive --foundation foundations/S10 --goal '(call StrataAnswersFor (grammar strata) (call StrataStoreSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata"))) (call DescendingKeyArtifact) (q admissionOf))'
+> "refused"
+
+# A reference carries the schema its target is expected to satisfy. Given one
+# that does not match, the store says which was wanted and which was found.
+$ derive --foundation foundations/S10 --goal '(call StrataAnswersFor (grammar strata) (call StrataStoreSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata"))) (call AscendingKeyArtifact) (q answerForOtherSchema))'
+> "wrong-schema"
+
+# What the layers below decided, S10 still decides.
+$ derive --foundation foundations/S10 --goal '(call BootstrapIsStable (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))))'
+> #t

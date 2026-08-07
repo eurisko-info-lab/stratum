@@ -1,0 +1,62 @@
+; S10: artifacts and the store, and the eleventh foundation of the second floor.
+;
+; S9 moved what a meaning is. This moves what a thing is called: `strata/
+; system/artifact.strata` says which octets an artifact encodes to and
+; `strata/system/cas.strata` says what a store does with one, and the name
+; Strata works out for an artifact of the first floor is the name that
+; artifact has been stored under since the day it was written.
+;
+; The boundary is wider here than S7 drew it, and `features/strata/store.meta`
+; widens it the way S7 made possible: it states a larger `HostNames` and a
+; larger `NativePrimitive`, and stands ahead of the module it widens, because
+; where two modules define a judgment the first one merged is the one that
+; answers. S7, S8 and S9 are untouched.
+(build
+  (name "S10")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/S9"))
+  (change (file "changes/S9-S10/change.canon"))
+  (application
+    (application
+      (name "strata-s10")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        ; Ahead of everything they speak for. Where two modules define a
+        ; judgment the first one merged is the one that answers, so a module
+        ; that says more about the host than S7 did, or answers a name in less
+        ; time than the seed's evaluator does, says it here -- and the layers
+        ; below keep what they were built with, and keep their digests.
+        (file "features/strata/index.generated.meta")
+        (file "features/strata/store.generated.meta")
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "foundations/S10/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+        (file "features/strata/metasource.generated.meta")
+      ]))
+      (grammars {
+        strata (file "foundations/S10/surface/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (checks (include "fixtures/strata/s10-checks.canon"))
+      (kernel (kernel (allow
+        cas-get cas-has hash grammar-parse grammar-print
+        text-octets octets-of-bytes bytes-of-octets digest-of-bytes)))
+      (resources (budget (steps 400000000) (depth 200000))))))

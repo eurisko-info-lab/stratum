@@ -1,0 +1,6 @@
+[submodule "vendor/scala3"]
+	path = vendor/scala3
+	url = https://github.com/scala/scala3.git
+[submodule "vendor/rust"]
+	path = vendor/rust
+	url = https://github.com/rust-lang/rust.git
