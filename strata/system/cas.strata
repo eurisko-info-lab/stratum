@@ -1,0 +1,88 @@
+module "strata.cas"
+version 1
+; The store, and what a reference into it means.
+;
+; A content addressed store has no names to hand out: what a thing is called
+; is worked out from what it is. `strata.artifact` says what a value weighs,
+; and everything here follows from that -- putting a thing in is computing its
+; name, taking a thing out is being given one, and there is no operation that
+; could put a thing under the wrong name.
+;
+; Two things are decided here that are not bookkeeping.
+;
+; A store admits a value or refuses it. An artifact whose map keys are out of
+; order encodes to octets the first floor will not decode, so naming it would
+; be issuing a name for something that cannot be read back. It is refused.
+;
+; A reference carries the schema its target is expected to satisfy, and
+; resolving it against an artifact of another kind is an answer --
+; `WrongSchema` -- and not a cast. That is the difference between a reference
+; that is typed and a reference that is merely annotated.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+
+; The envelope every stored thing wears: what kind of thing it is, and the
+; thing. The host never interprets the kind, and neither does this.
+data Artifact = | Artifact [artifactKind #1: Text, artifactBody #2: Value]
+
+def envelopeOf [a: Artifact]: Value = match a of case Artifact kind body -> VNode "artifact" (MoreValue (VName kind) (MoreValue body NoValue)) end
+def nameOfArtifact [a: Artifact] ! text arith hash: Text = nameOfValue (envelopeOf a)
+
+; -------------------------------------------------------------------- the store
+
+data Store = | NoStored [] | MoreStored [storedName #1: Text, storedArtifact #2: Artifact, storedRest #3: Store]
+data Kept = | Absent [] | Present [keptArtifact #1: Artifact]
+
+def holds [s: Store, name: Text] ! text: Bool = match s of case NoStored -> False case MoreStored stored artifact rest -> match textEq stored name of case True -> True case False -> holds rest name end end
+def lookUp [s: Store, name: Text] ! text: Kept = match s of case NoStored -> Absent case MoreStored stored artifact rest -> match textEq stored name of case True -> Present artifact case False -> lookUp rest name end end
+def storeSize [s: Store] ! arith: Number = match s of case NoStored -> c0 case MoreStored name artifact rest -> numberAdd c1 (storeSize rest) end
+
+data Admission = | Refused [] | Admitted [admittedName #1: Text, admittedStore #2: Store]
+
+; Admitting the same thing twice is admitting it once. That is not an
+; optimisation, it is what content addressing means.
+def admit [s: Store, a: Artifact] ! text arith hash: Admission = match isCanonical (envelopeOf a) of case True -> match holds s (nameOfArtifact a) of case True -> Admitted (nameOfArtifact a) s case False -> Admitted (nameOfArtifact a) (MoreStored (nameOfArtifact a) a s) end case False -> Refused end
+
+; ------------------------------------------------------------ typed references
+
+data TypedRef = | TypedRef [wantedName #1: Text, wantedSchema #2: Text]
+data Resolution = | Unknown [] | WrongSchema [expected #1: Text, found #2: Text] | Answered [answeredBody #1: Value]
+
+def referenceTo [a: Artifact] ! text arith hash: TypedRef = match a of case Artifact kind body -> TypedRef (nameOfArtifact (Artifact kind body)) kind end
+def resolve [s: Store, r: TypedRef] ! text: Resolution = match r of case TypedRef name schema -> match lookUp s name of case Absent -> Unknown case Present found -> match found of case Artifact kind body -> match textEq kind schema of case True -> Answered body case False -> WrongSchema schema kind end end end end
+
+; --------------------------------------------------------------- reachability
+;
+; An artifact names others by their digests, and a store that has the artifact
+; but not what it names is holding a promise it cannot keep.
+
+data Names = | NoName [] | MoreName [nameHead #1: Text, nameTail #2: Names]
+
+def namesJoin [a: Names, b: Names]: Names = match a of case NoName -> b case MoreName head tail -> MoreName head (namesJoin tail b) end
+def namesOfValue [v: Value]: Names = match v of case VRef pointing -> MoreName pointing NoName case VList items -> namesOfValues items case VMap pairs -> namesOfPairs pairs case VNode tag arguments -> namesOfValues arguments case _ -> NoName end
+def namesOfValues [vs: Values]: Names = match vs of case NoValue -> NoName case MoreValue head tail -> namesJoin (namesOfValue head) (namesOfValues tail) end
+def namesOfPairs [ps: Pairs]: Names = match ps of case NoPair -> NoName case MorePair key value tail -> namesJoin (namesJoin (namesOfValue key) (namesOfValue value)) (namesOfPairs tail) end
+def allHeld [s: Store, ns: Names] ! text: Bool = match ns of case NoName -> True case MoreName head tail -> match holds s head of case True -> allHeld s tail case False -> False end end
+def isComplete [s: Store, a: Artifact] ! text: Bool = match a of case Artifact kind body -> allHeld s (namesOfValue body) end
+
+; ---------------------------------------------------------------------- answers
+;
+; What the store says, said in one word, so that a check can be read rather
+; than decoded. Each of these is an ordinary use of what is above it.
+
+def weightOfArtifact [a: Artifact] ! text arith: Number = octetsCount (encodeValue (envelopeOf a))
+def isCanonicalArtifact [a: Artifact] ! text arith: Bool = isCanonical (envelopeOf a)
+def admissionTag [ad: Admission]: Text = match ad of case Refused -> "refused" case Admitted name kept -> "admitted" end
+def admissionOf [a: Artifact] ! text arith hash: Text = admissionTag (admit NoStored a)
+def storeOf [a: Artifact] ! text arith hash: Store = match admit NoStored a of case Refused -> NoStored case Admitted name kept -> kept end
+def resolutionTag [r: Resolution]: Text = match r of case Unknown -> "unknown" case WrongSchema expected found -> "wrong-schema" case Answered body -> "answered" end
+def answerForOwnReference [a: Artifact] ! text arith hash: Text = resolutionTag (resolve (storeOf a) (referenceTo a))
+def schemaChanged [r: TypedRef]: TypedRef = match r of case TypedRef name schema -> TypedRef name "a-different-kind" end
+def answerForOtherSchema [a: Artifact] ! text arith hash: Text = resolutionTag (resolve (storeOf a) (schemaChanged (referenceTo a)))
+def answerForUnknownName [a: Artifact] ! text arith hash: Text = resolutionTag (resolve (storeOf a) (TypedRef "nothing is stored under this" "source"))
+def storeHoldsIt [a: Artifact] ! text arith hash: Bool = holds (storeOf a) (nameOfArtifact a)
+def admitAgain [a: Artifact] ! text arith hash: Store = match admit (storeOf a) a of case Refused -> NoStored case Admitted name kept -> kept end
+def admittingTwiceKeepsOne [a: Artifact] ! text arith hash: Bool = numberEq (storeSize (admitAgain a)) (storeSize (storeOf a))
+def isCompleteInOwnStore [a: Artifact] ! text arith hash: Bool = isComplete (storeOf a) a

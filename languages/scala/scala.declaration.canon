@@ -1,0 +1,5 @@
+(LanguageDeclaration
+  [".scala" ".sbt"]
+  []
+  []
+  ["vendor/scala3/tests/run"])

@@ -189,6 +189,7 @@ object GrammarMachine0:
     val out = mutable.ArrayBuffer.empty[Token]
     var i = 0
     while i < input.length do
+      if i == 0 && input(i) == '\uFEFF' then i += 1
       val explicitWhitespaceToken =
         input(i).isWhitespace && g.tokens.exists { token =>
           val matcher = token.pattern.matcher(input)
@@ -198,6 +199,7 @@ object GrammarMachine0:
       if input(i).isWhitespace && !explicitWhitespaceToken then i += 1
       else
         var skipped = 0
+        nestedBlockCommentLength(g, input, i).foreach(length => skipped = length)
         g.skips.foreach { s =>
           val m = s.matcher(input)
           m.region(i, input.length)
@@ -232,6 +234,28 @@ object GrammarMachine0:
             case None => return Left(s"unexpected character '${input(i)}' at offset $i")
     Right(if g.layout then applyLayout(out.toVector, input) else out.toVector)
 
+  private def nestedBlockCommentLength(g: Grammar, input: String, offset: Int): Option[Int] =
+    def hasBlockCommentSkip: Boolean =
+      g.skips.exists { pattern =>
+        val sample = "/*x*/"
+        val matcher = pattern.matcher(sample)
+        matcher.lookingAt() && matcher.end() == sample.length
+      }
+
+    if !hasBlockCommentSkip || offset + 1 >= input.length || input(offset) != '/' || input(offset + 1) != '*' then None
+    else
+      var index = offset + 2
+      var depth = 1
+      while index + 1 < input.length && depth > 0 do
+        if input(index) == '/' && input(index + 1) == '*' then
+          depth += 1
+          index += 2
+        else if input(index) == '*' && input(index + 1) == '/' then
+          depth -= 1
+          index += 2
+        else index += 1
+      if depth == 0 then Some(index - offset) else None
+
   /**
    * The off-side rule, applied once as a token-stream rewrite rather than
    * threaded through the character-level lexer: whenever a real newline is
@@ -244,6 +268,8 @@ object GrammarMachine0:
    */
   private val IndentText = "INDENT"
   private val DedentText = "DEDENT"
+  private val LayoutOpeners = Set("(", "[")
+  private val LayoutClosers = Set(")", "]")
 
   private def columnOf(input: String, offset: Int): Int =
     if offset <= 0 then 0
@@ -254,6 +280,7 @@ object GrammarMachine0:
   private def applyLayout(tokens: Vector[Token], input: String): Vector[Token] =
     val out = mutable.ArrayBuffer.empty[Token]
     val stack = mutable.ArrayBuffer(0)
+    var bracketDepth = 0
 
     def indentAt(offset: Int): Unit = out += Token("kw", IndentText, Canon.S(IndentText), offset)
     def dedentAt(offset: Int): Unit = out += Token("kw", DedentText, Canon.S(DedentText), offset)
@@ -268,6 +295,9 @@ object GrammarMachine0:
     while i < tokens.length do
       val t = tokens(i)
       out += t
+      if t.kind == "kw" then
+        if LayoutOpeners.contains(t.text) then bracketDepth += 1
+        else if LayoutClosers.contains(t.text) && bracketDepth > 0 then bracketDepth -= 1
       // A token counts as ending its line if its text ends in a real
       // newline -- true for the `newline` token kind, but also for any
       // token whose own pattern absorbs a trailing newline (for example
@@ -282,7 +312,7 @@ object GrammarMachine0:
         // token per blank line just to keep matching.
         while j < tokens.length && tokens(j).kind == "newline" do
           j += 1
-        if j < tokens.length then
+        if j < tokens.length && bracketDepth == 0 then
           val col = columnOf(input, tokens(j).offset)
           if col > stack.last then
             stack += col

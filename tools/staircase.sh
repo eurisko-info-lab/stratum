@@ -12,8 +12,17 @@ cd "$(dirname "$0")/.."
 # The loop below issues dozens of Stratum invocations. Compiling and asking
 # sbt for the runtime classpath once, then invoking `java` directly for every
 # command, avoids paying sbt's ~3s startup cost on each of them.
+#
+# The classpath is the last line that looks like one. On a cold machine the
+# sbt launcher first says what it is downloading, on stdout and before any log
+# level applies, and capturing that as part of the classpath produced a `java
+# -cp` that could not find the Scala runtime -- which is what a fresh checkout
+# does, so it failed everywhere except where it had been run before.
 echo "== compiling"
-classpath=$(sbt -batch --error 'export Runtime/fullClasspath')
+classpath=$(sbt -batch --error 'export Runtime/fullClasspath' | grep -E 'classes|\.jar' | tail -n 1) || {
+  echo "sbt did not report a runtime classpath" >&2
+  exit 1
+}
 
 run() {
   java -Xss256m -cp "$classpath" stratum.cli.Stratum "$@"

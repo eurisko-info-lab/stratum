@@ -1,0 +1,5 @@
+(LanguageDeclaration
+  [".rs"]
+  []
+  []
+  ["vendor/rust/tests/ui"])

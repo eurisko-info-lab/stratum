@@ -521,7 +521,11 @@ character at a time and rebuilt by repeated concatenation, which is quadratic
 in the length of the name and crosses the boundary once per character. A
 primitive that takes a slice of a text would make most of this disappear. It
 was not added here because the boundary belongs to S7, and widening it would
-mean rebuilding S7 and S8 to say something neither of them needed.
+mean rebuilding S7 and S8 to say something neither of them needed. S10 found
+that it would not: a module that needs more of the host can state a larger
+host table and stand ahead of the one it widens, leaving S7 alone. That was
+not known yet here, and the slice is still not added, because nothing in this
+layer's corpus would have been checked differently by it.
 
 **What does not move, and why.** Grammar0 and Meta0 keep running the
 definitions. Rewriting the machines themselves is not blocked by expressive
@@ -540,20 +544,89 @@ only witness.
 
 ## Commit 11 — S10: artifacts and CAS
 
-**Constructs** $S_8 \vdash S_{10}$.
+**Constructs** $S_9 \vdash S_{10}$.
 
 **Adds**
 
+- `strata/system/octets.strata` — the boundary storage needs, and base 128
 - `strata/system/artifact.strata`, `strata/system/cas.strata`
 - SHA-256 identity, canonical encoding, content-addressed store, typed
   references carrying digest **and** expected schema
+- `features/strata/store.meta` — the reader, and the wider host table
+- `features/strata/index.meta` — a name answered from a table
 - `fixtures/strata/s10.transcript`, `foundations/S10/`
 
 **Acceptance**
 
-- existing `foundations/F*/closure/*.canon` are readable and digest-identical
-  through the Strata store
+- existing first-floor artifacts are readable and digest-identical through the
+  Strata store — the foundation record of every one of F0..F11, and closure
+  artifacts of four other shapes up to four kilobytes
+- an artifact whose map keys are out of order is refused, not sorted
 - a typed reference with a mismatched schema is rejected, not coerced
+
+**The boundary S7 drew is not enough for this, and it is widened here.** S7's
+set can split a text and join two, add and compare a number, and hash a value.
+It cannot look inside a byte string or make one, and it cannot divide, so a
+program that wants to say which bytes an artifact is and to spell a length
+seven bits at a time cannot say either. Seven primitives are added: taking
+away, the quotient and the remainder; and which octets spell a text, which
+octets a byte string is, which byte string some octets are, and what the hash
+of a byte string is.
+
+S9 said widening the boundary would mean rebuilding S7 and S8 to say something
+neither of them needed. It does not, and the reason is worth keeping. A
+program is the union of its modules, and where two of them define a judgment
+the first one merged is the one that answers. So `features/strata/store.meta`
+states its own, larger `HostNames` and `NativePrimitive` and stands ahead of
+the module it widens. S7, S8 and S9 are untouched — each still declares
+exactly the set it was checked against, and each still passes the same
+boundary check against it. What S7 built was the mechanism, and using the
+mechanism is not editing S7.
+
+None of the seven is part of a canonical encoding. Hashing is a function of
+octets and division is arithmetic; which octets an artifact encodes to is
+decided in `strata/system/artifact.strata` and nowhere else.
+
+**The layer was unusable before it was measured, and the measurement was the
+interesting part.** Deriving one check cost two hundred and sixty million
+steps, and the gate took three and a half minutes in the Scala host and
+eighteen in the Rust one. Almost none of that was the encoder. Of the twenty
+million and change judgment calls a check made, twenty million were three of
+them: the seed's evaluator answers *what is this name* by walking the whole
+declaration list, once for the constructors, once for the definitions and once
+for the primitives. Evaluation itself was thirty-five thousand calls, and each
+one paid about six hundred to ask who a name was. That was free when a module
+was a page long, and this layer's module set is the largest yet.
+
+`features/strata/index.meta` is the same three answers from a table built once,
+by the same walk in the same order, keeping the first declaration of a name —
+so an indexed module answers exactly what an unindexed one answers. It is a
+module rather than an edit to the seed, for the same reason the wider boundary
+is: the evaluator lives in `languages/strata/strata.meta`, which S8 and S9
+elaborate and compare byte for byte, and standing ahead of it costs them
+nothing. Six million steps instead of two hundred and sixty.
+
+Every layer from S7 on now carries it, because S7 is where a linked module
+first got large enough for the walk to be what the layer costs, and because a
+gate nobody can afford to run is not a gate. S9 went from two minutes and
+fourteen seconds to seven in the Scala host, and from six minutes and
+twenty-one seconds to four in the Rust one; the whole staircase went from
+seventeen minutes to under three. Nothing any of them decides has changed —
+the same checks pass, and the two hosts still agree on every one of them byte
+for byte — but S7, S8 and S9 are constituted with one more module than they
+were, so their digests are not the digests those layers were first written
+with.
+
+**And the hosts were measured too, which was overdue.** Three things in them
+cost more than everything they were asked to do. The Rust host held a list as
+a vector and took a tail by copying it, so walking a list was quadratic in its
+length; it now holds a shared vector and an offset. It cloned a map of
+bindings — with a fresh string per name — on *every attempted* match case; it
+now keeps a small frame it rewinds. Both hosts decided which of twelve forms
+an expression was by trying them in order, with `call`, `match` and `prim`
+tried last; both now switch on the tag once. None of that changes what a step
+is or how many there are, which is what the two hosts must agree on, and the
+reports are byte for byte the ones they produced before.
 
 **Exit condition** — storage is Strata's, and it is bit-compatible with the
 first floor.

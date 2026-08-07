@@ -16,8 +16,8 @@ final case class DeclaredLanguage(
     properties: Set[String],
     grammarPath: Option[String],
     metaPath: Option[String],
-    reader: String,
-    testRoots: Vector[String] = Vector.empty
+    testRoots: Vector[String],
+    reader: String
 )
 
 final case class StructuredFile(
@@ -82,8 +82,8 @@ object DeclaredLanguage:
             parsedProperties,
             parsedGrammarPath,
             parsedMetaPath,
-            reader,
-            parsedTestRoots
+            parsedTestRoots,
+            reader
           )
         )
       case other => Left(s"not a declared language: ${CanonText.write(other)}")
@@ -161,13 +161,15 @@ object LanguageDeclarations:
       name: String,
       extensions: Vector[String],
       exactPaths: Vector[String],
-      properties: Set[String]
+      properties: Set[String],
+      testRoots: Vector[String]
   )
 
   private final case class SourceLanguageDeclaration(
       extensions: Option[Vector[String]],
       exactPaths: Vector[String],
-      properties: Set[String]
+      properties: Set[String],
+      testRoots: Vector[String]
   )
 
   private val SpecialDeclarations: Vector[DeclaredLanguage] = Vector(
@@ -178,6 +180,7 @@ object LanguageDeclarations:
       Set.empty,
       Some(NativeCanon),
       Some(NativeCanon),
+      Vector.empty,
       "canon"
     ),
     declaredLanguage(
@@ -187,6 +190,7 @@ object LanguageDeclarations:
       Set.empty,
       Some(Bytes),
       Some(Bytes),
+      Vector.empty,
       "negative-fixture"
     ),
     declaredLanguage(
@@ -196,6 +200,7 @@ object LanguageDeclarations:
       Set.empty,
       Some(Bytes),
       Some(Bytes),
+      Vector.empty,
       "negative-fixture"
     ),
     declaredLanguage(
@@ -214,6 +219,7 @@ object LanguageDeclarations:
       Set.empty,
       Some(NativeCanon),
       Some(NativeCanon),
+      Vector.empty,
       "canon"
     ),
     declaredLanguage(
@@ -223,6 +229,7 @@ object LanguageDeclarations:
       Set.empty,
       Some(NativeCanon),
       Some(NativeCanon),
+      Vector.empty,
       "canon"
     )
   )
@@ -246,6 +253,7 @@ object LanguageDeclarations:
           descriptor.properties,
           Some(Canon.S(grammar)),
           Some(Canon.S(meta)),
+          descriptor.testRoots,
           "grammar"
         )
       }
@@ -271,7 +279,8 @@ object LanguageDeclarations:
                   name,
                   declaration.extensions.getOrElse(Vector(s".$name")),
                   declaration.exactPaths,
-                  declaration.properties
+                  declaration.properties,
+                  declaration.testRoots
                 )
               )
             }
@@ -280,13 +289,34 @@ object LanguageDeclarations:
 
   private def sourceLanguageDeclaration(root: Path, name: String): Either[String, SourceLanguageDeclaration] =
     val path = root.resolve(name).resolve(s"$name.declaration.canon")
-    if !Files.isRegularFile(path) then Right(SourceLanguageDeclaration(None, Vector.empty, Set.empty))
+    if !Files.isRegularFile(path) then Right(SourceLanguageDeclaration(None, Vector.empty, Set.empty, Vector.empty))
     else
       CanonText.read(Files.readString(path)).left.map(error => s"${path.toString}: $error").flatMap {
         case Canon.L(items) =>
           val invalid = items.collect { case other if !other.isInstanceOf[Canon.Sym] => CanonText.write(other) }
           if invalid.nonEmpty then Left(s"${path.toString}: declaration properties must be symbols")
-          else Right(SourceLanguageDeclaration(None, Vector.empty, items.collect { case Canon.Sym(value) => value }.toSet))
+          else Right(SourceLanguageDeclaration(None, Vector.empty, items.collect { case Canon.Sym(value) => value }.toSet, Vector.empty))
+        case Canon.Node(_, Vector(Canon.L(extensions), Canon.L(exactPaths), Canon.L(properties), Canon.L(testRoots))) =>
+          val badExtensions = extensions.collect { case other if !other.isInstanceOf[Canon.S] => CanonText.write(other) }
+          val badExactPaths = exactPaths.collect { case other if !other.isInstanceOf[Canon.S] => CanonText.write(other) }
+          val badProperties = properties.collect { case other if !other.isInstanceOf[Canon.Sym] => CanonText.write(other) }
+          val badTestRoots = testRoots.collect { case other if !other.isInstanceOf[Canon.S] => CanonText.write(other) }
+          if badExtensions.nonEmpty then Left(s"${path.toString}: declaration extensions must be strings")
+          else if badExactPaths.nonEmpty then Left(s"${path.toString}: declaration exact paths must be strings")
+          else if badProperties.nonEmpty then Left(s"${path.toString}: declaration properties must be symbols")
+          else if badTestRoots.nonEmpty then Left(s"${path.toString}: declaration test roots must be strings")
+          else
+            val ext = extensions.collect { case Canon.S(value) => value }
+            if ext.exists(!_.startsWith(".")) then Left(s"${path.toString}: each extension must start with '.'")
+            else
+              Right(
+                SourceLanguageDeclaration(
+                  Some(ext),
+                  exactPaths.collect { case Canon.S(value) => value },
+                  properties.collect { case Canon.Sym(value) => value }.toSet,
+                  testRoots.collect { case Canon.S(value) => value }.toVector
+                )
+              )
         case Canon.Node(_, Vector(Canon.L(extensions), Canon.L(exactPaths), Canon.L(properties))) =>
           val badExtensions = extensions.collect { case other if !other.isInstanceOf[Canon.S] => CanonText.write(other) }
           val badExactPaths = exactPaths.collect { case other if !other.isInstanceOf[Canon.S] => CanonText.write(other) }
@@ -302,7 +332,8 @@ object LanguageDeclarations:
                 SourceLanguageDeclaration(
                   Some(ext),
                   exactPaths.collect { case Canon.S(value) => value },
-                  properties.collect { case Canon.Sym(value) => value }.toSet
+                  properties.collect { case Canon.Sym(value) => value }.toSet,
+                  Vector.empty
                 )
               )
         case other =>
@@ -371,6 +402,54 @@ object LanguageDeclarations:
       .orElse(declarations.find(_.extensions.exists(path.endsWith)))
       .toRight(s"no declared language for $path")
 
+  private def readDeclaration(value: Canon): Either[String, DeclaredLanguage] = value match
+    case declaration @ Canon.Node(_, Vector(
+          Canon.Sym(name),
+          Canon.L(extensions),
+          Canon.L(exactPaths),
+          Canon.L(properties),
+          grammarPath,
+          metaPath,
+          Canon.L(testRoots),
+          Canon.Sym(reader)
+        )) =>
+      Right(
+        DeclaredLanguage(
+          declaration,
+          name,
+          extensions.collect { case Canon.S(value) => value },
+          exactPaths.collect { case Canon.S(value) => value },
+          properties.collect { case Canon.Sym(value) => value }.toSet,
+          optionalPath(grammarPath),
+          optionalPath(metaPath),
+          testRoots.collect { case Canon.S(value) => value }.toVector,
+          reader
+        )
+      )
+    case declaration @ Canon.Node(_, Vector(
+          Canon.Sym(name),
+          Canon.L(extensions),
+          Canon.L(exactPaths),
+          Canon.L(properties),
+          grammarPath,
+          metaPath,
+          Canon.Sym(reader)
+        )) =>
+      Right(
+        DeclaredLanguage(
+          declaration,
+          name,
+          extensions.collect { case Canon.S(value) => value },
+          exactPaths.collect { case Canon.S(value) => value },
+          properties.collect { case Canon.Sym(value) => value }.toSet,
+          optionalPath(grammarPath),
+          optionalPath(metaPath),
+          Vector.empty,
+          reader
+        )
+      )
+    case _ => Left(s"invalid language declaration: ${CanonText.write(value)}")
+
   private def optionalPath(value: Canon): Option[String] = value match
     case Canon.S(path) => Some(path)
     case _             => None
@@ -379,9 +458,10 @@ object LanguageDeclarations:
       name: String,
       extensions: Vector[String],
       exactPaths: Vector[String],
-        properties: Set[String],
+      properties: Set[String],
       grammarPath: Option[Canon],
       metaPath: Option[Canon],
+      testRoots: Vector[String],
       reader: String
   ): DeclaredLanguage =
     val declaration = Canon.node(
@@ -392,6 +472,7 @@ object LanguageDeclarations:
       Canon.L(properties.toVector.sorted.map(Canon.Sym.apply)),
       grammarPath.getOrElse(Canon.Sym("none")),
       metaPath.getOrElse(Canon.Sym("none")),
+      Canon.L(testRoots.map(Canon.S.apply)),
       Canon.Sym(reader)
     )
     DeclaredLanguage(
@@ -402,8 +483,8 @@ object LanguageDeclarations:
       properties,
       grammarPath.flatMap(optionalPath),
       metaPath.flatMap(optionalPath),
-      reader,
-      Vector.empty
+      testRoots,
+      reader
     )
 
   private def readCanon(source: Path, relative: String, label: String): Either[String, Canon] =

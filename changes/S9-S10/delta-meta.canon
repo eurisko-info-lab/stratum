@@ -1,0 +1,10 @@
+; delta-meta for S9 -> S10: Meta gains the crossing for the store, and a
+; wider host set for the module that needs one.
+(change
+  (kind delta-meta)
+  (name "S9->S10 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (meaning strata)
+      (storing strata))))

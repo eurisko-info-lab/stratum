@@ -1,0 +1,322 @@
+module stratastore
+
+; Storage, crossed into Strata and back.
+;
+; S8 and S9 each handed Strata a parse tree and compared what came back with
+; what was committed. This hands Strata an artifact -- one of the ones the
+; first floor is actually made of -- and compares the name Strata works out
+; for it with the name it is actually stored under. The claim needs no writer:
+; a reader that dropped anything, reordered anything or rounded anything would
+; produce a different digest, and the digest is what is being compared. There
+; is a small writer further down, and it is used for one thing only -- asking
+; the host what it would have called a value Strata built rather than read.
+;
+; The boundary is wider here than S7 drew it, and it is widened the way S7
+; made possible rather than by editing S7. `HostNames` and `NativePrimitive`
+; are the two judgments that say what the host provides and what it does when
+; asked; this module states larger versions of both, and because a program is
+; the union of its modules with the first one merged saying the word, a module
+; placed ahead of the one it widens is the module that answers. S7, S8 and S9
+; are untouched, and each still declares exactly the set it was checked
+; against.
+;
+; The four crossings added for bytes are the four that cannot be computed on
+; this side: which octets spell a text, which octets a byte string is, which
+; byte string some octets are, and what the hash of a byte string is. The
+; three added for arithmetic -- taking away, the quotient, the remainder --
+; are the host doing arithmetic it already does. None of the seven is part of
+; a canonical encoding. Which octets an artifact encodes to is decided in
+; Strata, in `strata/system/artifact.strata`, and nowhere else.
+
+; --------------------------------------------------------------- the host set
+
+judgment HostNames [] =
+  list [
+    #numberOfNat #natOfNumber #numberAdd #numberEq #numberLess
+    #numberMonus #numberQuotient #numberRemainder
+    #textBytes #bytesText #bytesEq #digest
+    #textCharacters #textConcat #textEq
+    #textOctets #octetsOfBytes #bytesOfOctets #bytesDigest
+  ]
+
+judgment ArityOfHost [name] =
+  if prim #eq [name #numberAdd] then 2
+  else if prim #eq [name #numberEq] then 2
+  else if prim #eq [name #numberLess] then 2
+  else if prim #eq [name #numberMonus] then 2
+  else if prim #eq [name #numberQuotient] then 2
+  else if prim #eq [name #numberRemainder] then 2
+  else if prim #eq [name #bytesEq] then 2
+  else if prim #eq [name #textConcat] then 2
+  else if prim #eq [name #textEq] then 2
+  else 1
+
+judgment NativePrimitive [name args] =
+  if prim #ne [prim #len [args] call HostArity [name]]
+  then
+    fail #native-error prim #scat [
+      prim #scat ["the primitive " prim #sym->str [name]]
+      " was given the wrong number of arguments"
+    ]
+  else
+    if prim #eq [name #textOctets]
+    then call HostToOctets [call OctetsOfText [prim #nth [args 0]]]
+    else if prim #eq [name #octetsOfBytes]
+    then call HostToOctets [call OctetsOfBytes [prim #nth [args 0]]]
+    else if prim #eq [name #bytesOfOctets]
+    then call BytesOfOctets [call OctetsToHost [prim #nth [args 0]]]
+    else if prim #eq [name #bytesDigest]
+    then call DigestOfBytes [prim #nth [args 0]]
+    else if prim #eq [name #numberMonus]
+    then call TakenAway [prim #nth [args 0] prim #nth [args 1]]
+    else if prim #eq [name #numberQuotient]
+    then call Quotient [prim #nth [args 0] prim #nth [args 1]]
+    else if prim #eq [name #numberRemainder]
+    then call Remainder [prim #nth [args 0] prim #nth [args 1]]
+    else call PerformPrimitive [name args]
+
+; Total where the host is not. Subtraction below zero and division by zero
+; have answers here because a Strata definition has an answer for every
+; argument it declares, and "the host would have stopped" is not one.
+judgment TakenAway [a b] = if prim #lt [a b] then 0 else prim #sub [a b]
+judgment Quotient [a b] = if prim #eq [b 0] then 0 else prim #div [a b]
+judgment Remainder [a b] = if prim #eq [b 0] then a else prim #mod [a b]
+
+; ------------------------------------------------------------- the crossings
+
+judgment OctetsOfText [text] =
+  match cap #text-octets [text] {
+    case (#ok numbers) -> numbers
+    case _ -> fail #store-error "the host will not say which octets spell that text"
+  }
+
+judgment OctetsOfBytes [bytes] =
+  match cap #octets-of-bytes [bytes] {
+    case (#ok numbers) -> numbers
+    case _ -> fail #store-error "the host will not say which octets those bytes are"
+  }
+
+judgment BytesOfOctets [numbers] =
+  match cap #bytes-of-octets [numbers] {
+    case (#ok bytes) -> bytes
+    case _ -> fail #store-error "the host will not make bytes of those numbers"
+  }
+
+judgment DigestOfBytes [bytes] =
+  match cap #digest-of-bytes [bytes] {
+    case (#ok reference) -> prim #ref->str [reference]
+    case _ -> fail #store-error "the host will not hash those bytes"
+  }
+
+; An octet list crosses as a chain, for the same reason a text crosses as one:
+; recursion on a chain is structural and recursion on an index is not. The
+; octets themselves cross unchanged, because an octet is a number on both
+; sides of the boundary.
+
+judgment HostToOctets [numbers] =
+  match numbers {
+    case [] -> prim #node [#NoOctet list []]
+    case head :: rest -> mk #MoreOctet [head call HostToOctets [rest]]
+  }
+
+judgment OctetsToHost [value] =
+  match value {
+    case (#NoOctet) -> list []
+    case (#MoreOctet head tail) -> prim #cons [head call OctetsToHost [tail]]
+    case _ -> fail #store-error "a value crossing as octets is not one"
+  }
+
+; ------------------------------------------------------------------ the reader
+;
+; A canonical value becomes a value of `Value`. Eleven shapes, one clause
+; each. Only one of them carries a spelling rather than a thing: a digest
+; arrives as the hexadecimal that names it, because a digest is thirty two
+; octets and working out which is Strata's job.
+
+judgment ReadCanonValue [value] =
+  if prim #is-unit [value] then prim #node [#VUnit list []]
+  else if prim #is-bool [value] then mk #VBool [call HostToBool [value]]
+  else if prim #is-nat [value] then mk #VNat [value]
+  else if prim #is-int [value] then call ReadCanonInt [value]
+  else if prim #is-bytes [value]
+  then mk #VBytes [call HostToOctets [call OctetsOfBytes [value]]]
+  else if prim #is-str [value] then mk #VText [value]
+  else if prim #is-sym [value] then mk #VName [prim #sym->str [value]]
+  else if prim #is-ref [value] then mk #VRef [prim #ref->str [value]]
+  else if prim #is-list [value] then mk #VList [call ReadCanonValues [value]]
+  else if prim #is-map [value]
+  then mk #VMap [call ReadCanonPairs [prim #mentries [value]]]
+  else if prim #is-node [value]
+  then mk #VNode [
+    prim #sym->str [prim #tag [value]]
+    call ReadCanonValues [prim #args [value]]
+  ]
+  else fail #store-error "a value the reader does not know"
+
+judgment ReadCanonInt [value] =
+  if prim #lt [value 0]
+  then mk #VInt [prim #sub [0 value] true]
+  else mk #VInt [value false]
+
+judgment ReadCanonValues [items] =
+  match items {
+    case [] -> prim #node [#NoValue list []]
+    case head :: rest ->
+      mk #MoreValue [call ReadCanonValue [head] call ReadCanonValues [rest]]
+  }
+
+judgment ReadCanonPairs [entries] =
+  match entries {
+    case [] -> prim #node [#NoPair list []]
+    case (#entry key value) :: rest ->
+      mk #MorePair [
+        call ReadCanonValue [key]
+        call ReadCanonValue [value]
+        call ReadCanonPairs [rest]
+      ]
+    case head :: rest -> fail #store-error "a map entry the reader does not know"
+  }
+
+; --------------------------------------------------------------- the round
+
+judgment StrataStoreSystem [prelude native octets artifact cas] =
+  list [prelude native octets artifact cas]
+
+judgment RunStrataWith [grammar sources name entry arguments] =
+  let decls = call IndexedDeclarations [call NativeModule [grammar sources name]] in
+  call EnterDefinition [decls call RequiredDefinition [decls entry] arguments]
+
+judgment StrataArtifactOf [reference] =
+  match cap #cas-get [reference] {
+    case (#ok (#artifact kind body)) ->
+      mk #Artifact [prim #sym->str [kind] call ReadCanonValue [body]]
+    case _ -> fail #store-error "no artifact is stored under that reference"
+  }
+
+; The claim S10 makes about the first floor: read one of its artifacts, work
+; out in Strata which octets it is and what their hash is, and get back the
+; name it has been stored under since the day it was written.
+judgment StrataNamesArtifact [grammar sources reference] =
+  if prim #eq [
+    prim #ref->str [reference]
+    call RunStrataWith [
+      grammar sources "strata.cas" #nameOfArtifact
+      list [call StrataArtifactOf [reference]]
+    ]
+  ]
+  then mk #named [#ok]
+  else mk #named [#mismatch]
+
+judgment StrataWeighsArtifact [grammar sources artifact] =
+  call RunStrataWith [
+    grammar sources "strata.cas" #weightOfArtifact list [artifact]
+  ]
+
+judgment StrataAnswersFor [grammar sources artifact entry] =
+  call RunStrataWith [grammar sources "strata.cas" entry list [artifact]]
+
+judgment StrataSaysYes [grammar sources artifact entry] =
+  match call StrataAnswersFor [grammar sources artifact entry] {
+    case (#True) -> true
+    case _ -> false
+  }
+
+; A map whose keys descend is not a value with an unusual spelling. Nothing in
+; the tree contains one, so the only way to ask the store what it does with
+; one is to build one here.
+judgment DescendingKeyArtifact [] =
+  mk #Artifact [
+    "data"
+    mk #VMap [
+      mk #MorePair [
+        mk #VName ["second"]
+        prim #node [#VUnit list []]
+        mk #MorePair [
+          mk #VName ["first"]
+          prim #node [#VUnit list []]
+          prim #node [#NoPair list []]
+        ]
+      ]
+    ]
+  ]
+
+judgment AscendingKeyArtifact [] =
+  mk #Artifact [
+    "data"
+    mk #VMap [
+      mk #MorePair [
+        mk #VName ["first"]
+        prim #node [#VUnit list []]
+        mk #MorePair [
+          mk #VName ["second"]
+          prim #node [#VUnit list []]
+          prim #node [#NoPair list []]
+        ]
+      ]
+    ]
+  ]
+
+; What the store makes of an artifact it built itself. The digest is worked
+; out in Strata, so this also decides that the first floor and the second
+; floor would give a value nobody has ever stored the same name.
+judgment StrataNamesItself [grammar sources artifact] =
+  if prim #eq [
+    prim #ref->str [prim #digest [call WriteEnvelope [artifact]]]
+    call RunStrataWith [
+      grammar sources "strata.cas" #nameOfArtifact list [artifact]
+    ]
+  ]
+  then mk #named [#ok]
+  else mk #named [#mismatch]
+
+; The one place a Strata value is turned back into a canonical one, and it is
+; used only to ask the host what it would have called something Strata made.
+; It is deliberately partial: a digest cannot be written back, because Meta
+; has no way to make a reference out of the hexadecimal that spells one, and a
+; signed integer is not written back because nothing built here is one. That
+; costs the layer nothing -- the claim about the first floor's artifacts is
+; decided by the digest, which needs no writer at all.
+judgment WriteEnvelope [artifact] =
+  match artifact {
+    case (#Artifact kind body) ->
+      prim #node [#artifact list [prim #str->sym [kind] call WriteCanonValue [body]]]
+    case _ -> fail #store-error "not an artifact"
+  }
+
+judgment WriteCanonValue [value] =
+  match value {
+    case (#VUnit) -> unit
+    case (#VBool flag) -> call WriteFlag [flag]
+    case (#VNat size) -> size
+    case (#VBytes content) -> call BytesOfOctets [call OctetsToHost [content]]
+    case (#VText spelling) -> spelling
+    case (#VName naming) -> prim #str->sym [naming]
+    case (#VList items) -> call WriteCanonValues [items]
+    case (#VMap pairs) -> prim #mfrom [call WriteCanonPairs [pairs]]
+    case (#VNode tag arguments) ->
+      prim #node [prim #str->sym [tag] call WriteCanonValues [arguments]]
+    case _ -> fail #store-error "a value the writer does not know"
+  }
+
+judgment WriteFlag [flag] =
+  match flag {
+    case (#True) -> true
+    case _ -> false
+  }
+
+judgment WriteCanonValues [values] =
+  match values {
+    case (#MoreValue head tail) ->
+      prim #cons [call WriteCanonValue [head] call WriteCanonValues [tail]]
+    case _ -> list []
+  }
+
+judgment WriteCanonPairs [pairs] =
+  match pairs {
+    case (#MorePair key value tail) ->
+      prim #cons [
+        mk #entry [call WriteCanonValue [key] call WriteCanonValue [value]]
+        call WriteCanonPairs [tail]
+      ]
+    case _ -> list []
+  }

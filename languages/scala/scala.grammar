@@ -4,12 +4,18 @@ start document
 token layout sym "x"
 token linecomment str "//[^\\r\\n]*\\r?\\n?"
 token blockcomment str "/\\*([^*]|\\*+[^*/])*\\*+/"
-token triplequoted str "\"\"\"([^\"]|\"\"?)*\"\"\""
+token triplequoted str "(\"\"\"([^\"]|\"[^\"]|\"\"[^\"])*\"\"\"\"|\"\"\"([^\"]|\"[^\"]|\"\"[^\"])*\"\"\")"
+token triplesinglequoted str "('''''([^']|'[^']|''[^']|'''[^']|''''[^'])*'''''|''''([^']|'[^']|''[^']|'''[^'])*''''|'''([^']|'[^']|''[^'])*''')"
 token dquoted str "\"(\\$\\{[^{}]*\\}|\\$[A-Za-z_][A-Za-z0-9_]*|\\$|\\\\.|[^\"\\\\$\\r\\n])*\""
+token squotedtext str "'(\\.|[^'\\\r\n])+'"
 token charlit str "'(\\\\(u[0-9a-fA-F]{4}|.)|[^'\\\\])'"
 token number str "(0x[0-9a-fA-F]+|[0-9]+(\\.[0-9]+)?)[a-zA-Z]*"
-token word str "[A-Za-z_][A-Za-z0-9_]*"
-token operator str "[!#%&*+\\-/<=>?@^|~]+"
+token backquoted str "`[^`\\r\\n]+`"
+token word str "[A-Za-z_À-ÿァ-ヿ一-龯А-Яа-яЁёΑ-ω][A-Za-z0-9_À-ÿァ-ヿ一-龯А-Яа-яЁёΑ-ω]*"
+token operator str "[-!#%&*+/<=>?@^|~\\\\⇒→]+"
+token slashcolon sym "/:"
+token colonbackslash sym ":\\\\"
+token underscore sym "_"
 token newline sym "\\n"
 
 category document
@@ -18,6 +24,37 @@ category document
 category item
   prod Brace "{" body : document "}"
   prod EmptyBrace "{" "}"
+  prod ObjectBraced "object" name : word "{" body : document "}"
+  prod ObjectHeaderBraced "object" name : word header : headerDocument "{" body : document "}"
+  prod ObjectColon "object" name : word ":" newline : newline "INDENT" body : document "DEDENT"
+  prod ObjectHeaderColon "object" name : word header : headerDocument ":" newline : newline "INDENT" body : document "DEDENT"
+  prod TraitBraced "trait" name : word "{" body : document "}"
+  prod TraitHeaderBraced "trait" name : word header : headerDocument "{" body : document "}"
+  prod TraitColon "trait" name : word ":" newline : newline "INDENT" body : document "DEDENT"
+  prod TraitHeaderColon "trait" name : word header : headerDocument ":" newline : newline "INDENT" body : document "DEDENT"
+  prod ClassHeaderIndentedBraced "class" name : word params : headerInline heritageLead : headerIndented "{" body : document "}"
+  prod ClassHeaderIndentedIndentBraced "class" name : word params : headerInline heritageLead : headerIndented "{" "INDENT" body : document "}"
+  prod ClassHeaderIndentedBodyBraced "class" name : word params : headerInline heritageLead : headerIndented "{" newline : newline "INDENT" body : document "}"
+  prod ClassHeaderIndentedDedentBraced "class" name : word params : headerInline heritageLead : headerIndented "{" body : document "DEDENT" "}"
+  prod ClassHeaderIndentedIndentDedentBraced "class" name : word params : headerInline heritageLead : headerIndented "{" "INDENT" body : document "DEDENT" "}"
+  prod ClassHeaderIndentedBodyDedentBraced "class" name : word params : headerInline heritageLead : headerIndented "{" newline : newline "INDENT" body : document "DEDENT" "}"
+  prod ClassHeaderBraced "class" name : word header : headerDocument "{" body : document "}"
+  prod ClassHeaderIndentBraced "class" name : word header : headerDocument "{" "INDENT" body : document "}"
+  prod ClassHeaderBodyBraced "class" name : word header : headerDocument "{" newline : newline "INDENT" body : document "}"
+  prod ClassHeaderDedentBraced "class" name : word header : headerDocument "{" body : document "DEDENT" "}"
+  prod ClassHeaderIndentDedentBraced "class" name : word header : headerDocument "{" "INDENT" body : document "DEDENT" "}"
+  prod ClassHeaderBodyDedentBraced "class" name : word header : headerDocument "{" newline : newline "INDENT" body : document "DEDENT" "}"
+  prod ClassBraced "class" name : word "{" body : document "}"
+  prod ClassIndentBraced "class" name : word "{" "INDENT" body : document "}"
+  prod ClassBodyBraced "class" name : word "{" newline : newline "INDENT" body : document "}"
+  prod ClassDedentBraced "class" name : word "{" body : document "DEDENT" "}"
+  prod ClassIndentDedentBraced "class" name : word "{" "INDENT" body : document "DEDENT" "}"
+  prod ClassBodyDedentBraced "class" name : word "{" newline : newline "INDENT" body : document "DEDENT" "}"
+  prod ClassHeaderColon "class" name : word header : headerDocument ":" newline : newline "INDENT" body : document "DEDENT"
+  prod ClassColon "class" name : word ":" newline : newline "INDENT" body : document "DEDENT"
+  prod DefOperator "def" name : operator
+  prod InlineDefSplice "inline" "def" name : word header : headerDocumentTyped "=" "$" "{" body : document "}"
+  prod DefQuoted "def" name : word header : headerDocumentTyped "=" "'" "{" body : document "}"
   prod BlockColon header : headerDocument ":" newline : newline "INDENT" body : document "DEDENT"
   prod BlockColonBare ":" newline : newline "INDENT" body : document "DEDENT"
   prod BlockEquals header : headerDocumentTyped "=" newline : newline "INDENT" body : document "DEDENT"
@@ -30,6 +67,8 @@ category item
   pass itemCore
 
 category itemCore
+  prod IndentToken "INDENT"
+  prod DedentToken "DEDENT"
   prod Colon ":"
   prod Assign "="
   prod FatArrow "=>"
@@ -40,6 +79,8 @@ category itemCore
   pass itemCoreNoColon
 
 category itemCoreNoColon
+  prod ParenLayout "(" "INDENT" body : document "DEDENT" ")"
+  prod ParenIndented "(" newline : newline "INDENT" body : document "DEDENT" ")"
   prod Paren "(" body : document ")"
   prod EmptyParen "(" ")"
   prod Bracket "[" body : document "]"
@@ -47,7 +88,11 @@ category itemCoreNoColon
   prod LineComment value : linecomment
   prod BlockComment value : blockcomment
   prod TripleQuoted value : triplequoted
+  prod TripleSingleQuoted value : triplesinglequoted
   prod DQuoted value : dquoted
+  prod SQuotedText value : squotedtext
+  prod Splice "$" "{" body : document "}"
+  prod Quoted "'" "{" body : document "}"
   prod CharLit value : charlit
   prod Number value : number
   prod Abstract "abstract"
@@ -97,13 +142,35 @@ category itemCoreNoColon
   prod Comma ","
   prod Semicolon ";"
   prod Dot "."
+  prod Dollar "$"
+  prod Backquoted value : backquoted
+  prod SlashColon value : slashcolon
+  prod ColonBackslash value : colonbackslash
   prod Operator value : operator
+  prod Underscore value : underscore
   prod Word value : word
 
 category headerDocument
   fold HeaderDocument headerItem
 
 category headerItem
+  prod HeaderIndent "INDENT"
+  prod HeaderDedent "DEDENT"
+  prod HeaderNewline value : newline
+  pass itemCoreNoColon
+
+category headerInline
+  fold HeaderInline headerInlineItem
+
+category headerInlineItem
+  pass itemCoreNoColon
+
+category headerIndented
+  fold HeaderIndented headerIndentedItem
+
+category headerIndentedItem
+  prod HeaderIndentedNewline value : newline
+  prod HeaderIndentedIndent "INDENT"
   pass itemCoreNoColon
 
 category itemCoreWithColon
