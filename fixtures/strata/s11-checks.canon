@@ -1,0 +1,279 @@
+; Executable acceptance checks for S11, the semantic repository.
+;
+; The chain under test is not a model of one. It is the repository in
+; `fixtures/strata/s11-repository/`, recorded by `repo-scala` with the
+; commands a person would use: two files, then a third added, one removed and
+; one replaced. Two blocks, nineteen objects, and every name in it worked out
+; by the first floor.
+[
+  (check strata-the-repository-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/repository.strata"))))
+    (value #t))
+
+  (check strata-the-repository-checks
+    (call CheckLinkedNative
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q "strata.repository"))
+    (value (checked ok)))
+
+  (check strata-the-repository-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q "strata.repository"))
+    (value (total ok)))
+
+  (check strata-the-repository-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q "strata.repository"))
+    (value (permitted ok)))
+
+  (check strata-the-repository-agrees-with-the-host-set
+    (call CheckLinkedBoundary
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q "strata.repository"))
+    (value (bounded ok)))
+
+  ; Forwards. Every block, patch and tree is re-hashed, every patch is read
+  ; back as typed changes, and every change is replayed against the state the
+  ; block before it recorded.
+  (check strata-verifies-the-chain-the-first-floor-recorded
+    (call StrataVerifiesChain
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon")))
+    (value (verified ok)))
+
+  (check strata-counts-the-blocks-of-the-chain
+    (call StrataSaysOf
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon"))
+      (q blocksOn))
+    (value 2))
+
+  ; Backwards, and this is the stronger half. Given the block before it, the
+  ; tree it records, what it says about itself and the profile it was recorded
+  ; under, Strata works the block out for itself -- the diff, the patch, the
+  ; encoding of both, the hashing -- and arrives at the digest the first floor
+  ; issued.
+  (check strata-records-the-head-block-again
+    (call StrataRecordsAgain
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon")))
+    (value (recorded ok)))
+
+  ; A block that follows nothing is recorded from nothing, which is a
+  ; different entry point rather than a special case of the same one.
+  (check strata-records-the-genesis-block-again
+    (call StrataRecordsAgain
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/98eb4e8b00a7af728b6ffada984086403bb25b4f324d3a58975f2eefaba09f9d.canon")))
+    (value (recorded ok)))
+
+  ; And the same question with one word changed, so that the two answers above
+  ; are answers about something. A block says what it says about itself, and
+  ; what it says is part of what it is called.
+  (check strata-records-a-different-block-when-the-message-differs
+    (call StrataRecordsAgainSaying
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon"))
+      (q "one added, one removed, one replaced "))
+    (value (recorded mismatch)))
+
+  ; A tampered chain, refused by the hashing: the bytes under a name are not
+  ; the bytes that earn it.
+  (check strata-refuses-a-chain-whose-patch-was-swapped
+    (call StrataRefusesSwapped
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon")))
+    (value "a patch is not stored under the name of its contents"))
+
+  ; A tampered chain where every name is honest. The patch is rebuilt around
+  ; its lie and the block is rebuilt around the patch, so nothing is stored
+  ; anywhere but where its contents put it -- and the chain is still refused,
+  ; because replaying the change says what hashing cannot.
+  (check strata-refuses-a-patch-that-lies-about-what-it-replaces
+    (call StrataRefusesLying
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon")))
+    (value "replace expects the content it names"))
+
+  (check strata-refuses-a-head-that-is-not-a-block
+    (call StrataSaysOf
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/2cb7b3d5732e42e4023f82a2acc11811f2f739fb24425bf556f2a0cb5b5739f9.canon"))
+      (q verdictOn))
+    (value "the chain names something that is not a block"))
+
+  (check strata-checks-out-what-the-branch-records
+    (call StrataSaysOf
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon"))
+      (q checkoutSize))
+    (value 2))
+
+  (check strata-says-the-recorded-working-tree-is-clean
+    (call StrataSaysWith
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/2cb7b3d5732e42e4023f82a2acc11811f2f739fb24425bf556f2a0cb5b5739f9.canon"))
+      (q statusOn))
+    (value "clean"))
+
+  (check strata-says-an-earlier-working-tree-has-changed
+    (call StrataSaysWith
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/0ab00ad647bae7466a5fce6126c0b0699f51e11717382ad965500b3c29a0c1a1.canon"))
+      (q statusOn))
+    (value "changed"))
+
+  ; A materializer is a decision about how a file comes back, so it is a
+  ; declared thing here rather than a spelling carried around.
+  (check strata-names-the-materializer-the-tree-uses
+    (call StrataSaysOf
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/ebfd5a501bf54a25145d9278525ff2951b4bdc8e810244772e1390541407c905.canon"))
+      (q materializerTag))
+    (value "prints-with-grammar"))
+
+  (check strata-shares-history-with-a-branch-made-from-another
+    (call StrataSaysOf
+      (q (file "foundations/S11/surface/strata.generated.grammar"))
+      (call StrataRepositorySystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata"))))
+      (q (include "fixtures/strata/s11-objects.canon"))
+      (q (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon"))
+      (q branchesAfter))
+    (value 2))
+]

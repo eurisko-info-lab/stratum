@@ -1,0 +1,12 @@
+; delta-meta for S10 -> S11: Meta gains the crossing for a whole repository,
+; which is what a chain needs -- a claim about one artifact travels as one
+; artifact, and a claim about a history travels as every object in it, with
+; its names kept.
+(change
+  (kind delta-meta)
+  (name "S10->S11 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (storing strata)
+      (remembering strata))))

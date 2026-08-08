@@ -1,0 +1,352 @@
+module stratarepository
+
+; History, crossed into Strata and back.
+;
+; S10 handed Strata one artifact at a time and compared the name it worked out
+; with the name that artifact is stored under. This hands it a whole
+; repository -- every object of a chain that `repo-scala` recorded, and the
+; name its branch points at -- and asks Strata whether that chain is a
+; history. Nothing is translated on the way in except shape: an artifact
+; becomes a value of `Value`, which is the universe S10 decided, and its name
+; travels as the hexadecimal that spells it.
+;
+; The claim has two directions and they are not the same claim.
+;
+; Forwards: a chain the first floor wrote verifies here. Strata re-hashes
+; every block, patch and tree, reads the typed changes out of every patch,
+; replays them against the state the predecessor recorded, and requires the
+; result to be the tree the patch names. Nothing about that is a comparison of
+; shapes -- a reader that dropped a change or reordered two would produce a
+; state that is not the recorded one.
+;
+; Backwards: given the block before it, the tree it records, the message and
+; the profile, Strata works out the patch and the block for itself and gets
+; the digest the first floor issued. That is the stronger half: the diff, the
+; encoding of a patch, the encoding of a block and the hashing all have to
+; agree exactly, because a digest does not agree approximately.
+;
+; And two tampered chains, which must be refused for two different reasons. In
+; the first the bytes under a name are not the bytes that earn it, which the
+; hashing catches. In the second every name is honest and the patch itself
+; lies about what it is replacing, which only replaying the typed change
+; catches.
+;
+; No new host primitive is needed. The set S10 widened is the set this uses.
+
+; ------------------------------------------------------------------ the round
+
+judgment StrataRepositorySystem [prelude native octets artifact cas repository] =
+  list [prelude native octets artifact cas repository]
+
+; ---------------------------------------------------------------- the objects
+;
+; A repository object is an artifact like any other, so it arrives the way the
+; layer below made artifacts arrive. What is added here is that a whole set of
+; them arrives together and keeps its names, because a chain is a claim about
+; several artifacts at once.
+
+judgment StoredArtifact [reference] =
+  match cap #cas-get [reference] {
+    case (#ok (#artifact kind body)) ->
+      mk #stored [prim #ref->str [reference] prim #sym->str [kind] body]
+    case _ -> fail #repository-error "no artifact is stored under that reference"
+  }
+
+judgment StoredArtifacts [references] =
+  match references {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [call StoredArtifact [head] call StoredArtifacts [rest]]
+  }
+
+judgment ArtifactBody [entries name] =
+  match entries {
+    case [] ->
+      fail #repository-error prim #scat ["the repository holds no object named " name]
+    case (#stored held kind body) :: rest ->
+      if prim #eq [held name] then body else call ArtifactBody [rest name]
+    case head :: rest -> fail #repository-error "not a stored object"
+  }
+
+judgment StrataStore [entries] =
+  match entries {
+    case [] -> prim #node [#NoStored list []]
+    case (#stored name kind body) :: rest ->
+      mk #MoreStored [
+        name
+        mk #Artifact [kind call ReadCanonValue [body]]
+        call StrataStore [rest]
+      ]
+    case head :: rest -> fail #repository-error "not a stored object"
+  }
+
+judgment RepositoryStore [references] = call StrataStore [call StoredArtifacts [references]]
+
+; ------------------------------------------------------------- opening a branch
+;
+; A repository can also be opened from the one name a branch points at, and
+; then it is whatever that name reaches. That is the same set the checks name
+; one by one -- naming them is how a foundation pins them -- said the way a
+; person would say it.
+
+judgment JoinRefs [a b] =
+  match a {
+    case [] -> b
+    case head :: rest -> prim #cons [head call JoinRefs [rest b]]
+  }
+
+judgment RefsIn [value] =
+  if prim #is-ref [value] then list [value]
+  else if prim #is-list [value] then call RefsInEach [value]
+  else if prim #is-map [value] then call RefsInEach [prim #mentries [value]]
+  else if prim #is-node [value] then call RefsInEach [prim #args [value]]
+  else list []
+
+judgment RefsInEach [items] =
+  match items {
+    case [] -> list []
+    case head :: rest -> call JoinRefs [call RefsIn [head] call RefsInEach [rest]]
+  }
+
+judgment StoredBody [entry] =
+  match entry {
+    case (#stored name kind body) -> body
+    case _ -> fail #repository-error "not a stored object"
+  }
+
+judgment AlreadyReached [seen name] =
+  match seen {
+    case [] -> false
+    case (#stored held kind body) :: rest ->
+      if prim #eq [held name] then true else call AlreadyReached [rest name]
+    case head :: rest -> false
+  }
+
+judgment ReachedFrom [pending seen] =
+  match pending {
+    case [] -> seen
+    case head :: rest ->
+      if call AlreadyReached [seen prim #ref->str [head]]
+      then call ReachedFrom [rest seen]
+      else
+        let found = call StoredArtifact [head] in
+        call ReachedFrom [
+          call JoinRefs [rest call RefsIn [call StoredBody [found]]]
+          prim #cons [found seen]
+        ]
+  }
+
+judgment ChainFrom [head] = call ReachedFrom [list [head] list []]
+
+; ------------------------------------------------------------------ the asking
+
+judgment AskRepository [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.repository" entry arguments]
+
+; One shape answers most of the questions, because most of what a repository
+; is asked is a name and what it leads to.
+judgment StrataSaysOf [grammar sources references reference entry] =
+  call AskRepository [
+    grammar sources entry
+    list [call RepositoryStore [references] prim #ref->str [reference]]
+  ]
+
+judgment StrataSaysWith [grammar sources references reference other entry] =
+  call AskRepository [
+    grammar sources entry
+    list [
+      call RepositoryStore [references]
+      prim #ref->str [reference]
+      prim #ref->str [other]
+    ]
+  ]
+
+judgment StrataVerifiesChain [grammar sources references head] =
+  let verdict = call StrataSaysOf [grammar sources references head #verdictOn] in
+  if prim #eq [verdict "valid"] then mk #verified [#ok] else mk #verified [verdict]
+
+; ---------------------------------------------------------- recording it again
+;
+; The other direction. Everything the first floor decided when it recorded a
+; block is read back out of the block itself -- what it follows, which tree it
+; records, what it says about itself, which profile it was recorded under --
+; and Strata is asked to record that again from the state before it. What
+; comes back is a name, and the name has to be the one the block already has.
+
+judgment BlockParts [entries head] =
+  match call ArtifactBody [entries head] {
+    case (#block height predecessor patch profile) ->
+      match call ArtifactBody [entries prim #ref->str [patch]] {
+        case (#patch before tree message changes) ->
+          mk #parts [predecessor prim #ref->str [tree] message prim #ref->str [profile]]
+        case _ -> fail #repository-error "the block names something that is not a patch"
+      }
+    case _ -> fail #repository-error "that is not a block"
+  }
+
+judgment StrataRecordsAgain [grammar sources references head] =
+  let entries = call StoredArtifacts [references] in
+  let name = prim #ref->str [head] in
+  match call BlockParts [entries name] {
+    case (#parts predecessor tree message profile) ->
+      call RecordedIs [grammar sources entries name predecessor tree message profile]
+    case _ -> fail #repository-error "malformed parts"
+  }
+
+; The same question with one word changed. A block says what it says about
+; itself, and what it says is part of what it is called, so recording the same
+; tree under a different message has to arrive somewhere else -- otherwise the
+; agreement above would be an agreement about nothing.
+judgment StrataRecordsAgainSaying [grammar sources references head message] =
+  let entries = call StoredArtifacts [references] in
+  let name = prim #ref->str [head] in
+  match call BlockParts [entries name] {
+    case (#parts predecessor tree spoken profile) ->
+      call RecordedIs [grammar sources entries name predecessor tree message profile]
+    case _ -> fail #repository-error "malformed parts"
+  }
+
+judgment RecordedIs [grammar sources entries name predecessor tree message profile] =
+  if prim #eq [
+    name
+    call RecordedName [grammar sources entries predecessor tree message profile]
+  ]
+  then mk #recorded [#ok]
+  else mk #recorded [#mismatch]
+
+judgment RecordedName [grammar sources entries predecessor tree message profile] =
+  call AskRepository [
+    grammar sources
+    call RecordEntry [predecessor]
+    call RecordArguments [call StrataStore [entries] predecessor tree message profile]
+  ]
+
+; The name itself, for a reader who would rather see the digest than be told
+; it agrees. The store is whatever the branch head reaches.
+judgment StrataRecordsNameFrom [grammar sources head] =
+  let entries = call ChainFrom [head] in
+  match call BlockParts [entries prim #ref->str [head]] {
+    case (#parts predecessor tree message profile) ->
+      call RecordedName [grammar sources entries predecessor tree message profile]
+    case _ -> fail #repository-error "malformed parts"
+  }
+
+judgment StrataVerdictFrom [grammar sources head] =
+  call AskRepository [
+    grammar sources #verdictOn
+    list [call StrataStore [call ChainFrom [head]] prim #ref->str [head]]
+  ]
+
+; A block that follows nothing is recorded by a different entry point, because
+; there is no earlier name to hand it. That is the one asymmetry in the chain
+; and it is answered rather than hidden.
+
+judgment RecordEntry [predecessor] =
+  if prim #is-ref [predecessor] then #recordedNameOn else #recordedGenesisOn
+
+judgment RecordArguments [store predecessor tree message profile] =
+  if prim #is-ref [predecessor]
+  then list [store prim #ref->str [predecessor] tree message profile]
+  else list [store tree message profile]
+
+; -------------------------------------------------------------------- tampering
+;
+; Two ways to lie about a history, refused for two different reasons.
+
+; The bytes under a name are not the bytes that earn it. Every name in the
+; chain still resolves and every shape is still a shape; what is gone is the
+; only thing that made the name mean anything.
+judgment SwappedStore [entries head] =
+  match call ArtifactBody [entries head] {
+    case (#block height predecessor patch profile) ->
+      let name = prim #ref->str [patch] in
+      call ReplaceStored [entries name call LyingPatch [call ArtifactBody [entries name]]]
+    case _ -> fail #repository-error "that is not a block"
+  }
+
+judgment ReplaceStored [entries name body] =
+  match entries {
+    case [] -> list []
+    case (#stored held kind stored) :: rest ->
+      if prim #eq [held name]
+      then prim #cons [mk #stored [held kind body] call ReplaceStored [rest name body]]
+      else prim #cons [mk #stored [held kind stored] call ReplaceStored [rest name body]]
+    case head :: rest -> fail #repository-error "not a stored object"
+  }
+
+; Every name is honest and the patch lies anyway: it claims to be replacing
+; content that was never at that path. Only replaying the typed change against
+; the state before it can say so.
+judgment LyingChainHead [entries head] =
+  match call ArtifactBody [entries head] {
+    case (#block height predecessor patch profile) ->
+      let lying = call LyingPatch [call ArtifactBody [entries prim #ref->str [patch]]] in
+      prim #digest [call Envelope [#block prim #node [#block list [
+        height predecessor prim #digest [call Envelope [#patch lying]] profile
+      ]]]]
+    case _ -> fail #repository-error "that is not a block"
+  }
+
+judgment LyingStore [entries head] =
+  match call ArtifactBody [entries head] {
+    case (#block height predecessor patch profile) ->
+      let lying = call LyingPatch [call ArtifactBody [entries prim #ref->str [patch]]] in
+      let lyingBlock = prim #node [#block list [
+        height predecessor prim #digest [call Envelope [#patch lying]] profile
+      ]] in
+      prim #cons [
+        mk #stored [
+          prim #ref->str [prim #digest [call Envelope [#block lyingBlock]]] "block" lyingBlock
+        ]
+        prim #cons [
+          mk #stored [
+            prim #ref->str [prim #digest [call Envelope [#patch lying]]] "patch" lying
+          ]
+          entries
+        ]
+      ]
+    case _ -> fail #repository-error "that is not a block"
+  }
+
+judgment Envelope [kind body] = prim #node [#artifact list [kind body]]
+
+judgment LyingPatch [body] =
+  match body {
+    case (#patch predecessor tree message changes) ->
+      prim #node [#patch list [predecessor tree message call LyingChanges [changes]]]
+    case _ -> fail #repository-error "that is not a patch"
+  }
+
+judgment LyingChanges [changes] =
+  match changes {
+    case [] -> list []
+    case (#replace path before after) :: rest ->
+      prim #cons [
+        prim #node [#replace list [path call NothingIsThere [] after]]
+        call LyingChanges [rest]
+      ]
+    case head :: rest -> prim #cons [head call LyingChanges [rest]]
+  }
+
+judgment NothingIsThere [] =
+  "0000000000000000000000000000000000000000000000000000000000000000"
+
+judgment StrataRefusesSwapped [grammar sources references head] =
+  let entries = call StoredArtifacts [references] in
+  call AskRepository [
+    grammar sources #verdictOn
+    list [
+      call StrataStore [call SwappedStore [entries prim #ref->str [head]]]
+      prim #ref->str [head]
+    ]
+  ]
+
+judgment StrataRefusesLying [grammar sources references head] =
+  let entries = call StoredArtifacts [references] in
+  call AskRepository [
+    grammar sources #verdictOn
+    list [
+      call StrataStore [call LyingStore [entries prim #ref->str [head]]]
+      prim #ref->str [call LyingChainHead [entries prim #ref->str [head]]]
+    ]
+  ]
