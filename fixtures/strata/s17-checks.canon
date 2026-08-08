@@ -1,0 +1,212 @@
+; Focused behavioral acceptance for S17 constituted performance evidence.
+[
+  (check strata-the-performance-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/performance.strata"))))
+    (value #t))
+
+  (check strata-the-performance-system-checks
+    (call CheckLinkedNative
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q "strata.performance"))
+    (value (checked ok)))
+
+  (check strata-the-performance-system-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q "strata.performance"))
+    (value (total ok)))
+
+  (check strata-the-performance-system-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q "strata.performance"))
+    (value (permitted ok)))
+
+  (check matching-observations-and-twofold-work-are-accepted
+    (call StrataPerformanceVerdictTag
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q (performance "compiler-bootstrap" (observation interpreted "result-v1" "trace-v1" 200 50) (observation compiled "result-v1" "trace-v1" 100 55)))
+      (q (policy 2 5)))
+    (value "accepted"))
+
+  (check changed-observation-is-rejected
+    (call StrataPerformanceVerdictTag
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q (performance "grammar-corpus" (observation interpreted "result-v1" "trace-v1" 200 50) (observation compiled "result-v2" "trace-v1" 80 40)))
+      (q (policy 2 5)))
+    (value "observations-differ"))
+
+  (check insufficient-speedup-is-rejected
+    (call StrataPerformanceVerdictTag
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q (performance "repository" (observation interpreted "result-v1" "trace-v1" 199 50) (observation compiled "result-v1" "trace-v1" 100 50)))
+      (q (policy 2 0)))
+    (value "speedup-target-missed"))
+
+  (check allocation-overhead-is-rejected
+    (call StrataPerformanceVerdictTag
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q (performance "foundation-verify" (observation interpreted "result-v1" "trace-v1" 200 50) (observation compiled "result-v1" "trace-v1" 90 56)))
+      (q (policy 2 5)))
+    (value "allocation-budget-exceeded"))
+
+  (check benchmark-policy-is-fixed-at-twofold
+    (call StrataPerformanceVerdictTag
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q (performance "compiler-bootstrap" (observation interpreted "result-v1" "trace-v1" 300 50) (observation compiled "result-v1" "trace-v1" 100 50)))
+      (q (policy 3 0)))
+    (value "unsupported-speedup-policy"))
+
+  (check replaying-the-same-performance-evidence-is-deterministic
+    (call StrataPerformanceRunsAgree
+      (q (file "foundations/S17/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata"))))
+      (q (performance "compiler-bootstrap" (observation interpreted "result-v1" "trace-v1" 200 50) (observation compiled "result-v1" "trace-v1" 100 55)))
+      (q (performance "compiler-bootstrap" (observation interpreted "result-v1" "trace-v1" 200 50) (observation compiled "result-v1" "trace-v1" 100 55))))
+    (value #t))
+]

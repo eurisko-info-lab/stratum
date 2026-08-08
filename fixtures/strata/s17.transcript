@@ -1,0 +1,71 @@
+# S17 acceptance transcript: performance claims bind semantic observations,
+# deterministic work and allocations without putting host timing in identity.
+
+$ foundation verify --dir foundations/S17
+> foundation S17
+> digest ef20a8cfab104e405adcb5d3c83c25da1bbd0ee34e1d5d590d7a58e1c83213f2
+> closure 321 artifacts
+> check strata-the-performance-module-prints-exactly ok
+> check strata-the-performance-system-checks ok
+> check strata-the-performance-system-is-total ok
+> check strata-the-performance-system-declares-its-capabilities ok
+> check matching-observations-and-twofold-work-are-accepted ok
+> check changed-observation-is-rejected ok
+> check insufficient-speedup-is-rejected ok
+> check allocation-overhead-is-rejected ok
+> check benchmark-policy-is-fixed-at-twofold ok
+> check replaying-the-same-performance-evidence-is-deterministic ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S16 --successor foundations/S17
+> predecessor S16
+> successor S17
+> result (valid #d17d081b050aabb6cac4164b4e9e21cd5f404870110910ea9030ad1e3c652d2f6)
+
+$ foundation reconstruct --dir foundations/S17
+> reconstructed S17
+> digest ef20a8cfab104e405adcb5d3c83c25da1bbd0ee34e1d5d590d7a58e1c83213f2
+> stable yes
+> closure 321 artifacts
+> checks 10 ok
+
+$ foundation derive-successor --predecessor foundations/S16 --derivation changes/S16-S17/derivation.canon --expect foundations/S17
+> predecessor S16
+> derived ef20a8cfab104e405adcb5d3c83c25da1bbd0ee34e1d5d590d7a58e1c83213f2
+> matches foundations/S17 yes
+
+$ transcript run fixtures/lambda/f0.transcript
+> ok fixtures/lambda/f0.transcript 14 steps
+
+$ transcript run fixtures/meta/f1.transcript
+> ok fixtures/meta/f1.transcript 12 steps
+
+$ transcript run fixtures/change/f2.transcript
+> ok fixtures/change/f2.transcript 12 steps
+
+$ transcript run fixtures/repository/f3.transcript
+> ok fixtures/repository/f3.transcript 14 steps
+
+$ transcript run fixtures/tooling/f4.transcript
+> ok fixtures/tooling/f4.transcript 14 steps
+
+$ transcript run fixtures/governance/f5.transcript
+> ok fixtures/governance/f5.transcript 16 steps
+
+$ transcript run fixtures/foundation/f6.transcript
+> ok fixtures/foundation/f6.transcript 10 steps
+
+$ transcript run fixtures/ledger/f7.transcript
+> ok fixtures/ledger/f7.transcript 10 steps
+
+$ transcript run fixtures/sync/f8.transcript
+> ok fixtures/sync/f8.transcript 11 steps
+
+$ transcript run fixtures/federation/f9.transcript
+> ok fixtures/federation/f9.transcript 12 steps
+
+$ transcript run fixtures/retention/f10.transcript
+> ok fixtures/retention/f10.transcript 13 steps
+
+$ transcript run fixtures/studio/f11.transcript
+> ok fixtures/studio/f11.transcript 23 steps

@@ -1,0 +1,9 @@
+; delta-meta for S16 -> S17: performance becomes constituted evidence.
+(change
+  (kind delta-meta)
+  (name "S16->S17 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (remembering strata)
+      (editing strata))))

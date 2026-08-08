@@ -1,0 +1,127 @@
+module strataperformance
+
+; Benchmark observations cross as values. Agreement, deterministic work,
+; allocation policy and evidence identity remain Strata decisions.
+
+judgment StrataPerformanceSystem [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention agent performance] =
+  list [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention agent performance]
+
+judgment AskPerformance [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.performance" entry arguments]
+
+judgment PerformancePath [path] =
+  match path {
+    case #interpreted -> prim #node [#Interpreted list []]
+    case #compiled -> prim #node [#Compiled list []]
+    case _ -> fail #performance-error "not an execution path"
+  }
+
+judgment PerformanceObservation [observation] =
+  match observation {
+    case (#observation path result trace instructions allocations) ->
+      mk #PerformanceObservation [call PerformancePath [path] result trace instructions allocations]
+    case _ -> fail #performance-error "not a performance observation"
+  }
+
+judgment PerformanceEvidence [measurement] =
+  match measurement {
+    case (#performance workload baseline candidate) ->
+      mk #PerformanceEvidence [
+        workload
+        call PerformanceObservation [baseline]
+        call PerformanceObservation [candidate]
+      ]
+    case _ -> fail #performance-error "not performance evidence"
+  }
+
+judgment PerformancePolicy [policy] =
+  match policy {
+    case (#policy speedup allowance) -> mk #PerformancePolicy [speedup allowance]
+    case _ -> fail #performance-error "not a performance policy"
+  }
+
+judgment StrataPerformanceEvaluate [grammar sources measurement policy] =
+  match measurement {
+    case (#performance workload baseline candidate) ->
+      match policy {
+        case (#policy speedup allowance) ->
+          if prim #eq [speedup 2]
+          then if prim #eq [
+            call AskPerformance [
+              grammar sources #observationResultOf
+              list [call PerformanceObservation [baseline]]
+            ]
+            call AskPerformance [
+              grammar sources #observationResultOf
+              list [call PerformanceObservation [candidate]]
+            ]
+          ]
+          then if prim #eq [
+            call AskPerformance [
+              grammar sources #observationTraceOf
+              list [call PerformanceObservation [baseline]]
+            ]
+            call AskPerformance [
+              grammar sources #observationTraceOf
+              list [call PerformanceObservation [candidate]]
+            ]
+          ]
+          then if prim #lt [
+            call AskPerformance [
+              grammar sources #observationInstructionsOf
+              list [call PerformanceObservation [baseline]]
+            ]
+            prim #add [
+              call AskPerformance [
+                grammar sources #observationInstructionsOf
+                list [call PerformanceObservation [candidate]]
+              ]
+              call AskPerformance [
+                grammar sources #observationInstructionsOf
+                list [call PerformanceObservation [candidate]]
+              ]
+            ]
+          ]
+          then mk #PerformanceRejected ["speedup-target-missed"]
+          else if prim #lt [
+            prim #add [
+              call AskPerformance [
+                grammar sources #observationAllocationsOf
+                list [call PerformanceObservation [baseline]]
+              ]
+              allowance
+            ]
+            call AskPerformance [
+              grammar sources #observationAllocationsOf
+              list [call PerformanceObservation [candidate]]
+            ]
+          ]
+          then mk #PerformanceRejected ["allocation-budget-exceeded"]
+          else mk #PerformanceAccepted [
+            call StrataPerformanceIdentity [grammar sources measurement]
+          ]
+          else mk #PerformanceRejected ["observations-differ"]
+          else mk #PerformanceRejected ["observations-differ"]
+          else mk #PerformanceRejected ["unsupported-speedup-policy"]
+        case _ -> fail #performance-error "not a performance policy"
+      }
+    case _ -> fail #performance-error "not a performance policy"
+  }
+
+judgment StrataPerformanceVerdictTag [grammar sources measurement policy] =
+  match call StrataPerformanceEvaluate [grammar sources measurement policy] {
+    case (#PerformanceRejected reason) -> reason
+    case (#PerformanceAccepted identity) -> "accepted"
+    case _ -> fail #performance-error "not a performance verdict"
+  }
+
+judgment StrataPerformanceIdentity [grammar sources measurement] =
+  call AskPerformance [
+    grammar sources #measurementIdentity list [call PerformanceEvidence [measurement]]
+  ]
+
+judgment StrataPerformanceRunsAgree [grammar sources first second] =
+  prim #eq [
+    call StrataPerformanceIdentity [grammar sources first]
+    call StrataPerformanceIdentity [grammar sources second]
+  ]
