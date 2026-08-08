@@ -1,6 +1,6 @@
 # Strata rebuild roadmap
 
-## Rebuilding Stratum in Strata, in eighteen commits
+## Rebuilding Stratum in Strata, in nineteen commits
 
 This roadmap starts at `182b7bc` — the commit that completed the first-floor
 landing and defined the second-floor architecture in
@@ -8,8 +8,8 @@ landing and defined the second-floor architecture in
 carried forward.
 
 The plan is the staircase specified in
-[docs/strata.md §24](../docs/strata.md), realized literally: **eighteen
-commits, eighteen foundations, one layer per commit.**
+[docs/strata.md §24](../docs/strata.md), realized literally: **nineteen
+commits, nineteen foundations, one layer per commit.**
 
 $$
 F_{11} \vdash S_0 \qquad S_n \vdash S_{n+1}
@@ -57,10 +57,10 @@ strata/lib/            Strata standard library, written in Strata
 strata/compiler/       Strata compiler, written in Strata
 strata/system/         Stratum itself, written in Strata
 fixtures/strata/       acceptance transcripts
-foundations/S0..S17/   second-floor staircase
+foundations/S0..S18/   second-floor staircase
 ```
 
-## The eighteen commits
+## The nineteen commits
 
 | # | Layer | Constructs | Authority moves to Strata |
 | --- | --- | --- | --- |
@@ -82,6 +82,7 @@ foundations/S0..S17/   second-floor staircase
 | 16 | S15 | retention and reconstruction | durability |
 | 17 | S16 | investigation agents | the agent substrate |
 | 18 | S17 | performance constitution and evidence | performance acceptance |
+| 19 | S18 | lowered compiled execution | optimized pure execution |
 
 S1 was originally written here as "the total dependent core". It is two
 layers, not one. S1 gives a declaration a type; S2 lets a type depend on a
@@ -960,12 +961,52 @@ choose the comparison policy, canonical identity or acceptance verdict.
 that can reject semantic drift, insufficient work reduction or excess
 allocation before it becomes authoritative.
 
+## Commit 19 — S18: lowered compiled execution
+
+**Constructs** $S_{17} \vdash S_{18}$, and makes the first optimization pass
+through the S17 gate.
+
+**Adds**
+
+- a one-time lowering pass from canonical compiler output to compact machine
+  instructions with host-number positions, tags and arities
+- a lowered execution loop that consumes ordinary instruction lists rather
+  than re-reading the `IStep` spine and unary `Nat` fields on every execution
+- `features/strata/optimization.meta` — an executable reference/candidate
+  workload and deterministic performance observation
+- `fixtures/strata/s18.transcript`, `foundations/S18/`
+
+The canonical compiler output does not change. It remains the portable,
+content-addressed artifact and the original machine remains an executable
+oracle. Lowering happens once at the execution boundary. Repeated execution
+then uses compact numeric data, so representation decoding is no longer part
+of every recursive call.
+
+**Acceptance**
+
+1. Reference and lowered machines produce the same canonical result.
+2. Recursion, matching, lets, partial application, partial construction and
+   imported names preserve their S5 behavior on the lowered path.
+3. The accepted workload falls from 8,978 to 2,618 canonical Meta derivation
+   steps, a $3.43\times$ reduction; the constituted machine-work observation
+   falls from 848 to 147 while staying within a three-allocation allowance.
+4. S17, not the execution path, decides whether this evidence is accepted.
+5. Timing and resident-memory samples remain environmental attestations.
+
+**Boundary** — S18 promotes the pure compiled subset. Literal and native
+primitive execution remains interpreted because the S5 compiler IR does not
+yet represent either one; silently routing those programs through this machine
+would be a semantic regression, not an optimization.
+
+**Exit condition** — pure compiled execution is measurably cheaper and accepted
+without changing the compiler artifact or the program result.
+
 ## Definition of done
 
 Fully operational means all three hold simultaneously:
 
 $$
-F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 17
+F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 18
 $$
 
 $$

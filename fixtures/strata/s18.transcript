@@ -1,0 +1,65 @@
+# S18 acceptance transcript: canonical compiler output is lowered once and
+# repeated pure execution avoids representation decoding.
+
+$ foundation verify --dir foundations/S18
+> foundation S18
+> digest 3a4138cfedafd6cb0893e1abcc696ad4f59f9a0f4d94446162050bd26985b837
+> closure 326 artifacts
+> check lowered-execution-preserves-the-reference-result ok
+> check lowered-execution-preserves-all-machine-forms ok
+> check optimization-evidence-is-produced-by-execution ok
+> check measured-lowered-execution-meets-the-s17-policy ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S17 --successor foundations/S18
+> predecessor S17
+> successor S18
+> result (valid #d174e6343b3e4e8d9dd92ab1a41ff0e743f19ff4bd014ebed860de986b584056d)
+
+$ foundation reconstruct --dir foundations/S18
+> reconstructed S18
+> digest 3a4138cfedafd6cb0893e1abcc696ad4f59f9a0f4d94446162050bd26985b837
+> stable yes
+> closure 326 artifacts
+> checks 4 ok
+
+$ foundation derive-successor --predecessor foundations/S17 --derivation changes/S17-S18/derivation.canon --expect foundations/S18
+> predecessor S17
+> derived 3a4138cfedafd6cb0893e1abcc696ad4f59f9a0f4d94446162050bd26985b837
+> matches foundations/S18 yes
+
+$ transcript run fixtures/lambda/f0.transcript
+> ok fixtures/lambda/f0.transcript 14 steps
+
+$ transcript run fixtures/meta/f1.transcript
+> ok fixtures/meta/f1.transcript 12 steps
+
+$ transcript run fixtures/change/f2.transcript
+> ok fixtures/change/f2.transcript 12 steps
+
+$ transcript run fixtures/repository/f3.transcript
+> ok fixtures/repository/f3.transcript 14 steps
+
+$ transcript run fixtures/tooling/f4.transcript
+> ok fixtures/tooling/f4.transcript 14 steps
+
+$ transcript run fixtures/governance/f5.transcript
+> ok fixtures/governance/f5.transcript 16 steps
+
+$ transcript run fixtures/foundation/f6.transcript
+> ok fixtures/foundation/f6.transcript 10 steps
+
+$ transcript run fixtures/ledger/f7.transcript
+> ok fixtures/ledger/f7.transcript 10 steps
+
+$ transcript run fixtures/sync/f8.transcript
+> ok fixtures/sync/f8.transcript 11 steps
+
+$ transcript run fixtures/federation/f9.transcript
+> ok fixtures/federation/f9.transcript 12 steps
+
+$ transcript run fixtures/retention/f10.transcript
+> ok fixtures/retention/f10.transcript 13 steps
+
+$ transcript run fixtures/studio/f11.transcript
+> ok fixtures/studio/f11.transcript 23 steps

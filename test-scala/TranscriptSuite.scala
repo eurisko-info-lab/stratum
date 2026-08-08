@@ -26,7 +26,13 @@ class TranscriptSuite extends munit.FunSuite:
     }
     if lines.length > MaxLinesPerSide then shown :+ s"  $prefix ... (${lines.length - MaxLinesPerSide} more lines)" else shown
 
-  Transcript.transcriptFiles(root, Vector("fixtures")).foreach { file =>
+  private val transcripts =
+    val all = Transcript.transcriptFiles(root, Vector("fixtures"))
+    if sys.env.contains("STRATUM_SKIP_FOUNDATION_TRANSCRIPTS") then
+      all.filterNot(_.startsWith(root.resolve("fixtures/strata")))
+    else all
+
+  transcripts.foreach { file =>
     val rel = root.relativize(file).toString
     test(s"transcript $rel") {
       val doc = Transcript.parse(Files.readString(file))

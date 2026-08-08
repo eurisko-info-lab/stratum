@@ -1,0 +1,53 @@
+; Focused behavioral acceptance for S18 lowered compiled execution.
+[
+  (check lowered-execution-preserves-the-reference-result
+    (call OptimizationPreservesMeaning)
+    (value #t))
+
+  (check lowered-execution-preserves-all-machine-forms
+    (call LoweredExamplesPreserveMeaning
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/compile.strata")))
+          (q [])))
+      (prim cons
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (prim cons
+          (call SourceText (q (text-file "strata/compiler/example.strata")))
+          (q []))))
+    (value #t))
+
+  (check optimization-evidence-is-produced-by-execution
+    (call OptimizationEvidence)
+    (value
+      (performance "compiled-high-tag-repeat"
+        (observation interpreted
+          "8f6344a4d87a9deea9e96705bfd2fff95963ac4cf9af8a7c9aee1dce7b120146"
+          "pure" 848 16)
+        (observation compiled
+          "8f6344a4d87a9deea9e96705bfd2fff95963ac4cf9af8a7c9aee1dce7b120146"
+          "pure" 147 19))))
+
+  (check measured-lowered-execution-meets-the-s17-policy
+    (call OptimizationVerdict
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call StrataPerformanceSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata")))
+        (call SourceText (q (text-file "strata/system/retention.strata")))
+        (call SourceText (q (text-file "strata/system/agent.strata")))
+        (call SourceText (q (text-file "strata/system/performance.strata")))))
+    (value "accepted"))
+]

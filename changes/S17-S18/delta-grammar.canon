@@ -1,0 +1,9 @@
+; S18 adds no Strata surface. The S17 grammar is inherited exactly.
+(change
+  (kind delta-grammar)
+  (name "S17->S18 delta-grammar")
+  (replace
+    (ReplaceChange
+      second-floor-grammar
+      (remembering strata)
+      (editing strata))))

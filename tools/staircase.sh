@@ -28,42 +28,103 @@ run() {
   java -Xss256m -cp "$classpath" stratum.cli.Stratum "$@"
 }
 
-previous=""
-previous_name=""
-# The first floor in order, then the second floor it constructs.
-for dir in $(ls -d foundations/F* | sort -V; ls -d foundations/S* 2>/dev/null | sort -V); do
+workers=${STRATUM_STAIRCASE_WORKERS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)}
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+mapfile -t all_foundations < <(ls -d foundations/F* | sort -V; ls -d foundations/S* 2>/dev/null | sort -V)
+foundations=("${all_foundations[@]}")
+if [[ -n "${STRATUM_STAIRCASE_SHARD:-}" ]]; then
+  IFS=/ read -r shard_index shard_count <<< "$STRATUM_STAIRCASE_SHARD"
+  if [[ ! "$shard_index" =~ ^[0-9]+$ || ! "$shard_count" =~ ^[1-9][0-9]*$ || "$shard_index" -ge "$shard_count" ]]; then
+    echo "STRATUM_STAIRCASE_SHARD must be INDEX/COUNT with INDEX < COUNT" >&2
+    exit 1
+  fi
+  foundations=()
+  for ((i = shard_index; i < ${#all_foundations[@]}; i += shard_count)); do
+    foundations+=("${all_foundations[i]}")
+  done
+fi
+
+build_world() {
+  local dir=$1 name golden rebuilt
   name=$(basename "$dir")
   golden=$(cat "$dir/digest.txt")
 
-  echo "== $name"
-  run foundation build --spec "$dir/build.canon" --out "$dir"
+  run foundation build --spec "$dir/build.canon" --out "$dir" > "$work/$name.build"
 
   rebuilt=$(cat "$dir/digest.txt")
-  if [ "$golden" != "$rebuilt" ]; then
+  if [[ "$golden" != "$rebuilt" ]]; then
     echo "digest drift in $name: committed $golden, rebuilt $rebuilt" >&2
-    exit 1
+    return 1
+  fi
+}
+
+verify_world() {
+  set -euo pipefail
+  local dir=$1 name
+  name=$(basename "$dir")
+  {
+    run foundation verify --dir "$dir"
+    run foundation reconstruct --dir "$dir"
+  } > "$work/$name.verify"
+}
+
+verify_transition() {
+  set -euo pipefail
+  local pair=$1 previous dir previous_name name derivation
+  IFS='|' read -r previous dir <<< "$pair"
+  previous_name=$(basename "$previous")
+  name=$(basename "$dir")
+  derivation="changes/$previous_name-$name/derivation.canon"
+
+  if [[ ! -f "$derivation" ]]; then
+      echo "no canonical derivation for $previous_name -> $name" >&2
+      return 1
   fi
 
-  run foundation verify --dir "$dir"
-  run foundation reconstruct --dir "$dir"
-
-  if [ -n "$previous" ]; then
+  {
     run foundation verify-successor --predecessor "$previous" --successor "$dir"
-
-    derivation="changes/$previous_name-$name/derivation.canon"
-    if [ ! -f "$derivation" ]; then
-      echo "no canonical derivation for $previous_name -> $name" >&2
-      exit 1
-    fi
-    # The predecessor constructs the successor. No successor manifest is given.
     run foundation derive-successor \
       --predecessor "$previous" \
       --derivation "$derivation" \
       --expect "$dir"
-    echo "   $previous_name |- $name"
-  fi
-  previous="$dir"
-  previous_name="$name"
+  } > "$work/$name.transition"
+}
+
+export -f run build_world verify_world verify_transition
+export classpath work
+
+for dir in "${foundations[@]}"; do
+  build_world "$dir"
+done
+printf '%s\n' "${foundations[@]}" | xargs -r -n 1 -P "$workers" bash -c 'verify_world "$1"' _
+
+transitions=()
+for dir in "${foundations[@]}"; do
+  for ((i = 1; i < ${#all_foundations[@]}; i++)); do
+    if [[ "${all_foundations[i]}" == "$dir" ]]; then
+      transitions+=("${all_foundations[i - 1]}|$dir")
+      break
+    fi
+  done
+done
+if ((${#transitions[@]} > 0)); then
+  printf '%s\n' "${transitions[@]}" | xargs -r -n 1 -P "$workers" bash -c 'verify_transition "$1"' _
+fi
+
+for dir in "${foundations[@]}"; do
+  name=$(basename "$dir")
+  echo "== $name"
+  cat "$work/$name.build" "$work/$name.verify"
+  for pair in "${transitions[@]}"; do
+    IFS='|' read -r previous current <<< "$pair"
+    if [[ "$current" != "$dir" ]]; then
+      continue
+    fi
+    cat "$work/$name.transition"
+    echo "   $(basename "$previous") |- $name"
+  done
 done
 
 echo "staircase ok"
