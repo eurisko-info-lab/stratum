@@ -1,0 +1,81 @@
+module stratagovernance
+
+; Pure governance over explicit proposal evidence and host-journaled run
+; reports. Maps are decoded here because they are the boundary representation;
+; policy remains in `strata.governance`.
+
+judgment StrataGovernanceSystem [prelude native octets artifact cas repository studio foundation governance] =
+  list [prelude native octets artifact cas repository studio foundation governance]
+
+judgment AskGovernance [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.governance" entry arguments]
+
+judgment GovernanceBool [value] =
+  if prim #eq [value true]
+  then prim #node [#True list []]
+  else prim #node [#False list []]
+
+judgment StrataConstitution [kind tests proof budget] =
+  mk #Constitution [kind call GovernanceBool [tests] call GovernanceBool [proof] budget]
+
+judgment StrataProposal [foundation predecessor kind signed tests proof budget] =
+  mk #Proposal [
+    foundation predecessor kind
+    call GovernanceBool [signed]
+    call GovernanceBool [tests]
+    call GovernanceBool [proof]
+    budget
+  ]
+
+judgment StrataDecision [grammar sources constitution proposal] =
+  call AskGovernance [grammar sources #evaluateProposal list [constitution proposal]]
+
+judgment StrataDecisionTag [grammar sources constitution proposal] =
+  call AskGovernance [
+    grammar sources #decisionTag
+    list [call StrataDecision [grammar sources constitution proposal]]
+  ]
+
+judgment StrataSponsorship [grammar sources sponsor decision] =
+  call AskGovernance [grammar sources #sponsor list [sponsor decision]]
+
+judgment StrataSponsorshipTag [grammar sources sponsor decision] =
+  call AskGovernance [
+    grammar sources #sponsorshipTag
+    list [call StrataSponsorship [grammar sources sponsor decision]]
+  ]
+
+judgment StrataRunSteps [steps] =
+  match steps {
+    case [] -> prim #node [#NoRunStep list []]
+    case head :: rest ->
+      mk #MoreRunStep [
+        mk #RunStep [prim #mget [head #exit 1]]
+        call StrataRunSteps [rest]
+      ]
+  }
+
+judgment StrataRunChanges [changes] =
+  match changes {
+    case [] -> prim #node [#NoRunChange list []]
+    case head :: rest ->
+      mk #MoreRunChange [
+        mk #RunChange [call GovernanceBool [prim #mhas [head #after]]]
+        call StrataRunChanges [rest]
+      ]
+  }
+
+judgment StrataRunReport [report] =
+  mk #RunReport [
+    call StrataRunSteps [prim #mget [report #steps list []]]
+    call StrataRunChanges [prim #mget [report #changed list []]]
+  ]
+
+judgment StrataRunDecision [grammar sources report] =
+  call AskGovernance [grammar sources #evaluateRun list [call StrataRunReport [report]]]
+
+judgment StrataRunDecisionTag [grammar sources report] =
+  call AskGovernance [
+    grammar sources #runDecisionTag
+    list [call StrataRunDecision [grammar sources report]]
+  ]
