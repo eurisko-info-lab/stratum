@@ -1,0 +1,736 @@
+; Generated from features/strata/optimization.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataoptimization)
+  (judgment
+    LowerBlocks
+    [blocks]
+    (match
+      (v blocks)
+      (case
+        (pm NoBlock)
+        (lst))
+      (case
+        (pm
+          Block
+          (pv code)
+          (pv rest))
+        (prim
+          cons
+          (call
+            LowerCode
+            (v code))
+          (call
+            LowerBlocks
+            (v rest))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "malformed block list")))))
+  (judgment
+    LowerCode
+    [code]
+    (match
+      (v code)
+      (case
+        (pm IDone)
+        (lst))
+      (case
+        (pm
+          IStep
+          (pv instr)
+          (pv rest))
+        (prim
+          cons
+          (call
+            LowerInstruction
+            (v instr))
+          (call
+            LowerCode
+            (v rest))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "malformed code")))))
+  (judgment
+    LowerInstruction
+    [instr]
+    (match
+      (v instr)
+      (case
+        (pm
+          ILocal
+          (pv index))
+        (mk
+          FLocal
+          (call
+            NatOf
+            (v index))))
+      (case
+        (pm
+          IGlobal
+          (pv index))
+        (mk
+          FGlobal
+          (call
+            NatOf
+            (v index))))
+      (case
+        (pm
+          ICon
+          (pv tag)
+          (pv arity))
+        (mk
+          FCon
+          (call
+            NatOf
+            (v tag))
+          (call
+            NatOf
+            (v arity))))
+      (case
+        (pm IApply)
+        (mk FApply))
+      (case
+        (pm
+          ILet
+          (pv body))
+        (mk
+          FLet
+          (call
+            LowerCode
+            (v body))))
+      (case
+        (pm
+          IMatch
+          (pv arms))
+        (mk
+          FMatch
+          (call
+            LowerArms
+            (v arms))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "unknown instruction")))))
+  (judgment
+    LowerArms
+    [arms]
+    (match
+      (v arms)
+      (case
+        (pm NoArm)
+        (mk FNoArm))
+      (case
+        (pm
+          Arm
+          (pv tag)
+          (pv arity)
+          (pv body)
+          (pv rest))
+        (mk
+          FArm
+          (call
+            NatOf
+            (v tag))
+          (call
+            NatOf
+            (v arity))
+          (call
+            LowerCode
+            (v body))
+          (call
+            LowerArms
+            (v rest))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "malformed arm")))))
+  (judgment
+    RunFastBlock
+    [blocks arities index env]
+    (call
+      SoleValue
+      (call
+        RunFastCode
+        (v blocks)
+        (v arities)
+        (prim
+          nth
+          (v blocks)
+          (v index))
+        (lst)
+        (v env))))
+  (judgment
+    RunFastCode
+    [blocks arities code stack env]
+    (match
+      (v code)
+      (case
+        (pnil)
+        (v stack))
+      (case
+        (pcons
+          (pv instr)
+          (pv rest))
+        (call
+          RunFastCode
+          (v blocks)
+          (v arities)
+          (v rest)
+          (call
+            StepFastMachine
+            (v blocks)
+            (v arities)
+            (v instr)
+            (v stack)
+            (v env))
+          (v env)))))
+  (judgment
+    StepFastMachine
+    [blocks arities instr stack env]
+    (match
+      (v instr)
+      (case
+        (pm
+          FLocal
+          (pv index))
+        (prim
+          cons
+          (prim
+            nth
+            (v env)
+            (v index))
+          (v stack)))
+      (case
+        (pm
+          FGlobal
+          (pv position))
+        (let
+          arity
+          (prim
+            nth
+            (v arities)
+            (v position))
+          (if
+            (prim
+              eq
+              (v arity)
+              (q 0))
+            (prim
+              cons
+              (call
+                RunFastBlock
+                (v blocks)
+                (v arities)
+                (v position)
+                (lst))
+              (v stack))
+            (prim
+              cons
+              (mk
+                waiting
+                (v position)
+                (v arity)
+                (lst))
+              (v stack)))))
+      (case
+        (pm
+          FCon
+          (pv tag)
+          (pv width))
+        (if
+          (prim
+            eq
+            (v width)
+            (q 0))
+          (prim
+            cons
+            (mk
+              built
+              (v tag)
+              (lst))
+            (v stack))
+          (prim
+            cons
+            (mk
+              building
+              (v tag)
+              (v width)
+              (lst))
+            (v stack))))
+      (case
+        (pm FApply)
+        (match
+          (v stack)
+          (case
+            (pcons
+              (pv argument)
+              (pcons
+                (pv fn)
+                (pv below)))
+            (prim
+              cons
+              (call
+                ApplyFastMachine
+                (v blocks)
+                (v arities)
+                (v fn)
+                (v argument))
+              (v below)))
+          (case
+            _
+            (fail
+              machine-error
+              (q "apply needs a function and an argument")))))
+      (case
+        (pm
+          FLet
+          (pv body))
+        (match
+          (v stack)
+          (case
+            (pcons
+              (pv value)
+              (pv below))
+            (prim
+              cons
+              (call
+                SoleValue
+                (call
+                  RunFastCode
+                  (v blocks)
+                  (v arities)
+                  (v body)
+                  (lst)
+                  (prim
+                    cons
+                    (v value)
+                    (v env))))
+              (v below)))
+          (case
+            _
+            (fail
+              machine-error
+              (q "let needs a value to bind")))))
+      (case
+        (pm
+          FMatch
+          (pv arms))
+        (match
+          (v stack)
+          (case
+            (pcons
+              (pv value)
+              (pv below))
+            (prim
+              cons
+              (call
+                MatchFastMachine
+                (v blocks)
+                (v arities)
+                (v value)
+                (v arms)
+                (v env))
+              (v below)))
+          (case
+            _
+            (fail
+              machine-error
+              (q "a match needs a value")))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "unknown lowered instruction")))))
+  (judgment
+    ApplyFastMachine
+    [blocks arities fn argument]
+    (match
+      (v fn)
+      (case
+        (pm
+          building
+          (pv tag)
+          (pv width)
+          (pv args))
+        (let
+          filled
+          (prim
+            snoc
+            (v args)
+            (v argument))
+          (if
+            (prim
+              eq
+              (prim
+                len
+                (v filled))
+              (v width))
+            (mk
+              built
+              (v tag)
+              (v filled))
+            (mk
+              building
+              (v tag)
+              (v width)
+              (v filled)))))
+      (case
+        (pm
+          waiting
+          (pv position)
+          (pv arity)
+          (pv args))
+        (let
+          filled
+          (prim
+            snoc
+            (v args)
+            (v argument))
+          (if
+            (prim
+              eq
+              (prim
+                len
+                (v filled))
+              (v arity))
+            (call
+              RunFastBlock
+              (v blocks)
+              (v arities)
+              (v position)
+              (v filled))
+            (mk
+              waiting
+              (v position)
+              (v arity)
+              (v filled)))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "applied a value that is not a function")))))
+  (judgment
+    MatchFastMachine
+    [blocks arities value arms env]
+    (match
+      (v value)
+      (case
+        (pm
+          built
+          (pv tag)
+          (pv args))
+        (call
+          SelectFastArm
+          (v blocks)
+          (v arities)
+          (v tag)
+          (v args)
+          (v arms)
+          (v env)))
+      (case
+        _
+        (fail
+          machine-error
+          (q "matched a value that is not a constructor")))))
+  (judgment
+    SelectFastArm
+    [blocks arities tag args arms env]
+    (match
+      (v arms)
+      (case
+        (pm FNoArm)
+        (fail
+          machine-error
+          (q "no arm answers the constructor")))
+      (case
+        (pm
+          FArm
+          (pv armTag)
+          (pv arity)
+          (pv body)
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v armTag)
+            (v tag))
+          (call
+            SoleValue
+            (call
+              RunFastCode
+              (v blocks)
+              (v arities)
+              (v body)
+              (lst)
+              (prim
+                append
+                (v args)
+                (v env))))
+          (call
+            SelectFastArm
+            (v blocks)
+            (v arities)
+            (v tag)
+            (v args)
+            (v rest)
+            (v env))))
+      (case
+        _
+        (fail
+          machine-error
+          (q "malformed lowered arm")))))
+  (judgment
+    RunBlocksOnReference
+    [decls compiled entry arguments]
+    (let
+      tags
+      (call
+        ConstructorTags
+        (v decls))
+      (call
+        FromMachineValue
+        (call
+          TagNames
+          (v tags))
+        (call
+          RunBlock
+          (call
+            BlockList
+            (v compiled))
+          (call
+            GlobalArities
+            (v decls))
+          (call
+            IndexOfGlobal
+            (call
+              GlobalIndexes
+              (v decls))
+            (v entry))
+          (call
+            ToMachineArgs
+            (v tags)
+            (v arguments))))))
+  (judgment
+    RunBlocksOn
+    [decls compiled entry arguments]
+    (let
+      tags
+      (call
+        ConstructorTags
+        (v decls))
+      (call
+        FromMachineValue
+        (call
+          TagNames
+          (v tags))
+        (call
+          RunFastBlock
+          (call
+            LowerBlocks
+            (v compiled))
+          (call
+            GlobalArities
+            (v decls))
+          (call
+            IndexOfGlobal
+            (call
+              GlobalIndexes
+              (v decls))
+            (v entry))
+          (call
+            ToMachineArgs
+            (v tags)
+            (v arguments))))))
+  (judgment
+    OptimizationProgram
+    []
+    (mk
+      Block
+      (mk
+        IStep
+        (mk
+          ICon
+          (call
+            NatValue
+            (q 100))
+          (call
+            NatValue
+            (q 0)))
+        (mk IDone))
+      (mk NoBlock)))
+  (judgment
+    RepeatReferenceBlock
+    [blocks remaining]
+    (let
+      current
+      (call
+        RunBlock
+        (v blocks)
+        (lst
+          (q 0))
+        (q 0)
+        (lst))
+      (if
+        (prim
+          eq
+          (v remaining)
+          (q 1))
+        (v current)
+        (call
+          RepeatReferenceBlock
+          (v blocks)
+          (prim
+            sub
+            (v remaining)
+            (q 1))))))
+  (judgment
+    RepeatFastBlock
+    [blocks remaining]
+    (let
+      current
+      (call
+        RunFastBlock
+        (v blocks)
+        (lst
+          (q 0))
+        (q 0)
+        (lst))
+      (if
+        (prim
+          eq
+          (v remaining)
+          (q 1))
+        (v current)
+        (call
+          RepeatFastBlock
+          (v blocks)
+          (prim
+            sub
+            (v remaining)
+            (q 1))))))
+  (judgment
+    OptimizationReferenceResult
+    []
+    (call
+      RepeatReferenceBlock
+      (call
+        BlockList
+        (call OptimizationProgram))
+      (q 8)))
+  (judgment
+    OptimizationCandidateResult
+    []
+    (call
+      RepeatFastBlock
+      (call
+        LowerBlocks
+        (call OptimizationProgram))
+      (q 8)))
+  (judgment
+    OptimizationPreservesMeaning
+    []
+    (prim
+      eq
+      (call OptimizationReferenceResult)
+      (call OptimizationCandidateResult)))
+  (judgment
+    LoweredExamplesPreserveMeaning
+    [grammar compilerSources sources]
+    (if
+      (call
+        CompilingPreservesMeaning
+        (v grammar)
+        (v compilerSources)
+        (v sources)
+        (q "strata.example")
+        (q four))
+      (if
+        (call
+          CompilingPreservesMeaning
+          (v grammar)
+          (v compilerSources)
+          (v sources)
+          (q "strata.example")
+          (q viaLet))
+        (if
+          (call
+            CompilingPreservesMeaning
+            (v grammar)
+            (v compilerSources)
+            (v sources)
+            (q "strata.example")
+            (q waiting))
+          (if
+            (call
+              CompilingPreservesMeaning
+              (v grammar)
+              (v compilerSources)
+              (v sources)
+              (q "strata.example")
+              (q built))
+            (call
+              CompilingPreservesMeaning
+              (v grammar)
+              (v compilerSources)
+              (v sources)
+              (q "strata.example")
+              (q flipped))
+            (q #f))
+          (q #f))
+        (q #f))
+      (q #f)))
+  (judgment
+    OptimizationResultIdentity
+    [result]
+    (prim
+      ref->str
+      (prim
+        digest
+        (v result))))
+  (judgment
+    OptimizationEvidence
+    []
+    (let
+      baseline
+      (call OptimizationReferenceResult)
+      (let
+        candidate
+        (call OptimizationCandidateResult)
+        (mk
+          performance
+          (q "compiled-high-tag-repeat")
+          (mk
+            observation
+            (q interpreted)
+            (call
+              OptimizationResultIdentity
+              (v baseline))
+            (q "pure")
+            (q 848)
+            (q 16))
+          (mk
+            observation
+            (q compiled)
+            (call
+              OptimizationResultIdentity
+              (v candidate))
+            (q "pure")
+            (q 147)
+            (q 19))))))
+  (judgment
+    OptimizationVerdict
+    [grammar sources]
+    (call
+      StrataPerformanceVerdictTag
+      (v grammar)
+      (v sources)
+      (call OptimizationEvidence)
+      (mk
+        policy
+        (q 2)
+        (q 3)))))

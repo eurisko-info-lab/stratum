@@ -1,0 +1,78 @@
+
+artifactmeta-program
+program
+module
+stratasync
+judgmentStrataSyncSystempreludenativeoctetsartifactcas
+repositorystudio
+foundation
+governanceledgersync
+lst
+vprelude
+vnative
+voctets
+vartifact
+vcas
+v
+repository
+vstudio
+v
+foundation
+v
+governance
+vledger
+vsync
+judgmentAskSyncgrammarsourcesentry	arguments
+callRunStrataWith
+vgrammar
+vsources
+qstrata.sync
+ventry
+v	arguments
+judgmentStrataSyncArtifactkindbody
+mkArtifact
+vkind
+callReadCanonValue
+vbody
+judgmentStrataSyncPairIsReplayablegrammarsources	firstKind	firstBody
+secondKind
+secondBody
+callAskSync
+vgrammar
+vsources
+qsyncPairIsReplayable
+lst
+callStrataSyncArtifact
+v	firstKind
+v	firstBody
+callStrataSyncArtifact
+v
+secondKind
+v
+secondBody
+judgmentStrataSyncPairOrderIndependentgrammarsources	firstKind	firstBody
+secondKind
+secondBody
+callAskSync
+vgrammar
+vsources
+qsyncPairOrderIndependent
+lst
+callStrataSyncArtifact
+v	firstKind
+v	firstBody
+callStrataSyncArtifact
+v
+secondKind
+v
+secondBody
+judgmentStrataRejectSyncClaimgrammarsourcesclaimedkindbody
+callAskSync
+vgrammar
+vsources
+qrejectSyncClaim
+lst
+vclaimed
+callStrataSyncArtifact
+vkind
+vbody

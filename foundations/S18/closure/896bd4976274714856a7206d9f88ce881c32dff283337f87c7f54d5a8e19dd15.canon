@@ -1,0 +1,22 @@
+
+artifactchange
+change
+kind
+foundation
+nameF5->F6
+predecessor
+foundation-offoundations/F5
+
+delta-meta
+filechanges/F5-F6/delta-meta.canon
+delta-grammar
+file!changes/F5-F6/delta-grammar.canon
+feature
+feature
+name/self-hosted application and foundation protocol
+programs
+file-features/foundation/foundation.generated.meta
+sources
+	text-file#features/foundation/foundation.meta
+hostsscalarust
+modellean

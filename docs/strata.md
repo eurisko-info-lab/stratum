@@ -313,7 +313,7 @@ Stage 3:
 
 ## 24. Second-floor staircase
 
-Second floor uses `S0 -> S17`:
+Second floor uses `S0 -> S18`:
 
 - S0: Strata seed
 - S1: canonical data
@@ -333,6 +333,7 @@ Second floor uses `S0 -> S17`:
 - S15: retention and reconstruction
 - S16: investigation agents
 - S17: performance constitution and evidence
+- S18: lowered compiled execution
 
 The dependent core is its own layer because it is a change to what can be
 said, not to what is done with what was already said. S1 gives a declaration
@@ -371,6 +372,16 @@ peak memory are labeled host attestations and never influence a foundation
 digest. A faster result that changes canonical output or effects is a failed
 result. This gate is the prerequisite for choosing and promoting a direct
 execution backend.
+
+S18 makes the first promotion. Canonical compiler output is lowered once into
+an execution-only representation whose positions, tags and arities are host
+numbers and whose code is an ordinary instruction list. The portable compiler
+artifact remains unchanged, and the original machine remains the reference.
+On the accepted repeated-constructor workload, the lowered path produces the
+same result in 2,618 canonical Meta derivation steps instead of 8,978, a
+$3.43\times$ reduction, and its deterministic observation passes S17's fixed
+policy. This promotion covers the pure compiled subset; literals and native
+primitives remain interpreted until the compiler IR can represent them.
 
 ## 25. Rewrite strategy
 

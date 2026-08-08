@@ -1,0 +1,9 @@
+; delta-meta for S17 -> S18: compiled execution lowers canonical IR once.
+(change
+  (kind delta-meta)
+  (name "S17->S18 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (remembering strata)
+      (editing strata))))

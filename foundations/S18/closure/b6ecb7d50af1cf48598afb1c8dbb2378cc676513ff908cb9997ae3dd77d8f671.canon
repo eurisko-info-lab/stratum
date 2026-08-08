@@ -1,0 +1,77 @@
+
+artifactsource
+source
+pathlanguages/toml/toml.meta
+text module toml
+
+record TomlFile [statements]
+record Assignment [key value newline]
+record Table [name newline]
+record ArrayTable [name newline]
+record String [value]
+record Integer [value]
+record True []
+record False []
+record EmptyArray []
+record Array [values]
+record LastValue [value]
+record MoreValues [value rest]
+record Blank [newline]
+
+judgment ParseToml [grammar source] = call Parse [grammar source]
+judgment PrintToml [grammar syntax] = call Print [grammar syntax]
+judgment TomlWellFormed [grammar source] =
+  match call ParseToml [grammar source] {
+    case (#TomlFile statements) -> mk #valid [statements]
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment TomlStatements [node] = call FlattenSeq [node #TomlFile]
+
+judgment TomlValueType [node] =
+  match node {
+    case (#String value) -> #string
+    case (#Integer value) -> #number
+    case (#True) -> #boolean
+    case (#False) -> #boolean
+    case (#EmptyArray) -> #array
+    case (#Array values) -> #array
+    case _ -> #unknown
+  }
+
+judgment TomlLookupType [env key] =
+  match env {
+    case [] -> #unknown
+    case (#typed k t) :: rest ->
+      if prim #eq [k key]
+      then t
+      else call TomlLookupType [rest key]
+  }
+
+judgment TomlInferStatements [items] =
+  match items {
+    case [] -> list []
+    case (#Assignment key value newline) :: rest ->
+      prim #cons [mk #type [key call TomlValueType [value] #declared call TomlValueType [value]] call TomlInferStatements [rest]]
+    case head :: rest -> call TomlInferStatements [rest]
+  }
+
+judgment TomlCheckStatements [items env] =
+  match items {
+    case [] -> list []
+    case (#Assignment key value newline) :: rest ->
+      let t = call TomlValueType [value] in
+      let old = call TomlLookupType [env key] in
+      if prim #eq [old #unknown]
+      then call TomlCheckStatements [rest prim #snoc [env mk #typed [key t]]]
+      else if prim #eq [old t]
+      then call TomlCheckStatements [rest env]
+      else prim #cons [mk #type-error [key old t] call TomlCheckStatements [rest env]]
+    case head :: rest -> call TomlCheckStatements [rest env]
+  }
+
+judgment InferToml [grammar source] =
+  call TomlInferStatements [call TomlStatements [call ParseToml [grammar source]]]
+
+judgment TypeCheckToml [grammar source] =
+  call TomlCheckStatements [call TomlStatements [call ParseToml [grammar source]] list []]

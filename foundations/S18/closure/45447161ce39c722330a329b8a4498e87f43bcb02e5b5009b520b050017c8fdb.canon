@@ -1,0 +1,49 @@
+
+artifactsource
+source
+pathstrata/system/agent.strata
+text¾9module "strata.agent"
+version 1
+; Investigations are explicit replayable state. Context, actions, evidence,
+; capability limits and budgets are values; the host only supplies them.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+import "strata.studio" 1
+import "strata.foundation" 1
+import "strata.governance" 1
+import "strata.ledger" 1
+import "strata.sync" 1
+import "strata.federation" 1
+import "strata.retention" 1
+
+data AgentTexts = | NoAgentText [] | MoreAgentText [agentTextHead #1: Text, agentTextTail #2: AgentTexts]
+data InvestigationTopic = | StableIdentities [] | Schemas [] | FieldPaths [] | Effects [] | Laws [] | Changes [] | History []
+data AgentDeclaration = | AgentDeclaration [declarationIdentity #1: Text, declarationSchema #2: Text, declarationFieldPaths #3: AgentTexts, declarationEffects #4: AgentTexts, declarationLaws #5: AgentTexts, declarationChanges #6: AgentTexts, declarationHistory #7: AgentTexts]
+data InvestigationView = | ClosedView [] | ExpandedView [expandedTopic #1: InvestigationTopic, expandedItems #2: AgentTexts]
+data AgentEvidence = | AgentEvidence [evidenceKind #1: Text, evidenceReference #2: Text]
+data AgentEvidences = | NoAgentEvidence [] | MoreAgentEvidence [agentEvidenceHead #1: AgentEvidence, agentEvidenceTail #2: AgentEvidences]
+data AgentEdit = | AgentEdit [editPredecessor #1: Text, editSuccessor #2: Text, editCapability #3: Text, editCost #4: Number]
+data AgentAction = | Inspect [inspectionTopic #1: InvestigationTopic] | RecordEvidence [recordedEvidence #1: AgentEvidence] | ProposeEdit [proposedEdit #1: AgentEdit]
+data AgentActions = | NoAgentAction [] | MoreAgentAction [agentActionHead #1: AgentAction, agentActionTail #2: AgentActions]
+data InvestigationState = | InvestigationState [investigationCurrent #1: Text, investigationDeclaration #2: AgentDeclaration, investigationView #3: InvestigationView, investigationEvidence #4: AgentEvidences, investigationCapabilities #5: AgentTexts, investigationBudget #6: Number]
+data AgentResult = | AgentRejected [agentRejectionReason #1: Text] | InvestigationAdvanced [advancedState #1: InvestigationState] | EditAuthorized [authorizedEdit #1: AgentEdit, authorizedState #2: InvestigationState]
+
+def agentTextMember [items: AgentTexts, wanted: Text] ! text: Bool = match items of case NoAgentText -> False case MoreAgentText head tail -> match textEq head wanted of case True -> True case False -> agentTextMember tail wanted end end
+def agentTextValues [items: AgentTexts]: Values = match items of case NoAgentText -> NoValue case MoreAgentText head tail -> MoreValue (VText head) (agentTextValues tail) end
+def declarationContextIdentity [declaration: AgentDeclaration] ! text arith hash: Text = match declaration of case AgentDeclaration identity schema fields effects laws changes history -> nameOfValue (VNode "agent-context" (MoreValue (VText identity) (MoreValue (VText schema) (MoreValue (VList (agentTextValues fields)) (MoreValue (VList (agentTextValues effects)) (MoreValue (VList (agentTextValues laws)) (MoreValue (VList (agentTextValues changes)) (MoreValue (VList (agentTextValues history)) NoValue)))))))) end
+def topicItems [declaration: AgentDeclaration, topic: InvestigationTopic]: AgentTexts = match declaration of case AgentDeclaration identity schema fields effects laws changes history -> match topic of case StableIdentities -> MoreAgentText identity NoAgentText case Schemas -> MoreAgentText schema NoAgentText case FieldPaths -> fields case Effects -> effects case Laws -> laws case Changes -> changes case History -> history end end
+def initialInvestigation [declaration: AgentDeclaration, capabilities: AgentTexts, budget: Number]: InvestigationState = match declaration of case AgentDeclaration identity schema fields effects laws changes history -> InvestigationState identity declaration ClosedView NoAgentEvidence capabilities budget end
+def resultTag [result: AgentResult]: Text = match result of case AgentRejected reason -> reason case InvestigationAdvanced state -> "advanced" case EditAuthorized edit state -> "edit-authorized" end
+def resultState [fallback: InvestigationState, result: AgentResult]: InvestigationState = match result of case AgentRejected reason -> fallback case InvestigationAdvanced state -> state case EditAuthorized edit state -> state end
+def remainingBudget [state: InvestigationState]: Number = match state of case InvestigationState current declaration view evidence capabilities budget -> budget end
+def currentInvestigationIdentity [state: InvestigationState]: Text = match state of case InvestigationState current declaration view evidence capabilities budget -> current end
+def investigationViewContains [state: InvestigationState, wanted: Text] ! text: Bool = match state of case InvestigationState current declaration view evidence capabilities budget -> match view of case ClosedView -> False case ExpandedView topic items -> agentTextMember items wanted end end
+def inspectInvestigation [state: InvestigationState, topic: InvestigationTopic] ! arith: AgentResult = match state of case InvestigationState current declaration view proofs capabilities budget -> match numberLess budget c1 of case True -> AgentRejected "budget-exhausted" case False -> InvestigationAdvanced (InvestigationState current declaration (ExpandedView topic (topicItems declaration topic)) proofs capabilities (numberMonus budget c1)) end end
+def recordAgentEvidence [state: InvestigationState, recorded: AgentEvidence] ! arith: AgentResult = match state of case InvestigationState current declaration view proofs capabilities budget -> match numberLess budget c1 of case True -> AgentRejected "budget-exhausted" case False -> InvestigationAdvanced (InvestigationState current declaration view (MoreAgentEvidence recorded proofs) capabilities (numberMonus budget c1)) end end
+def authorizeAgentEdit [state: InvestigationState, edit: AgentEdit] ! text arith: AgentResult = match state of case InvestigationState current declaration view proofs capabilities budget -> match edit of case AgentEdit predecessor successor permission cost -> match textEq current predecessor of case False -> AgentRejected "stale-edit-predecessor" case True -> match agentTextMember capabilities permission of case False -> AgentRejected "capability-not-declared" case True -> match numberLess budget cost of case True -> AgentRejected "budget-exceeded" case False -> EditAuthorized edit (InvestigationState successor declaration view proofs capabilities (numberMonus budget cost)) end end end end end
+def advanceInvestigation [state: InvestigationState, action: AgentAction] ! text arith: AgentResult = match action of case Inspect topic -> inspectInvestigation state topic case RecordEvidence recorded -> recordAgentEvidence state recorded case ProposeEdit edit -> authorizeAgentEdit state edit end
+def runInvestigation [state: InvestigationState, actions: AgentActions] ! text arith: AgentResult = match actions of case NoAgentAction -> InvestigationAdvanced state case MoreAgentAction action rest -> match advanceInvestigation state action of case AgentRejected reason -> AgentRejected reason case InvestigationAdvanced next -> runInvestigation next rest case EditAuthorized edit next -> runInvestigation next rest end end

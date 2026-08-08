@@ -1,0 +1,21 @@
+
+artifactchange
+change
+kind
+foundation
+nameS14->S15
+predecessor
+foundation-offoundations/S14
+
+delta-meta
+file changes/S14-S15/delta-meta.canon
+delta-grammar
+file#changes/S14-S15/delta-grammar.canon
+feature
+feature
+nameretention and reconstruction
+programs
+file(features/strata/retention.generated.meta
+sources
+	text-filefeatures/strata/retention.meta
+	text-filestrata/system/retention.strata

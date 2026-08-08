@@ -1,0 +1,22 @@
+
+artifactchange
+change
+kind
+foundation
+nameS11->S12
+predecessor
+foundation-offoundations/S11
+
+delta-meta
+file changes/S11-S12/delta-meta.canon
+delta-grammar
+file#changes/S11-S12/delta-grammar.canon
+feature
+feature
+nametooling and studios
+programs
+file%features/strata/studio.generated.meta
+file(languages/service/service.generated.meta
+sources
+	text-filefeatures/strata/studio.meta
+	text-filestrata/system/studio.strata

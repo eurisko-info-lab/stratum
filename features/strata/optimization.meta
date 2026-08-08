@@ -1,0 +1,238 @@
+module strataoptimization
+
+; Executable evidence for the first promoted optimization. The workload uses a
+; constructor tag whose canonical unary representation is expensive to decode,
+; then executes the same compiled block eight times. The reference machine
+; decodes that tag on every run; the lowered machine decodes it once.
+
+; Compiler output stays canonical Strata data. S18 lowers its unary positions,
+; tags and arities once into an execution-only representation, then runs host
+; numbers and ordinary instruction lists. This module stands before the S5
+; compiler module, so its RunBlocksOn is the promoted answer only in S18.
+
+judgment LowerBlocks [blocks] =
+  match blocks {
+    case (#NoBlock) -> list []
+    case (#Block code rest) -> prim #cons [call LowerCode [code] call LowerBlocks [rest]]
+    case _ -> fail #machine-error "malformed block list"
+  }
+
+judgment LowerCode [code] =
+  match code {
+    case (#IDone) -> list []
+    case (#IStep instr rest) -> prim #cons [call LowerInstruction [instr] call LowerCode [rest]]
+    case _ -> fail #machine-error "malformed code"
+  }
+
+judgment LowerInstruction [instr] =
+  match instr {
+    case (#ILocal index) -> mk #FLocal [call NatOf [index]]
+    case (#IGlobal index) -> mk #FGlobal [call NatOf [index]]
+    case (#ICon tag arity) -> mk #FCon [call NatOf [tag] call NatOf [arity]]
+    case (#IApply) -> mk #FApply []
+    case (#ILet body) -> mk #FLet [call LowerCode [body]]
+    case (#IMatch arms) -> mk #FMatch [call LowerArms [arms]]
+    case _ -> fail #machine-error "unknown instruction"
+  }
+
+judgment LowerArms [arms] =
+  match arms {
+    case (#NoArm) -> mk #FNoArm []
+    case (#Arm tag arity body rest) ->
+      mk #FArm [
+        call NatOf [tag]
+        call NatOf [arity]
+        call LowerCode [body]
+        call LowerArms [rest]
+      ]
+    case _ -> fail #machine-error "malformed arm"
+  }
+
+judgment RunFastBlock [blocks arities index env] =
+  call SoleValue [call RunFastCode [blocks arities prim #nth [blocks index] list [] env]]
+
+judgment RunFastCode [blocks arities code stack env] =
+  match code {
+    case [] -> stack
+    case instr :: rest ->
+      call RunFastCode [
+        blocks
+        arities
+        rest
+        call StepFastMachine [blocks arities instr stack env]
+        env
+      ]
+  }
+
+judgment StepFastMachine [blocks arities instr stack env] =
+  match instr {
+    case (#FLocal index) -> prim #cons [prim #nth [env index] stack]
+    case (#FGlobal position) ->
+      let arity = prim #nth [arities position] in
+      if prim #eq [arity 0]
+      then prim #cons [call RunFastBlock [blocks arities position list []] stack]
+      else prim #cons [mk #waiting [position arity list []] stack]
+    case (#FCon tag width) ->
+      if prim #eq [width 0]
+      then prim #cons [mk #built [tag list []] stack]
+      else prim #cons [mk #building [tag width list []] stack]
+    case (#FApply) ->
+      match stack {
+        case argument :: (fn :: below) ->
+          prim #cons [call ApplyFastMachine [blocks arities fn argument] below]
+        case _ -> fail #machine-error "apply needs a function and an argument"
+      }
+    case (#FLet body) ->
+      match stack {
+        case value :: below ->
+          prim #cons [
+            call SoleValue [
+              call RunFastCode [blocks arities body list [] prim #cons [value env]]
+            ]
+            below
+          ]
+        case _ -> fail #machine-error "let needs a value to bind"
+      }
+    case (#FMatch arms) ->
+      match stack {
+        case value :: below ->
+          prim #cons [call MatchFastMachine [blocks arities value arms env] below]
+        case _ -> fail #machine-error "a match needs a value"
+      }
+    case _ -> fail #machine-error "unknown lowered instruction"
+  }
+
+judgment ApplyFastMachine [blocks arities fn argument] =
+  match fn {
+    case (#building tag width args) ->
+      let filled = prim #snoc [args argument] in
+      if prim #eq [prim #len [filled] width]
+      then mk #built [tag filled]
+      else mk #building [tag width filled]
+    case (#waiting position arity args) ->
+      let filled = prim #snoc [args argument] in
+      if prim #eq [prim #len [filled] arity]
+      then call RunFastBlock [blocks arities position filled]
+      else mk #waiting [position arity filled]
+    case _ -> fail #machine-error "applied a value that is not a function"
+  }
+
+judgment MatchFastMachine [blocks arities value arms env] =
+  match value {
+    case (#built tag args) -> call SelectFastArm [blocks arities tag args arms env]
+    case _ -> fail #machine-error "matched a value that is not a constructor"
+  }
+
+judgment SelectFastArm [blocks arities tag args arms env] =
+  match arms {
+    case (#FNoArm) -> fail #machine-error "no arm answers the constructor"
+    case (#FArm armTag arity body rest) ->
+      if prim #eq [armTag tag]
+      then
+        call SoleValue [
+          call RunFastCode [blocks arities body list [] prim #append [args env]]
+        ]
+      else call SelectFastArm [blocks arities tag args rest env]
+    case _ -> fail #machine-error "malformed lowered arm"
+  }
+
+judgment RunBlocksOnReference [decls compiled entry arguments] =
+  let tags = call ConstructorTags [decls] in
+  call FromMachineValue [
+    call TagNames [tags]
+    call RunBlock [
+      call BlockList [compiled]
+      call GlobalArities [decls]
+      call IndexOfGlobal [call GlobalIndexes [decls] entry]
+      call ToMachineArgs [tags arguments]
+    ]
+  ]
+
+judgment RunBlocksOn [decls compiled entry arguments] =
+  let tags = call ConstructorTags [decls] in
+  call FromMachineValue [
+    call TagNames [tags]
+    call RunFastBlock [
+      call LowerBlocks [compiled]
+      call GlobalArities [decls]
+      call IndexOfGlobal [call GlobalIndexes [decls] entry]
+      call ToMachineArgs [tags arguments]
+    ]
+  ]
+
+judgment OptimizationProgram [] =
+  mk #Block [
+    mk #IStep [
+      mk #ICon [call NatValue [100] call NatValue [0]]
+      mk #IDone []
+    ]
+    mk #NoBlock []
+  ]
+
+judgment RepeatReferenceBlock [blocks remaining] =
+  let current = call RunBlock [blocks list [0] 0 list []] in
+  if prim #eq [remaining 1]
+  then current
+  else call RepeatReferenceBlock [blocks prim #sub [remaining 1]]
+
+judgment RepeatFastBlock [blocks remaining] =
+  let current = call RunFastBlock [blocks list [0] 0 list []] in
+  if prim #eq [remaining 1]
+  then current
+  else call RepeatFastBlock [blocks prim #sub [remaining 1]]
+
+judgment OptimizationReferenceResult [] =
+  call RepeatReferenceBlock [call BlockList [call OptimizationProgram []] 8]
+
+judgment OptimizationCandidateResult [] =
+  call RepeatFastBlock [call LowerBlocks [call OptimizationProgram []] 8]
+
+judgment OptimizationPreservesMeaning [] =
+  prim #eq [call OptimizationReferenceResult [] call OptimizationCandidateResult []]
+
+judgment LoweredExamplesPreserveMeaning [grammar compilerSources sources] =
+  if call CompilingPreservesMeaning [grammar compilerSources sources "strata.example" #four]
+  then if call CompilingPreservesMeaning [grammar compilerSources sources "strata.example" #viaLet]
+  then if call CompilingPreservesMeaning [grammar compilerSources sources "strata.example" #waiting]
+  then if call CompilingPreservesMeaning [grammar compilerSources sources "strata.example" #built]
+  then call CompilingPreservesMeaning [grammar compilerSources sources "strata.example" #flipped]
+  else false
+  else false
+  else false
+  else false
+
+judgment OptimizationResultIdentity [result] =
+  prim #ref->str [prim #digest [result]]
+
+; Work is the exact number of machine, code-spine and unary-decoder judgment
+; calls made by this fixed workload. Allocation counts cover the constructed
+; value and stack cells, plus the candidate's one lowered instruction and code
+; list. The constituted allowance admits precisely that one-time lowering.
+judgment OptimizationEvidence [] =
+  let baseline = call OptimizationReferenceResult [] in
+  let candidate = call OptimizationCandidateResult [] in
+  mk #performance [
+    "compiled-high-tag-repeat"
+    mk #observation [
+      #interpreted
+      call OptimizationResultIdentity [baseline]
+      "pure"
+      848
+      16
+    ]
+    mk #observation [
+      #compiled
+      call OptimizationResultIdentity [candidate]
+      "pure"
+      147
+      19
+    ]
+  ]
+
+judgment OptimizationVerdict [grammar sources] =
+  call StrataPerformanceVerdictTag [
+    grammar
+    sources
+    call OptimizationEvidence []
+    mk #policy [2 3]
+  ]

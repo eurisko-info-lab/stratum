@@ -1,0 +1,20 @@
+
+artifactchange
+change
+kind
+foundation
+nameS17->S18
+predecessor
+foundation-offoundations/S17
+
+delta-meta
+file changes/S17-S18/delta-meta.canon
+delta-grammar
+file#changes/S17-S18/delta-grammar.canon
+feature
+feature
+namelowered compiled execution
+programs
+file+features/strata/optimization.generated.meta
+sources
+	text-file!features/strata/optimization.meta

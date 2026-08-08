@@ -1,0 +1,7 @@
+
+artifactevidence
+evidence
+check0lowered-execution-preserves-the-reference-resultok
+check-lowered-execution-preserves-all-machine-formsok
+check.optimization-evidence-is-produced-by-executionok
+check/measured-lowered-execution-meets-the-s17-policyok
