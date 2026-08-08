@@ -1,0 +1,51 @@
+
+artifactsource
+source
+pathstrata/system/sync.strata
+text¸-module "strata.sync"
+version 1
+; Synchronization admits content by the name its bytes earn. Transfer order is
+; not state: replay keeps one sorted set of accepted artifact identities.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+import "strata.studio" 1
+import "strata.foundation" 1
+import "strata.governance" 1
+import "strata.ledger" 1
+
+data SyncCommand = | SyncReceive [claimedArtifact #1: Text, receivedArtifact #2: Artifact]
+data SyncCommands = | NoSyncCommand [] | MoreSyncCommand [syncCommandHead #1: SyncCommand, syncCommandTail #2: SyncCommands]
+data SyncEvent = | SyncAccepted [acceptedArtifact #1: Text]
+data SyncEvents = | NoSyncEvent [] | MoreSyncEvent [syncEventHead #1: SyncEvent, syncEventTail #2: SyncEvents]
+data SyncNames = | NoSyncName [] | MoreSyncName [syncNameHead #1: Text, syncNameTail #2: SyncNames]
+data SyncState = | SyncState [synchronizedNames #1: SyncNames]
+data SyncDecision = | SyncCommandRejected [syncCommandReason #1: Text] | SyncCommandAccepted [acceptedSyncEvent #1: SyncEvent]
+data SyncReplay = | SyncReplayRejected [syncReplayReason #1: Text] | SyncReplayed [replayedSyncState #1: SyncState]
+data SyncExecution = | SyncExecutionRejected [syncExecutionReason #1: Text] | SyncExecuted [executedSyncState #1: SyncState, emittedSyncEvents #2: SyncEvents]
+
+def initialSyncState []: SyncState = SyncState NoSyncName
+def insertSyncName [names: SyncNames, name: Text] ! text arith: SyncNames = match names of case NoSyncName -> MoreSyncName name NoSyncName case MoreSyncName head tail -> match compareText name head of case Below -> MoreSyncName name names case Same -> names case Above -> MoreSyncName head (insertSyncName tail name) end end
+def decideSyncCommand [command: SyncCommand] ! text arith hash: SyncDecision = match command of case SyncReceive claimed artifact -> match textEq claimed (nameOfArtifact artifact) of case True -> SyncCommandAccepted (SyncAccepted claimed) case False -> SyncCommandRejected "corrupted-artifact" end end
+def applySyncEvent [state: SyncState, event: SyncEvent] ! text arith: SyncReplay = match state of case SyncState names -> match event of case SyncAccepted name -> SyncReplayed (SyncState (insertSyncName names name)) end end
+def replaySyncFrom [state: SyncState, events: SyncEvents] ! text arith: SyncReplay = match events of case NoSyncEvent -> SyncReplayed state case MoreSyncEvent head tail -> match applySyncEvent state head of case SyncReplayRejected reason -> SyncReplayRejected reason case SyncReplayed next -> replaySyncFrom next tail end end
+def replaySync [events: SyncEvents] ! text arith: SyncReplay = replaySyncFrom initialSyncState events
+def executeSyncFrom [state: SyncState, commands: SyncCommands] ! text arith hash: SyncExecution = match commands of case NoSyncCommand -> SyncExecuted state NoSyncEvent case MoreSyncCommand command tail -> match decideSyncCommand command of case SyncCommandRejected reason -> SyncExecutionRejected reason case SyncCommandAccepted event -> match applySyncEvent state event of case SyncReplayRejected reason -> SyncExecutionRejected reason case SyncReplayed next -> match executeSyncFrom next tail of case SyncExecutionRejected reason -> SyncExecutionRejected reason case SyncExecuted terminal emitted -> SyncExecuted terminal (MoreSyncEvent event emitted) end end end end
+def executeSync [commands: SyncCommands] ! text arith hash: SyncExecution = executeSyncFrom initialSyncState commands
+def syncExecutionTag [result: SyncExecution]: Text = match result of case SyncExecutionRejected reason -> reason case SyncExecuted state events -> "synchronized" end
+def syncExecutionEvents [result: SyncExecution]: SyncEvents = match result of case SyncExecutionRejected reason -> NoSyncEvent case SyncExecuted state events -> events end
+def syncNamesValues [names: SyncNames]: Values = match names of case NoSyncName -> NoValue case MoreSyncName head tail -> MoreValue (VRef head) (syncNamesValues tail) end
+def syncStateValue [state: SyncState]: Value = match state of case SyncState names -> VNode "sync-state" (MoreValue (VList (syncNamesValues names)) NoValue) end
+def syncStateIdentity [state: SyncState] ! text arith hash: Text = nameOfValue (syncStateValue state)
+def syncReplayIdentity [result: SyncReplay] ! text arith hash: Text = match result of case SyncReplayRejected reason -> "" case SyncReplayed state -> syncStateIdentity state end
+def syncExecutionIdentity [result: SyncExecution] ! text arith hash: Text = match result of case SyncExecutionRejected reason -> "" case SyncExecuted state events -> syncStateIdentity state end
+def syncExecutionReplayIdentity [result: SyncExecution] ! text arith hash: Text = syncReplayIdentity (replaySync (syncExecutionEvents result))
+def syncExecutionIsReplayable [result: SyncExecution] ! text arith hash: Bool = textEq (syncExecutionIdentity result) (syncExecutionReplayIdentity result)
+def ownSyncCommand [artifact: Artifact] ! text arith hash: SyncCommand = SyncReceive (nameOfArtifact artifact) artifact
+def executeSyncPair [first: Artifact, second: Artifact] ! text arith hash: SyncExecution = executeSync (MoreSyncCommand (ownSyncCommand first) (MoreSyncCommand (ownSyncCommand second) NoSyncCommand))
+def syncPairIsReplayable [first: Artifact, second: Artifact] ! text arith hash: Bool = syncExecutionIsReplayable (executeSyncPair first second)
+def syncPairOrderIndependent [first: Artifact, second: Artifact] ! text arith hash: Bool = textEq (syncExecutionIdentity (executeSyncPair first second)) (syncExecutionIdentity (executeSyncPair second first))
+def rejectSyncClaim [claimed: Text, artifact: Artifact] ! text arith hash: Text = syncExecutionTag (executeSync (MoreSyncCommand (SyncReceive claimed artifact) NoSyncCommand))

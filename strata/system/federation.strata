@@ -1,0 +1,42 @@
+module "strata.federation"
+version 1
+; Federation orders only transitions already judged semantically valid. A
+; quorum-certified command emits one finalization event; replay alone advances
+; the shared state, so peers can compare canonical terminal identities.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+import "strata.studio" 1
+import "strata.foundation" 1
+import "strata.governance" 1
+import "strata.ledger" 1
+import "strata.sync" 1
+
+data FederationCommand = | FederationFinalize [expectedFederationHead #1: Text, proposedFederationHead #2: Text, validFederationVotes #3: Number, requiredFederationVotes #4: Number, federationSemanticsValid #5: Bool]
+data FederationCommands = | NoFederationCommand [] | MoreFederationCommand [federationCommandHead #1: FederationCommand, federationCommandTail #2: FederationCommands]
+data FederationEvent = | FederationFinalized [previousFederationHead #1: Text, nextFederationHead #2: Text]
+data FederationEvents = | NoFederationEvent [] | MoreFederationEvent [federationEventHead #1: FederationEvent, federationEventTail #2: FederationEvents]
+data FederationState = | FederationState [federationHeight #1: Number, federationHead #2: Text]
+data FederationDecision = | FederationCommandRejected [federationCommandReason #1: Text] | FederationCommandAccepted [acceptedFederationEvent #1: FederationEvent]
+data FederationReplay = | FederationReplayRejected [federationReplayReason #1: Text] | FederationReplayed [replayedFederationState #1: FederationState]
+data FederationExecution = | FederationExecutionRejected [federationExecutionReason #1: Text] | FederationExecuted [executedFederationState #1: FederationState, emittedFederationEvents #2: FederationEvents]
+
+def initialFederationState [] ! arith: FederationState = FederationState c0 "genesis"
+def decideFederationCommand [state: FederationState, command: FederationCommand] ! text arith: FederationDecision = match state of case FederationState height head -> match command of case FederationFinalize expected next votes required semantic -> match semantic of case False -> FederationCommandRejected "semantically-invalid" case True -> match textEq head expected of case False -> FederationCommandRejected "stale-federation-command" case True -> match numberLess votes required of case True -> FederationCommandRejected "insufficient-quorum" case False -> FederationCommandAccepted (FederationFinalized head next) end end end end end
+def applyFederationEvent [state: FederationState, event: FederationEvent] ! text arith: FederationReplay = match state of case FederationState height head -> match event of case FederationFinalized previous next -> match textEq head previous of case True -> FederationReplayed (FederationState (numberAdd height c1) next) case False -> FederationReplayRejected "broken-federation-link" end end end
+def replayFederationFrom [state: FederationState, events: FederationEvents] ! text arith: FederationReplay = match events of case NoFederationEvent -> FederationReplayed state case MoreFederationEvent head tail -> match applyFederationEvent state head of case FederationReplayRejected reason -> FederationReplayRejected reason case FederationReplayed next -> replayFederationFrom next tail end end
+def replayFederation [events: FederationEvents] ! text arith: FederationReplay = replayFederationFrom initialFederationState events
+def executeFederationFrom [state: FederationState, commands: FederationCommands] ! text arith: FederationExecution = match commands of case NoFederationCommand -> FederationExecuted state NoFederationEvent case MoreFederationCommand command tail -> match decideFederationCommand state command of case FederationCommandRejected reason -> FederationExecutionRejected reason case FederationCommandAccepted event -> match applyFederationEvent state event of case FederationReplayRejected reason -> FederationExecutionRejected reason case FederationReplayed next -> match executeFederationFrom next tail of case FederationExecutionRejected reason -> FederationExecutionRejected reason case FederationExecuted terminal emitted -> FederationExecuted terminal (MoreFederationEvent event emitted) end end end end
+def executeFederation [commands: FederationCommands] ! text arith: FederationExecution = executeFederationFrom initialFederationState commands
+def federationExecutionTag [result: FederationExecution]: Text = match result of case FederationExecutionRejected reason -> reason case FederationExecuted state events -> "finalized" end
+def federationExecutionEvents [result: FederationExecution]: FederationEvents = match result of case FederationExecutionRejected reason -> NoFederationEvent case FederationExecuted state events -> events end
+def federationStateValue [state: FederationState]: Value = match state of case FederationState height head -> VNode "federation-state" (MoreValue (VNat height) (MoreValue (VText head) NoValue)) end
+def federationStateIdentity [state: FederationState] ! text arith hash: Text = nameOfValue (federationStateValue state)
+def federationReplayIdentity [result: FederationReplay] ! text arith hash: Text = match result of case FederationReplayRejected reason -> "" case FederationReplayed state -> federationStateIdentity state end
+def federationExecutionIdentity [result: FederationExecution] ! text arith hash: Text = match result of case FederationExecutionRejected reason -> "" case FederationExecuted state events -> federationStateIdentity state end
+def federationExecutionReplayIdentity [result: FederationExecution] ! text arith hash: Text = federationReplayIdentity (replayFederation (federationExecutionEvents result))
+def federationExecutionIsReplayable [result: FederationExecution] ! text arith hash: Bool = textEq (federationExecutionIdentity result) (federationExecutionReplayIdentity result)
+def federationPeersAgree [firstResult: FederationReplay, secondResult: FederationReplay] ! text arith hash: Bool = let firstIdentity = federationReplayIdentity firstResult in let secondIdentity = federationReplayIdentity secondResult in textEq firstIdentity secondIdentity

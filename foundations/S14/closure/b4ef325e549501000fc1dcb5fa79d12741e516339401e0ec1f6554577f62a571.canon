@@ -1,0 +1,40 @@
+
+artifactsource
+source
+pathstrata/system/governance.strata
+textœ module "strata.governance"
+version 1
+; Governance decides whether evidence is enough. It neither signs proposals
+; nor performs runs: signatures and journaled effects cross the boundary as
+; evidence, and these functions decide what that evidence authorizes.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+import "strata.studio" 1
+import "strata.foundation" 1
+
+data Constitution = | Constitution [constitutedKind #1: Text, testsRequired #2: Bool, proofRequired #3: Bool, minimumBudget #4: Number]
+data Proposal = | Proposal [proposedFoundation #1: Text, proposedPredecessor #2: Text, proposedKind #3: Text, signatureValid #4: Bool, testsPass #5: Bool, proofPass #6: Bool, proposedBudget #7: Number]
+data Decision = | ProposalRejected [rejectionReason #1: Text] | ProposalAccepted [acceptedProposal #1: Proposal]
+data Sponsor = | Sponsor [sponsorName #1: Text, sponsoredKind #2: Text]
+data Sponsorship = | Unsponsored [unsponsoredReason #1: Text] | Sponsored [sponsoredFoundation #1: Text, sponsoringIdentity #2: Text]
+
+def evaluateProposal [constitution: Constitution, proposal: Proposal] ! text arith: Decision = match constitution of case Constitution kind requiresTests requiresProof minimum -> match proposal of case Proposal foundation predecessor proposedKind signed tests proof budget -> match textEq kind proposedKind of case False -> ProposalRejected "kind-not-governed" case True -> match signed of case False -> ProposalRejected "bad-signature" case True -> match and requiresTests (not tests) of case True -> ProposalRejected "failing-tests" case False -> match and requiresProof (not proof) of case True -> ProposalRejected "missing-proof" case False -> match numberLess budget minimum of case True -> ProposalRejected "insufficient-budget" case False -> ProposalAccepted proposal end end end end end end end
+def sponsor [sponsoring: Sponsor, decision: Decision] ! text: Sponsorship = match decision of case ProposalRejected reason -> Unsponsored "proposal-not-accepted" case ProposalAccepted proposal -> match sponsoring of case Sponsor identity kind -> match proposal of case Proposal foundation predecessor proposedKind signed tests proof budget -> match textEq kind proposedKind of case True -> Sponsored foundation identity case False -> Unsponsored "sponsor-out-of-scope" end end end end
+def decisionTag [decision: Decision]: Text = match decision of case ProposalRejected reason -> reason case ProposalAccepted proposal -> "accepted" end
+def sponsorshipTag [sponsorship: Sponsorship]: Text = match sponsorship of case Unsponsored reason -> reason case Sponsored foundation identity -> "sponsored" end
+
+data RunStep = | RunStep [stepExit #1: Number]
+data RunSteps = | NoRunStep [] | MoreRunStep [runStepHead #1: RunStep, runStepTail #2: RunSteps]
+data RunChange = | RunChange [replacementPresent #1: Bool]
+data RunChanges = | NoRunChange [] | MoreRunChange [runChangeHead #1: RunChange, runChangeTail #2: RunChanges]
+data RunReport = | RunReport [runSteps #1: RunSteps, runChanges #2: RunChanges]
+data RunDecision = | RunInvalid [runReason #1: Text] | RunValid []
+
+def stepsSucceeded [steps: RunSteps] ! arith: Bool = match steps of case NoRunStep -> True case MoreRunStep head tail -> match head of case RunStep exit -> match numberEq exit c0 of case True -> stepsSucceeded tail case False -> False end end end
+def changesPresent [changes: RunChanges]: Bool = match changes of case NoRunChange -> True case MoreRunChange head tail -> match head of case RunChange present -> match present of case True -> changesPresent tail case False -> False end end end
+def evaluateRun [report: RunReport] ! arith: RunDecision = match report of case RunReport steps changes -> match stepsSucceeded steps of case False -> RunInvalid "step-failed" case True -> match changesPresent changes of case False -> RunInvalid "removed-without-replacement" case True -> RunValid end end end
+def runDecisionTag [decision: RunDecision]: Text = match decision of case RunInvalid reason -> reason case RunValid -> "valid" end

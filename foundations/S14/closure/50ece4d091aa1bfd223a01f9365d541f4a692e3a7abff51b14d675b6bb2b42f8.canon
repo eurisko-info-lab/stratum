@@ -1,0 +1,24 @@
+
+artifactchange
+change
+kind
+foundation
+nameS12->S13
+predecessor
+foundation-offoundations/S12
+
+delta-meta
+file changes/S12-S13/delta-meta.canon
+delta-grammar
+file#changes/S12-S13/delta-grammar.canon
+feature
+feature
+namefoundation and governance
+programs
+file)features/strata/foundation.generated.meta
+file)features/strata/governance.generated.meta
+sources
+	text-filefeatures/strata/foundation.meta
+	text-filefeatures/strata/governance.meta
+	text-filestrata/system/foundation.strata
+	text-filestrata/system/governance.strata

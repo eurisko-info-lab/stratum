@@ -805,6 +805,7 @@ constitute and whether the evidence permits it.
 
 - `strata/system/ledger.strata`, `sync.strata`, `federation.strata`
 - deterministic state machines: commands in, events out, traces as artifacts
+- representation-only crossings in `features/strata/{ledger,sync,federation}.meta`
 - `fixtures/strata/s14.transcript`, `foundations/S14/`
 
 **Acceptance**
@@ -812,6 +813,21 @@ constitute and whether the evidence permits it.
 - all `fixtures/ledger`, `fixtures/sync`, `fixtures/federation` transcripts pass
 - replaying a recorded trace reproduces the terminal state digest exactly
 - a divergent peer is detected rather than silently merged
+
+**Each distributed subsystem is now a state machine in Strata.** Ledger
+commands name the head they expect and emit publication events only when that
+expectation is current. Synchronization admits an artifact only under the name
+its canonical envelope earns, keeps accepted names in canonical order, and
+therefore reaches the same state regardless of transfer order. Federation
+orders only semantically valid transitions with an explicit quorum and emits
+finalization events whose predecessor must match during replay.
+
+**Traces, not effects, are authoritative.** Command execution advances by
+applying the event it just emitted. Replaying those events from genesis must
+produce the same canonical terminal-state identity; independently replayed
+peers compare those identities, and disagreement remains visible rather than
+being merged. Transport, hashing and signature verification remain host
+capabilities. No network or persistence primitive enters the Strata boundary.
 
 **Exit condition** — distribution is deterministic and replayable.
 

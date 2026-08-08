@@ -1,0 +1,176 @@
+; Generated from features/strata/ledger.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataledger)
+  (judgment
+    StrataLedgerSystem
+    [prelude native octets artifact cas repository studio foundation governance ledger]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)
+      (v studio)
+      (v foundation)
+      (v governance)
+      (v ledger)))
+  (judgment
+    AskLedger
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.ledger")
+      (v entry)
+      (v arguments)))
+  (judgment
+    StrataLedgerCommands
+    [commands]
+    (match
+      (v commands)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoLedgerCommand)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            publish
+            (pv expected)
+            (pv next))
+          (pv rest))
+        (mk
+          MoreLedgerCommand
+          (mk
+            LedgerPublish
+            (v expected)
+            (v next))
+          (call
+            StrataLedgerCommands
+            (v rest))))
+      (case
+        _
+        (fail
+          ledger-error
+          (q "not a ledger command list")))))
+  (judgment
+    StrataLedgerEvents
+    [events]
+    (match
+      (v events)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoLedgerEvent)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            published
+            (pv previous)
+            (pv next))
+          (pv rest))
+        (mk
+          MoreLedgerEvent
+          (mk
+            LedgerPublished
+            (v previous)
+            (v next))
+          (call
+            StrataLedgerEvents
+            (v rest))))
+      (case
+        _
+        (fail
+          ledger-error
+          (q "not a ledger event list")))))
+  (judgment
+    StrataLedgerExecution
+    [grammar sources commands]
+    (call
+      AskLedger
+      (v grammar)
+      (v sources)
+      (q executeLedger)
+      (lst
+        (call
+          StrataLedgerCommands
+          (v commands)))))
+  (judgment
+    StrataLedgerExecutionTag
+    [grammar sources commands]
+    (call
+      AskLedger
+      (v grammar)
+      (v sources)
+      (q ledgerExecutionTag)
+      (lst
+        (call
+          StrataLedgerExecution
+          (v grammar)
+          (v sources)
+          (v commands)))))
+  (judgment
+    StrataLedgerExecutionIsReplayable
+    [grammar sources commands]
+    (call
+      AskLedger
+      (v grammar)
+      (v sources)
+      (q ledgerExecutionIsReplayable)
+      (lst
+        (call
+          StrataLedgerExecution
+          (v grammar)
+          (v sources)
+          (v commands)))))
+  (judgment
+    StrataLedgerReplay
+    [grammar sources events]
+    (call
+      AskLedger
+      (v grammar)
+      (v sources)
+      (q replayLedger)
+      (lst
+        (call
+          StrataLedgerEvents
+          (v events)))))
+  (judgment
+    StrataLedgerHead
+    [grammar sources events]
+    (call
+      AskLedger
+      (v grammar)
+      (v sources)
+      (q ledgerHeadOf)
+      (lst
+        (call
+          StrataLedgerReplay
+          (v grammar)
+          (v sources)
+          (v events)))))
+  (judgment
+    StrataLedgerPeersAgree
+    [grammar sources local remote]
+    (call
+      AskLedger
+      (v grammar)
+      (v sources)
+      (q ledgerPeersAgree)
+      (lst
+        (call
+          StrataLedgerReplay
+          (v grammar)
+          (v sources)
+          (v local))
+        (call
+          StrataLedgerReplay
+          (v grammar)
+          (v sources)
+          (v remote))))))

@@ -1,0 +1,138 @@
+
+artifactsource
+source
+path'languages/typescript/typescript.grammar
+text÷grammar "typescript"
+start document
+
+skip "//[^\\r\\n]*"
+skip "/\\*([^*]|\\*+[^*/])*\\*+/"
+
+token dquoted str "\"(\\\\.|[^\"\\\\\\r\\n])*\""
+token squoted str "'(\\\\.|[^'\\\\\\r\\n])*'"
+token template str "`(\\\\.|[^`\\\\])*`"
+token number str "[0-9]+(\\.[0-9]+)?"
+token word str "[A-Za-z_$][A-Za-z0-9_$]*"
+
+category document
+  fold TypeScriptDocument item
+
+category item
+  prod Brace "{" body : document "}"
+  prod EmptyBrace "{" "}"
+  prod FunctionDecl "function" name : word header : headerDocument "{" body : document "}"
+  prod ClassDecl "class" name : word "{" body : document "}"
+  prod ClassDeclHeritage "class" name : word heritage : headerDocument "{" body : document "}"
+  prod InterfaceDecl "interface" name : word "{" body : document "}"
+  prod InterfaceDeclHeritage "interface" name : word heritage : headerDocument "{" body : document "}"
+  prod IfStatement "if" "(" condition : document ")" "{" thenBody : document "}"
+  prod IfElseStatement "if" "(" condition : document ")" "{" thenBody : document "}" "else" "{" elseBody : document "}"
+  prod ForStatement "for" "(" header : document ")" "{" body : document "}"
+  prod WhileStatement "while" "(" condition : document ")" "{" body : document "}"
+  prod TryStatement "try" "{" body : document "}" "catch" "(" name : word ")" "{" handler : document "}"
+  prod ArrowParams "(" params : document ")" "=>"
+  prod EmptyArrowParams "(" ")" "=>"
+  prod ArrowParamBare param : word "=>"
+  pass itemCore
+
+category itemCore
+  prod Paren "(" body : document ")"
+  prod EmptyParen "(" ")"
+  prod Bracket "[" body : document "]"
+  prod EmptyBracket "[" "]"
+  prod DQuoted value : dquoted
+  prod SQuoted value : squoted
+  prod Template value : template
+  prod Number value : number
+  prod Import "import"
+  prod Export "export"
+  prod Interface "interface"
+  prod TypeKw "type"
+  prod Function "function"
+  prod Class "class"
+  prod Const "const"
+  prod Let "let"
+  prod Var "var"
+  prod Return "return"
+  prod If "if"
+  prod Else "else"
+  prod For "for"
+  prod While "while"
+  prod New "new"
+  prod Async "async"
+  prod Await "await"
+  prod Extends "extends"
+  prod Implements "implements"
+  prod Public "public"
+  prod Private "private"
+  prod Readonly "readonly"
+  prod Static "static"
+  prod Void "void"
+  prod Null "null"
+  prod Undefined "undefined"
+  prod True "true"
+  prod False "false"
+  prod This "this"
+  prod Typeof "typeof"
+  prod In "in"
+  prod Of "of"
+  prod Default "default"
+  prod From "from"
+  prod As "as"
+  prod Enum "enum"
+  prod Namespace "namespace"
+  prod Declare "declare"
+  prod Try "try"
+  prod Catch "catch"
+  prod Finally "finally"
+  prod Throw "throw"
+  prod Switch "switch"
+  prod Case "case"
+  prod Break "break"
+  prod Continue "continue"
+  prod Super "super"
+  prod Instanceof "instanceof"
+  prod Delete "delete"
+  prod Arrow "=>"
+  prod OptionalChain "?."
+  prod Nullish "??"
+  prod Spread "..."
+  prod StrictEq "==="
+  prod StrictNeq "!=="
+  prod Eq "=="
+  prod Neq "!="
+  prod Le "<="
+  prod Ge ">="
+  prod And "&&"
+  prod Or "||"
+  prod PlusEq "+="
+  prod MinusEq "-="
+  prod StarEq "*="
+  prod SlashEq "/="
+  prod Increment "++"
+  prod Decrement "--"
+  prod Plus "+"
+  prod Minus "-"
+  prod Star "*"
+  prod Slash "/"
+  prod Percent "%"
+  prod Assign "="
+  prod Bang "!"
+  prod Question "?"
+  prod Colon ":"
+  prod Comma ","
+  prod Dot "."
+  prod Semicolon ";"
+  prod Less "<"
+  prod Greater ">"
+  prod Amp "&"
+  prod Pipe "|"
+  prod Caret "^"
+  prod Tilde "~"
+  prod Word value : word
+
+category headerDocument
+  fold HeaderDocument headerItem
+
+category headerItem
+  pass itemCore

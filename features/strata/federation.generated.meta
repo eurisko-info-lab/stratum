@@ -1,0 +1,172 @@
+; Generated from features/strata/federation.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratumfederation)
+  (judgment
+    StrataFederationSystem
+    [prelude native octets artifact cas repository studio foundation governance ledger sync federation]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)
+      (v studio)
+      (v foundation)
+      (v governance)
+      (v ledger)
+      (v sync)
+      (v federation)))
+  (judgment
+    AskFederation
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.federation")
+      (v entry)
+      (v arguments)))
+  (judgment
+    StrataFederationCommands
+    [commands]
+    (match
+      (v commands)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoFederationCommand)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            finalize
+            (pv expected)
+            (pv next)
+            (pv votes)
+            (pv required)
+            (pv semantic))
+          (pv rest))
+        (mk
+          MoreFederationCommand
+          (mk
+            FederationFinalize
+            (v expected)
+            (v next)
+            (v votes)
+            (v required)
+            (call
+              GovernanceBool
+              (v semantic)))
+          (call
+            StrataFederationCommands
+            (v rest))))
+      (case
+        _
+        (fail
+          federation-error
+          (q "not a federation command list")))))
+  (judgment
+    StrataFederationEvents
+    [events]
+    (match
+      (v events)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoFederationEvent)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            finalized
+            (pv previous)
+            (pv next))
+          (pv rest))
+        (mk
+          MoreFederationEvent
+          (mk
+            FederationFinalized
+            (v previous)
+            (v next))
+          (call
+            StrataFederationEvents
+            (v rest))))
+      (case
+        _
+        (fail
+          federation-error
+          (q "not a federation event list")))))
+  (judgment
+    StrataFederationExecution
+    [grammar sources commands]
+    (call
+      AskFederation
+      (v grammar)
+      (v sources)
+      (q executeFederation)
+      (lst
+        (call
+          StrataFederationCommands
+          (v commands)))))
+  (judgment
+    StrataFederationExecutionTag
+    [grammar sources commands]
+    (call
+      AskFederation
+      (v grammar)
+      (v sources)
+      (q federationExecutionTag)
+      (lst
+        (call
+          StrataFederationExecution
+          (v grammar)
+          (v sources)
+          (v commands)))))
+  (judgment
+    StrataFederationExecutionIsReplayable
+    [grammar sources commands]
+    (call
+      AskFederation
+      (v grammar)
+      (v sources)
+      (q federationExecutionIsReplayable)
+      (lst
+        (call
+          StrataFederationExecution
+          (v grammar)
+          (v sources)
+          (v commands)))))
+  (judgment
+    StrataFederationReplay
+    [grammar sources events]
+    (call
+      AskFederation
+      (v grammar)
+      (v sources)
+      (q replayFederation)
+      (lst
+        (call
+          StrataFederationEvents
+          (v events)))))
+  (judgment
+    StrataFederationPeersAgree
+    [grammar sources first second]
+    (call
+      AskFederation
+      (v grammar)
+      (v sources)
+      (q federationPeersAgree)
+      (lst
+        (call
+          StrataFederationReplay
+          (v grammar)
+          (v sources)
+          (v first))
+        (call
+          StrataFederationReplay
+          (v grammar)
+          (v sources)
+          (v second))))))

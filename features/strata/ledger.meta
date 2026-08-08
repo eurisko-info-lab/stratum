@@ -1,0 +1,65 @@
+module strataledger
+
+; Typed ledger commands and events cross as ordinary constructor values. The
+; state transition, replay and terminal identity remain Strata decisions.
+
+judgment StrataLedgerSystem [prelude native octets artifact cas repository studio foundation governance ledger] =
+  list [prelude native octets artifact cas repository studio foundation governance ledger]
+
+judgment AskLedger [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.ledger" entry arguments]
+
+judgment StrataLedgerCommands [commands] =
+  match commands {
+    case [] -> prim #node [#NoLedgerCommand list []]
+    case (#publish expected next) :: rest ->
+      mk #MoreLedgerCommand [
+        mk #LedgerPublish [expected next]
+        call StrataLedgerCommands [rest]
+      ]
+    case _ -> fail #ledger-error "not a ledger command list"
+  }
+
+judgment StrataLedgerEvents [events] =
+  match events {
+    case [] -> prim #node [#NoLedgerEvent list []]
+    case (#published previous next) :: rest ->
+      mk #MoreLedgerEvent [
+        mk #LedgerPublished [previous next]
+        call StrataLedgerEvents [rest]
+      ]
+    case _ -> fail #ledger-error "not a ledger event list"
+  }
+
+judgment StrataLedgerExecution [grammar sources commands] =
+  call AskLedger [grammar sources #executeLedger list [call StrataLedgerCommands [commands]]]
+
+judgment StrataLedgerExecutionTag [grammar sources commands] =
+  call AskLedger [
+    grammar sources #ledgerExecutionTag
+    list [call StrataLedgerExecution [grammar sources commands]]
+  ]
+
+judgment StrataLedgerExecutionIsReplayable [grammar sources commands] =
+  call AskLedger [
+    grammar sources #ledgerExecutionIsReplayable
+    list [call StrataLedgerExecution [grammar sources commands]]
+  ]
+
+judgment StrataLedgerReplay [grammar sources events] =
+  call AskLedger [grammar sources #replayLedger list [call StrataLedgerEvents [events]]]
+
+judgment StrataLedgerHead [grammar sources events] =
+  call AskLedger [
+    grammar sources #ledgerHeadOf
+    list [call StrataLedgerReplay [grammar sources events]]
+  ]
+
+judgment StrataLedgerPeersAgree [grammar sources local remote] =
+  call AskLedger [
+    grammar sources #ledgerPeersAgree
+    list [
+      call StrataLedgerReplay [grammar sources local]
+      call StrataLedgerReplay [grammar sources remote]
+    ]
+  ]

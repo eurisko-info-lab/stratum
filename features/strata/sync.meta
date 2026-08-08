@@ -1,0 +1,37 @@
+module stratasync
+
+; Artifact bodies cross as canonical values. Strata computes their names,
+; decides admission, emits sync events and derives terminal identities.
+
+judgment StrataSyncSystem [prelude native octets artifact cas repository studio foundation governance ledger sync] =
+  list [prelude native octets artifact cas repository studio foundation governance ledger sync]
+
+judgment AskSync [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.sync" entry arguments]
+
+judgment StrataSyncArtifact [kind body] =
+  mk #Artifact [kind call ReadCanonValue [body]]
+
+judgment StrataSyncPairIsReplayable [grammar sources firstKind firstBody secondKind secondBody] =
+  call AskSync [
+    grammar sources #syncPairIsReplayable
+    list [
+      call StrataSyncArtifact [firstKind firstBody]
+      call StrataSyncArtifact [secondKind secondBody]
+    ]
+  ]
+
+judgment StrataSyncPairOrderIndependent [grammar sources firstKind firstBody secondKind secondBody] =
+  call AskSync [
+    grammar sources #syncPairOrderIndependent
+    list [
+      call StrataSyncArtifact [firstKind firstBody]
+      call StrataSyncArtifact [secondKind secondBody]
+    ]
+  ]
+
+judgment StrataRejectSyncClaim [grammar sources claimed kind body] =
+  call AskSync [
+    grammar sources #rejectSyncClaim
+    list [claimed call StrataSyncArtifact [kind body]]
+  ]
