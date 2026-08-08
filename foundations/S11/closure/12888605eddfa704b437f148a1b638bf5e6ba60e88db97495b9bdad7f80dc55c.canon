@@ -1,0 +1,256 @@
+
+artifactsource
+source
+pathfeatures/strata/native.meta
+textÌFmodule stratanative
+
+; The native boundary.
+;
+; A primitive is declared in Strata and performed by the host. Three things
+; have to hold for that to be worth anything, and this decides all three:
+;
+;   the set agrees   what the module declares is what the host provides,
+;                    name for name and arity for arity
+;   the crossing is  a value that goes out and comes back is the value that
+;   faithful         set out
+;   the permission   using a primitive needs its capability -- which is S6's
+;   is checked       rule, unchanged, because a primitive declares `uses` like
+;                    any other definition
+;
+; Only the first and second are new. The third costs nothing, which is the
+; argument for having built S6 before this.
+
+; ------------------------------------------------------------ the host set
+;
+; What the host will perform, and how many arguments each takes. A primitive
+; outside this set is not a primitive; it is a name nobody answers.
+
+judgment HostNames [] =
+  list [
+    #numberOfNat #natOfNumber #numberAdd #numberEq #numberLess
+    #textBytes #bytesText #bytesEq #digest
+    #textCharacters #textConcat #textEq
+  ]
+
+judgment HostArity [name] =
+  if prim #contains [call HostNames [] name]
+  then call ArityOfHost [name]
+  else
+    fail #native-error prim #scat [
+      "the host provides no primitive named "
+      prim #sym->str [name]
+    ]
+
+judgment ArityOfHost [name] =
+  if prim #eq [name #numberAdd] then 2
+  else if prim #eq [name #numberEq] then 2
+  else if prim #eq [name #numberLess] then 2
+  else if prim #eq [name #bytesEq] then 2
+  else if prim #eq [name #textConcat] then 2
+  else if prim #eq [name #textEq] then 2
+  else 1
+
+; ---------------------------------------------------------- the crossing
+;
+; A Strata number is a chain of `Succ`. A host number is a number. Crossing
+; between them is walking the chain one way and building it the other, and it
+; is the only place where the two ways of counting meet.
+
+judgment NatToHost [value] =
+  match value {
+    case (#Zero) -> 0
+    case (#Succ inner) -> prim #add [1 call NatToHost [inner]]
+    case _ -> fail #native-error "a value crossing as a number is not one"
+  }
+
+judgment HostToNat [n] =
+  if prim #eq [n 0]
+  then prim #node [#Zero list []]
+  else prim #node [#Succ list [call HostToNat [prim #sub [n 1]]]]
+
+; A text crosses as the list of its characters. Walking that list is
+; structural, which is what lets a definition over it be accepted as total --
+; walking an index is not.
+judgment HostToChars [text index] =
+  if prim #ge [index prim #slen [text]]
+  then prim #node [#NoChar list []]
+  else
+    prim #node [#MoreChar list [
+      prim #ssub [text index prim #add [index 1]]
+      call HostToChars [text prim #add [index 1]]
+    ]]
+
+judgment HostToBool [flag] =
+  if flag
+  then prim #node [#True list []]
+  else prim #node [#False list []]
+
+; The host performs the primitive. Everything it is handed has already
+; crossed, and everything it returns crosses back.
+judgment NativePrimitive [name args] =
+  if prim #ne [prim #len [args] call HostArity [name]]
+  then
+    fail #native-error prim #scat [
+      prim #scat ["the primitive " prim #sym->str [name]]
+      " was given the wrong number of arguments"
+    ]
+  else call PerformPrimitive [name args]
+
+judgment PerformPrimitive [name args] =
+  if prim #eq [name #numberOfNat]
+  then call NatToHost [prim #nth [args 0]]
+  else if prim #eq [name #natOfNumber]
+  then call HostToNat [prim #nth [args 0]]
+  else if prim #eq [name #numberAdd]
+  then prim #add [prim #nth [args 0] prim #nth [args 1]]
+  else if prim #eq [name #numberEq]
+  then call HostToBool [prim #eq [prim #nth [args 0] prim #nth [args 1]]]
+  else if prim #eq [name #numberLess]
+  then call HostToBool [prim #lt [prim #nth [args 0] prim #nth [args 1]]]
+  else if prim #eq [name #textBytes]
+  then prim #encode [prim #nth [args 0]]
+  else if prim #eq [name #bytesText]
+  then prim #decode [prim #nth [args 0]]
+  else if prim #eq [name #bytesEq]
+  then call HostToBool [prim #eq [prim #nth [args 0] prim #nth [args 1]]]
+  else if prim #eq [name #digest]
+  then prim #ref->str [prim #digest [prim #nth [args 0]]]
+  else if prim #eq [name #textCharacters]
+  then call HostToChars [prim #nth [args 0] 0]
+  else if prim #eq [name #textConcat]
+  then prim #scat [prim #nth [args 0] prim #nth [args 1]]
+  else if prim #eq [name #textEq]
+  then call HostToBool [prim #eq [prim #nth [args 0] prim #nth [args 1]]]
+  else
+    fail #native-error prim #scat [
+      "the host provides no primitive named "
+      prim #sym->str [name]
+    ]
+
+; --------------------------------------------------------------- the set
+;
+; What a module declares and what the host provides must be the same set.
+
+judgment DeclaredPrimitives [decls] =
+  match decls {
+    case [] -> list []
+    case (#prim name params result) :: rest ->
+      prim #cons [mk #declared [name prim #len [params]] call DeclaredPrimitives [rest]]
+    case head :: rest -> call DeclaredPrimitives [rest]
+  }
+
+judgment CheckNativeBoundary [decls] =
+  match call CheckEachDeclared [call DeclaredPrimitives [decls]] {
+    case _ ->
+      call CheckNothingMissing [
+        call DeclaredPrimitiveNames [decls]
+        call HostNames []
+      ]
+  }
+
+judgment DeclaredPrimitiveNames [decls] =
+  match decls {
+    case [] -> list []
+    case (#prim name params result) :: rest ->
+      prim #cons [name call DeclaredPrimitiveNames [rest]]
+    case head :: rest -> call DeclaredPrimitiveNames [rest]
+  }
+
+judgment CheckEachDeclared [declared] =
+  match declared {
+    case [] -> mk #bounded [#ok]
+    case (#declared name arity) :: rest ->
+      if prim #contains [call HostNames [] name]
+      then
+        if prim #ne [arity call ArityOfHost [name]]
+        then
+          fail #native-error prim #scat [
+            prim #scat [
+              prim #scat ["the module declares " prim #sym->str [name]]
+              prim #scat [" with " prim #nat->str [arity]]
+            ]
+            prim #scat [
+              prim #scat [" arguments, but the host performs it with " prim #nat->str [call ArityOfHost [name]]]
+              ""
+            ]
+          ]
+        else call CheckEachDeclared [rest]
+      else
+        fail #native-error prim #scat [
+          prim #scat ["the module declares the primitive " prim #sym->str [name]]
+          ", which the host does not provide"
+        ]
+    case head :: rest -> call CheckEachDeclared [rest]
+  }
+
+; And nothing the host provides is left undeclared, because a primitive that
+; is reachable without being written down is a hole in the boundary.
+judgment CheckNothingMissing [declared hosted] =
+  match hosted {
+    case [] -> mk #bounded [#ok]
+    case name :: rest ->
+      if prim #contains [declared name]
+      then call CheckNothingMissing [declared rest]
+      else
+        fail #native-error prim #scat [
+          prim #scat ["the host provides " prim #sym->str [name]]
+          ", which the module does not declare"
+        ]
+  }
+
+; ---------------------------------------------------------------- typing
+;
+; A primitive has a type, so a call to one is checked like any other call. The
+; table is the ordinary definition table with the primitives added, which is
+; all the checker needs to be told.
+
+judgment NativeDefinitions [decls] =
+  call AddPrimitiveSignatures [decls call DefinitionTable [decls]]
+
+judgment AddPrimitiveSignatures [decls table] =
+  match decls {
+    case [] -> table
+    case (#prim name params result) :: rest ->
+      call AddPrimitiveSignatures [
+        rest
+        prim #mput [table name mk #sig [
+          call DeclaredParamTypes [params]
+          call TypeValue [result]
+        ]]
+      ]
+    case head :: rest -> call AddPrimitiveSignatures [rest table]
+  }
+
+judgment CheckNativeDeclarations [decls] =
+  call CheckDeclarations [
+    decls
+    call ConstructorTable [decls]
+    call NativeDefinitions [decls]
+  ]
+
+; ---------------------------------------------------------------- driving
+
+judgment NativeModule [grammar sources name] =
+  call LinkModule [call LoadModuleSet [grammar sources] name]
+
+judgment CheckLinkedNative [grammar sources name] =
+  call CheckNativeDeclarations [call NativeModule [grammar sources name]]
+
+judgment CheckLinkedBoundary [grammar sources name] =
+  call CheckNativeBoundary [call NativeModule [grammar sources name]]
+
+judgment RunNative [grammar sources name entry] =
+  let decls = call IndexedDeclarations [call NativeModule [grammar sources name]] in
+  call EnterDefinition [decls call RequiredDefinition [decls entry] list []]
+
+; A value that crosses to the host and back is the value that set out.
+judgment CrossingIsFaithful [value] =
+  prim #eq [value call HostToNat [call NatToHost [value]]]
+
+; And what the host works out is what the language would have worked out. If
+; these disagree the boundary is not a boundary, it is a second answer.
+judgment HostAgreesWithStrata [grammar sources name left right] =
+  prim #eq [
+    call RunNative [grammar sources name left]
+    call RunNative [grammar sources name right]
+  ]

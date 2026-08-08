@@ -1,0 +1,9 @@
+
+artifactgrammar
+grammar
+nametext
+startsource
+tokenbodystr[^\r]+
+categorysource
+prodTextFile
+bindtextbody

@@ -1,0 +1,1596 @@
+; Generated from languages/strata/strata.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strata)
+  (judgment
+    ParseStrata
+    [grammar source]
+    (call
+      Parse
+      (v grammar)
+      (v source)))
+  (judgment
+    PrintStrata
+    [grammar syntax]
+    (call
+      Print
+      (v grammar)
+      (v syntax)))
+  (judgment
+    RoundTripStrata
+    [grammar source]
+    (call
+      RoundTrip
+      (v grammar)
+      (v source)))
+  (judgment
+    Reprint
+    [grammar source]
+    (call
+      Print
+      (v grammar)
+      (call
+        Parse
+        (v grammar)
+        (v source))))
+  (judgment
+    PrintsExactly
+    [grammar source]
+    (prim
+      eq
+      (call
+        Reprint
+        (v grammar)
+        (v source))
+      (v source)))
+  (judgment
+    Lines
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Unit
+          (pv left)
+          (pv right))
+        (prim
+          snoc
+          (call
+            Lines
+            (v left))
+          (v right)))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    ModuleName
+    [parsed]
+    (call
+      FindModule
+      (call
+        Lines
+        (v parsed))))
+  (judgment
+    FindModule
+    [lines]
+    (match
+      (v lines)
+      (case
+        (pnil)
+        (fail
+          missing-module
+          (q "a module declaration is required")))
+      (case
+        (pcons
+          (pm
+            Module
+            (pv name)
+            (pv eol))
+          (pv rest))
+        (call
+          StrataUnquote
+          (v name)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindModule
+          (v rest)))))
+  (judgment
+    StrataUnquote
+    [value]
+    (prim
+      ssub
+      (v value)
+      (q 1)
+      (prim
+        sub
+        (prim
+          slen
+          (v value))
+        (q 1))))
+  (judgment
+    ModuleVersion
+    [parsed]
+    (call
+      FindVersion
+      (call
+        Lines
+        (v parsed))))
+  (judgment
+    FindVersion
+    [lines]
+    (match
+      (v lines)
+      (case
+        (pnil)
+        (fail
+          missing-version
+          (q "a version declaration is required")))
+      (case
+        (pcons
+          (pm
+            Version
+            (pv value)
+            (pv eol))
+          (pv rest))
+        (v value))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindVersion
+          (v rest)))))
+  (judgment
+    Declarations
+    [parsed]
+    (call
+      CollectDeclarations
+      (call
+        Lines
+        (v parsed))))
+  (judgment
+    CollectDeclarations
+    [lines]
+    (match
+      (v lines)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            Data
+            (pv name)
+            (pv constructors)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            data
+            (v name)
+            (call
+              ConstructorList
+              (v constructors)))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            DataParams
+            (pv name)
+            (pv params)
+            (pv constructors)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            family
+            (v name)
+            (call
+              ParameterList
+              (v params))
+            (call
+              ConstructorList
+              (v constructors)))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Import
+            (pv name)
+            (pv version)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            import
+            (call
+              StrataUnquote
+              (v name))
+            (v version))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Export
+            (pv names)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            export
+            (call
+              IdentList
+              (v names)))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Prim
+            (pv name)
+            (pv params)
+            (pv uses)
+            (pv result)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            prim
+            (v name)
+            (call
+              ParameterList
+              (v params))
+            (v result))
+          (prim
+            cons
+            (mk
+              grades
+              (v name)
+              (call
+                ParameterGrades
+                (v params)))
+            (prim
+              cons
+              (mk
+                uses
+                (v name)
+                (call
+                  IdentList
+                  (v uses)))
+              (call
+                CollectDeclarations
+                (v rest))))))
+      (case
+        (pcons
+          (pm
+            Abstract
+            (pv name)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            abstract
+            (v name))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Def
+            (pv name)
+            (pv params)
+            (pv result)
+            (pv body)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            def
+            (v name)
+            (call
+              ParameterList
+              (v params))
+            (v result)
+            (v body))
+          (prim
+            cons
+            (mk
+              grades
+              (v name)
+              (call
+                ParameterGrades
+                (v params)))
+            (call
+              CollectDeclarations
+              (v rest)))))
+      (case
+        (pcons
+          (pm
+            DefUses
+            (pv name)
+            (pv params)
+            (pv uses)
+            (pv result)
+            (pv body)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            def
+            (v name)
+            (call
+              ParameterList
+              (v params))
+            (v result)
+            (v body))
+          (prim
+            cons
+            (mk
+              grades
+              (v name)
+              (call
+                ParameterGrades
+                (v params)))
+            (prim
+              cons
+              (mk
+                uses
+                (v name)
+                (call
+                  IdentList
+                  (v uses)))
+              (call
+                CollectDeclarations
+                (v rest))))))
+      (case
+        (pcons
+          (pm
+            Law
+            (pv name)
+            (pv params)
+            (pv body)
+            (pv eol))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            law
+            (v name)
+            (call
+              ParameterList
+              (v params))
+            (v body))
+          (call
+            CollectDeclarations
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          CollectDeclarations
+          (v rest)))))
+  (judgment
+    ConstructorList
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Constructors
+          (pv left)
+          (pv right))
+        (prim
+          snoc
+          (call
+            ConstructorList
+            (v left))
+          (v right)))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    IdentList
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Idents
+          (pv left)
+          (pv right))
+        (prim
+          snoc
+          (call
+            IdentList
+            (v left))
+          (v right)))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    ParameterList
+    [node]
+    (call
+      PlainParameters
+      (match
+        (v node)
+        (case
+          (pm NoParams)
+          (lst))
+        (case
+          (pm
+            Params
+            (pv items))
+          (call
+            ParameterSeq
+            (v items)))
+        (case _ (lst)))))
+  (judgment
+    PlainParameters
+    [params]
+    (match
+      (v params)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            ParamGraded
+            (pv grade)
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            Param
+            (v pname)
+            (v ptype))
+          (call
+            PlainParameters
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (v head)
+          (call
+            PlainParameters
+            (v rest))))))
+  (judgment
+    ParameterGrades
+    [node]
+    (call
+      GradesOfParameters
+      (match
+        (v node)
+        (case
+          (pm NoParams)
+          (lst))
+        (case
+          (pm
+            Params
+            (pv items))
+          (call
+            ParameterSeq
+            (v items)))
+        (case _ (lst)))))
+  (judgment
+    GradesOfParameters
+    [params]
+    (match
+      (v params)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            ParamGraded
+            (pv grade)
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            graded
+            (v pname)
+            (call
+              GradeName
+              (v grade)))
+          (call
+            GradesOfParameters
+            (v rest))))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv pname)
+            (pv ptype))
+          (pv rest))
+        (prim
+          cons
+          (mk
+            graded
+            (v pname)
+            (q many))
+          (call
+            GradesOfParameters
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          GradesOfParameters
+          (v rest)))))
+  (judgment
+    GradeName
+    [grade]
+    (match
+      (v grade)
+      (case
+        (pm Erased)
+        (q erased))
+      (case
+        (pm Once)
+        (q once))
+      (case
+        (pm Affine)
+        (q affine))
+      (case
+        (pm Many)
+        (q many))
+      (case
+        _
+        (fail
+          grade-error
+          (q "not a multiplicity")))))
+  (judgment
+    ParameterSeq
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          ParamMore
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (v head)
+          (call
+            ParameterSeq
+            (v tail))))
+      (case
+        (pm
+          ParamOne
+          (pv value))
+        (lst
+          (v value)))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    FieldList
+    [node]
+    (match
+      (v node)
+      (case
+        (pm NoFields)
+        (lst))
+      (case
+        (pm
+          Fields
+          (pv items))
+        (call
+          FieldSeq
+          (v items)))
+      (case _ (lst))))
+  (judgment
+    FieldSeq
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          FieldMore
+          (pv head)
+          (pv tail))
+        (prim
+          cons
+          (v head)
+          (call
+            FieldSeq
+            (v tail))))
+      (case
+        (pm
+          FieldOne
+          (pv value))
+        (lst
+          (v value)))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    ElaborateModule
+    [grammar source]
+    (let
+      parsed
+      (call
+        ParseStrata
+        (v grammar)
+        (v source))
+      (mk
+        module
+        (call
+          ModuleName
+          (v parsed))
+        (call
+          ModuleVersion
+          (v parsed))
+        (call
+          Declarations
+          (v parsed)))))
+  (judgment
+    ModuleDigest
+    [grammar source]
+    (prim
+      ref->str
+      (prim
+        digest
+        (call
+          ElaborateModule
+          (v grammar)
+          (v source)))))
+  (judgment
+    ModuleNameOf
+    [grammar source]
+    (call
+      ModuleName
+      (call
+        ParseStrata
+        (v grammar)
+        (v source))))
+  (judgment
+    ModuleVersionOf
+    [grammar source]
+    (call
+      ModuleVersion
+      (call
+        ParseStrata
+        (v grammar)
+        (v source))))
+  (judgment
+    DeclarationCount
+    [grammar source]
+    (prim
+      len
+      (call
+        Declarations
+        (call
+          ParseStrata
+          (v grammar)
+          (v source)))))
+  (judgment
+    Lookup
+    [env name]
+    (match
+      (v env)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            bind
+            (pv bound)
+            (pv value))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v bound)
+            (v name))
+          (mk
+            some
+            (v value))
+          (call
+            Lookup
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          Lookup
+          (v rest)
+          (v name)))))
+  (judgment
+    FindConstructor
+    [decls name]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            data
+            (pv owner)
+            (pv constructors))
+          (pv rest))
+        (match
+          (call
+            FindConstructorIn
+            (v constructors)
+            (v name))
+          (case
+            (pm
+              some
+              (pv found))
+            (mk
+              some
+              (v found)))
+          (case
+            (pm none)
+            (call
+              FindConstructor
+              (v rest)
+              (v name)))))
+      (case
+        (pcons
+          (pm
+            family
+            (pv owner)
+            (pv params)
+            (pv constructors))
+          (pv rest))
+        (match
+          (call
+            FindConstructorIn
+            (v constructors)
+            (v name))
+          (case
+            (pm
+              some
+              (pv found))
+            (mk
+              some
+              (v found)))
+          (case
+            (pm none)
+            (call
+              FindConstructor
+              (v rest)
+              (v name)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindConstructor
+          (v rest)
+          (v name)))))
+  (judgment
+    FindConstructorIn
+    [constructors name]
+    (match
+      (v constructors)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            Constructor
+            (pv declared)
+            (pv fields))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            some
+            (mk
+              constructor
+              (v declared)
+              (prim
+                len
+                (call
+                  FieldList
+                  (v fields)))))
+          (call
+            FindConstructorIn
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pm
+            ConstructorAt
+            (pv declared)
+            (pv fields)
+            (pv result))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            some
+            (mk
+              constructor
+              (v declared)
+              (prim
+                len
+                (call
+                  FieldList
+                  (v fields)))))
+          (call
+            FindConstructorIn
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindConstructorIn
+          (v rest)
+          (v name)))))
+  (judgment
+    FindDefinition
+    [decls name]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            def
+            (pv declared)
+            (pv params)
+            (pv result)
+            (pv body))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            some
+            (mk
+              def
+              (v declared)
+              (v params)
+              (v result)
+              (v body)))
+          (call
+            FindDefinition
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindDefinition
+          (v rest)
+          (v name)))))
+  (judgment
+    Eval
+    [decls env expr]
+    (match
+      (v expr)
+      (case
+        (pm
+          Natural
+          (pv value))
+        (v value))
+      (case
+        (pm
+          Text
+          (pv value))
+        (call
+          TextValue
+          (v value)))
+      (case
+        (pm
+          Var
+          (pv name))
+        (call
+          EvalName
+          (v decls)
+          (v env)
+          (v name)))
+      (case
+        (pm
+          Apply
+          (pv fn)
+          (pv argument))
+        (call
+          StrataApplyValue
+          (v decls)
+          (call
+            Eval
+            (v decls)
+            (v env)
+            (v fn))
+          (call
+            Eval
+            (v decls)
+            (v env)
+            (v argument))))
+      (case
+        (pm
+          Let
+          (pv name)
+          (pv value)
+          (pv body))
+        (call
+          Eval
+          (v decls)
+          (prim
+            cons
+            (mk
+              bind
+              (v name)
+              (call
+                Eval
+                (v decls)
+                (v env)
+                (v value)))
+            (v env))
+          (v body)))
+      (case
+        (pm
+          Match
+          (pv scrutinee)
+          (pv cases))
+        (call
+          MatchCases
+          (v decls)
+          (v env)
+          (call
+            Eval
+            (v decls)
+            (v env)
+            (v scrutinee))
+          (call
+            CaseList
+            (v cases))))
+      (case
+        _
+        (fail
+          eval-error
+          (q "unsupported expression")))))
+  (judgment
+    EvalName
+    [decls env name]
+    (match
+      (call
+        Lookup
+        (v env)
+        (v name))
+      (case
+        (pm
+          some
+          (pv value))
+        (v value))
+      (case
+        (pm none)
+        (match
+          (call
+            FindConstructor
+            (v decls)
+            (v name))
+          (case
+            (pm
+              some
+              (pm
+                constructor
+                (pv declared)
+                (pv arity)))
+            (if
+              (prim
+                eq
+                (v arity)
+                (q 0))
+              (prim
+                node
+                (v declared)
+                (lst))
+              (mk
+                partial
+                (v declared)
+                (lst))))
+          (case
+            (pm none)
+            (match
+              (call
+                FindDefinition
+                (v decls)
+                (v name))
+              (case
+                (pm
+                  some
+                  (pv found))
+                (call
+                  EnterDefinition
+                  (v decls)
+                  (v found)
+                  (lst)))
+              (case
+                (pm none)
+                (call
+                  EvalPrimitive
+                  (v decls)
+                  (v name)))))))))
+  (judgment
+    EvalPrimitive
+    [decls name]
+    (match
+      (call
+        FindPrimitive
+        (v decls)
+        (v name))
+      (case
+        (pm
+          some
+          (pm
+            prim
+            (pv declared)
+            (pv params)
+            (pv result)))
+        (if
+          (prim
+            eq
+            (prim
+              len
+              (v params))
+            (q 0))
+          (call
+            NativePrimitive
+            (v declared)
+            (lst))
+          (mk
+            native
+            (v declared)
+            (prim
+              len
+              (v params))
+            (lst))))
+      (case
+        _
+        (fail
+          eval-error
+          (prim
+            scat
+            (q "unbound name ")
+            (prim
+              sym->str
+              (v name)))))))
+  (judgment
+    FindPrimitive
+    [decls name]
+    (match
+      (v decls)
+      (case
+        (pnil)
+        (mk none))
+      (case
+        (pcons
+          (pm
+            prim
+            (pv declared)
+            (pv params)
+            (pv result))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v declared)
+            (v name))
+          (mk
+            some
+            (mk
+              prim
+              (v declared)
+              (v params)
+              (v result)))
+          (call
+            FindPrimitive
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          FindPrimitive
+          (v rest)
+          (v name)))))
+  (judgment
+    EnterDefinition
+    [decls found args]
+    (match
+      (v found)
+      (case
+        (pm
+          def
+          (pv declared)
+          (pv params)
+          (pv result)
+          (pv body))
+        (if
+          (prim
+            eq
+            (prim
+              len
+              (v args))
+            (prim
+              len
+              (v params)))
+          (call
+            Eval
+            (v decls)
+            (call
+              BindParameters
+              (v params)
+              (v args)
+              (lst))
+            (v body))
+          (mk
+            closure
+            (v declared)
+            (v args))))
+      (case
+        _
+        (fail
+          eval-error
+          (q "malformed definition")))))
+  (judgment
+    StrataApplyValue
+    [decls fn argument]
+    (match
+      (v fn)
+      (case
+        (pm
+          partial
+          (pv declared)
+          (pv args))
+        (let
+          filled
+          (prim
+            snoc
+            (v args)
+            (v argument))
+          (match
+            (call
+              FindConstructor
+              (v decls)
+              (v declared))
+            (case
+              (pm
+                some
+                (pm
+                  constructor
+                  (pv owner)
+                  (pv arity)))
+              (if
+                (prim
+                  eq
+                  (prim
+                    len
+                    (v filled))
+                  (v arity))
+                (prim
+                  node
+                  (v declared)
+                  (v filled))
+                (mk
+                  partial
+                  (v declared)
+                  (v filled))))
+            (case
+              (pm none)
+              (fail
+                eval-error
+                (q "unknown constructor"))))))
+      (case
+        (pm
+          closure
+          (pv declared)
+          (pv args))
+        (let
+          filled
+          (prim
+            snoc
+            (v args)
+            (v argument))
+          (match
+            (call
+              FindDefinition
+              (v decls)
+              (v declared))
+            (case
+              (pm
+                some
+                (pv found))
+              (call
+                EnterDefinition
+                (v decls)
+                (v found)
+                (v filled)))
+            (case
+              (pm none)
+              (fail
+                eval-error
+                (q "unknown definition"))))))
+      (case
+        (pm
+          native
+          (pv declared)
+          (pv arity)
+          (pv args))
+        (let
+          filled
+          (prim
+            snoc
+            (v args)
+            (v argument))
+          (if
+            (prim
+              eq
+              (prim
+                len
+                (v filled))
+              (v arity))
+            (call
+              NativePrimitive
+              (v declared)
+              (v filled))
+            (mk
+              native
+              (v declared)
+              (v arity)
+              (v filled)))))
+      (case
+        _
+        (fail
+          eval-error
+          (q "cannot apply a value that is not a function")))))
+  (judgment
+    BindParameters
+    [params args env]
+    (match
+      (v params)
+      (case
+        (pnil)
+        (v env))
+      (case
+        (pcons
+          (pm
+            Param
+            (pv name)
+            (pv declared))
+          (pv rest))
+        (match
+          (v args)
+          (case
+            (pnil)
+            (fail
+              eval-error
+              (q "argument count does not match parameters")))
+          (case
+            (pcons
+              (pv argument)
+              (pv remaining))
+            (call
+              BindParameters
+              (v rest)
+              (v remaining)
+              (prim
+                cons
+                (mk
+                  bind
+                  (v name)
+                  (v argument))
+                (v env))))))
+      (case
+        _
+        (fail
+          eval-error
+          (q "malformed parameter")))))
+  (judgment
+    CaseList
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          Cases
+          (pv left)
+          (pv right))
+        (prim
+          snoc
+          (call
+            CaseList
+            (v left))
+          (v right)))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    MatchCases
+    [decls env value cases]
+    (match
+      (v cases)
+      (case
+        (pnil)
+        (fail
+          eval-error
+          (q "no case matches the scrutinee")))
+      (case
+        (pcons
+          (pm
+            Case
+            (pv pattern)
+            (pv body))
+          (pv rest))
+        (match
+          (call
+            MatchPattern
+            (v decls)
+            (v pattern)
+            (v value)
+            (v env))
+          (case
+            (pm
+              some
+              (pv bound))
+            (call
+              Eval
+              (v decls)
+              (v bound)
+              (v body)))
+          (case
+            (pm none)
+            (call
+              MatchCases
+              (v decls)
+              (v env)
+              (v value)
+              (v rest)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          MatchCases
+          (v decls)
+          (v env)
+          (v value)
+          (v rest)))))
+  (judgment
+    MatchPattern
+    [decls pattern value env]
+    (match
+      (v pattern)
+      (case
+        (pm PatWild)
+        (mk
+          some
+          (v env)))
+      (case
+        (pm
+          PatVar
+          (pv name))
+        (match
+          (call
+            FindConstructor
+            (v decls)
+            (v name))
+          (case
+            (pm
+              some
+              (pm
+                constructor
+                (pv declared)
+                (pv arity)))
+            (call
+              MatchTag
+              (v declared)
+              (v value)
+              (v env)))
+          (case
+            (pm none)
+            (mk
+              some
+              (prim
+                cons
+                (mk
+                  bind
+                  (v name)
+                  (v value))
+                (v env))))))
+      (case
+        (pm
+          PatApply
+          (pv left)
+          (pv right))
+        (call
+          MatchSpine
+          (v decls)
+          (call
+            PatternSpine
+            (v pattern))
+          (v value)
+          (v env)))
+      (case
+        _
+        (mk none))))
+  (judgment
+    MatchTag
+    [declared value env]
+    (if
+      (prim
+        is-node
+        (v value))
+      (if
+        (prim
+          eq
+          (prim
+            tag
+            (v value))
+          (v declared))
+        (mk
+          some
+          (v env))
+        (mk none))
+      (mk none)))
+  (judgment
+    PatternSpine
+    [node]
+    (match
+      (v node)
+      (case
+        (pm
+          PatApply
+          (pv left)
+          (pv right))
+        (prim
+          snoc
+          (call
+            PatternSpine
+            (v left))
+          (v right)))
+      (case
+        _
+        (lst
+          (v node)))))
+  (judgment
+    MatchSpine
+    [decls parts value env]
+    (match
+      (v parts)
+      (case
+        (pcons
+          (pm
+            PatVar
+            (pv declared))
+          (pv subs))
+        (if
+          (prim
+            is-node
+            (v value))
+          (if
+            (prim
+              eq
+              (prim
+                tag
+                (v value))
+              (v declared))
+            (call
+              MatchArguments
+              (v decls)
+              (v subs)
+              (prim
+                args
+                (v value))
+              (v env))
+            (mk none))
+          (mk none)))
+      (case
+        _
+        (mk none))))
+  (judgment
+    MatchArguments
+    [decls subs args env]
+    (match
+      (v subs)
+      (case
+        (pnil)
+        (mk
+          some
+          (v env)))
+      (case
+        (pcons
+          (pv pattern)
+          (pv rest))
+        (match
+          (v args)
+          (case
+            (pnil)
+            (mk none))
+          (case
+            (pcons
+              (pv argument)
+              (pv remaining))
+            (match
+              (call
+                MatchPattern
+                (v decls)
+                (v pattern)
+                (v argument)
+                (v env))
+              (case
+                (pm
+                  some
+                  (pv bound))
+                (call
+                  MatchArguments
+                  (v decls)
+                  (v rest)
+                  (v remaining)
+                  (v bound)))
+              (case
+                (pm none)
+                (mk none))))))))
+  (judgment
+    EvalExample
+    [grammar source]
+    (let
+      parsed
+      (call
+        ParseStrata
+        (v grammar)
+        (v source))
+      (call
+        EvalName
+        (call
+          Declarations
+          (v parsed))
+        (lst)
+        (q example)))))

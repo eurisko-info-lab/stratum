@@ -1,0 +1,313 @@
+
+artifactsource
+source
+path#features/governance/governance.meta
+textÛRmodule governance
+
+; Repository changes become constitutionally accepted rather than merely
+; well formed.
+;
+; The host verifies cryptographic equations. Entitlement, scope, subject
+; binding, expiry, acceptable evidence, required tests, the decision procedure
+; and resource limits are all decided here.
+
+record Signer [key]
+record Claim [subject predicate object]
+record ProofGoal [statement]
+record ProofTerm [goal steps]
+record TestEvidence [name outcome]
+record AuthorityScope [kinds languages]
+record Authority [identity scope expiry]
+record AcceptanceConstitution [name requirements scope tests budget]
+record ResourceProfile [steps depth]
+record Proposal [patch predecessor kind authority signature claims proofs tests profile]
+record AcceptanceDecision [
+  accepted reason constitution authority patch predecessor support
+]
+
+; ------------------------------------------------------------ subject binding
+
+; Acceptance evidence binds the exact patch, predecessor and constitution.
+judgment SubjectOf [proposal constitution] =
+  mk #subject [
+    call Proposal'patch [proposal]
+    call Proposal'predecessor [proposal]
+    call AcceptanceConstitution'name [constitution]
+  ]
+
+judgment SignSubject [secret subject] =
+  match cap #sign [secret subject] {
+    case (#ok signature) -> signature
+    case (#denied reason) -> fail #capability-denied "signing is not constituted"
+  }
+
+judgment PublicKey [secret] =
+  match cap #public-key [secret] {
+    case (#ok key) -> key
+    case (#denied reason) -> fail #capability-denied "key derivation is not constituted"
+  }
+
+judgment VerifySubject [key subject signature] =
+  match cap #verify [key subject signature] {
+    case (#ok result) -> result
+    case (#denied reason) -> false
+  }
+
+; ------------------------------------------------------------------ checks
+
+judgment CheckAuthority [authority now kind] =
+  if prim #lt [call Authority'expiry [authority] now]
+  then mk #invalid [#expired-authority]
+  else
+    if prim #contains [call AuthorityScope'kinds [call Authority'scope [authority]] kind]
+    then mk #valid []
+    else mk #invalid [#out-of-scope]
+
+judgment CheckSignature [proposal constitution] =
+  let authority = call Proposal'authority [proposal] in
+  if call VerifySubject [
+       call Signer'key [call Authority'identity [authority]]
+       call SubjectOf [proposal constitution]
+       call Proposal'signature [proposal]
+     ]
+  then mk #valid []
+  else mk #invalid [#bad-signature]
+
+judgment TestOutcome [tests name] =
+  match tests {
+    case [] -> mk #missing []
+    case head :: rest ->
+      if prim #eq [call TestEvidence'name [head] name]
+      then mk #outcome [call TestEvidence'outcome [head]]
+      else call TestOutcome [rest name]
+  }
+
+judgment CheckTests [required provided] =
+  match required {
+    case [] -> mk #valid []
+    case head :: rest ->
+      match call TestOutcome [provided head] {
+        case (#missing) -> mk #invalid [#missing-test-evidence]
+        case (#outcome result) ->
+          if prim #eq [result #pass]
+          then call CheckTests [rest provided]
+          else mk #invalid [#failing-test]
+      }
+  }
+
+; ---------------------------------------------------------- proof checking
+
+judgment ApplyStep [assumptions derived step] =
+  match step {
+    case (#axiom claim) ->
+      if prim #contains [assumptions claim]
+      then mk #ok [prim #snoc [derived claim]]
+      else mk #failed [#unjustified-axiom]
+    case (#modusPonens implication antecedent) ->
+      if prim #contains [derived implication]
+      then
+        if prim #contains [derived antecedent]
+        then
+          match implication {
+            case (#implies left right) ->
+              if prim #eq [left antecedent]
+              then mk #ok [prim #snoc [derived right]]
+              else mk #failed [#antecedent-mismatch]
+            case _ -> mk #failed [#not-an-implication]
+          }
+        else mk #failed [#missing-antecedent]
+      else mk #failed [#missing-implication]
+    case _ -> mk #failed [#unknown-step]
+  }
+
+judgment DeriveProof [assumptions steps derived] =
+  match steps {
+    case [] -> mk #derived [derived]
+    case step :: rest ->
+      match call ApplyStep [assumptions derived step] {
+        case (#ok next) -> call DeriveProof [assumptions rest next]
+        case (#failed reason) -> mk #failed [reason]
+      }
+  }
+
+judgment CheckProof [assumptions goal proof] =
+  if prim #eq [call ProofTerm'goal [proof] goal]
+  then
+    match call DeriveProof [assumptions call ProofTerm'steps [proof] list []] {
+      case (#derived claims) ->
+        if prim #contains [claims call ProofGoal'statement [goal]]
+        then mk #valid []
+        else mk #invalid [#goal-not-derived]
+      case (#failed reason) -> mk #invalid [reason]
+    }
+  else mk #invalid [#evidence-for-another-claim]
+
+judgment CheckProofs [assumptions goals proofs] =
+  match goals {
+    case [] -> mk #valid []
+    case goal :: rest ->
+      match call FindProof [proofs goal] {
+        case (#none) -> mk #invalid [#missing-proof]
+        case (#some proof) ->
+          match call CheckProof [assumptions goal proof] {
+            case (#valid) -> call CheckProofs [assumptions rest proofs]
+            case (#invalid reason) -> mk #invalid [reason]
+          }
+      }
+  }
+
+judgment FindProof [proofs goal] =
+  match proofs {
+    case [] -> mk #none []
+    case head :: rest ->
+      if prim #eq [call ProofGoal'statement [call ProofTerm'goal [head]] call ProofGoal'statement [goal]]
+      then mk #some [head]
+      else call FindProof [rest goal]
+  }
+
+judgment CheckBudget [required profile] =
+  if prim #ge [call ResourceProfile'steps [profile] call ResourceProfile'steps [required]]
+  then mk #valid []
+  else mk #invalid [#insufficient-resource-budget]
+
+judgment CheckKind [constitution proposal] =
+  if prim #contains [
+       call AuthorityScope'kinds [call AcceptanceConstitution'scope [constitution]]
+       call Proposal'kind [proposal]
+     ]
+  then mk #valid []
+  else mk #invalid [#kind-not-governed]
+
+; --------------------------------------------------------------- decision
+
+judgment CheckRequirement [constitution proposal now requirement] =
+  match requirement {
+    case #kind -> call CheckKind [constitution proposal]
+    case #signature -> call CheckSignature [proposal constitution]
+    case #authority ->
+      call CheckAuthority [
+        call Proposal'authority [proposal]
+        now
+        call Proposal'kind [proposal]
+      ]
+    case #tests ->
+      call CheckTests [call AcceptanceConstitution'tests [constitution] call Proposal'tests [proposal]]
+    case #proof ->
+      call CheckProofs [
+        call Proposal'claims [proposal]
+        call ProofGoals [constitution proposal]
+        call Proposal'proofs [proposal]
+      ]
+    case #budget ->
+      call CheckBudget [call AcceptanceConstitution'budget [constitution] call Proposal'profile [proposal]]
+    case _ -> mk #invalid [#unknown-requirement]
+  }
+
+; The proof obligation of a proposal is that its patch is well founded.
+judgment ProofGoals [constitution proposal] =
+  list [call ProofGoal [mk #well-founded [call Proposal'patch [proposal]]]]
+
+judgment CheckRequirements [constitution proposal now requirements] =
+  match requirements {
+    case [] -> mk #valid []
+    case head :: rest ->
+      match call CheckRequirement [constitution proposal now head] {
+        case (#valid) -> call CheckRequirements [constitution proposal now rest]
+        case (#invalid reason) -> mk #invalid [reason]
+      }
+  }
+
+judgment EvidenceOf [proposal] =
+  mk #evidence [
+    call Proposal'claims [proposal]
+    call Proposal'proofs [proposal]
+    call Proposal'tests [proposal]
+  ]
+
+judgment EvaluateAcceptance [constitution proposal now] =
+  match call CheckRequirements [
+         constitution proposal now
+         call AcceptanceConstitution'requirements [constitution]
+       ] {
+    case (#valid) ->
+      call AcceptanceDecision [
+        true
+        #accepted
+        call AcceptanceConstitution'name [constitution]
+        call Authority'identity [call Proposal'authority [proposal]]
+        call Proposal'patch [proposal]
+        call Proposal'predecessor [proposal]
+        call EvidenceOf [proposal]
+      ]
+    case (#invalid reason) ->
+      call AcceptanceDecision [
+        false
+        reason
+        call AcceptanceConstitution'name [constitution]
+        call Authority'identity [call Proposal'authority [proposal]]
+        call Proposal'patch [proposal]
+        call Proposal'predecessor [proposal]
+        call EvidenceOf [proposal]
+      ]
+  }
+
+judgment DecisionReason [decision] = call AcceptanceDecision'reason [decision]
+
+judgment IsAccepted [decision] = call AcceptanceDecision'accepted [decision]
+
+; ------------------------------------------------------ repository integration
+
+; Publication and promoted foundation construction require accepted patches.
+judgment AllAccepted [decisions] =
+  match decisions {
+    case [] -> true
+    case head :: rest ->
+      if call IsAccepted [head] then call AllAccepted [rest] else false
+  }
+
+judgment PublishableBranch [decisions] =
+  if call AllAccepted [decisions]
+  then mk #publishable []
+  else mk #blocked [#unaccepted-patches]
+
+; ------------------------------------------------------------------- runs
+
+; A run of a document against real state, as the host recorded it.
+;
+; The host can journal what a run wrote and put it back, but an undo is not
+; permission. Whether a run was allowed to do what it did is decided here,
+; against a constitution, exactly as a proposal is. The host dispatched on
+; nothing to produce the record -- it is a keyed map, not a tagged node -- so
+; reading it is this layer's work and not its.
+
+judgment RunSteps [report] = prim #mget [report #steps list []]
+
+judgment RunChanged [report] = prim #mget [report #changed list []]
+
+judgment StepsSucceeded [steps] =
+  match steps {
+    case [] -> true
+    case head :: rest ->
+      if prim #eq [prim #mget [head #exit 0] 0]
+      then call StepsSucceeded [rest]
+      else false
+  }
+
+; A run that took something away and put nothing back is not a change, it is
+; a loss, and a constitution is entitled to refuse it.
+judgment ChangesArePresent [changed] =
+  match changed {
+    case [] -> true
+    case head :: rest ->
+      if prim #mhas [head #after]
+      then call ChangesArePresent [rest]
+      else false
+  }
+
+judgment EvaluateRun [report] =
+  if call StepsSucceeded [call RunSteps [report]]
+  then
+    if call ChangesArePresent [call RunChanged [report]]
+    then mk #valid []
+    else mk #invalid [#removed-without-replacement]
+  else mk #invalid [#step-failed]

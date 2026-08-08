@@ -1,0 +1,969 @@
+; Generated from features/strata/repository.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratarepository)
+  (judgment
+    StrataRepositorySystem
+    [prelude native octets artifact cas repository]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)))
+  (judgment
+    StoredArtifact
+    [reference]
+    (match
+      (cap
+        cas-get
+        (v reference))
+      (case
+        (pm
+          ok
+          (pm
+            artifact
+            (pv kind)
+            (pv body)))
+        (mk
+          stored
+          (prim
+            ref->str
+            (v reference))
+          (prim
+            sym->str
+            (v kind))
+          (v body)))
+      (case
+        _
+        (fail
+          repository-error
+          (q "no artifact is stored under that reference")))))
+  (judgment
+    StoredArtifacts
+    [references]
+    (match
+      (v references)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (call
+            StoredArtifact
+            (v head))
+          (call
+            StoredArtifacts
+            (v rest))))))
+  (judgment
+    ArtifactBody
+    [entries name]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (fail
+          repository-error
+          (prim
+            scat
+            (q "the repository holds no object named ")
+            (v name))))
+      (case
+        (pcons
+          (pm
+            stored
+            (pv held)
+            (pv kind)
+            (pv body))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v held)
+            (v name))
+          (v body)
+          (call
+            ArtifactBody
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (fail
+          repository-error
+          (q "not a stored object")))))
+  (judgment
+    StrataStore
+    [entries]
+    (match
+      (v entries)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoStored)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            stored
+            (pv name)
+            (pv kind)
+            (pv body))
+          (pv rest))
+        (mk
+          MoreStored
+          (v name)
+          (mk
+            Artifact
+            (v kind)
+            (call
+              ReadCanonValue
+              (v body)))
+          (call
+            StrataStore
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (fail
+          repository-error
+          (q "not a stored object")))))
+  (judgment
+    RepositoryStore
+    [references]
+    (call
+      StrataStore
+      (call
+        StoredArtifacts
+        (v references))))
+  (judgment
+    JoinRefs
+    [a b]
+    (match
+      (v a)
+      (case
+        (pnil)
+        (v b))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (v head)
+          (call
+            JoinRefs
+            (v rest)
+            (v b))))))
+  (judgment
+    RefsIn
+    [value]
+    (if
+      (prim
+        is-ref
+        (v value))
+      (lst
+        (v value))
+      (if
+        (prim
+          is-list
+          (v value))
+        (call
+          RefsInEach
+          (v value))
+        (if
+          (prim
+            is-map
+            (v value))
+          (call
+            RefsInEach
+            (prim
+              mentries
+              (v value)))
+          (if
+            (prim
+              is-node
+              (v value))
+            (call
+              RefsInEach
+              (prim
+                args
+                (v value)))
+            (lst))))))
+  (judgment
+    RefsInEach
+    [items]
+    (match
+      (v items)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (call
+          JoinRefs
+          (call
+            RefsIn
+            (v head))
+          (call
+            RefsInEach
+            (v rest))))))
+  (judgment
+    StoredBody
+    [entry]
+    (match
+      (v entry)
+      (case
+        (pm
+          stored
+          (pv name)
+          (pv kind)
+          (pv body))
+        (v body))
+      (case
+        _
+        (fail
+          repository-error
+          (q "not a stored object")))))
+  (judgment
+    AlreadyReached
+    [seen name]
+    (match
+      (v seen)
+      (case
+        (pnil)
+        (q #f))
+      (case
+        (pcons
+          (pm
+            stored
+            (pv held)
+            (pv kind)
+            (pv body))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v held)
+            (v name))
+          (q #t)
+          (call
+            AlreadyReached
+            (v rest)
+            (v name))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (q #f))))
+  (judgment
+    ReachedFrom
+    [pending seen]
+    (match
+      (v pending)
+      (case
+        (pnil)
+        (v seen))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (if
+          (call
+            AlreadyReached
+            (v seen)
+            (prim
+              ref->str
+              (v head)))
+          (call
+            ReachedFrom
+            (v rest)
+            (v seen))
+          (let
+            found
+            (call
+              StoredArtifact
+              (v head))
+            (call
+              ReachedFrom
+              (call
+                JoinRefs
+                (v rest)
+                (call
+                  RefsIn
+                  (call
+                    StoredBody
+                    (v found))))
+              (prim
+                cons
+                (v found)
+                (v seen))))))))
+  (judgment
+    ChainFrom
+    [head]
+    (call
+      ReachedFrom
+      (lst
+        (v head))
+      (lst)))
+  (judgment
+    AskRepository
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.repository")
+      (v entry)
+      (v arguments)))
+  (judgment
+    StrataSaysOf
+    [grammar sources references reference entry]
+    (call
+      AskRepository
+      (v grammar)
+      (v sources)
+      (v entry)
+      (lst
+        (call
+          RepositoryStore
+          (v references))
+        (prim
+          ref->str
+          (v reference)))))
+  (judgment
+    StrataSaysWith
+    [grammar sources references reference other entry]
+    (call
+      AskRepository
+      (v grammar)
+      (v sources)
+      (v entry)
+      (lst
+        (call
+          RepositoryStore
+          (v references))
+        (prim
+          ref->str
+          (v reference))
+        (prim
+          ref->str
+          (v other)))))
+  (judgment
+    StrataVerifiesChain
+    [grammar sources references head]
+    (let
+      verdict
+      (call
+        StrataSaysOf
+        (v grammar)
+        (v sources)
+        (v references)
+        (v head)
+        (q verdictOn))
+      (if
+        (prim
+          eq
+          (v verdict)
+          (q "valid"))
+        (mk
+          verified
+          (q ok))
+        (mk
+          verified
+          (v verdict)))))
+  (judgment
+    BlockParts
+    [entries head]
+    (match
+      (call
+        ArtifactBody
+        (v entries)
+        (v head))
+      (case
+        (pm
+          block
+          (pv height)
+          (pv predecessor)
+          (pv patch)
+          (pv profile))
+        (match
+          (call
+            ArtifactBody
+            (v entries)
+            (prim
+              ref->str
+              (v patch)))
+          (case
+            (pm
+              patch
+              (pv before)
+              (pv tree)
+              (pv message)
+              (pv changes))
+            (mk
+              parts
+              (v predecessor)
+              (prim
+                ref->str
+                (v tree))
+              (v message)
+              (prim
+                ref->str
+                (v profile))))
+          (case
+            _
+            (fail
+              repository-error
+              (q "the block names something that is not a patch")))))
+      (case
+        _
+        (fail
+          repository-error
+          (q "that is not a block")))))
+  (judgment
+    StrataRecordsAgain
+    [grammar sources references head]
+    (let
+      entries
+      (call
+        StoredArtifacts
+        (v references))
+      (let
+        name
+        (prim
+          ref->str
+          (v head))
+        (match
+          (call
+            BlockParts
+            (v entries)
+            (v name))
+          (case
+            (pm
+              parts
+              (pv predecessor)
+              (pv tree)
+              (pv message)
+              (pv profile))
+            (call
+              RecordedIs
+              (v grammar)
+              (v sources)
+              (v entries)
+              (v name)
+              (v predecessor)
+              (v tree)
+              (v message)
+              (v profile)))
+          (case
+            _
+            (fail
+              repository-error
+              (q "malformed parts")))))))
+  (judgment
+    StrataRecordsAgainSaying
+    [grammar sources references head message]
+    (let
+      entries
+      (call
+        StoredArtifacts
+        (v references))
+      (let
+        name
+        (prim
+          ref->str
+          (v head))
+        (match
+          (call
+            BlockParts
+            (v entries)
+            (v name))
+          (case
+            (pm
+              parts
+              (pv predecessor)
+              (pv tree)
+              (pv spoken)
+              (pv profile))
+            (call
+              RecordedIs
+              (v grammar)
+              (v sources)
+              (v entries)
+              (v name)
+              (v predecessor)
+              (v tree)
+              (v message)
+              (v profile)))
+          (case
+            _
+            (fail
+              repository-error
+              (q "malformed parts")))))))
+  (judgment
+    RecordedIs
+    [grammar sources entries name predecessor tree message profile]
+    (if
+      (prim
+        eq
+        (v name)
+        (call
+          RecordedName
+          (v grammar)
+          (v sources)
+          (v entries)
+          (v predecessor)
+          (v tree)
+          (v message)
+          (v profile)))
+      (mk
+        recorded
+        (q ok))
+      (mk
+        recorded
+        (q mismatch))))
+  (judgment
+    RecordedName
+    [grammar sources entries predecessor tree message profile]
+    (call
+      AskRepository
+      (v grammar)
+      (v sources)
+      (call
+        RecordEntry
+        (v predecessor))
+      (call
+        RecordArguments
+        (call
+          StrataStore
+          (v entries))
+        (v predecessor)
+        (v tree)
+        (v message)
+        (v profile))))
+  (judgment
+    StrataRecordsNameFrom
+    [grammar sources head]
+    (let
+      entries
+      (call
+        ChainFrom
+        (v head))
+      (match
+        (call
+          BlockParts
+          (v entries)
+          (prim
+            ref->str
+            (v head)))
+        (case
+          (pm
+            parts
+            (pv predecessor)
+            (pv tree)
+            (pv message)
+            (pv profile))
+          (call
+            RecordedName
+            (v grammar)
+            (v sources)
+            (v entries)
+            (v predecessor)
+            (v tree)
+            (v message)
+            (v profile)))
+        (case
+          _
+          (fail
+            repository-error
+            (q "malformed parts"))))))
+  (judgment
+    StrataVerdictFrom
+    [grammar sources head]
+    (call
+      AskRepository
+      (v grammar)
+      (v sources)
+      (q verdictOn)
+      (lst
+        (call
+          StrataStore
+          (call
+            ChainFrom
+            (v head)))
+        (prim
+          ref->str
+          (v head)))))
+  (judgment
+    RecordEntry
+    [predecessor]
+    (if
+      (prim
+        is-ref
+        (v predecessor))
+      (q recordedNameOn)
+      (q recordedGenesisOn)))
+  (judgment
+    RecordArguments
+    [store predecessor tree message profile]
+    (if
+      (prim
+        is-ref
+        (v predecessor))
+      (lst
+        (v store)
+        (prim
+          ref->str
+          (v predecessor))
+        (v tree)
+        (v message)
+        (v profile))
+      (lst
+        (v store)
+        (v tree)
+        (v message)
+        (v profile))))
+  (judgment
+    SwappedStore
+    [entries head]
+    (match
+      (call
+        ArtifactBody
+        (v entries)
+        (v head))
+      (case
+        (pm
+          block
+          (pv height)
+          (pv predecessor)
+          (pv patch)
+          (pv profile))
+        (let
+          name
+          (prim
+            ref->str
+            (v patch))
+          (call
+            ReplaceStored
+            (v entries)
+            (v name)
+            (call
+              LyingPatch
+              (call
+                ArtifactBody
+                (v entries)
+                (v name))))))
+      (case
+        _
+        (fail
+          repository-error
+          (q "that is not a block")))))
+  (judgment
+    ReplaceStored
+    [entries name body]
+    (match
+      (v entries)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            stored
+            (pv held)
+            (pv kind)
+            (pv stored))
+          (pv rest))
+        (if
+          (prim
+            eq
+            (v held)
+            (v name))
+          (prim
+            cons
+            (mk
+              stored
+              (v held)
+              (v kind)
+              (v body))
+            (call
+              ReplaceStored
+              (v rest)
+              (v name)
+              (v body)))
+          (prim
+            cons
+            (mk
+              stored
+              (v held)
+              (v kind)
+              (v stored))
+            (call
+              ReplaceStored
+              (v rest)
+              (v name)
+              (v body)))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (fail
+          repository-error
+          (q "not a stored object")))))
+  (judgment
+    LyingChainHead
+    [entries head]
+    (match
+      (call
+        ArtifactBody
+        (v entries)
+        (v head))
+      (case
+        (pm
+          block
+          (pv height)
+          (pv predecessor)
+          (pv patch)
+          (pv profile))
+        (let
+          lying
+          (call
+            LyingPatch
+            (call
+              ArtifactBody
+              (v entries)
+              (prim
+                ref->str
+                (v patch))))
+          (prim
+            digest
+            (call
+              Envelope
+              (q block)
+              (prim
+                node
+                (q block)
+                (lst
+                  (v height)
+                  (v predecessor)
+                  (prim
+                    digest
+                    (call
+                      Envelope
+                      (q patch)
+                      (v lying)))
+                  (v profile)))))))
+      (case
+        _
+        (fail
+          repository-error
+          (q "that is not a block")))))
+  (judgment
+    LyingStore
+    [entries head]
+    (match
+      (call
+        ArtifactBody
+        (v entries)
+        (v head))
+      (case
+        (pm
+          block
+          (pv height)
+          (pv predecessor)
+          (pv patch)
+          (pv profile))
+        (let
+          lying
+          (call
+            LyingPatch
+            (call
+              ArtifactBody
+              (v entries)
+              (prim
+                ref->str
+                (v patch))))
+          (let
+            lyingBlock
+            (prim
+              node
+              (q block)
+              (lst
+                (v height)
+                (v predecessor)
+                (prim
+                  digest
+                  (call
+                    Envelope
+                    (q patch)
+                    (v lying)))
+                (v profile)))
+            (prim
+              cons
+              (mk
+                stored
+                (prim
+                  ref->str
+                  (prim
+                    digest
+                    (call
+                      Envelope
+                      (q block)
+                      (v lyingBlock))))
+                (q "block")
+                (v lyingBlock))
+              (prim
+                cons
+                (mk
+                  stored
+                  (prim
+                    ref->str
+                    (prim
+                      digest
+                      (call
+                        Envelope
+                        (q patch)
+                        (v lying))))
+                  (q "patch")
+                  (v lying))
+                (v entries))))))
+      (case
+        _
+        (fail
+          repository-error
+          (q "that is not a block")))))
+  (judgment
+    Envelope
+    [kind body]
+    (prim
+      node
+      (q artifact)
+      (lst
+        (v kind)
+        (v body))))
+  (judgment
+    LyingPatch
+    [body]
+    (match
+      (v body)
+      (case
+        (pm
+          patch
+          (pv predecessor)
+          (pv tree)
+          (pv message)
+          (pv changes))
+        (prim
+          node
+          (q patch)
+          (lst
+            (v predecessor)
+            (v tree)
+            (v message)
+            (call
+              LyingChanges
+              (v changes)))))
+      (case
+        _
+        (fail
+          repository-error
+          (q "that is not a patch")))))
+  (judgment
+    LyingChanges
+    [changes]
+    (match
+      (v changes)
+      (case (pnil) (lst))
+      (case
+        (pcons
+          (pm
+            replace
+            (pv path)
+            (pv before)
+            (pv after))
+          (pv rest))
+        (prim
+          cons
+          (prim
+            node
+            (q replace)
+            (lst
+              (v path)
+              (call NothingIsThere)
+              (v after)))
+          (call
+            LyingChanges
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (prim
+          cons
+          (v head)
+          (call
+            LyingChanges
+            (v rest))))))
+  (judgment
+    NothingIsThere
+    []
+    (q "0000000000000000000000000000000000000000000000000000000000000000"))
+  (judgment
+    StrataRefusesSwapped
+    [grammar sources references head]
+    (let
+      entries
+      (call
+        StoredArtifacts
+        (v references))
+      (call
+        AskRepository
+        (v grammar)
+        (v sources)
+        (q verdictOn)
+        (lst
+          (call
+            StrataStore
+            (call
+              SwappedStore
+              (v entries)
+              (prim
+                ref->str
+                (v head))))
+          (prim
+            ref->str
+            (v head))))))
+  (judgment
+    StrataRefusesLying
+    [grammar sources references head]
+    (let
+      entries
+      (call
+        StoredArtifacts
+        (v references))
+      (call
+        AskRepository
+        (v grammar)
+        (v sources)
+        (q verdictOn)
+        (lst
+          (call
+            StrataStore
+            (call
+              LyingStore
+              (v entries)
+              (prim
+                ref->str
+                (v head))))
+          (prim
+            ref->str
+            (call
+              LyingChainHead
+              (v entries)
+              (prim
+                ref->str
+                (v head)))))))))

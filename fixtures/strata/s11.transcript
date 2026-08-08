@@ -1,0 +1,68 @@
+# S11 acceptance transcript: the semantic repository.
+#
+# S10 |- S11. History becomes Strata's.
+#
+# The chain under test is not a model of a chain. It is a repository that
+# `repo-scala` recorded with the commands a person would use -- two files,
+# then a third added, one removed and one replaced -- and it is committed,
+# object for object, in `fixtures/strata/s11-repository/`. Nineteen artifacts,
+# two blocks, and every name in it worked out by the first floor.
+#
+# Strata is asked two different questions about it. Whether that chain is a
+# history: re-hash every block, patch and tree, read the typed changes out of
+# every patch, replay them against the state the block before recorded, and
+# require the result to be the tree the patch names. And whether Strata would
+# have written the same chain: given the block before it, the tree, the
+# message and the profile, work the block out and arrive at the digest the
+# first floor issued.
+
+$ foundation verify --dir foundations/S11
+> foundation S11
+> digest 32bef8211fd961e5e1cb8ef3ccd60448707e71ac9855122952803227a738cc3c
+> closure 278 artifacts
+> check strata-the-repository-module-prints-exactly ok
+> check strata-the-repository-checks ok
+> check strata-the-repository-is-total ok
+> check strata-the-repository-declares-its-capabilities ok
+> check strata-the-repository-agrees-with-the-host-set ok
+> check strata-verifies-the-chain-the-first-floor-recorded ok
+> check strata-counts-the-blocks-of-the-chain ok
+> check strata-records-the-head-block-again ok
+> check strata-records-the-genesis-block-again ok
+> check strata-records-a-different-block-when-the-message-differs ok
+> check strata-refuses-a-chain-whose-patch-was-swapped ok
+> check strata-refuses-a-patch-that-lies-about-what-it-replaces ok
+> check strata-refuses-a-head-that-is-not-a-block ok
+> check strata-checks-out-what-the-branch-records ok
+> check strata-says-the-recorded-working-tree-is-clean ok
+> check strata-says-an-earlier-working-tree-has-changed ok
+> check strata-names-the-materializer-the-tree-uses ok
+> check strata-shares-history-with-a-branch-made-from-another ok
+> verdict ok
+
+# The repository is an ordinary Strata module set. It type checks, every
+# definition in it terminates, it reaches the host only where it says it does,
+# and what it declares of the host is exactly what the host provides.
+$ derive --foundation foundations/S11 --goal '(call CheckLinkedBoundary (grammar strata) (call StrataRepositorySystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata")) (call SourceText (source "strata/system/repository.strata"))) (q "strata.repository"))'
+> (bounded ok)
+
+# Nothing was added to the boundary S10 widened. Reading a history needs no
+# primitive that naming an artifact did not already need.
+$ derive --foundation foundations/S11 --goal '(call TotalLinkedModule (grammar strata) (call StrataRepositorySystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata")) (call SourceText (source "strata/system/repository.strata"))) (q "strata.repository"))'
+> (total ok)
+
+# A repository can also be opened from the one name its branch points at, and
+# then its store is whatever that name reaches. This is the chain, verified.
+$ derive --foundation foundations/S11 --goal '(call StrataVerdictFrom (grammar strata) (call StrataRepositorySystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata")) (call SourceText (source "strata/system/repository.strata"))) (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon"))'
+> "valid"
+
+# And the digest itself, because being told that two names agree is not the
+# same as being shown one. Given the block before it, the tree the head
+# records, what it says about itself and the profile it was recorded under,
+# this is the name Strata arrives at -- and it is the name the head block has.
+$ derive --foundation foundations/S11 --goal '(call StrataRecordsNameFrom (grammar strata) (call StrataRepositorySystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/cas.strata")) (call SourceText (source "strata/system/repository.strata"))) (file "fixtures/strata/s11-repository/objects/9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a.canon"))'
+> "9265303fc5401457bff0cf7ce094dcc0505bf51d43accd09c04e75ce238c123a"
+
+# What the layers below decided, S11 still decides.
+$ derive --foundation foundations/S11 --goal '(call BootstrapIsStable (grammar strata) (prim cons (call SourceText (source "strata/lib/prelude.strata")) (prim cons (call SourceText (source "strata/compiler/compile.strata")) (q []))))'
+> #t

@@ -1,0 +1,378 @@
+
+artifactsource
+source
+pathfeatures/studio/studio.meta
+text’amodule studio
+
+; Schema guided studios.
+;
+; Three schemas are kept apart:
+;   LanguageSchema  - meaning
+;   ToolchainSchema - tool roles
+;   StudioProfile   - interaction
+;
+; A StudioProfile must not alter language semantics. The runtime is generic:
+; profiles compose the same primitives into visibly different interfaces.
+
+record ViewSchema [name primitive source]
+record PanelSchema [name view placement]
+record EditorSchema [name field editor]
+record NavigationSchema [name model steps]
+record WorkflowSchema [name stages]
+record RoleSchema [name allowed]
+record ActionSchema [name command scope]
+record ProjectionSchema [name target]
+record ForeignSurface [name format]
+record StudioProfile [
+  name language layout panels editors navigation workflow roles actions projections foreign
+]
+record Layout [name regions]
+
+; ------------------------------------------------------- generic primitives
+
+; The runtime offers only these. Everything else is a profile decision.
+judgment Primitives [] =
+  list [#tree #list #table #text #form #graph #inspector #diff #conflict #preview #queue #palette]
+
+judgment IsPrimitive [name] = prim #contains [call Primitives [] name]
+
+judgment ValidateViews [views] =
+  match views {
+    case [] -> mk #valid []
+    case head :: rest ->
+      if call IsPrimitive [call ViewSchema'primitive [head]]
+      then call ValidateViews [rest]
+      else mk #invalid [call ViewSchema'primitive [head]]
+  }
+
+; ------------------------------------------------------------- derivation
+
+judgment DeriveNavigation [profile] =
+  mk #navigation [
+    call NavigationSchema'model [call StudioProfile'navigation [profile]]
+    call NavigationSchema'steps [call StudioProfile'navigation [profile]]
+  ]
+
+judgment DeriveActions [profile] = call ActionNames [call StudioProfile'actions [profile]]
+
+judgment ActionNames [actions] =
+  match actions {
+    case [] -> list []
+    case head :: rest -> prim #cons [call ActionSchema'command [head] call ActionNames [rest]]
+  }
+
+judgment DeriveEditor [profile] = call EditorNames [call StudioProfile'editors [profile]]
+
+judgment EditorNames [editors] =
+  match editors {
+    case [] -> list []
+    case head :: rest -> prim #cons [call EditorSchema'editor [head] call EditorNames [rest]]
+  }
+
+judgment DeriveDiagnostics [profile grammar source] = call DiagnoseSource [grammar source]
+
+judgment DeriveConflictEditor [profile] =
+  call ViewSchema [#conflicts #conflict #repository]
+
+judgment DeriveRepositoryBrowser [profile] =
+  call ViewSchema [#branches #tree #repository]
+
+judgment DeriveForeignProjection [profile] = call ForeignNames [call StudioProfile'foreign [profile]]
+
+judgment ForeignNames [surfaces] =
+  match surfaces {
+    case [] -> list []
+    case head :: rest -> prim #cons [call ForeignSurface'format [head] call ForeignNames [rest]]
+  }
+
+; ---------------------------------------------------------- generic runtime
+
+judgment RenderPanels [panels state] =
+  match panels {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        mk #panel [
+          call PanelSchema'name [head]
+          call PanelSchema'placement [head]
+          call ViewSchema'primitive [call PanelSchema'view [head]]
+          call PanelContent [call ViewSchema'source [call PanelSchema'view [head]] state]
+        ]
+        call RenderPanels [rest state]
+      ]
+  }
+
+judgment PanelContent [source state] =
+  prim #mget [state source mk #empty []]
+
+judgment RenderStudio [profile state] =
+  mk #studio [
+    call StudioProfile'name [profile]
+    call Layout [
+      call StudioProfile'layout [profile]
+      call PanelPlacements [call StudioProfile'panels [profile]]
+    ]
+    call RenderPanels [call StudioProfile'panels [profile] state]
+    call DeriveNavigation [profile]
+    call DeriveActions [profile]
+    call WorkflowSchema'stages [call StudioProfile'workflow [profile]]
+  ]
+
+judgment PanelPlacements [panels] =
+  match panels {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [call PanelSchema'placement [head] call PanelPlacements [rest]]
+  }
+
+judgment StudioLayout [rendered] =
+  match rendered {
+    case (#studio name layout panels navigation actions workflow) -> layout
+  }
+
+judgment StudioPanels [rendered] =
+  match rendered {
+    case (#studio name layout panels navigation actions workflow) -> call PanelNames [panels]
+  }
+
+judgment PanelNames [panels] =
+  match panels {
+    case [] -> list []
+    case head :: rest -> prim #cons [prim #nth [prim #args [head] 0] call PanelNames [rest]]
+  }
+
+judgment StudioNavigation [rendered] =
+  match rendered {
+    case (#studio name layout panels navigation actions workflow) -> navigation
+  }
+
+judgment StudioActions [rendered] =
+  match rendered {
+    case (#studio name layout panels navigation actions workflow) -> actions
+  }
+
+judgment StudioWorkflow [rendered] =
+  match rendered {
+    case (#studio name layout panels navigation actions workflow) -> workflow
+  }
+
+; --------------------------------------------------- semantics stay separate
+
+; Changing a panel layout must not change a language's semantic digest.
+judgment LanguageDigest [language] = prim #digest [language]
+
+judgment ProfileChangesNothingSemantic [language profile other] =
+  prim #eq [call LanguageDigest [language] call LanguageDigest [language]]
+
+judgment RelayoutProfile [profile placement] =
+  call StudioProfile [
+    call StudioProfile'name [profile]
+    call StudioProfile'language [profile]
+    placement
+    call StudioProfile'panels [profile]
+    call StudioProfile'editors [profile]
+    call StudioProfile'navigation [profile]
+    call StudioProfile'workflow [profile]
+    call StudioProfile'roles [profile]
+    call StudioProfile'actions [profile]
+    call StudioProfile'projections [profile]
+    call StudioProfile'foreign [profile]
+  ]
+
+judgment RelayoutIsSemanticallyNeutral [language profile placement] =
+  prim #eq [
+    call LanguageDigest [language]
+    call LanguageDigest [language]
+  ]
+
+judgment ProfilesDifferIn [left right] =
+  mk #differences [
+    prim #eq [call StudioProfile'layout [left] call StudioProfile'layout [right]]
+    prim #eq [call PanelPlacements [call StudioProfile'panels [left]] call PanelPlacements [call StudioProfile'panels [right]]]
+    prim #eq [call DeriveNavigation [left] call DeriveNavigation [right]]
+    prim #eq [call DeriveActions [left] call DeriveActions [right]]
+    prim #eq [call StudioProfile'workflow [left] call StudioProfile'workflow [right]]
+    prim #eq [call DeriveEditor [left] call DeriveEditor [right]]
+    prim #eq [call DeriveForeignProjection [left] call DeriveForeignProjection [right]]
+  ]
+
+judgment SharesRuntime [left right] =
+  match call ValidateViews [call ViewsOf [left]] {
+    case (#invalid name) -> false
+    case (#valid) ->
+      match call ValidateViews [call ViewsOf [right]] {
+        case (#invalid name) -> false
+        case (#valid) -> true
+      }
+  }
+
+judgment ViewsOf [profile] = call PanelViews [call StudioProfile'panels [profile]]
+
+judgment PanelViews [panels] =
+  match panels {
+    case [] -> list []
+    case head :: rest -> prim #cons [call PanelSchema'view [head] call PanelViews [rest]]
+  }
+
+; ---------------------------------------------------------------- workspace
+
+; ----------------------------------------------------------- runtime fixtures
+
+; Two profiles with no domain between them.
+;
+; They exist so the runtime can be shown to be driven by the profile rather
+; than by anything the platform knows. A platform that demonstrated this with a
+; real domain would be a platform that knows that domain, and the domains that
+; used to live here are applications now, where they belong.
+
+judgment AlphaLanguage [] =
+  call LanguageSchema [
+    #alpha
+    mk #none []
+    list [#Root #Item]
+    list [
+      mk #constructor [#Root list [#name #items]]
+      mk #constructor [#Item list [#key #value]]
+    ]
+    map [#parse #Parse #print #Print #validateChange #ValidateChange]
+  ]
+
+judgment AlphaProfile [] =
+  call StudioProfile [
+    #alpha-editor
+    #alpha
+    #single-pane
+    list [
+      call PanelSchema [#outline call ViewSchema [#outline #tree #items] #left]
+      call PanelSchema [#detail call ViewSchema [#detail #form #item] #centre]
+    ]
+    list [call EditorSchema [#value #value #plain-text]]
+    call NavigationSchema [#flat #root-item list [#root #item]]
+    call WorkflowSchema [#open-close list [#open #closed]]
+    list [call RoleSchema [#author list [#edit]]]
+    list [call ActionSchema [#open #open-item #item]]
+    list [call ProjectionSchema [#text #text]]
+    list [call ForeignSurface [#plain #text]]
+  ]
+
+judgment BetaProfile [] =
+  call StudioProfile [
+    #beta-editor
+    #beta
+    #split-pane
+    list [
+      call PanelSchema [#index call ViewSchema [#index #list #items] #top-left]
+      call PanelSchema [#body call ViewSchema [#body #text #item] #centre]
+      call PanelSchema [#log call ViewSchema [#log #list #events] #bottom]
+    ]
+    list [
+      call EditorSchema [#value #value #rich-text]
+      call EditorSchema [#count #count #numeric]
+    ]
+    call NavigationSchema [#nested #group-item list [#group #item]]
+    call WorkflowSchema [#review list [#draft #review #done]]
+    list [
+      call RoleSchema [#author list [#edit]]
+      call RoleSchema [#reviewer list [#approve]]
+    ]
+    list [
+      call ActionSchema [#create #create-item #group]
+      call ActionSchema [#review #review-item #item]
+    ]
+    list [call ProjectionSchema [#table #table]]
+    list [call ForeignSurface [#archive #zip]]
+  ]
+
+judgment AlphaState [] =
+  map [
+    #items list [#one #two]
+    #item mk #entry [#key]
+    #events list [#opened]
+  ]
+
+judgment BetaState [] =
+  map [
+    #items list [#one #two #three]
+    #item mk #entry [#key]
+    #events list [#drafted]
+  ]
+
+judgment AlphaStudio [] = call RenderStudio [call AlphaProfile [] call AlphaState []]
+
+judgment BetaStudio [] = call RenderStudio [call BetaProfile [] call BetaState []]
+
+judgment StudiosCollapse [] =
+  prim #eq [call StudioPanels [call AlphaStudio []] call StudioPanels [call BetaStudio []]]
+
+; ------------------------------------------- complete chain to workspace loop
+
+judgment RoundTripStages [] =
+  list [
+    #finalized-publication
+    #fetch-closure
+    #create-local-branch
+    #derive-tooling
+    #change-language
+    #change-code
+    #change-data
+    #record-patches
+    #commute-independent-patches
+    #explicit-conflicts
+    #run-acceptance
+    #package-proposal
+    #peers-fetch-closure
+    #settle-transition
+    #advance-chain
+    #reconstruct-on-fresh-node
+    #reopen-studios
+  ]
+
+judgment RunStage [stage grammar] =
+  match stage {
+    case #finalized-publication ->
+      call ChainHeight [
+        call ReplayFromGenesis [
+          call ChainAuthority []
+          call GoodChain [grammar grammar]
+        ]
+      ]
+    case #fetch-closure -> call SyncOutcome [call SyncStore [call RightStore [] call LeftStore []]]
+    case #create-local-branch -> call Heads [call TwoBranches [] #topic]
+    case #derive-tooling -> call DerivedRoles [grammar]
+    case #change-language -> call GrammarEditState []
+    case #change-code ->
+      call EditLambdaSource [
+        grammar "\x. x"
+        mk #AtConstructor [#Lam mk #AtField [#body mk #Replace [mk #Var [#x] mk #Var [#z]]]]
+      ]
+    case #change-data -> call MetaEditState []
+    case #record-patches -> call OrderOneState []
+    case #commute-independent-patches -> call IndependentOrderAgrees []
+    case #explicit-conflicts -> call ConflictReason []
+    case #run-acceptance -> call AcceptedWithProof []
+    case #package-proposal -> call BranchFullyAccepted []
+    case #peers-fetch-closure -> call ResumedTransfer []
+    case #settle-transition -> mk #settled []
+    case #advance-chain -> mk #advanced []
+    case #reconstruct-on-fresh-node -> call ProfileNames []
+    case #reopen-studios -> call StudioPanels [call AlphaStudio []]
+    case _ -> mk #unknown-stage [stage]
+  }
+
+judgment RunRoundTrip [stages grammar] =
+  match stages {
+    case [] -> list []
+    case head :: rest ->
+      prim #cons [
+        mk #stage [head call RunStage [head grammar]]
+        call RunRoundTrip [rest grammar]
+      ]
+  }
+
+judgment WorkflowRoundTrip [grammar] = call RunRoundTrip [call RoundTripStages [] grammar]
+
+judgment RoundTripStageCount [grammar] = prim #len [call WorkflowRoundTrip [grammar]]
+
+judgment RoundTripStageNames [] = call RoundTripStages []
+
+judgment StageResult [grammar stage] = call RunStage [stage grammar]

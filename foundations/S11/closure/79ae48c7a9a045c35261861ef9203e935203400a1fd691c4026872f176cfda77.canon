@@ -1,0 +1,240 @@
+
+artifactsource
+source
+pathstrata/system/repository.strata
+text˜Îmodule "strata.repository"
+version 1
+; History, and the only way it is allowed to advance.
+;
+; S10 moved storage: what a thing is called is worked out from what it is.
+; This moves what a sequence of things means. A repository is a store and a
+; set of branch names; a branch names a block; a block anchors a patch to the
+; block before it; and a patch carries the typed changes that turn the tree
+; the predecessor recorded into the tree this one records.
+;
+; The word that matters is `typed`. A change here is not a run of octets that
+; happens to reconstruct a file. It is `Added`, `Removed` or `Replaced`, each
+; carrying the path it speaks about and the content it expects to find there,
+; and `applyChanges` refuses the ones whose expectation is wrong. Two states
+; of a repository are therefore related by a value that can be read, stored
+; and refused, rather than by the accident that one was written after the
+; other.
+;
+; Nothing here is allowed to write a name. Every name in a chain is the name
+; S10 works out for the artifact it points at, so `recordOn` cannot put a
+; block anywhere but where its own contents put it, and `checkFrom` decides
+; that every name a chain uses is the name its contents earn.
+;
+; The chain walk recurses on a chain of names, which is not structural: the
+; predecessor of a block is not a part of it. So the walk is given a chain to
+; spend, exactly as the varint loop is, and a chain longer than it will walk
+; is refused rather than followed. That is a limit and it is written down.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+
+; ------------------------------------------------------------- reading values
+;
+; An artifact of the first floor arrives as a `Value`, which is the universe
+; S10 decided. Reading one is taking it apart by position, and a position
+; that is not there answers the empty value rather than stopping -- a reader
+; that stops cannot report what it found.
+
+def at0 []: Nat = Zero
+def at1 []: Nat = Succ at0
+def at2 []: Nat = Succ at1
+def at3 []: Nat = Succ at2
+
+def tagOf [v: Value]: Text = match v of case VNode tag arguments -> tag case _ -> "" end
+def argsOf [v: Value]: Values = match v of case VNode tag arguments -> arguments case _ -> NoValue end
+def headValue [vs: Values]: Value = match vs of case NoValue -> VUnit case MoreValue head tail -> head end
+def tailValues [vs: Values]: Values = match vs of case NoValue -> NoValue case MoreValue head tail -> tail end
+def valueAt [vs: Values, n: Nat]: Value = match n of case Zero -> headValue vs case Succ earlier -> valueAt (tailValues vs) earlier end
+def argAt [v: Value, n: Nat]: Value = valueAt (argsOf v) n
+def textIn [v: Value]: Text = match v of case VText spelling -> spelling case _ -> "" end
+def nameIn [v: Value]: Text = match v of case VName naming -> naming case _ -> "" end
+def refIn [v: Value]: Text = match v of case VRef pointing -> pointing case _ -> "" end
+def natIn [v: Value] ! arith: Number = match v of case VNat size -> size case _ -> c0 end
+def listIn [v: Value]: Values = match v of case VList items -> items case _ -> NoValue end
+
+; --------------------------------------------------------------- what follows
+;
+; The first block of a chain follows nothing, and says so with a name rather
+; than with a reference. That distinction is what makes a genesis block
+; recognisable without knowing whether the store happens to be missing
+; something.
+
+data Link = | Genesis [] | Follows [followed #1: Text]
+
+def linkIn [v: Value]: Link = match v of case VRef pointing -> Follows pointing case _ -> Genesis end
+def linkValue [l: Link]: Value = match l of case Genesis -> VName "genesis" case Follows followed -> VRef followed end
+def sameLink [a: Link, b: Link] ! text: Bool = match a of case Genesis -> match b of case Genesis -> True case Follows later -> False end case Follows earlier -> match b of case Genesis -> False case Follows later -> textEq earlier later end end
+
+; ---------------------------------------------------------------- what is held
+;
+; A tree entry says where a file lives, what its content is called, and how it
+; is put back on a disk. The last of those is a decision, not a note: a
+; profile says which materializers a chain may use, and a tree that uses one
+; it does not allow is not a tree this repository will accept.
+
+data Materializer = | KeepsBlob [] | PrintsWithGrammar [] | WritesCanon [] | KeepsNegativeBytes [] | UnknownMaterializer []
+data Entry = | Entry [entryPath #1: Text, entryContent #2: Text, entryMaterializer #3: Text]
+data Entries = | NoEntry [] | MoreEntry [entryHead #1: Entry, entryTail #2: Entries]
+data Tree = | Tree [treeHolds #1: Entries]
+
+def materializerOf [id: Text] ! text: Materializer = match textEq id "blob-v1" of case True -> KeepsBlob case False -> match textEq id "grammar0-native-print-v1" of case True -> PrintsWithGrammar case False -> match textEq id "canon-text-write-v1" of case True -> WritesCanon case False -> match textEq id "negative-fixture-bytes-v1" of case True -> KeepsNegativeBytes case False -> UnknownMaterializer end end end end
+def keepsItsBytes [m: Materializer]: Bool = match m of case KeepsBlob -> True case KeepsNegativeBytes -> True case _ -> False end
+def entryIn [v: Value]: Entry = Entry (textIn (argAt v at0)) (textIn (argAt v at1)) (refIn (argAt v at3))
+def entriesIn [vs: Values]: Entries = match vs of case NoValue -> NoEntry case MoreValue head tail -> MoreEntry (entryIn head) (entriesIn tail) end
+def treeIn [v: Value]: Tree = Tree (entriesIn (listIn (argAt v at0)))
+def treeHoldsOf [t: Tree]: Entries = match t of case Tree held -> held end
+
+; --------------------------------------------------------------- what changed
+;
+; The state a chain is about: which path carries which content. A tree carries
+; more than that -- how each file is materialized, which language reads it --
+; and none of it is what a patch speaks about.
+
+data Content = | NoContent [] | MoreContent [contentPath #1: Text, contentName #2: Text, contentRest #3: Content]
+data Found = | Missing [] | Found [foundName #1: Text]
+
+def contentAt [c: Content, path: Text] ! text: Found = match c of case NoContent -> Missing case MoreContent held name rest -> match textEq held path of case True -> Found name case False -> contentAt rest path end end
+def contentCount [c: Content] ! arith: Number = match c of case NoContent -> c0 case MoreContent held name rest -> numberAdd c1 (contentCount rest) end
+def contentWithout [c: Content, path: Text] ! text: Content = match c of case NoContent -> NoContent case MoreContent held name rest -> match textEq held path of case True -> contentWithout rest path case False -> MoreContent held name (contentWithout rest path) end end
+def contentInsert [c: Content, path: Text, name: Text] ! text arith: Content = match c of case NoContent -> MoreContent path name NoContent case MoreContent held name' rest -> match compareText path held of case Below -> MoreContent path name (MoreContent held name' rest) case Same -> MoreContent path name rest case Above -> MoreContent held name' (contentInsert rest path name) end end
+def contentsOf [e: Entries]: Content = match e of case NoEntry -> NoContent case MoreEntry head tail -> match head of case Entry path content materializer -> MoreContent path content (contentsOf tail) end end
+def contentsOfTree [t: Tree]: Content = contentsOf (treeHoldsOf t)
+def containsAll [a: Content, b: Content] ! text: Bool = match a of case NoContent -> True case MoreContent path name rest -> match contentAt b path of case Missing -> False case Found there -> match textEq there name of case True -> containsAll rest b case False -> False end end end
+def sameContent [a: Content, b: Content] ! text arith: Bool = and (numberEq (contentCount a) (contentCount b)) (containsAll a b)
+
+; ------------------------------------------------------------- typed changes
+;
+; A change names a path and says what it expects to find there. Applying one
+; that expects something else is refused, which is the whole difference
+; between a patch and a rewrite: a patch is an argument about two states, and
+; an argument can be wrong.
+
+data Change = | Added [addedPath #1: Text, addedAfter #2: Text] | Removed [removedPath #1: Text, removedBefore #2: Text] | Replaced [replacedPath #1: Text, replacedBefore #2: Text, replacedAfter #3: Text]
+data Changes = | NoChange [] | MoreChange [changeHead #1: Change, changeTail #2: Changes]
+data ReadChange = | NotAChange [] | ReadChange [gotChange #1: Change]
+data ReadChanges = | NotChanges [] | ReadChanges [gotChanges #1: Changes]
+data Application = | Rejected [rejectedReason #1: Text] | Applied [appliedContent #1: Content]
+
+def changeIn [v: Value] ! text: ReadChange = match textEq (tagOf v) "add" of case True -> ReadChange (Added (textIn (argAt v at0)) (textIn (argAt v at1))) case False -> match textEq (tagOf v) "remove" of case True -> ReadChange (Removed (textIn (argAt v at0)) (textIn (argAt v at1))) case False -> match textEq (tagOf v) "replace" of case True -> ReadChange (Replaced (textIn (argAt v at0)) (textIn (argAt v at1)) (textIn (argAt v at2))) case False -> NotAChange end end end
+def changesIn [vs: Values] ! text: ReadChanges = match vs of case NoValue -> ReadChanges NoChange case MoreValue head tail -> match changeIn head of case NotAChange -> NotChanges case ReadChange one -> match changesIn tail of case NotChanges -> NotChanges case ReadChanges rest -> ReadChanges (MoreChange one rest) end end end
+def changeValue [ch: Change]: Value = match ch of case Added path after -> VNode "add" (MoreValue (VText path) (MoreValue (VText after) NoValue)) case Removed path before -> VNode "remove" (MoreValue (VText path) (MoreValue (VText before) NoValue)) case Replaced path before after -> VNode "replace" (MoreValue (VText path) (MoreValue (VText before) (MoreValue (VText after) NoValue))) end
+def changeValues [chs: Changes]: Values = match chs of case NoChange -> NoValue case MoreChange head tail -> MoreValue (changeValue head) (changeValues tail) end
+def applyChange [c: Content, ch: Change] ! text arith: Application = match ch of case Added path after -> match contentAt c path of case Missing -> Applied (contentInsert c path after) case Found there -> Rejected "add expects a path nothing is held at" end case Removed path before -> match contentAt c path of case Missing -> Rejected "remove expects a path something is held at" case Found there -> match textEq there before of case True -> Applied (contentWithout c path) case False -> Rejected "remove expects the content it names" end end case Replaced path before after -> match contentAt c path of case Missing -> Rejected "replace expects a path something is held at" case Found there -> match textEq there before of case True -> Applied (contentInsert c path after) case False -> Rejected "replace expects the content it names" end end end
+def applyChanges [c: Content, chs: Changes] ! text arith: Application = match chs of case NoChange -> Applied c case MoreChange head tail -> match applyChange c head of case Rejected reason -> Rejected reason case Applied next -> applyChanges next tail end end
+
+; The changes between two states, in the order their paths compare in, so that
+; two runs over the same pair of states produce the same patch and therefore
+; the same name.
+
+def namesInsert [ns: Names, name: Text] ! text arith: Names = match ns of case NoName -> MoreName name NoName case MoreName head tail -> match compareText name head of case Below -> MoreName name (MoreName head tail) case Same -> MoreName head tail case Above -> MoreName head (namesInsert tail name) end end
+def pathsOf [c: Content, into: Names] ! text arith: Names = match c of case NoContent -> into case MoreContent path name rest -> pathsOf rest (namesInsert into path) end
+def changeFor [before: Content, after: Content, path: Text] ! text: ReadChange = match contentAt before path of case Missing -> match contentAt after path of case Missing -> NotAChange case Found now -> ReadChange (Added path now) end case Found was -> match contentAt after path of case Missing -> ReadChange (Removed path was) case Found now -> match textEq was now of case True -> NotAChange case False -> ReadChange (Replaced path was now) end end end
+def changesFor [before: Content, after: Content, ps: Names] ! text: Changes = match ps of case NoName -> NoChange case MoreName head tail -> match changeFor before after head of case NotAChange -> changesFor before after tail case ReadChange one -> MoreChange one (changesFor before after tail) end end
+def diffContent [before: Content, after: Content] ! text arith: Changes = changesFor before after (pathsOf after (pathsOf before NoName))
+
+; ------------------------------------------------------------ patches and blocks
+
+data Patch = | Patch [patchPredecessor #1: Link, patchTree #2: Text, patchMessage #3: Text, patchChanges #4: Changes]
+data Block = | Block [blockHeight #1: Number, blockPredecessor #2: Link, blockPatch #3: Text, blockProfile #4: Text]
+data ReadPatch = | NotAPatch [] | ReadPatch [gotPatch #1: Patch]
+data ReadBlock = | NotABlock [] | ReadBlock [gotBlock #1: Block]
+
+def patchIn [v: Value] ! text: ReadPatch = match textEq (tagOf v) "patch" of case False -> NotAPatch case True -> match changesIn (listIn (argAt v at3)) of case NotChanges -> NotAPatch case ReadChanges chs -> ReadPatch (Patch (linkIn (argAt v at0)) (refIn (argAt v at1)) (textIn (argAt v at2)) chs) end end
+def blockIn [v: Value] ! text arith: ReadBlock = match textEq (tagOf v) "block" of case False -> NotABlock case True -> ReadBlock (Block (natIn (argAt v at0)) (linkIn (argAt v at1)) (refIn (argAt v at2)) (refIn (argAt v at3))) end
+def patchValue [p: Patch]: Value = match p of case Patch predecessor tree message changes -> VNode "patch" (MoreValue (linkValue predecessor) (MoreValue (VRef tree) (MoreValue (VText message) (MoreValue (VList (changeValues changes)) NoValue)))) end
+def blockValue [b: Block]: Value = match b of case Block height predecessor patch profile -> VNode "block" (MoreValue (VNat height) (MoreValue (linkValue predecessor) (MoreValue (VRef patch) (MoreValue (VRef profile) NoValue)))) end
+def patchArtifact [p: Patch]: Artifact = Artifact "patch" (patchValue p)
+def blockArtifact [b: Block]: Artifact = Artifact "block" (blockValue b)
+
+; ----------------------------------------------------------- reaching the store
+
+data Fetch = | NotHeld [] | OtherKind [] | Body [fetchedBody #1: Value]
+
+def fetch [s: Store, name: Text, kind: Text] ! text: Fetch = match lookUp s name of case Absent -> NotHeld case Present held -> match held of case Artifact stored body -> match textEq stored kind of case True -> Body body case False -> OtherKind end end end
+def storedUnderItsName [s: Store, name: Text] ! text arith hash: Bool = match lookUp s name of case Absent -> False case Present held -> textEq (nameOfArtifact held) name end
+def namesInValues [vs: Values]: Names = match vs of case NoValue -> NoName case MoreValue head tail -> MoreName (nameIn head) (namesInValues tail) end
+def holdsName [ns: Names, name: Text] ! text: Bool = match ns of case NoName -> False case MoreName head tail -> match textEq head name of case True -> True case False -> holdsName tail name end end
+def allowedIds [s: Store, profile: Text] ! text: Names = match fetch s profile "materialization-profile" of case Body body -> namesInValues (listIn (argAt body at1)) case _ -> NoName end
+def materializerId [s: Store, name: Text] ! text: Text = match fetch s name "materializer" of case Body body -> nameIn (argAt body at0) case _ -> "" end
+def entryAllowed [s: Store, allowed: Names, e: Entry] ! text: Bool = match e of case Entry path content materializer -> match materializerOf (materializerId s materializer) of case UnknownMaterializer -> False case _ -> holdsName allowed (materializerId s materializer) end end
+def entriesAllowed [s: Store, allowed: Names, es: Entries] ! text: Bool = match es of case NoEntry -> True case MoreEntry head tail -> match entryAllowed s allowed head of case True -> entriesAllowed s allowed tail case False -> False end end
+
+; What a block recorded, read back through the two hops that separate a block
+; from a tree. Anything missing answers the empty state, and the check that
+; the patch derives the tree is what turns that into a verdict.
+
+def contentsNamed [s: Store, name: Text] ! text arith: Content = match fetch s name "tree" of case Body body -> contentsOfTree (treeIn body) case _ -> NoContent end
+def contentsOfPatchNamed [s: Store, name: Text] ! text arith: Content = match fetch s name "patch" of case Body body -> contentsNamed s (refIn (argAt body at1)) case _ -> NoContent end
+def contentsOfBlockNamed [s: Store, name: Text] ! text arith: Content = match fetch s name "block" of case Body body -> contentsOfPatchNamed s (refIn (argAt body at2)) case _ -> NoContent end
+def contentsBefore [s: Store, l: Link] ! text arith: Content = match l of case Genesis -> NoContent case Follows earlier -> contentsOfBlockNamed s earlier end
+def blockNamed [s: Store, name: Text] ! text arith: ReadBlock = match fetch s name "block" of case Body body -> blockIn body case _ -> NotABlock end
+def heightOf [s: Store, name: Text] ! text arith: Number = match blockNamed s name of case ReadBlock b -> match b of case Block height predecessor patch profile -> height end case NotABlock -> c0 end
+def predecessorOf [s: Store, name: Text] ! text arith: Link = match blockNamed s name of case ReadBlock b -> match b of case Block height predecessor patch profile -> predecessor end case NotABlock -> Genesis end
+
+; ------------------------------------------------------------------- verdicts
+
+data Verdict = | Valid [validBlocks #1: Number] | Broken [brokenReason #1: Text]
+
+def soundnessOfTree [s: Store, profile: Text, predecessor: Link, changes: Changes, t: Tree] ! text arith: Verdict = match entriesAllowed s (allowedIds s profile) (treeHoldsOf t) of case False -> Broken "the tree uses a materializer the profile does not allow" case True -> match applyChanges (contentsBefore s predecessor) changes of case Rejected reason -> Broken reason case Applied rebuilt -> match sameContent rebuilt (contentsOfTree t) of case True -> Valid c0 case False -> Broken "the patch does not derive the tree it names" end end end
+def soundnessOfPatch [s: Store, profile: Text, predecessor: Link, p: Patch] ! text arith hash: Verdict = match p of case Patch patchPredecessor tree message changes -> match sameLink predecessor patchPredecessor of case False -> Broken "the block and its patch disagree about what they follow" case True -> match storedUnderItsName s tree of case False -> Broken "a tree is not stored under the name of its contents" case True -> match fetch s tree "tree" of case Body body -> soundnessOfTree s profile predecessor changes (treeIn body) case _ -> Broken "the patch names no tree" end end end end
+def soundnessOfBlock [s: Store, b: Block] ! text arith hash: Verdict = match b of case Block height predecessor patch profile -> match storedUnderItsName s patch of case False -> Broken "a patch is not stored under the name of its contents" case True -> match fetch s patch "patch" of case Body body -> match patchIn body of case NotAPatch -> Broken "a patch is not one" case ReadPatch p -> soundnessOfPatch s profile predecessor p end case _ -> Broken "the block names no patch" end end end
+def soundnessOf [s: Store, name: Text] ! text arith hash: Verdict = match storedUnderItsName s name of case False -> Broken "a block is not stored under the name of its contents" case True -> match blockNamed s name of case NotABlock -> Broken "the chain names something that is not a block" case ReadBlock b -> soundnessOfBlock s b end end
+
+; The walk. It recurses on a chain of names, and a name is not a part of the
+; block that mentions it, so the recursion is on a chain to spend instead --
+; and a repository whose history is longer than that is refused rather than
+; half read.
+
+def chainBound []: Nat = eightMore (eightMore (eightMore (eightMore Zero)))
+def followsHeight [height: Number, blocks: Number] ! arith: Verdict = match numberEq height (numberAdd blocks c1) of case True -> Valid (numberAdd blocks c1) case False -> Broken "a block does not follow the height of the block before it" end
+def checkFrom [s: Store, name: Text, fuel: Nat] ! text arith hash: Verdict = match fuel of case Zero -> Broken "the history is longer than this walk will follow" case Succ spend -> match soundnessOf s name of case Broken reason -> Broken reason case Valid ignored -> match predecessorOf s name of case Genesis -> match numberEq (heightOf s name) c1 of case True -> Valid c1 case False -> Broken "a history that follows nothing does not begin at height one" end case Follows earlier -> match checkFrom s earlier spend of case Broken reason -> Broken reason case Valid blocks -> followsHeight (heightOf s name) blocks end end end end
+
+; ---------------------------------------------------------------- the commands
+;
+; A repository is a store and the branch names that point into it. Everything
+; a command does is one of the two: it adds artifacts whose names it did not
+; choose, or it moves a branch to a name that is already there.
+
+data Branches = | NoBranch [] | MoreBranch [branchName #1: Text, branchHead #2: Text, branchRest #3: Branches]
+data Repository = | Repository [repositoryStore #1: Store, repositoryBranches #2: Branches]
+data Recorded = | NotRecorded [refusedReason #1: Text] | Recorded [recordedBlock #1: Text, recordedRepository #2: Repository]
+
+def initial []: Repository = Repository NoStored NoBranch
+def storeIn [r: Repository]: Store = match r of case Repository s bs -> s end
+def branchesIn [r: Repository]: Branches = match r of case Repository s bs -> bs end
+def headOf [bs: Branches, name: Text] ! text: Link = match bs of case NoBranch -> Genesis case MoreBranch held head rest -> match textEq held name of case True -> Follows head case False -> headOf rest name end end
+def setHead [bs: Branches, name: Text, head: Text] ! text: Branches = match bs of case NoBranch -> MoreBranch name head NoBranch case MoreBranch held earlier rest -> match textEq held name of case True -> MoreBranch name head rest case False -> MoreBranch held earlier (setHead rest name head) end end
+def branchFrom [r: Repository, name: Text, from: Text] ! text: Repository = match headOf (branchesIn r) from of case Genesis -> r case Follows head -> Repository (storeIn r) (setHead (branchesIn r) name head) end
+def branchCount [bs: Branches] ! arith: Number = match bs of case NoBranch -> c0 case MoreBranch held head rest -> numberAdd c1 (branchCount rest) end
+
+def heightAfter [s: Store, head: Link] ! text arith: Number = match head of case Genesis -> c1 case Follows earlier -> numberAdd (heightOf s earlier) c1 end
+def recordBlock [s: Store, head: Link, height: Number, patchName: Text, profile: Text, bs: Branches, branch: Text] ! text arith hash: Recorded = match admit s (blockArtifact (Block height head patchName profile)) of case Refused -> NotRecorded "the block a record would make is not canonical" case Admitted name kept -> Recorded name (Repository kept (setHead bs branch name)) end
+def recordOn [r: Repository, branch: Text, treeName: Text, message: Text, profile: Text] ! text arith hash: Recorded = match admit (storeIn r) (patchArtifact (Patch (headOf (branchesIn r) branch) treeName message (diffContent (contentsBefore (storeIn r) (headOf (branchesIn r) branch)) (contentsNamed (storeIn r) treeName)))) of case Refused -> NotRecorded "the patch a record would make is not canonical" case Admitted patchName kept -> recordBlock kept (headOf (branchesIn r) branch) (heightAfter (storeIn r) (headOf (branchesIn r) branch)) patchName profile (branchesIn r) branch end
+
+def checkoutOf [r: Repository, branch: Text] ! text arith: Content = contentsBefore (storeIn r) (headOf (branchesIn r) branch)
+def statusOf [r: Repository, branch: Text, now: Content] ! text arith: Text = match sameContent (checkoutOf r branch) now of case True -> "clean" case False -> "changed" end
+def verifyBranch [r: Repository, branch: Text] ! text arith hash: Verdict = match headOf (branchesIn r) branch of case Genesis -> Valid c0 case Follows head -> checkFrom (storeIn r) head chainBound end
+
+; ---------------------------------------------------------------------- answers
+;
+; What a repository says, said in one word, so that a check can be read rather
+; than decoded.
+
+def verdictTag [v: Verdict]: Text = match v of case Valid blocks -> "valid" case Broken reason -> reason end
+def openedOn [s: Store, branch: Text, head: Text] ! text: Repository = Repository s (setHead NoBranch branch head)
+def verdictOn [s: Store, head: Text] ! text arith hash: Text = verdictTag (verifyBranch (openedOn s "main" head) "main")
+def blocksOn [s: Store, head: Text] ! text arith hash: Number = match verifyBranch (openedOn s "main" head) "main" of case Valid blocks -> blocks case Broken reason -> c0 end
+def recordedNameOn [s: Store, head: Text, treeName: Text, message: Text, profile: Text] ! text arith hash: Text = match recordOn (openedOn s "main" head) "main" treeName message profile of case NotRecorded reason -> reason case Recorded name kept -> name end
+def recordedGenesisOn [s: Store, treeName: Text, message: Text, profile: Text] ! text arith hash: Text = match recordOn (Repository s NoBranch) "main" treeName message profile of case NotRecorded reason -> reason case Recorded name kept -> name end
+def statusOn [s: Store, head: Text, treeName: Text] ! text arith hash: Text = statusOf (openedOn s "main" head) "main" (contentsNamed s treeName)
+def branchesAfter [s: Store, head: Text] ! text arith hash: Number = branchCount (branchesIn (branchFrom (openedOn s "main" head) "featured/example" "main"))
+def checkoutSize [s: Store, head: Text] ! text arith hash: Number = contentCount (checkoutOf (openedOn s "main" head) "main")
+def materializerTag [s: Store, name: Text] ! text: Text = match materializerOf (materializerId s name) of case KeepsBlob -> "keeps-blob" case PrintsWithGrammar -> "prints-with-grammar" case WritesCanon -> "writes-canon" case KeepsNegativeBytes -> "keeps-negative-bytes" case UnknownMaterializer -> "unknown" end
+def bytesAreKept [s: Store, name: Text] ! text: Bool = keepsItsBytes (materializerOf (materializerId s name))

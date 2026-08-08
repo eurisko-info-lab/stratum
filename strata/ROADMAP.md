@@ -641,15 +641,61 @@ first floor.
 
 - `strata/system/repository.strata` — init, record, status, verify, branch,
   checkout, materializers
-- transitions expressed as typed changes from S2, not diffs over bytes
+- `features/strata/repository.meta` — a whole store crossing at once, and two
+  tampered chains to refuse
+- transitions expressed as typed changes, not diffs over bytes
+- `fixtures/strata/s11-repository/` — a chain `repo-scala` recorded, committed
+  object for object
 - `fixtures/strata/s11.transcript`, `foundations/S11/`
 
 **Acceptance**
 
-- every scenario in `test-repo-scala/StratumRepoSuite.scala` passes against the
-  Strata repository
-- chains recorded by `repo-scala` verify under Strata and vice versa
-- tampered patches are still rejected
+- the chain in `fixtures/strata/s11-repository/` verifies under Strata: every
+  block, patch and tree re-hashed, every patch read back as typed changes and
+  replayed against the state the block before it recorded
+- Strata records the same chain: given the block before it, the tree, the
+  message and the profile it arrives at the digest the first floor issued, for
+  the head block and for the genesis block — and at a different digest when
+  one word of the message changes
+- a chain whose patch bytes were swapped under a kept name is refused, and so
+  is a patch that is named honestly and lies about what it replaces
+
+**A history is a claim about several artifacts at once, and that is what makes
+this layer different from the one below it.** S10 handed Strata one artifact
+and compared one name. A chain cannot be handed over one artifact at a time:
+what is being decided is whether a set of them, taken together, is a history,
+and the answer depends on artifacts the question does not mention. So the
+whole store crosses, keeping its names, and the foundation pins every object
+in it — nineteen for two blocks.
+
+**What `typed change` buys is visible in the second tampered chain.** In the
+first, the bytes under a name are not the bytes that earn it, and hashing says
+so; any content-addressed store would catch that. In the second the patch is
+rebuilt around its lie and the block is rebuilt around the patch, so every
+name in the chain is the name its contents earn and nothing is stored anywhere
+it does not belong. It is still refused, because a change says what it expects
+to find at the path it names and there was something else there. That is the
+difference between a patch and a rewrite: a patch is an argument about two
+states, and an argument can be wrong.
+
+**The walk is bounded and the bound is written down.** Following a chain
+recurses on a chain of names, and the predecessor of a block is not a part of
+it, so the recursion is not structural. It is given a chain to spend, exactly
+as the varint loop is, and a history longer than thirty-two blocks is refused
+rather than half read. Raising that is a declaration, not a rewrite.
+
+**Nothing was added to the boundary.** S10 widened it to say which octets an
+artifact encodes to; reading a history needs no primitive that naming an
+artifact did not already need.
+
+**What is not done here.** `test-repo-scala/StratumRepoSuite.scala` still
+drives `repo-scala`, not the Strata repository, because there is no command
+that routes a filesystem through Strata yet — walking a directory, materializing
+a checkout and moving a ref are effects, and effects reach the disk through the
+journal rather than through a derivation. What is decided here is what a
+history *is*; what still belongs to the first floor is the part that touches
+a disk. That is the same demotion the layers below made, and it moves when the
+command surface does.
 
 **Authority moves** — history. `repo-scala` becomes reference.
 
