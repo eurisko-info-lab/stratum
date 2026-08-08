@@ -1,0 +1,42 @@
+# S15 acceptance transcript: retention is reachability after expiry policy,
+# and committed history reconstructs from a frozen origin under Strata.
+
+$ foundation verify --dir foundations/S15
+> foundation S15
+> digest 2cdcd93a5a4bdfff66852879fba29fc893c71a951a7bbae358ad85f50a5b4516
+> closure 309 artifacts
+> check strata-the-retention-module-prints-exactly ok
+> check strata-the-retention-system-checks ok
+> check strata-the-retention-system-is-total ok
+> check strata-the-retention-system-declares-its-capabilities ok
+> check strata-the-retention-system-agrees-with-the-host-set ok
+> check expired-content-is-unreachable ok
+> check content-only-reachable-through-expired-content-is-unreachable ok
+> check live-reachable-content-is-retained ok
+> check full-semantic-history-retains-patches ok
+> check current-state-only-does-not-retain-patches ok
+> check retained-closure-identity-is-order-independent ok
+> check reconstruction-replays-from-frozen-origin ok
+> check committed-foundation-history-reconstructs-through-s14 ok
+> check broken-reconstruction-links-are-rejected ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S14 --successor foundations/S15
+> predecessor S14
+> successor S15
+> result (valid #d05e6a14aab7a7e14c1166d2c51b7f0267c275c8e0f8449f36d0c37460d9f592f)
+
+$ foundation reconstruct --dir foundations/S15
+> reconstructed S15
+> digest 2cdcd93a5a4bdfff66852879fba29fc893c71a951a7bbae358ad85f50a5b4516
+> stable yes
+> closure 309 artifacts
+> checks 14 ok
+
+$ foundation derive-successor --predecessor foundations/S14 --derivation changes/S14-S15/derivation.canon --expect foundations/S15
+> predecessor S14
+> derived 2cdcd93a5a4bdfff66852879fba29fc893c71a951a7bbae358ad85f50a5b4516
+> matches foundations/S15 yes
+
+$ transcript run fixtures/retention/f10.transcript
+> ok fixtures/retention/f10.transcript 13 steps

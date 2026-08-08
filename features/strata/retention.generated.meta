@@ -1,0 +1,305 @@
+; Generated from features/strata/retention.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataretention)
+  (judgment
+    StrataRetentionSystem
+    [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)
+      (v studio)
+      (v foundation)
+      (v governance)
+      (v ledger)
+      (v sync)
+      (v federation)
+      (v retention)))
+  (judgment
+    AskRetention
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.retention")
+      (v entry)
+      (v arguments)))
+  (judgment
+    StrataRetentionLimit
+    [limit]
+    (match
+      (v limit)
+      (case
+        (pm forever)
+        (prim
+          node
+          (q RetainForever)
+          (lst)))
+      (case
+        (pm
+          before
+          (pv expiry))
+        (mk
+          RetainBefore
+          (v expiry)))
+      (case
+        _
+        (fail
+          retention-error
+          (q "not a retention limit")))))
+  (judgment
+    StrataRetentionClass
+    [class]
+    (match
+      (v class)
+      (case
+        (pq CurrentStateOnly)
+        (prim
+          node
+          (q CurrentStateOnly)
+          (lst)))
+      (case
+        (pq TransitionMetadata)
+        (prim
+          node
+          (q TransitionMetadata)
+          (lst)))
+      (case
+        (pq ReplayableFoundation)
+        (prim
+          node
+          (q ReplayableFoundation)
+          (lst)))
+      (case
+        (pq FullSemanticHistory)
+        (prim
+          node
+          (q FullSemanticHistory)
+          (lst)))
+      (case
+        (pq CheckpointedHistory)
+        (prim
+          node
+          (q CheckpointedHistory)
+          (lst)))
+      (case
+        _
+        (fail
+          retention-error
+          (q "not a retention class")))))
+  (judgment
+    StrataRetentionNames
+    [names]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoRetentionName)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv tail))
+        (mk
+          MoreRetentionName
+          (v head)
+          (call
+            StrataRetentionNames
+            (v tail))))))
+  (judgment
+    StrataRetentionArtifacts
+    [artifacts]
+    (match
+      (v artifacts)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoRetentionArtifact)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            retained
+            (pv name)
+            (pv references)
+            (pv limit))
+          (pv tail))
+        (mk
+          MoreRetentionArtifact
+          (mk
+            RetentionArtifact
+            (v name)
+            (call
+              StrataRetentionNames
+              (v references))
+            (call
+              StrataRetentionLimit
+              (v limit)))
+          (call
+            StrataRetentionArtifacts
+            (v tail))))
+      (case
+        _
+        (fail
+          retention-error
+          (q "not a retention artifact list")))))
+  (judgment
+    StrataRetainedContains
+    [grammar sources artifacts roots now wanted]
+    (call
+      AskRetention
+      (v grammar)
+      (v sources)
+      (q retainedContains)
+      (lst
+        (call
+          StrataRetentionArtifacts
+          (v artifacts))
+        (call
+          StrataRetentionNames
+          (v roots))
+        (v now)
+        (v wanted))))
+  (judgment
+    StrataRetainedClosureIdentity
+    [grammar sources artifacts roots now]
+    (call
+      AskRetention
+      (v grammar)
+      (v sources)
+      (q retainedClosureIdentity)
+      (lst
+        (call
+          StrataRetentionArtifacts
+          (v artifacts))
+        (call
+          StrataRetentionNames
+          (v roots))
+        (v now))))
+  (judgment
+    StrataRetentionClassKeeps
+    [grammar sources class kind]
+    (call
+      AskRetention
+      (v grammar)
+      (v sources)
+      (q retentionClassKeeps)
+      (lst
+        (call
+          StrataRetentionClass
+          (v class))
+        (v kind))))
+  (judgment
+    StrataRetainedClosuresAgree
+    [grammar sources first second roots now]
+    (call
+      AskRetention
+      (v grammar)
+      (v sources)
+      (q retainedClosuresAgree)
+      (lst
+        (call
+          StrataRetentionArtifacts
+          (v first))
+        (call
+          StrataRetentionArtifacts
+          (v second))
+        (call
+          StrataRetentionNames
+          (v roots))
+        (v now))))
+  (judgment
+    StrataReconstructionChanges
+    [changes]
+    (match
+      (v changes)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoReconstructionChange)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            change
+            (pv predecessor)
+            (pv successor))
+          (pv tail))
+        (mk
+          MoreReconstructionChange
+          (mk
+            ReconstructionChange
+            (v predecessor)
+            (v successor))
+          (call
+            StrataReconstructionChanges
+            (v tail))))
+      (case
+        _
+        (fail
+          retention-error
+          (q "not a reconstruction change list")))))
+  (judgment
+    StrataReconstruction
+    [grammar sources origin changes]
+    (call
+      AskRetention
+      (v grammar)
+      (v sources)
+      (q reconstruct)
+      (lst
+        (v origin)
+        (call
+          StrataReconstructionChanges
+          (v changes)))))
+  (judgment
+    StrataReconstructionTag
+    [grammar sources origin changes]
+    (call
+      AskRetention
+      (v grammar)
+      (v sources)
+      (q reconstructionTag)
+      (lst
+        (call
+          StrataReconstruction
+          (v grammar)
+          (v sources)
+          (v origin)
+          (v changes)))))
+  (judgment
+    StrataReconstructedState
+    [grammar sources origin changes]
+    (call
+      AskRetention
+      (v grammar)
+      (v sources)
+      (q reconstructedState)
+      (lst
+        (call
+          StrataReconstruction
+          (v grammar)
+          (v sources)
+          (v origin)
+          (v changes)))))
+  (judgment
+    StrataReconstructionIdentity
+    [grammar sources origin changes]
+    (call
+      AskRetention
+      (v grammar)
+      (v sources)
+      (q reconstructionIdentity)
+      (lst
+        (v origin)
+        (call
+          StrataReconstructionChanges
+          (v changes))))))

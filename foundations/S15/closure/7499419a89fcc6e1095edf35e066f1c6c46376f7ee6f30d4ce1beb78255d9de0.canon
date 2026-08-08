@@ -1,0 +1,534 @@
+
+artifactsource
+source
+path$languages/typescript/typescript.meta
+text‘œmodule typescript
+
+record TypeScriptDocument [items]
+record Brace [body]
+record EmptyBrace []
+record FunctionDecl [name header body]
+record ClassDecl [name body]
+record ClassDeclHeritage [name heritage body]
+record InterfaceDecl [name body]
+record InterfaceDeclHeritage [name heritage body]
+record IfStatement [condition thenBody]
+record IfElseStatement [condition thenBody elseBody]
+record ForStatement [header body]
+record WhileStatement [condition body]
+record TryStatement [body name handler]
+record ArrowParams [params]
+record EmptyArrowParams []
+record ArrowParamBare [param]
+record HeaderDocument [items]
+record Paren [body]
+record EmptyParen []
+record Bracket [body]
+record EmptyBracket []
+record DQuoted [value]
+record SQuoted [value]
+record Template [value]
+record Number [value]
+record Import []
+record Export []
+record Interface []
+record TypeKw []
+record Function []
+record Class []
+record Const []
+record Let []
+record Var []
+record Return []
+record If []
+record Else []
+record For []
+record While []
+record New []
+record Async []
+record Await []
+record Extends []
+record Implements []
+record Public []
+record Private []
+record Readonly []
+record Static []
+record Void []
+record Null []
+record Undefined []
+record True []
+record False []
+record This []
+record Typeof []
+record In []
+record Of []
+record Default []
+record From []
+record As []
+record Enum []
+record Namespace []
+record Declare []
+record Try []
+record Catch []
+record Finally []
+record Throw []
+record Switch []
+record Case []
+record Break []
+record Continue []
+record Super []
+record Instanceof []
+record Delete []
+record Arrow []
+record OptionalChain []
+record Nullish []
+record Spread []
+record StrictEq []
+record StrictNeq []
+record Eq []
+record Neq []
+record Le []
+record Ge []
+record And []
+record Or []
+record PlusEq []
+record MinusEq []
+record StarEq []
+record SlashEq []
+record Increment []
+record Decrement []
+record Plus []
+record Minus []
+record Star []
+record Slash []
+record Percent []
+record Assign []
+record Bang []
+record Question []
+record Colon []
+record Comma []
+record Dot []
+record Semicolon []
+record Less []
+record Greater []
+record Amp []
+record Pipe []
+record Caret []
+record Tilde []
+record Word [value]
+
+judgment ParseTypeScript [grammar source] = call Parse [grammar source]
+judgment PrintTypeScript [grammar syntax] = call Print [grammar syntax]
+judgment TypeScriptWellFormed [grammar source] =
+  match call ParseTypeScript [grammar source] {
+    case (#TypeScriptDocument items) -> mk #valid [items]
+    case _ -> mk #invalid [#parse]
+  }
+
+; ------------------------------------------------------------ name resolution
+;
+; A second, semantic pass over the same parse tree produced above: for every
+; `let`/`const`/`var`/`function`/`class`/`interface` name it reports a
+; #binding, and for every other bare `Word` it reports a #reference, resolved
+; against the lexical scope built up while walking left to right (block
+; scoped uniformly, including `var`; no hoisting -- a reference only resolves
+; to a binding that appears earlier in the same scope or an enclosing one).
+; Property access after `.` is skipped, since it names a member, not a
+; binding. This never touches the parse tree itself (which must stay
+; print/reparse-stable) -- it is a separate report over it.
+;
+; Arrow functions (`(x) => ...`, `() => ...`, `x => ...`) are recognized by
+; three small productions (ArrowParams/EmptyArrowParams/ArrowParamBare) that
+; match only the parameter list up to `=>`, deliberately leaving the body
+; alone: an expression-bodied arrow has no other natural terminator in this
+; grammar, so instead of trying to bound it, the resolver just treats the
+; params as bindings for the rest of the enclosing item list (the same
+; technique already used for `let`/`const`). That is exact whenever the arrow
+; is the last thing in its enclosing `(...)`/`{...}` (the common case: a call
+; argument or a single callback), and only over-extends scope for a sibling
+; item after a `,` in the rare case of a second argument following an arrow
+; in the same argument list -- a false resolution there, not a missed one.
+;
+; Known scope cut: function *expressions* (`const f = function() {...}`,
+; without the arrow) still have no dedicated production, so their parameters
+; resolve as free the same way arrow parameters used to. Object-literal keys
+; (`{ command: id }`) are also not told apart from value references and may
+; resolve as free.
+
+judgment TSBody [node] = call FlattenSeq [node #TypeScriptDocument]
+judgment TSHeader [node] = call FlattenSeq [node #HeaderDocument]
+
+judgment TSDeclaredNames [items] =
+  match items {
+    case [] -> list []
+    case (#Let) :: (#Word name) :: rest -> prim #cons [name call TSDeclaredNames [rest]]
+    case (#Const) :: (#Word name) :: rest -> prim #cons [name call TSDeclaredNames [rest]]
+    case (#Var) :: (#Word name) :: rest -> prim #cons [name call TSDeclaredNames [rest]]
+    case head :: rest -> call TSDeclaredNames [rest]
+  }
+
+; Parameter names in a flattened header: a `Word` counts as a parameter
+; unless it appears after a `:` (a type annotation) up to the next `,`; a
+; parenthesized group is the common `(params)` case and is scanned the same
+; way one level down.
+judgment TSParamNames [items typePosition] =
+  match items {
+    case [] -> list []
+    case (#Colon) :: rest -> call TSParamNames [rest #true]
+    case (#Comma) :: rest -> call TSParamNames [rest #false]
+    case (#Paren body) :: rest ->
+      prim #append [call TSParamNames [call TSBody [body] #false] call TSParamNames [rest typePosition]]
+    case (#Word name) :: rest ->
+      if prim #eq [typePosition #true]
+      then call TSParamNames [rest typePosition]
+      else prim #cons [name call TSParamNames [rest typePosition]]
+    case head :: rest -> call TSParamNames [rest typePosition]
+  }
+
+judgment TSFunctionParams [header] = call TSParamNames [call TSHeader [header] #false]
+
+judgment TSResolveItems [items scope] =
+  match items {
+    case [] -> list []
+    case (#Let) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #let] call TSResolveItems [rest prim #snoc [scope name]]]
+    case (#Const) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #const] call TSResolveItems [rest prim #snoc [scope name]]]
+    case (#Var) :: (#Word name) :: rest ->
+      prim #cons [mk #binding [name #var] call TSResolveItems [rest prim #snoc [scope name]]]
+    case (#Dot) :: (#Word name) :: rest ->
+      call TSResolveItems [rest scope]
+    case (#OptionalChain) :: (#Word name) :: rest ->
+      call TSResolveItems [rest scope]
+    case (#ArrowParams params) :: rest ->
+      call TSResolveItems [rest prim #append [scope call TSParamNames [call TSBody [params] #false]]]
+    case (#EmptyArrowParams) :: rest ->
+      call TSResolveItems [rest scope]
+    case (#ArrowParamBare param) :: rest ->
+      call TSResolveItems [rest prim #snoc [scope param]]
+    case (#FunctionDecl name header body) :: rest ->
+      let inner = prim #append [prim #append [scope call TSFunctionParams [header]] list [name]] in
+      prim #cons [
+        mk #binding [name #function]
+        prim #append [
+          call TSResolveItems [call TSBody [body] inner]
+          call TSResolveItems [rest prim #snoc [scope name]]
+        ]
+      ]
+    case (#ClassDecl name body) :: rest ->
+      prim #cons [
+        mk #binding [name #class]
+        prim #append [
+          call TSResolveItems [call TSBody [body] prim #snoc [scope name]]
+          call TSResolveItems [rest prim #snoc [scope name]]
+        ]
+      ]
+    case (#ClassDeclHeritage name heritage body) :: rest ->
+      prim #cons [
+        mk #binding [name #class]
+        prim #append [
+          call TSResolveItems [call TSBody [body] prim #snoc [scope name]]
+          call TSResolveItems [rest prim #snoc [scope name]]
+        ]
+      ]
+    case (#InterfaceDecl name body) :: rest ->
+      prim #cons [mk #binding [name #interface] call TSResolveItems [rest prim #snoc [scope name]]]
+    case (#InterfaceDeclHeritage name heritage body) :: rest ->
+      prim #cons [mk #binding [name #interface] call TSResolveItems [rest prim #snoc [scope name]]]
+    case (#IfStatement condition thenBody) :: rest ->
+      prim #append [
+        call TSResolveItems [call TSBody [condition] scope]
+        prim #append [
+          call TSResolveItems [call TSBody [thenBody] scope]
+          call TSResolveItems [rest scope]
+        ]
+      ]
+    case (#IfElseStatement condition thenBody elseBody) :: rest ->
+      prim #append [
+        call TSResolveItems [call TSBody [condition] scope]
+        prim #append [
+          call TSResolveItems [call TSBody [thenBody] scope]
+          prim #append [
+            call TSResolveItems [call TSBody [elseBody] scope]
+            call TSResolveItems [rest scope]
+          ]
+        ]
+      ]
+    case (#ForStatement header body) :: rest ->
+      let headerItems = call TSBody [header] in
+      let headerNames = call TSDeclaredNames [headerItems] in
+      prim #append [
+        call TSResolveItems [headerItems scope]
+        prim #append [
+          call TSResolveItems [call TSBody [body] prim #append [scope headerNames]]
+          call TSResolveItems [rest scope]
+        ]
+      ]
+    case (#WhileStatement condition body) :: rest ->
+      prim #append [
+        call TSResolveItems [call TSBody [condition] scope]
+        prim #append [
+          call TSResolveItems [call TSBody [body] scope]
+          call TSResolveItems [rest scope]
+        ]
+      ]
+    case (#TryStatement body name handler) :: rest ->
+      prim #append [
+        call TSResolveItems [call TSBody [body] scope]
+        prim #append [
+          call TSResolveItems [call TSBody [handler] prim #snoc [scope name]]
+          call TSResolveItems [rest scope]
+        ]
+      ]
+    case (#Brace body) :: rest ->
+      prim #append [call TSResolveItems [call TSBody [body] scope] call TSResolveItems [rest scope]]
+    case (#Paren body) :: rest ->
+      prim #append [call TSResolveItems [call TSBody [body] scope] call TSResolveItems [rest scope]]
+    case (#Bracket body) :: rest ->
+      prim #append [call TSResolveItems [call TSBody [body] scope] call TSResolveItems [rest scope]]
+    case (#Word name) :: rest ->
+      if prim #contains [scope name]
+      then prim #cons [mk #reference [name #resolved] call TSResolveItems [rest scope]]
+      else prim #cons [mk #reference [name #free] call TSResolveItems [rest scope]]
+    case head :: rest ->
+      call TSResolveItems [rest scope]
+  }
+
+judgment ResolveTypeScript [grammar source] =
+  call TSResolveItems [call TSBody [call ParseTypeScript [grammar source]] list []]
+
+; ---------------------------------------------------- type inference/checking
+;
+; A lightweight, judgment-defined type layer over the parsed tree. It does
+; three things:
+; 1) extracts declared annotations (`name: Type`) from declarations/params,
+; 2) infers simple types from immediate literal/value shapes,
+; 3) reports mismatches between declared and inferred simple types.
+;
+; This is intentionally local and syntax-driven (no control-flow analysis,
+; no unions/intersections beyond carrying their words, no overload model).
+
+judgment TSTypeWords [tokens] =
+  match tokens {
+    case [] -> list []
+    case (#Word w) :: rest -> prim #cons [w call TSTypeWords [rest]]
+    case head :: rest -> call TSTypeWords [rest]
+  }
+
+judgment TSTakeType [items] =
+  match items {
+    case [] -> mk #taken [list [] list []]
+    case (#Comma) :: rest -> mk #taken [list [] rest]
+    case head :: rest ->
+      match call TSTakeType [rest] {
+        case (#taken typeToks remaining) -> mk #taken [prim #cons [head typeToks] remaining]
+      }
+  }
+
+judgment TSTakeTypeUntilAssign [items] =
+  match items {
+    case [] -> mk #taken [list [] list []]
+    case (#Assign) :: rest -> mk #taken [list [] rest]
+    case (#Semicolon) :: rest -> mk #taken [list [] rest]
+    case head :: rest ->
+      match call TSTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) -> mk #taken [prim #cons [head typeToks] remaining]
+      }
+  }
+
+judgment TSParamAnnotations [items] =
+  match items {
+    case [] -> list []
+    case (#Comma) :: rest -> call TSParamAnnotations [rest]
+    case (#Word name) :: (#Colon) :: rest ->
+      match call TSTakeType [rest] {
+        case (#taken typeToks remaining) ->
+          prim #cons [mk #annotation [name call TSTypeWords [typeToks]] call TSParamAnnotations [remaining]]
+      }
+    case head :: rest -> call TSParamAnnotations [rest]
+  }
+
+judgment TSHeaderAnnotations [items] =
+  match items {
+    case [] -> list []
+    case (#Paren body) :: rest ->
+      prim #append [call TSParamAnnotations [call TSBody [body]] call TSHeaderAnnotations [rest]]
+    case head :: rest -> call TSHeaderAnnotations [rest]
+  }
+
+judgment TSEntriesFromAnnotations [annos] =
+  match annos {
+    case [] -> list []
+    case (#annotation name typeWords) :: rest ->
+      prim #cons [mk #typed [name call TSPrimaryType [typeWords]] call TSEntriesFromAnnotations [rest]]
+  }
+
+judgment TSLookupType [env name] =
+  match env {
+    case [] -> #unknown
+    case (#typed key t) :: rest ->
+      if prim #eq [key name]
+      then t
+      else call TSLookupType [rest name]
+  }
+
+judgment TSInferExprType [items env] =
+  match items {
+    case [] -> #unknown
+    case (#Number n) :: rest -> #number
+    case (#DQuoted t) :: rest -> #string
+    case (#SQuoted t) :: rest -> #string
+    case (#Template t) :: rest -> #string
+    case (#True) :: rest -> #boolean
+    case (#False) :: rest -> #boolean
+    case (#Null) :: rest -> #null
+    case (#Undefined) :: rest -> #undefined
+    case (#Word name) :: rest -> call TSLookupType [env name]
+    case head :: rest -> call TSInferExprType [rest env]
+  }
+
+judgment TSPrimaryType [typeWords] =
+  match typeWords {
+    case [] -> #unknown
+    case t :: rest ->
+      if prim #eq [t "number"]
+      then #number
+      else if prim #eq [t "string"]
+      then #string
+      else if prim #eq [t "boolean"]
+      then #boolean
+      else if prim #eq [t "null"]
+      then #null
+      else if prim #eq [t "undefined"]
+      then #undefined
+      else if prim #eq [t "any"]
+      then #any
+      else if prim #eq [t "unknown"]
+      then #unknown
+      else call TSPrimaryType [rest]
+  }
+
+judgment TSCompatibleType [declared inferred] =
+  if prim #eq [declared #any]
+  then #true
+  else if prim #eq [declared #unknown]
+  then #true
+  else if prim #eq [inferred #unknown]
+  then #true
+  else if prim #eq [declared inferred]
+  then #true
+  else #false
+
+judgment TSInferItems [items env] =
+  match items {
+    case [] -> list []
+    case (#Let) :: (#Word name) :: (#Colon) :: rest ->
+      match call TSTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) ->
+          let declared = call TSPrimaryType [call TSTypeWords [typeToks]] in
+          let inferred = call TSInferExprType [remaining env] in
+          let entry = mk #typed [name declared] in
+          prim #cons [
+            mk #type [name declared #declared inferred]
+            call TSInferItems [remaining prim #snoc [env entry]]
+          ]
+      }
+    case (#Const) :: (#Word name) :: (#Colon) :: rest ->
+      match call TSTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) ->
+          let declared = call TSPrimaryType [call TSTypeWords [typeToks]] in
+          let inferred = call TSInferExprType [remaining env] in
+          let entry = mk #typed [name declared] in
+          prim #cons [
+            mk #type [name declared #declared inferred]
+            call TSInferItems [remaining prim #snoc [env entry]]
+          ]
+      }
+    case (#Var) :: (#Word name) :: (#Colon) :: rest ->
+      match call TSTakeTypeUntilAssign [rest] {
+        case (#taken typeToks remaining) ->
+          let declared = call TSPrimaryType [call TSTypeWords [typeToks]] in
+          let inferred = call TSInferExprType [remaining env] in
+          let entry = mk #typed [name declared] in
+          prim #cons [
+            mk #type [name declared #declared inferred]
+            call TSInferItems [remaining prim #snoc [env entry]]
+          ]
+      }
+    case (#Let) :: (#Word name) :: rest ->
+      let inferred = call TSInferExprType [rest env] in
+      let entry = mk #typed [name inferred] in
+      prim #cons [mk #type [name inferred #inferred inferred] call TSInferItems [rest prim #snoc [env entry]]]
+    case (#Const) :: (#Word name) :: rest ->
+      let inferred = call TSInferExprType [rest env] in
+      let entry = mk #typed [name inferred] in
+      prim #cons [mk #type [name inferred #inferred inferred] call TSInferItems [rest prim #snoc [env entry]]]
+    case (#Var) :: (#Word name) :: rest ->
+      let inferred = call TSInferExprType [rest env] in
+      let entry = mk #typed [name inferred] in
+      prim #cons [mk #type [name inferred #inferred inferred] call TSInferItems [rest prim #snoc [env entry]]]
+    case (#FunctionDecl name header body) :: rest ->
+      let paramAnnos = call TSHeaderAnnotations [call TSHeader [header]] in
+      let paramEntries = call TSEntriesFromAnnotations [paramAnnos] in
+      let inner = prim #append [prim #append [env paramEntries] list [mk #typed [name #function]]] in
+      prim #append [
+        prim #cons [mk #type [name #function #declared #function] call TSInferItems [call TSBody [body] inner]]
+        call TSInferItems [rest prim #snoc [env mk #typed [name #function]]]
+      ]
+    case (#ArrowParams params) :: rest ->
+      let paramAnnos = call TSParamAnnotations [call TSBody [params]] in
+      call TSInferItems [rest prim #append [env call TSEntriesFromAnnotations [paramAnnos]]]
+    case (#Brace body) :: rest ->
+      prim #append [call TSInferItems [call TSBody [body] env] call TSInferItems [rest env]]
+    case (#Paren body) :: rest ->
+      prim #append [call TSInferItems [call TSBody [body] env] call TSInferItems [rest env]]
+    case (#Bracket body) :: rest ->
+      prim #append [call TSInferItems [call TSBody [body] env] call TSInferItems [rest env]]
+    case (#IfStatement condition thenBody) :: rest ->
+      prim #append [
+        call TSInferItems [call TSBody [condition] env]
+        prim #append [call TSInferItems [call TSBody [thenBody] env] call TSInferItems [rest env]]
+      ]
+    case (#IfElseStatement condition thenBody elseBody) :: rest ->
+      prim #append [
+        call TSInferItems [call TSBody [condition] env]
+        prim #append [
+          call TSInferItems [call TSBody [thenBody] env]
+          prim #append [call TSInferItems [call TSBody [elseBody] env] call TSInferItems [rest env]]
+        ]
+      ]
+    case (#ForStatement header body) :: rest ->
+      prim #append [
+        call TSInferItems [call TSBody [header] env]
+        prim #append [call TSInferItems [call TSBody [body] env] call TSInferItems [rest env]]
+      ]
+    case (#WhileStatement condition body) :: rest ->
+      prim #append [
+        call TSInferItems [call TSBody [condition] env]
+        prim #append [call TSInferItems [call TSBody [body] env] call TSInferItems [rest env]]
+      ]
+    case (#TryStatement body name handler) :: rest ->
+      prim #append [
+        call TSInferItems [call TSBody [body] env]
+        prim #append [
+          call TSInferItems [call TSBody [handler] prim #snoc [env mk #typed [name #unknown]]]
+          call TSInferItems [rest env]
+        ]
+      ]
+    case head :: rest -> call TSInferItems [rest env]
+  }
+
+judgment TSTypeErrors [typed] =
+  match typed {
+    case [] -> list []
+    case (#type name declared #declared inferred) :: rest ->
+      if call TSCompatibleType [declared inferred]
+      then call TSTypeErrors [rest]
+      else prim #cons [mk #type-error [name declared inferred] call TSTypeErrors [rest]]
+    case head :: rest -> call TSTypeErrors [rest]
+  }
+
+judgment InferTypeScript [grammar source] =
+  call TSInferItems [call TSBody [call ParseTypeScript [grammar source]] list []]
+
+judgment TypeCheckTypeScript [grammar source] =
+  call TSTypeErrors [call InferTypeScript [grammar source]]

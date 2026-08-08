@@ -1,0 +1,55 @@
+
+artifactsource
+source
+pathstrata/system/retention.strata
+text@module "strata.retention"
+version 1
+; Retention is reachability after policy, not visibility after storage. Expired
+; artifacts are removed before the closure is followed, so neither they nor
+; content reachable only through them can survive collection.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+import "strata.studio" 1
+import "strata.foundation" 1
+import "strata.governance" 1
+import "strata.ledger" 1
+import "strata.sync" 1
+import "strata.federation" 1
+
+data RetentionClass = | CurrentStateOnly [] | TransitionMetadata [] | ReplayableFoundation [] | FullSemanticHistory [] | CheckpointedHistory []
+data RetentionLimit = | RetainForever [] | RetainBefore [retentionExpiry #1: Number]
+data RetentionNames = | NoRetentionName [] | MoreRetentionName [retentionNameHead #1: Text, retentionNameTail #2: RetentionNames]
+data RetentionArtifact = | RetentionArtifact [retentionArtifactName #1: Text, retentionArtifactReferences #2: RetentionNames, retentionArtifactLimit #3: RetentionLimit]
+data RetentionArtifacts = | NoRetentionArtifact [] | MoreRetentionArtifact [retentionArtifactHead #1: RetentionArtifact, retentionArtifactTail #2: RetentionArtifacts]
+
+def retentionRequired [class: RetentionClass]: RetentionNames = match class of case CurrentStateOnly -> MoreRetentionName "state" NoRetentionName case TransitionMetadata -> MoreRetentionName "state" (MoreRetentionName "transitions" NoRetentionName) case ReplayableFoundation -> MoreRetentionName "closure" (MoreRetentionName "foundation" (MoreRetentionName "state" (MoreRetentionName "transitions" NoRetentionName))) case FullSemanticHistory -> MoreRetentionName "closure" (MoreRetentionName "foundation" (MoreRetentionName "patches" (MoreRetentionName "state" (MoreRetentionName "transitions" NoRetentionName)))) case CheckpointedHistory -> MoreRetentionName "checkpoint" (MoreRetentionName "closure" (MoreRetentionName "foundation" (MoreRetentionName "state" NoRetentionName))) end
+def retentionClassKeeps [class: RetentionClass, kind: Text] ! text: Bool = retentionNameMember (retentionRequired class) kind
+def retentionNameMember [names: RetentionNames, wanted: Text] ! text: Bool = match names of case NoRetentionName -> False case MoreRetentionName head tail -> match textEq head wanted of case True -> True case False -> retentionNameMember tail wanted end end
+def insertRetentionName [names: RetentionNames, name: Text] ! text arith: RetentionNames = match names of case NoRetentionName -> MoreRetentionName name NoRetentionName case MoreRetentionName head tail -> match compareText name head of case Below -> MoreRetentionName name names case Same -> names case Above -> MoreRetentionName head (insertRetentionName tail name) end end
+def retentionActive [limit: RetentionLimit, now: Number] ! arith: Bool = match limit of case RetainForever -> True case RetainBefore expiry -> numberLess now expiry end
+def retentionArtifactActive [artifact: RetentionArtifact, now: Number] ! arith: Bool = match artifact of case RetentionArtifact name references limit -> retentionActive limit now end
+def retentionNameActive [artifacts: RetentionArtifacts, name: Text, now: Number] ! text arith: Bool = match artifacts of case NoRetentionArtifact -> False case MoreRetentionArtifact head tail -> match head of case RetentionArtifact held references limit -> match textEq held name of case True -> retentionActive limit now case False -> retentionNameActive tail name now end end end
+def activeRetentionRoots [artifacts: RetentionArtifacts, roots: RetentionNames, now: Number] ! text arith: RetentionNames = match artifacts of case NoRetentionArtifact -> NoRetentionName case MoreRetentionArtifact head tail -> match head of case RetentionArtifact name references limit -> match and (retentionNameMember roots name) (retentionActive limit now) of case True -> insertRetentionName (activeRetentionRoots tail roots now) name case False -> activeRetentionRoots tail roots now end end end
+def addActiveRetentionReferences [references: RetentionNames, artifacts: RetentionArtifacts, now: Number, reachable: RetentionNames] ! text arith: RetentionNames = match references of case NoRetentionName -> reachable case MoreRetentionName head tail -> match retentionNameActive artifacts head now of case True -> addActiveRetentionReferences tail artifacts now (insertRetentionName reachable head) case False -> addActiveRetentionReferences tail artifacts now reachable end end
+def expandRetention [remaining: RetentionArtifacts, allArtifacts: RetentionArtifacts, now: Number, reachable: RetentionNames] ! text arith: RetentionNames = match remaining of case NoRetentionArtifact -> reachable case MoreRetentionArtifact head tail -> match head of case RetentionArtifact name references limit -> match and (retentionNameMember reachable name) (retentionActive limit now) of case True -> expandRetention tail allArtifacts now (addActiveRetentionReferences references allArtifacts now reachable) case False -> expandRetention tail allArtifacts now reachable end end end
+def retentionFuel [artifacts: RetentionArtifacts]: Nat = match artifacts of case NoRetentionArtifact -> Zero case MoreRetentionArtifact head tail -> Succ (retentionFuel tail) end
+def closeRetention [fuel: Nat, artifacts: RetentionArtifacts, now: Number, reachable: RetentionNames] ! text arith: RetentionNames = match fuel of case Zero -> reachable case Succ earlier -> closeRetention earlier artifacts now (expandRetention artifacts artifacts now reachable) end
+def retainedClosure [artifacts: RetentionArtifacts, roots: RetentionNames, now: Number] ! text arith: RetentionNames = closeRetention (retentionFuel artifacts) artifacts now (activeRetentionRoots artifacts roots now)
+def retainedContains [artifacts: RetentionArtifacts, roots: RetentionNames, now: Number, wanted: Text] ! text arith: Bool = retentionNameMember (retainedClosure artifacts roots now) wanted
+def retentionNamesValues [names: RetentionNames]: Values = match names of case NoRetentionName -> NoValue case MoreRetentionName head tail -> MoreValue (VRef head) (retentionNamesValues tail) end
+def retainedClosureIdentity [artifacts: RetentionArtifacts, roots: RetentionNames, now: Number] ! text arith hash: Text = nameOfValue (VNode "retained-closure" (MoreValue (VList (retentionNamesValues (retainedClosure artifacts roots now))) NoValue))
+def retainedClosuresAgree [firstArtifacts: RetentionArtifacts, secondArtifacts: RetentionArtifacts, roots: RetentionNames, now: Number] ! text arith hash: Bool = textEq (retainedClosureIdentity firstArtifacts roots now) (retainedClosureIdentity secondArtifacts roots now)
+
+data ReconstructionChange = | ReconstructionChange [reconstructionPredecessor #1: Text, reconstructionSuccessor #2: Text]
+data ReconstructionChanges = | NoReconstructionChange [] | MoreReconstructionChange [reconstructionChangeHead #1: ReconstructionChange, reconstructionChangeTail #2: ReconstructionChanges]
+data Reconstruction = | ReconstructionRejected [reconstructionReason #1: Text] | Reconstructed [reconstructedState #1: Text]
+
+def reconstructFrom [state: Text, changes: ReconstructionChanges] ! text: Reconstruction = match changes of case NoReconstructionChange -> Reconstructed state case MoreReconstructionChange head tail -> match head of case ReconstructionChange predecessor successor -> match textEq state predecessor of case True -> reconstructFrom successor tail case False -> ReconstructionRejected "broken-reconstruction-link" end end end
+def reconstruct [origin: Text, changes: ReconstructionChanges] ! text: Reconstruction = reconstructFrom origin changes
+def reconstructionTag [result: Reconstruction]: Text = match result of case ReconstructionRejected reason -> reason case Reconstructed state -> "reconstructed" end
+def reconstructedState [result: Reconstruction]: Text = match result of case ReconstructionRejected reason -> "" case Reconstructed state -> state end
+def reconstructionIdentity [origin: Text, changes: ReconstructionChanges] ! text arith hash: Text = nameOfValue (VNode "reconstruction" (MoreValue (VText (reconstructedState (reconstruct origin changes))) NoValue))

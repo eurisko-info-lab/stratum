@@ -1,0 +1,23 @@
+
+artifactchange
+change
+kind
+foundation
+nameS7->S8
+predecessor
+foundation-offoundations/S7
+
+delta-meta
+filechanges/S7-S8/delta-meta.canon
+delta-grammar
+file!changes/S7-S8/delta-grammar.canon
+feature
+feature
+namelanguage definitions rewritten
+programs
+file'features/strata/language.generated.meta
+sources
+	text-filefeatures/strata/language.meta
+	text-filelanguages/strata/strata.grammar
+	text-filelanguages/strata/strata.meta
+	text-filestrata/system/grammar.strata
