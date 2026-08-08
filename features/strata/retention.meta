@@ -1,0 +1,121 @@
+module strataretention
+
+; Roots, references, expiry limits and recorded changes cross as constructor
+; values. Reachability and reconstruction remain Strata decisions.
+
+judgment StrataRetentionSystem [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention] =
+  list [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention]
+
+judgment AskRetention [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.retention" entry arguments]
+
+judgment StrataRetentionLimit [limit] =
+  match limit {
+    case (#forever) -> prim #node [#RetainForever list []]
+    case (#before expiry) -> mk #RetainBefore [expiry]
+    case _ -> fail #retention-error "not a retention limit"
+  }
+
+judgment StrataRetentionClass [class] =
+  match class {
+    case #CurrentStateOnly -> prim #node [#CurrentStateOnly list []]
+    case #TransitionMetadata -> prim #node [#TransitionMetadata list []]
+    case #ReplayableFoundation -> prim #node [#ReplayableFoundation list []]
+    case #FullSemanticHistory -> prim #node [#FullSemanticHistory list []]
+    case #CheckpointedHistory -> prim #node [#CheckpointedHistory list []]
+    case _ -> fail #retention-error "not a retention class"
+  }
+
+judgment StrataRetentionNames [names] =
+  match names {
+    case [] -> prim #node [#NoRetentionName list []]
+    case head :: tail -> mk #MoreRetentionName [head call StrataRetentionNames [tail]]
+  }
+
+judgment StrataRetentionArtifacts [artifacts] =
+  match artifacts {
+    case [] -> prim #node [#NoRetentionArtifact list []]
+    case (#retained name references limit) :: tail ->
+      mk #MoreRetentionArtifact [
+        mk #RetentionArtifact [
+          name
+          call StrataRetentionNames [references]
+          call StrataRetentionLimit [limit]
+        ]
+        call StrataRetentionArtifacts [tail]
+      ]
+    case _ -> fail #retention-error "not a retention artifact list"
+  }
+
+judgment StrataRetainedContains [grammar sources artifacts roots now wanted] =
+  call AskRetention [
+    grammar sources #retainedContains
+    list [
+      call StrataRetentionArtifacts [artifacts]
+      call StrataRetentionNames [roots]
+      now
+      wanted
+    ]
+  ]
+
+judgment StrataRetainedClosureIdentity [grammar sources artifacts roots now] =
+  call AskRetention [
+    grammar sources #retainedClosureIdentity
+    list [
+      call StrataRetentionArtifacts [artifacts]
+      call StrataRetentionNames [roots]
+      now
+    ]
+  ]
+
+judgment StrataRetentionClassKeeps [grammar sources class kind] =
+  call AskRetention [
+    grammar sources #retentionClassKeeps
+    list [call StrataRetentionClass [class] kind]
+  ]
+
+judgment StrataRetainedClosuresAgree [grammar sources first second roots now] =
+  call AskRetention [
+    grammar sources #retainedClosuresAgree
+    list [
+      call StrataRetentionArtifacts [first]
+      call StrataRetentionArtifacts [second]
+      call StrataRetentionNames [roots]
+      now
+    ]
+  ]
+
+judgment StrataReconstructionChanges [changes] =
+  match changes {
+    case [] -> prim #node [#NoReconstructionChange list []]
+    case (#change predecessor successor) :: tail ->
+      mk #MoreReconstructionChange [
+        mk #ReconstructionChange [predecessor successor]
+        call StrataReconstructionChanges [tail]
+      ]
+    case _ -> fail #retention-error "not a reconstruction change list"
+  }
+
+judgment StrataReconstruction [grammar sources origin changes] =
+  call AskRetention [
+    grammar sources #reconstruct
+    list [origin call StrataReconstructionChanges [changes]]
+  ]
+
+judgment StrataReconstructionTag [grammar sources origin changes] =
+  call AskRetention [
+    grammar sources #reconstructionTag
+    list [call StrataReconstruction [grammar sources origin changes]]
+  ]
+
+judgment StrataReconstructedState [grammar sources origin changes] =
+  call AskRetention [
+    grammar sources #reconstructedState
+    list [call StrataReconstruction [grammar sources origin changes]]
+  ]
+
+judgment StrataReconstructionIdentity [grammar sources origin changes] =
+  call AskRetention [
+    grammar sources #reconstructionIdentity
+    list [origin call StrataReconstructionChanges [changes]]
+  ]

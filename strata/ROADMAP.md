@@ -840,6 +840,8 @@ capabilities. No network or persistence primitive enters the Strata boundary.
 **Adds**
 
 - `strata/system/retention.strata` — retention classes, expiry, reconstruction
+- `features/strata/retention.meta` — representation-only crossing for roots,
+  references, expiry limits and recorded changes
 - clean-room reconstruction driven by Strata
 - `fixtures/strata/s15.transcript`, `foundations/S15/`
 
@@ -848,6 +850,19 @@ capabilities. No network or persistence primitive enters the Strata boundary.
 - `tools/cleanroom.sh` reconstructs the whole system using the Strata
   implementation from frozen origin plus recorded changes
 - expired content is provably unreachable, not merely hidden
+
+**Retention is reachability after policy.** The five constituted classes state
+which semantic evidence must survive. Expiry is applied before graph traversal:
+an expired root or intermediate artifact is absent from the retained closure,
+and content reachable only through it is absent too. Active names are kept in
+canonical order, so artifact enumeration cannot change the closure identity.
+
+**Reconstruction is a typed predecessor chain.** Starting from the frozen F0
+identity, Strata validates every recorded successor link and reconstructs the
+actual committed history through S14. S15's report carries that proof, so the
+independent clean-room host evaluates it using only the committed digest and
+closure. Filesystem copying and process execution remain host effects; the
+decision about what survives and what sequence is valid belongs to Strata.
 
 **Exit condition** — the system can be rebuilt from origin by Strata alone.
 

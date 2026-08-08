@@ -1,0 +1,20 @@
+; The canonical change from S14 to S15.
+;
+; S14 |- S15. Retention reachability and reconstruction from a frozen origin
+; become Strata decisions.
+(change
+  (kind foundation)
+  (name "S14->S15")
+  (predecessor (foundation-of "foundations/S14"))
+  (delta-meta (file "changes/S14-S15/delta-meta.canon"))
+  (delta-grammar (file "changes/S14-S15/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "retention and reconstruction")
+      (programs [
+        (file "features/strata/retention.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/retention.meta")
+        (text-file "strata/system/retention.strata")
+      ]))))
