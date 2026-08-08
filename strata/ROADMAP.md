@@ -879,6 +879,21 @@ decision about what survives and what sequence is valid belongs to Strata.
 - agent edits as first-class change artifacts with capability limits and budgets
 - `fixtures/strata/s16.transcript`, `foundations/S16/`
 
+**Investigation is replayable state.** A declaration compiles to a stable
+context identity over its schema, field paths, effects, laws, changes and
+history. Inspecting a semantic view and recording evidence are explicit
+actions. Proposed edits carry predecessor and successor identities, a required
+capability and a cost; stale, undeclared or over-budget edits are rejected
+before they can advance the investigation.
+
+**The replacement theorem is bounded by accepted observations.** S16 replays
+all first-floor transcripts and inherits the compiler fixed point, codecs,
+typed changes, capability checks and machine agreement established by the
+earlier second-floor foundations. Staircase derivation, independent-host
+parity and clean-room reconstruction remain external gates over the complete
+closure. This closes the semantic floor; compiled whole-repository execution
+remains the explicitly documented performance work below.
+
 **Acceptance — the retirement criteria from [docs/strata.md §26](../docs/strata.md)**
 
 1. the Strata compiler self-compiles
@@ -924,7 +939,7 @@ taken with a measurement in hand, not now.
 Fully operational means all three hold simultaneously:
 
 $$
-F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 15
+F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 16
 $$
 
 $$

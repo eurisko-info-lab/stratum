@@ -313,7 +313,7 @@ Stage 3:
 
 ## 24. Second-floor staircase
 
-Second floor uses `S0 -> S15`:
+Second floor uses `S0 -> S16`:
 
 - S0: Strata seed
 - S1: canonical data
@@ -324,13 +324,14 @@ Second floor uses `S0 -> S15`:
 - S6: effects and multiplicities
 - S7: the native boundary
 - S8: language definitions rewritten
-- S9: artifacts and CAS
-- S10: semantic repository
-- S11: tooling and studios
-- S12: foundation and governance
-- S13: ledger, sync, federation
-- S14: retention and reconstruction
-- S15: investigation agents
+- S9: Meta definitions rewritten
+- S10: artifacts and CAS
+- S11: semantic repository
+- S12: tooling and studios
+- S13: foundation and governance
+- S14: ledger, sync, federation
+- S15: retention and reconstruction
+- S16: investigation agents
 
 The dependent core is its own layer because it is a change to what can be
 said, not to what is done with what was already said. S1 gives a declaration
@@ -354,7 +355,7 @@ stops it comparing a character or hashing a byte. Reaching the host is a
 change to what can be said, and S6's capabilities are already the discipline
 that decides where it is allowed.
 
-At S15, second floor reconstructs first-floor capability set and extends it
+At S16, second floor reconstructs the first-floor capability set and extends it
 with agent substrate.
 
 ## 25. Rewrite strategy

@@ -1,0 +1,458 @@
+; Generated from features/strata/agent.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataagent)
+  (judgment
+    StrataAgentSystem
+    [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention agent]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)
+      (v studio)
+      (v foundation)
+      (v governance)
+      (v ledger)
+      (v sync)
+      (v federation)
+      (v retention)
+      (v agent)))
+  (judgment
+    AskAgent
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.agent")
+      (v entry)
+      (v arguments)))
+  (judgment
+    AgentTexts
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoAgentText)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv tail))
+        (mk
+          MoreAgentText
+          (v head)
+          (call
+            AgentTexts
+            (v tail))))))
+  (judgment
+    AgentTopic
+    [topic]
+    (match
+      (v topic)
+      (case
+        (pq identities)
+        (prim
+          node
+          (q StableIdentities)
+          (lst)))
+      (case
+        (pq schemas)
+        (prim
+          node
+          (q Schemas)
+          (lst)))
+      (case
+        (pq fields)
+        (prim
+          node
+          (q FieldPaths)
+          (lst)))
+      (case
+        (pq effects)
+        (prim
+          node
+          (q Effects)
+          (lst)))
+      (case
+        (pq laws)
+        (prim
+          node
+          (q Laws)
+          (lst)))
+      (case
+        (pq changes)
+        (prim
+          node
+          (q Changes)
+          (lst)))
+      (case
+        (pq history)
+        (prim
+          node
+          (q History)
+          (lst)))
+      (case
+        _
+        (fail
+          agent-error
+          (q "not an investigation topic")))))
+  (judgment
+    AgentDeclaration
+    [declaration]
+    (match
+      (v declaration)
+      (case
+        (pm
+          declaration
+          (pv identity)
+          (pv schema)
+          (pv fields)
+          (pv effects)
+          (pv laws)
+          (pv changes)
+          (pv history))
+        (mk
+          AgentDeclaration
+          (v identity)
+          (v schema)
+          (call
+            AgentTexts
+            (v fields))
+          (call
+            AgentTexts
+            (v effects))
+          (call
+            AgentTexts
+            (v laws))
+          (call
+            AgentTexts
+            (v changes))
+          (call
+            AgentTexts
+            (v history))))
+      (case
+        _
+        (fail
+          agent-error
+          (q "not an agent declaration")))))
+  (judgment
+    AgentEvidence
+    [proof]
+    (match
+      (v proof)
+      (case
+        (pm
+          evidence
+          (pv kind)
+          (pv reference))
+        (mk
+          AgentEvidence
+          (v kind)
+          (v reference)))
+      (case
+        _
+        (fail
+          agent-error
+          (q "not agent evidence")))))
+  (judgment
+    AgentEdit
+    [alteration]
+    (match
+      (v alteration)
+      (case
+        (pm
+          edit
+          (pv predecessor)
+          (pv successor)
+          (pv permission)
+          (pv cost))
+        (mk
+          AgentEdit
+          (v predecessor)
+          (v successor)
+          (v permission)
+          (v cost)))
+      (case
+        _
+        (fail
+          agent-error
+          (q "not an agent edit")))))
+  (judgment
+    AgentAction
+    [action]
+    (match
+      (v action)
+      (case
+        (pm
+          inspect
+          (pv topic))
+        (mk
+          Inspect
+          (call
+            AgentTopic
+            (v topic))))
+      (case
+        (pm
+          record
+          (pv proof))
+        (mk
+          RecordEvidence
+          (call
+            AgentEvidence
+            (v proof))))
+      (case
+        (pm
+          propose
+          (pv alteration))
+        (mk
+          ProposeEdit
+          (call
+            AgentEdit
+            (v alteration))))
+      (case
+        _
+        (fail
+          agent-error
+          (q "not an agent action")))))
+  (judgment
+    AgentActions
+    [actions]
+    (match
+      (v actions)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoAgentAction)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv tail))
+        (mk
+          MoreAgentAction
+          (call
+            AgentAction
+            (v head))
+          (call
+            AgentActions
+            (v tail))))))
+  (judgment
+    StrataAgentInitial
+    [grammar sources declaration capabilities budget]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q initialInvestigation)
+      (lst
+        (call
+          AgentDeclaration
+          (v declaration))
+        (call
+          AgentTexts
+          (v capabilities))
+        (v budget))))
+  (judgment
+    StrataAgentAdvance
+    [grammar sources declaration capabilities budget action]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q advanceInvestigation)
+      (lst
+        (call
+          StrataAgentInitial
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v capabilities)
+          (v budget))
+        (call
+          AgentAction
+          (v action)))))
+  (judgment
+    StrataAgentRun
+    [grammar sources declaration capabilities budget actions]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q runInvestigation)
+      (lst
+        (call
+          StrataAgentInitial
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v capabilities)
+          (v budget))
+        (call
+          AgentActions
+          (v actions)))))
+  (judgment
+    StrataAgentRunState
+    [grammar sources declaration capabilities budget actions]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q resultState)
+      (lst
+        (call
+          StrataAgentInitial
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v capabilities)
+          (v budget))
+        (call
+          StrataAgentRun
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v capabilities)
+          (v budget)
+          (v actions)))))
+  (judgment
+    StrataAgentRunCurrent
+    [grammar sources declaration capabilities budget actions]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q currentInvestigationIdentity)
+      (lst
+        (call
+          StrataAgentRunState
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v capabilities)
+          (v budget)
+          (v actions)))))
+  (judgment
+    StrataAgentRunBudget
+    [grammar sources declaration capabilities budget actions]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q remainingBudget)
+      (lst
+        (call
+          StrataAgentRunState
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v capabilities)
+          (v budget)
+          (v actions)))))
+  (judgment
+    StrataAgentRunViewContains
+    [grammar sources declaration capabilities budget actions wanted]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q investigationViewContains)
+      (lst
+        (call
+          StrataAgentRunState
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v capabilities)
+          (v budget)
+          (v actions))
+        (v wanted))))
+  (judgment
+    StrataAgentResultTag
+    [grammar sources declaration capabilities budget action]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q resultTag)
+      (lst
+        (call
+          StrataAgentAdvance
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v capabilities)
+          (v budget)
+          (v action)))))
+  (judgment
+    StrataAgentContextIdentity
+    [grammar sources declaration]
+    (call
+      AskAgent
+      (v grammar)
+      (v sources)
+      (q declarationContextIdentity)
+      (lst
+        (call
+          AgentDeclaration
+          (v declaration)))))
+  (judgment
+    StrataAgentContextsAgree
+    [grammar sources first second]
+    (prim
+      eq
+      (call
+        StrataAgentContextIdentity
+        (v grammar)
+        (v sources)
+        (v first))
+      (call
+        StrataAgentContextIdentity
+        (v grammar)
+        (v sources)
+        (v second))))
+  (judgment
+    StrataAgentContextsDiffer
+    [grammar sources first second]
+    (if
+      (prim
+        eq
+        (call
+          StrataAgentContextIdentity
+          (v grammar)
+          (v sources)
+          (v first))
+        (call
+          StrataAgentContextIdentity
+          (v grammar)
+          (v sources)
+          (v second)))
+      (q #f)
+      (q #t)))
+  (judgment
+    StrataAgentRunsAgree
+    [grammar sources declaration capabilities budget first second]
+    (prim
+      eq
+      (call
+        StrataAgentRunState
+        (v grammar)
+        (v sources)
+        (v declaration)
+        (v capabilities)
+        (v budget)
+        (v first))
+      (call
+        StrataAgentRunState
+        (v grammar)
+        (v sources)
+        (v declaration)
+        (v capabilities)
+        (v budget)
+        (v second)))))

@@ -1,0 +1,55 @@
+
+artifactsource
+source
+pathlanguages/json/json.meta
+text¨module json
+
+data Json =
+  | #empty-object []
+  | #object [members]
+  | #empty-array []
+  | #array [elements]
+  | #string [value]
+  | #number [value]
+  | #true []
+  | #false []
+  | #null []
+
+record Member [key value]
+
+judgment ParseJson [grammar source] = call Parse [grammar source]
+judgment PrintJson [grammar syntax] = call Print [grammar syntax]
+
+judgment JsonWellFormed [grammar source] =
+  match call ParseJson [grammar source] {
+    case (#EmptyObject) -> mk #valid []
+    case (#Object members) -> mk #valid [members]
+    case (#EmptyArray) -> mk #valid []
+    case (#Array elements) -> mk #valid [elements]
+    case (#String value) -> mk #valid [value]
+    case (#Number value) -> mk #valid [value]
+    case (#True) -> mk #valid []
+    case (#False) -> mk #valid []
+    case (#Null) -> mk #valid []
+    case _ -> mk #invalid [#parse]
+  }
+
+judgment JsonValueType [node] =
+  match node {
+    case (#EmptyObject) -> #object
+    case (#Object members) -> #object
+    case (#EmptyArray) -> #array
+    case (#Array elements) -> #array
+    case (#String value) -> #string
+    case (#Number value) -> #number
+    case (#True) -> #boolean
+    case (#False) -> #boolean
+    case (#Null) -> #null
+    case _ -> #unknown
+  }
+
+judgment InferJson [grammar source] =
+  let root = call ParseJson [grammar source] in
+  list [mk #type [#root call JsonValueType [root] #declared call JsonValueType [root]]]
+
+judgment TypeCheckJson [grammar source] = list []

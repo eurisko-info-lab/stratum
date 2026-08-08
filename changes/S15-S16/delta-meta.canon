@@ -1,0 +1,9 @@
+; delta-meta for S15 -> S16: investigation agents close the second floor.
+(change
+  (kind delta-meta)
+  (name "S15->S16 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (remembering strata)
+      (editing strata))))

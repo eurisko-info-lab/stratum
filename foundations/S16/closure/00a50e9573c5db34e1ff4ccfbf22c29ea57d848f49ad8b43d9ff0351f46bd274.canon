@@ -1,0 +1,38 @@
+
+artifactsource
+source
+pathstrata/system/foundation.strata
+textÎmodule "strata.foundation"
+version 1
+; A foundation is a small root over a large closure.
+;
+; Construction does not inspect a build directory. It receives the canonical
+; names of the application, predecessor and change, builds the five fields of
+; the root, and lets the artifact layer decide its name. The host may still
+; move bytes into a directory; it no longer decides which root those bytes
+; constitute.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+import "strata.studio" 1
+
+data OptionalReference = | NoReference [] | Reference [referenceName #1: Text]
+data FoundationInput = | FoundationInput [foundationName #1: Text, foundationBootstrap #2: Text, foundationApplication #3: Text, foundationPredecessor #4: OptionalReference, foundationChange #5: OptionalReference]
+data FoundationInputs = | NoFoundationInput [] | MoreFoundationInput [foundationInputHead #1: FoundationInput, foundationInputTail #2: FoundationInputs]
+data FoundationNames = | NoFoundationName [] | MoreFoundationName [foundationNameHead #1: Text, foundationNameTail #2: FoundationNames]
+data AttestationInput = | AttestationInput [attestedName #1: Text, attestedFoundation #2: Text, attestedApplication #3: Text, attestedMeta #4: Text, attestedClosure #5: Number, attestedKinds #6: Value]
+
+def optionalValue [reference: OptionalReference]: Value = match reference of case NoReference -> VNode "none" NoValue case Reference name -> VNode "some" (MoreValue (VRef name) NoValue) end
+def foundationChangeValue [reference: OptionalReference]: Value = match reference of case NoReference -> VNode "none" NoValue case Reference name -> VRef name end
+def namedField [tag: Text, value: Value]: Value = VNode tag (MoreValue value NoValue)
+
+def foundationValue [input: FoundationInput]: Value = match input of case FoundationInput name bootstrap application predecessor change -> VNode "foundation" (MoreValue (namedField "name" (VText name)) (MoreValue (namedField "bootstrap" (VText bootstrap)) (MoreValue (namedField "application" (VRef application)) (MoreValue (namedField "predecessor" (optionalValue predecessor)) (MoreValue (namedField "change" (foundationChangeValue change)) NoValue))))) end
+def foundationArtifact [input: FoundationInput]: Artifact = Artifact "foundation" (foundationValue input)
+def foundationIdentity [input: FoundationInput] ! text arith hash: Text = nameOfArtifact (foundationArtifact input)
+def foundationIdentitiesMatch [inputs: FoundationInputs, expected: FoundationNames] ! text arith hash: Bool = match inputs of case NoFoundationInput -> match expected of case NoFoundationName -> True case MoreFoundationName head tail -> False end case MoreFoundationInput input rest -> match expected of case NoFoundationName -> False case MoreFoundationName name names -> match textEq (foundationIdentity input) name of case True -> foundationIdentitiesMatch rest names case False -> False end end end
+
+def attestationValue [input: AttestationInput]: Value = match input of case AttestationInput name foundation application meta closure kinds -> VNode "attestation" (MoreValue (namedField "name" (VText name)) (MoreValue (namedField "foundation" (VRef foundation)) (MoreValue (namedField "application" (VRef application)) (MoreValue (namedField "meta" (VRef meta)) (MoreValue (namedField "closure" (VNat closure)) (MoreValue (namedField "kinds" kinds) (MoreValue (namedField "complete" (VBool True)) NoValue))))))) end
+def attestationIdentity [input: AttestationInput] ! text arith hash: Text = bytesDigest (bytesOfOctets (encodeValue (attestationValue input)))

@@ -1,0 +1,17 @@
+
+artifactevidence
+evidence
+check&strata-the-agent-module-prints-exactlyok
+checkstrata-the-agent-system-checksok
+check strata-the-agent-system-is-totalok
+check1strata-the-agent-system-declares-its-capabilitiesok
+check0strata-the-agent-system-agrees-with-the-host-setok
+check&declaration-context-identity-is-stableok
+check0declared-capability-and-budget-authorize-an-editok
+check%undeclared-capability-rejects-an-editok
+checkover-budget-edit-is-rejectedok
+check*context-identity-binds-declaration-effectsok
+check"stale-edit-predecessor-is-rejectedok
+check1investigation-expands-the-requested-semantic-viewok
+check.evidence-driven-replay-advances-the-edit-chainok
+check1replaying-the-same-investigation-is-deterministicok
