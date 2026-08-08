@@ -1,0 +1,42 @@
+module "strata.ledger"
+version 1
+; A ledger is a deterministic state machine. Commands propose transitions,
+; accepted commands emit events, and only replaying those events changes state.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+import "strata.studio" 1
+import "strata.foundation" 1
+import "strata.governance" 1
+
+data LedgerCommand = | LedgerPublish [expectedHead #1: Text, publishedHead #2: Text]
+data LedgerCommands = | NoLedgerCommand [] | MoreLedgerCommand [ledgerCommandHead #1: LedgerCommand, ledgerCommandTail #2: LedgerCommands]
+data LedgerEvent = | LedgerPublished [previousHead #1: Text, nextHead #2: Text]
+data LedgerEvents = | NoLedgerEvent [] | MoreLedgerEvent [ledgerEventHead #1: LedgerEvent, ledgerEventTail #2: LedgerEvents]
+data LedgerState = | LedgerState [ledgerHeight #1: Number, ledgerHead #2: Text]
+data LedgerDecision = | LedgerCommandRejected [ledgerCommandReason #1: Text] | LedgerCommandAccepted [acceptedLedgerEvent #1: LedgerEvent]
+data LedgerReplay = | LedgerReplayRejected [ledgerReplayReason #1: Text] | LedgerReplayed [replayedLedgerState #1: LedgerState]
+data LedgerExecution = | LedgerExecutionRejected [ledgerExecutionReason #1: Text] | LedgerExecuted [executedLedgerState #1: LedgerState, emittedLedgerEvents #2: LedgerEvents]
+
+def initialLedgerState [] ! arith: LedgerState = LedgerState c0 "genesis"
+def decideLedgerCommand [state: LedgerState, command: LedgerCommand] ! text: LedgerDecision = match state of case LedgerState height head -> match command of case LedgerPublish expected next -> match textEq head expected of case True -> LedgerCommandAccepted (LedgerPublished head next) case False -> LedgerCommandRejected "stale-command" end end end
+def applyLedgerEvent [state: LedgerState, event: LedgerEvent] ! text arith: LedgerReplay = match state of case LedgerState height head -> match event of case LedgerPublished previous next -> match textEq head previous of case True -> LedgerReplayed (LedgerState (numberAdd height c1) next) case False -> LedgerReplayRejected "broken-ledger-link" end end end
+def replayLedgerFrom [state: LedgerState, events: LedgerEvents] ! text arith: LedgerReplay = match events of case NoLedgerEvent -> LedgerReplayed state case MoreLedgerEvent head tail -> match applyLedgerEvent state head of case LedgerReplayRejected reason -> LedgerReplayRejected reason case LedgerReplayed next -> replayLedgerFrom next tail end end
+def replayLedger [events: LedgerEvents] ! text arith: LedgerReplay = replayLedgerFrom initialLedgerState events
+def executeLedgerFrom [state: LedgerState, commands: LedgerCommands] ! text arith: LedgerExecution = match commands of case NoLedgerCommand -> LedgerExecuted state NoLedgerEvent case MoreLedgerCommand command tail -> match decideLedgerCommand state command of case LedgerCommandRejected reason -> LedgerExecutionRejected reason case LedgerCommandAccepted event -> match applyLedgerEvent state event of case LedgerReplayRejected reason -> LedgerExecutionRejected reason case LedgerReplayed next -> match executeLedgerFrom next tail of case LedgerExecutionRejected reason -> LedgerExecutionRejected reason case LedgerExecuted terminal emitted -> LedgerExecuted terminal (MoreLedgerEvent event emitted) end end end end
+def executeLedger [commands: LedgerCommands] ! text arith: LedgerExecution = executeLedgerFrom initialLedgerState commands
+def ledgerExecutionTag [result: LedgerExecution]: Text = match result of case LedgerExecutionRejected reason -> reason case LedgerExecuted state events -> "executed" end
+def ledgerExecutionEvents [result: LedgerExecution]: LedgerEvents = match result of case LedgerExecutionRejected reason -> NoLedgerEvent case LedgerExecuted state events -> events end
+def ledgerExecutionIdentity [result: LedgerExecution] ! text arith hash: Text = match result of case LedgerExecutionRejected reason -> "" case LedgerExecuted state events -> ledgerStateIdentity state end
+def ledgerExecutionReplayIdentity [result: LedgerExecution] ! text arith hash: Text = ledgerReplayIdentity (replayLedger (ledgerExecutionEvents result))
+def ledgerExecutionIsReplayable [result: LedgerExecution] ! text arith hash: Bool = textEq (ledgerExecutionIdentity result) (ledgerExecutionReplayIdentity result)
+def ledgerReplayTag [result: LedgerReplay]: Text = match result of case LedgerReplayRejected reason -> reason case LedgerReplayed state -> "replayed" end
+def ledgerHeightOf [result: LedgerReplay] ! arith: Number = match result of case LedgerReplayRejected reason -> c0 case LedgerReplayed state -> match state of case LedgerState height head -> height end end
+def ledgerHeadOf [result: LedgerReplay]: Text = match result of case LedgerReplayRejected reason -> "" case LedgerReplayed state -> match state of case LedgerState height head -> head end end
+def ledgerStateValue [state: LedgerState]: Value = match state of case LedgerState height head -> VNode "ledger-state" (MoreValue (VNat height) (MoreValue (VText head) NoValue)) end
+def ledgerStateIdentity [state: LedgerState] ! text arith hash: Text = nameOfValue (ledgerStateValue state)
+def ledgerReplayIdentity [result: LedgerReplay] ! text arith hash: Text = match result of case LedgerReplayRejected reason -> "" case LedgerReplayed state -> ledgerStateIdentity state end
+def ledgerPeersAgree [firstResult: LedgerReplay, secondResult: LedgerReplay] ! text arith hash: Bool = let firstIdentity = ledgerReplayIdentity firstResult in let secondIdentity = ledgerReplayIdentity secondResult in textEq firstIdentity secondIdentity

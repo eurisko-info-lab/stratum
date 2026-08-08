@@ -1,0 +1,26 @@
+; The canonical change from S13 to S14.
+;
+; S13 |- S14. Deterministic ledger replay enters Strata first; synchronization
+; and federation build on the same event-trace boundary.
+(change
+  (kind foundation)
+  (name "S13->S14")
+  (predecessor (foundation-of "foundations/S13"))
+  (delta-meta (file "changes/S13-S14/delta-meta.canon"))
+  (delta-grammar (file "changes/S13-S14/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "ledger, sync, and federation")
+      (programs [
+        (file "features/strata/ledger.generated.meta")
+        (file "features/strata/sync.generated.meta")
+        (file "features/strata/federation.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/ledger.meta")
+        (text-file "features/strata/sync.meta")
+        (text-file "features/strata/federation.meta")
+        (text-file "strata/system/ledger.strata")
+        (text-file "strata/system/sync.strata")
+        (text-file "strata/system/federation.strata")
+      ]))))

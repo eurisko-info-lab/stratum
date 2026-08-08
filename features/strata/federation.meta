@@ -1,0 +1,65 @@
+module stratumfederation
+
+; Commands, certificates and finalized events cross as data. Strata decides
+; quorum sufficiency, semantic ordering, replay and peer agreement.
+
+judgment StrataFederationSystem [prelude native octets artifact cas repository studio foundation governance ledger sync federation] =
+  list [prelude native octets artifact cas repository studio foundation governance ledger sync federation]
+
+judgment AskFederation [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.federation" entry arguments]
+
+judgment StrataFederationCommands [commands] =
+  match commands {
+    case [] -> prim #node [#NoFederationCommand list []]
+    case (#finalize expected next votes required semantic) :: rest ->
+      mk #MoreFederationCommand [
+        mk #FederationFinalize [expected next votes required call GovernanceBool [semantic]]
+        call StrataFederationCommands [rest]
+      ]
+    case _ -> fail #federation-error "not a federation command list"
+  }
+
+judgment StrataFederationEvents [events] =
+  match events {
+    case [] -> prim #node [#NoFederationEvent list []]
+    case (#finalized previous next) :: rest ->
+      mk #MoreFederationEvent [
+        mk #FederationFinalized [previous next]
+        call StrataFederationEvents [rest]
+      ]
+    case _ -> fail #federation-error "not a federation event list"
+  }
+
+judgment StrataFederationExecution [grammar sources commands] =
+  call AskFederation [
+    grammar sources #executeFederation
+    list [call StrataFederationCommands [commands]]
+  ]
+
+judgment StrataFederationExecutionTag [grammar sources commands] =
+  call AskFederation [
+    grammar sources #federationExecutionTag
+    list [call StrataFederationExecution [grammar sources commands]]
+  ]
+
+judgment StrataFederationExecutionIsReplayable [grammar sources commands] =
+  call AskFederation [
+    grammar sources #federationExecutionIsReplayable
+    list [call StrataFederationExecution [grammar sources commands]]
+  ]
+
+judgment StrataFederationReplay [grammar sources events] =
+  call AskFederation [
+    grammar sources #replayFederation
+    list [call StrataFederationEvents [events]]
+  ]
+
+judgment StrataFederationPeersAgree [grammar sources first second] =
+  call AskFederation [
+    grammar sources #federationPeersAgree
+    list [
+      call StrataFederationReplay [grammar sources first]
+      call StrataFederationReplay [grammar sources second]
+    ]
+  ]

@@ -1,0 +1,10 @@
+; delta-meta for S13 -> S14: deterministic distributed state machines enter
+; the second-floor language application.
+(change
+  (kind delta-meta)
+  (name "S13->S14 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (remembering strata)
+      (editing strata))))

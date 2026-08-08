@@ -1,0 +1,50 @@
+# S14 acceptance transcript: ledger, synchronization and federation are
+# deterministic command/event machines whose traces replay exactly.
+
+$ foundation verify --dir foundations/S14
+> foundation S14
+> digest d5b5d912619d47ebff291b9cb62939de3682ce489d946e0e07990165cbf5d4d5
+> closure 303 artifacts
+> check strata-the-ledger-module-prints-exactly ok
+> check strata-the-federation-system-checks ok
+> check strata-the-federation-system-is-total ok
+> check strata-the-federation-system-declares-its-capabilities ok
+> check strata-the-federation-system-agrees-with-the-host-set ok
+> check ledger-command-events-replay-to-the-same-terminal-state ok
+> check a-divergent-ledger-peer-is-detected ok
+> check strata-the-sync-module-prints-exactly ok
+> check synchronized-events-replay-to-the-same-terminal-state ok
+> check synchronization-order-does-not-change-terminal-state ok
+> check synchronization-rejects-a-false-content-claim ok
+> check strata-the-federation-module-prints-exactly ok
+> check certified-federation-events-replay-to-the-same-terminal-state ok
+> check federation-rejects-an-insufficient-quorum ok
+> check federation-rejects-semantically-invalid-transitions ok
+> check divergent-federation-peers-are-detected ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S13 --successor foundations/S14
+> predecessor S13
+> successor S14
+> result (valid #de8d0fe595867d85c4f5e19d2b8ef5bfeadfde8141889acb5680f97fa1884c3d6)
+
+$ foundation reconstruct --dir foundations/S14
+> reconstructed S14
+> digest d5b5d912619d47ebff291b9cb62939de3682ce489d946e0e07990165cbf5d4d5
+> stable yes
+> closure 303 artifacts
+> checks 16 ok
+
+$ foundation derive-successor --predecessor foundations/S13 --derivation changes/S13-S14/derivation.canon --expect foundations/S14
+> predecessor S13
+> derived d5b5d912619d47ebff291b9cb62939de3682ce489d946e0e07990165cbf5d4d5
+> matches foundations/S14 yes
+
+$ transcript run fixtures/ledger/f7.transcript
+> ok fixtures/ledger/f7.transcript 10 steps
+
+$ transcript run fixtures/sync/f8.transcript
+> ok fixtures/sync/f8.transcript 11 steps
+
+$ transcript run fixtures/federation/f9.transcript
+> ok fixtures/federation/f9.transcript 12 steps

@@ -1,0 +1,266 @@
+; Executable acceptance checks for S14's deterministic ledger slice.
+[
+  (check strata-the-ledger-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/ledger.strata"))))
+    (value #t))
+
+  (check strata-the-federation-system-checks
+    (call CheckLinkedNative
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataFederationSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata"))))
+      (q "strata.federation"))
+    (value (checked ok)))
+
+  (check strata-the-federation-system-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataFederationSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata"))))
+      (q "strata.federation"))
+    (value (total ok)))
+
+  (check strata-the-federation-system-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataFederationSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata"))))
+      (q "strata.federation"))
+    (value (permitted ok)))
+
+  (check strata-the-federation-system-agrees-with-the-host-set
+    (call CheckLinkedBoundary
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataFederationSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata"))))
+      (q "strata.federation"))
+    (value (bounded ok)))
+
+  (check ledger-command-events-replay-to-the-same-terminal-state
+    (call StrataLedgerExecutionIsReplayable
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataLedgerSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata"))))
+      (q [(publish "genesis" "language") (publish "language" "program")]))
+    (value (True)))
+
+  (check a-divergent-ledger-peer-is-detected
+    (call StrataLedgerPeersAgree
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataLedgerSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata"))))
+      (q [(published "genesis" "language") (published "language" "program")])
+      (q [(published "genesis" "language") (published "language" "other")]))
+    (value (False)))
+
+  (check strata-the-sync-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/sync.strata"))))
+    (value #t))
+
+  (check synchronized-events-replay-to-the-same-terminal-state
+    (call StrataSyncPairIsReplayable
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataSyncSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata"))))
+      (q "source") (q (artifact alpha))
+      (q "program") (q (artifact beta)))
+    (value (True)))
+
+  (check synchronization-order-does-not-change-terminal-state
+    (call StrataSyncPairOrderIndependent
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataSyncSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata"))))
+      (q "source") (q (artifact alpha))
+      (q "program") (q (artifact beta)))
+    (value (True)))
+
+  (check synchronization-rejects-a-false-content-claim
+    (call StrataRejectSyncClaim
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataSyncSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata"))))
+      (q "not-the-artifact-name")
+      (q "source")
+      (q (artifact alpha)))
+    (value "corrupted-artifact"))
+
+  (check strata-the-federation-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/federation.strata"))))
+    (value #t))
+
+  (check certified-federation-events-replay-to-the-same-terminal-state
+    (call StrataFederationExecutionIsReplayable
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataFederationSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata"))))
+      (q [(finalize "genesis" "language" 3 3 #t) (finalize "language" "program" 3 3 #t)]))
+    (value (True)))
+
+  (check federation-rejects-an-insufficient-quorum
+    (call StrataFederationExecutionTag
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataFederationSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata"))))
+      (q [(finalize "genesis" "language" 2 3 #t)]))
+    (value "insufficient-quorum"))
+
+  (check federation-rejects-semantically-invalid-transitions
+    (call StrataFederationExecutionTag
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataFederationSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata"))))
+      (q [(finalize "genesis" "language" 3 3 #f)]))
+    (value "semantically-invalid"))
+
+  (check divergent-federation-peers-are-detected
+    (call StrataFederationPeersAgree
+      (q (file "foundations/S14/surface/strata.generated.grammar"))
+      (call StrataFederationSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata")))
+        (call SourceText (q (text-file "strata/system/foundation.strata")))
+        (call SourceText (q (text-file "strata/system/governance.strata")))
+        (call SourceText (q (text-file "strata/system/ledger.strata")))
+        (call SourceText (q (text-file "strata/system/sync.strata")))
+        (call SourceText (q (text-file "strata/system/federation.strata"))))
+      (q [(finalized "genesis" "language") (finalized "language" "program")])
+      (q [(finalized "genesis" "language") (finalized "language" "other")]))
+    (value (False)))
+]
