@@ -1,0 +1,41 @@
+# S12 acceptance transcript: tooling and studios are derived from declarations
+# and profiles, and the generic protocol adapter serves the resulting world.
+
+$ foundation verify --dir foundations/S12
+> foundation S12
+> digest ffec3eb6f35ed6a7d18b5f52c4b6c79a6ba16e16df672d3db45636e9719c0673
+> closure 285 artifacts
+> check strata-the-studio-module-prints-exactly ok
+> check strata-the-studio-checks ok
+> check strata-the-studio-is-total ok
+> check strata-the-studio-declares-its-capabilities ok
+> check strata-the-studio-agrees-with-the-host-set ok
+> check declaration-roles-derive-the-language-service-capabilities ok
+> check a-profile-derives-the-whole-editor-shape ok
+> check another-profile-derives-another-editor-shape ok
+> check a-profile-for-another-language-is-not-an-editor-surface ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S11 --successor foundations/S12
+> predecessor S11
+> successor S12
+> result (valid #de038bbd76a1f9095b843e2dfbc9f71582b7ca4493d19b328dab06cbeec864bfc)
+
+$ foundation reconstruct --dir foundations/S12
+> reconstructed S12
+> digest ffec3eb6f35ed6a7d18b5f52c4b6c79a6ba16e16df672d3db45636e9719c0673
+> stable yes
+> closure 285 artifacts
+> checks 9 ok
+
+$ lsp languages --world foundations/S12
+> service stratum-s12
+>   strata Strata .strata 28 keywords
+
+$ lsp replay --world foundations/S12 --script fixtures/strata/s12-lsp.txt
+> result 1 {"capabilities":{"textDocumentSync":{"openClose":true,"change":1,"save":true},"documentSymbolProvider":true,"documentFormattingProvider":true,"hoverProvider":true,"completionProvider":{"resolveProvider":false},"semanticTokensProvider":{"legend":{"tokenTypes":["keyword","string","number","variable"],"tokenModifiers":[]},"full":true}},"serverInfo":{"name":"stratum stratum-s12","version":"ffec3eb6f35e"}}
+> textDocument/publishDiagnostics {"uri":"file:///memory/example.strata","diagnostics":[]}
+> result 2 {"isIncomplete":false,"items":[{"label":"!","kind":14,"detail":"keyword"},{"label":",","kind":14,"detail":"keyword"},{"label":"->","kind":14,"detail":"keyword"},{"label":":","kind":14,"detail":"keyword"},{"label":"=","kind":14,"detail":"keyword"},{"label":"[","kind":14,"detail":"keyword"},{"label":"]","kind":14,"detail":"keyword"},{"label":"_","kind":14,"detail":"keyword"},{"label":"affine","kind":14,"detail":"keyword"},{"label":"case","kind":14,"detail":"keyword"},{"label":"data","kind":14,"detail":"keyword"},{"label":"def","kind":14,"detail":"keyword"},{"label":"end","kind":14,"detail":"keyword"},{"label":"erased","kind":14,"detail":"keyword"},{"label":"export","kind":14,"detail":"keyword"},{"label":"import","kind":14,"detail":"keyword"},{"label":"in","kind":14,"detail":"keyword"},{"label":"law","kind":14,"detail":"keyword"},{"label":"let","kind":14,"detail":"keyword"},{"label":"many","kind":14,"detail":"keyword"},{"label":"match","kind":14,"detail":"keyword"},{"label":"module","kind":14,"detail":"keyword"},{"label":"of","kind":14,"detail":"keyword"},{"label":"once","kind":14,"detail":"keyword"},{"label":"prim","kind":14,"detail":"keyword"},{"label":"type","kind":14,"detail":"keyword"},{"label":"version","kind":14,"detail":"keyword"},{"label":"|","kind":14,"detail":"keyword"}]}
+> result 3 [{"range":{"start":{"line":0,"character":0},"end":{"line":3,"character":0}},"newText":"module \"example\"\nversion 1\n\n"}]
+> result 4 {"data":[0,0,6,0,0,0,7,9,1,0,0,9,1,3,0,1,0,7,0,0,0,8,1,2,0,0,1,1,3,0,1,0,1,3,0]}
+> result 5 null

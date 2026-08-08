@@ -1,0 +1,505 @@
+
+artifactsource
+source
+pathfeatures/strata/effect.meta
+text҄module strataeffect
+
+; Effects and multiplicities, described in Meta.
+;
+; S2 lets a type mention a value. S6 lets a declaration say what happens: what
+; a definition needs permission to do, and how many times a parameter may be
+; used.
+;
+;   def readAll [p: Path] ! io : Text = ...
+;   def useOnce [erased a: Type, once xs: List a]: Nat = ...
+;
+; Neither is a comment. A definition that calls something needing `io` must
+; declare `io` itself, so a capability cannot be acquired by going one call
+; deeper. A parameter declared `once` must be used exactly once on every path
+; through the body, and the rejection names the path. A parameter declared
+; `erased` must be used on no path at all, which is what makes it safe to
+; remove -- and removing it is a pass over the core, checked to preserve what
+; the program computes.
+
+; ------------------------------------------------------------ declarations
+
+judgment DeclaredCapabilities [decls] = call CapabilitiesFrom [decls prim #mnew []]
+
+judgment CapabilitiesFrom [decls table] =
+  match decls {
+    case [] -> table
+    case (#uses name caps) :: rest ->
+      call CapabilitiesFrom [rest prim #mput [table name caps]]
+    case head :: rest -> call CapabilitiesFrom [rest table]
+  }
+
+judgment CapabilitiesOf [table name] = prim #mget [table name list []]
+
+judgment DeclaredGrades [decls] = call GradesFrom [decls prim #mnew []]
+
+judgment GradesFrom [decls table] =
+  match decls {
+    case [] -> table
+    case (#grades name graded) :: rest ->
+      call GradesFrom [rest prim #mput [table name graded]]
+    case head :: rest -> call GradesFrom [rest table]
+  }
+
+; ------------------------------------------------------------- capabilities
+;
+; A capability is not acquired by going one call deeper. If a definition calls
+; something that needs `io`, it needs `io`.
+
+judgment CheckCapabilities [decls] =
+  call CheckEachCapability [decls call DeclaredCapabilities [decls] decls]
+
+judgment CheckEachCapability [all table remaining] =
+  match remaining {
+    case [] -> mk #permitted [#ok]
+    case (#def name params result body) :: rest ->
+      match call CheckCalls [
+        all
+        table
+        name
+        call CapabilitiesOf [table name]
+        call CalledNames [body list []]
+      ] {
+        case _ -> call CheckEachCapability [all table rest]
+      }
+    case head :: rest -> call CheckEachCapability [all table rest]
+  }
+
+judgment CheckCalls [all table caller held called] =
+  match called {
+    case [] -> mk #permitted [#ok]
+    case name :: rest ->
+      match call MissingCapability [held call CapabilitiesOf [table name]] {
+        case (#missing lacked) ->
+          fail #capability-error prim #scat [
+            prim #scat [
+              prim #scat [prim #scat [prim #sym->str [caller] " calls "] prim #sym->str [name]]
+              prim #scat [", which needs " prim #sym->str [lacked]]
+            ]
+            prim #scat [prim #scat [", and " prim #sym->str [caller]] " does not declare it"]
+          ]
+        case _ -> call CheckCalls [all table caller held rest]
+      }
+  }
+
+judgment MissingCapability [held needed] =
+  match needed {
+    case [] -> mk #permitted []
+    case permission :: rest ->
+      if prim #contains [held permission]
+      then call MissingCapability [held rest]
+      else mk #missing [permission]
+  }
+
+; Every name a body applies or mentions. A capability travels along a mention,
+; not only along a saturated call, because a definition handed on is a
+; definition that will run.
+judgment CalledNames [expr found] =
+  match expr {
+    case (#Var name) -> prim #snoc [found name]
+    case (#Apply fn argument) ->
+      call CalledNames [argument call CalledNames [fn found]]
+    case (#Let name value body) ->
+      call CalledNames [body call CalledNames [value found]]
+    case (#Match scrutinee cases) ->
+      call CalledNamesInCases [call CaseList [cases] call CalledNames [scrutinee found]]
+    case _ -> found
+  }
+
+judgment CalledNamesInCases [cases found] =
+  match cases {
+    case [] -> found
+    case (#Case pattern body) :: rest ->
+      call CalledNamesInCases [rest call CalledNames [body found]]
+    case head :: rest -> call CalledNamesInCases [rest found]
+  }
+
+; ----------------------------------------------------------- multiplicities
+;
+; How often a name is used, counted separately along every path a match can
+; take, and labelled with the constructors that were chosen to get there.
+
+judgment UsePaths [expr name] = call PathsOf [expr name list [] ]
+
+judgment PathsOf [expr name label] =
+  match expr {
+    case (#Var declared) ->
+      if prim #eq [declared name]
+      then list [mk #path [label 1]]
+      else list [mk #path [label 0]]
+    case (#Apply fn argument) ->
+      call CombinePaths [call PathsOf [fn name label] call PathsOf [argument name label]]
+    case (#Let bound value body) ->
+      if prim #eq [bound name]
+      then call PathsOf [value name label]
+      else
+        call CombinePaths [
+          call PathsOf [value name label]
+          call PathsOf [body name label]
+        ]
+    case (#Match scrutinee cases) ->
+      call CombinePaths [
+        call PathsOf [scrutinee name label]
+        call BranchPaths [call CaseList [cases] name label]
+      ]
+    case _ -> list [mk #path [label 0]]
+  }
+
+; Two subexpressions on the same path add up; two branches are two paths.
+judgment CombinePaths [left right] =
+  match left {
+    case [] -> list []
+    case (#path label count) :: restLeft ->
+      prim #append [
+        call AddToEach [label count right]
+        call CombinePaths [restLeft right]
+      ]
+    case head :: restLeft -> call CombinePaths [restLeft right]
+  }
+
+judgment AddToEach [label count paths] =
+  match paths {
+    case [] -> list []
+    case (#path other amount) :: rest ->
+      prim #cons [
+        mk #path [call JoinLabels [label other] prim #add [count amount]]
+        call AddToEach [label count rest]
+      ]
+    case head :: rest -> call AddToEach [label count rest]
+  }
+
+judgment JoinLabels [left right] = prim #distinct [prim #append [left right]]
+
+judgment BranchPaths [cases name label] =
+  match cases {
+    case [] -> list []
+    case (#Case pattern body) :: rest ->
+      if prim #contains [call BoundInPattern [pattern] name]
+      then call BranchPaths [rest name label]
+      else
+        prim #append [
+          call PathsOf [body name prim #snoc [label call PatternHead [pattern]]]
+          call BranchPaths [rest name label]
+        ]
+    case head :: rest -> call BranchPaths [rest name label]
+  }
+
+; What a pattern binds is its fields, not its constructor: a branch that names
+; a field the same as the parameter shadows it, and a constructor of that name
+; does not.
+judgment BoundInPattern [pattern] =
+  match call PatternSpine [pattern] {
+    case head :: fields -> call FieldNamesOf [fields]
+    case _ -> list []
+  }
+
+judgment FieldNamesOf [fields] =
+  match fields {
+    case [] -> list []
+    case (#PatVar name) :: rest -> prim #cons [name call FieldNamesOf [rest]]
+    case head :: rest -> call FieldNamesOf [rest]
+  }
+
+judgment PatternHead [pattern] =
+  match call PatternSpine [pattern] {
+    case (#PatVar head) :: args -> head
+    case _ -> #_
+  }
+
+judgment CheckMultiplicities [decls] =
+  call CheckEachDefinitionGrades [decls call DeclaredGrades [decls]]
+
+judgment CheckEachDefinitionGrades [decls table] =
+  match decls {
+    case [] -> mk #used [#ok]
+    case (#def name params result body) :: rest ->
+      match call CheckGradedParameters [
+        name
+        body
+        prim #mget [table name list []]
+      ] {
+        case _ -> call CheckEachDefinitionGrades [rest table]
+      }
+    case head :: rest -> call CheckEachDefinitionGrades [rest table]
+  }
+
+judgment CheckGradedParameters [owner body graded] =
+  match graded {
+    case [] -> mk #used [#ok]
+    case (#graded pname grade) :: rest ->
+      match call CheckOneGrade [owner pname grade call UsePaths [body pname]] {
+        case _ -> call CheckGradedParameters [owner body rest]
+      }
+    case head :: rest -> call CheckGradedParameters [owner body rest]
+  }
+
+judgment CheckOneGrade [owner pname grade paths] =
+  if prim #eq [grade #many]
+  then mk #used [#ok]
+  else call CheckPathsAgainst [owner pname grade paths]
+
+judgment CheckPathsAgainst [owner pname grade paths] =
+  match paths {
+    case [] -> mk #used [#ok]
+    case (#path label count) :: rest ->
+      if call GradeAdmits [grade count]
+      then call CheckPathsAgainst [owner pname grade rest]
+      else
+        fail #multiplicity-error prim #scat [
+          prim #scat [
+            prim #scat [prim #scat [prim #sym->str [owner] " declares "] prim #sym->str [pname]]
+            prim #scat [prim #scat [" " prim #sym->str [grade]] ", but "]
+          ]
+          prim #scat [prim #scat [call UsageText [count] " "] call WhereText [label]]
+        ]
+    case head :: rest -> call CheckPathsAgainst [owner pname grade rest]
+  }
+
+judgment UsageText [count] =
+  if prim #eq [count 0]
+  then "does not use it"
+  else
+    if prim #eq [count 1]
+    then "uses it once"
+    else prim #scat [prim #scat ["uses it " prim #nat->str [count]] " times"]
+
+judgment WhereText [label] =
+  match label {
+    case [] -> "in its body"
+    case _ -> prim #scat ["on the path through " call PathTail [label]]
+  }
+
+judgment GradeAdmits [grade count] =
+  if prim #eq [grade #erased]
+  then prim #eq [count 0]
+  else
+    if prim #eq [grade #once]
+    then prim #eq [count 1]
+    else
+      if prim #eq [grade #affine]
+      then prim #le [count 1]
+      else
+        if prim #eq [grade #many]
+        then true
+        else fail #grade-error "not a multiplicity"
+
+judgment PathTail [label] =
+  match label {
+    case [] -> ""
+    case name :: [] -> prim #sym->str [name]
+    case name :: rest ->
+      prim #scat [prim #scat [prim #sym->str [name] " then "] call PathTail [rest]]
+  }
+
+; ---------------------------------------------------------------- erasure
+;
+; A parameter used on no path can be removed, and this removes it: from the
+; definition that takes it, and from every application that supplies it. The
+; core is the compiler's, so this is a pass over the core rather than a second
+; reader.
+
+judgment ErasedPositions [decls] =
+  call ErasedFrom [decls call DeclaredGrades [decls] 0 prim #mnew []]
+
+judgment ErasedFrom [decls table next out] =
+  match decls {
+    case [] -> out
+    case (#def name params result body) :: rest ->
+      call ErasedFrom [
+        rest
+        table
+        prim #add [next 1]
+        prim #mput [out prim #nat->str [next] call ErasedIndexes [prim #mget [table name list []] 0]]
+      ]
+    case head :: rest -> call ErasedFrom [rest table next out]
+  }
+
+judgment ErasedIndexes [graded position] =
+  match graded {
+    case [] -> list []
+    case (#graded pname grade) :: rest ->
+      if prim #eq [grade #erased]
+      then prim #cons [position call ErasedIndexes [rest prim #add [position 1]]]
+      else call ErasedIndexes [rest prim #add [position 1]]
+    case head :: rest -> call ErasedIndexes [rest prim #add [position 1]]
+  }
+judgment ErasedAt [positions index] =
+  prim #mget [positions prim #nat->str [index] list []]
+
+judgment EraseProgram [positions program] = call EraseDefinitions [positions program 0]
+
+judgment EraseDefinitions [positions program index] =
+  match program {
+    case (#NoDef) -> prim #node [#NoDef list []]
+    case (#Def arity body rest) ->
+      let dropped = call ErasedAt [positions index] in
+      prim #node [#Def list [
+        call NatValue [prim #sub [call NatOf [arity] prim #len [dropped]]]
+        call EraseCore [positions dropped body 0]
+        call EraseDefinitions [positions rest prim #add [index 1]]
+      ]]
+    case _ -> fail #erase-error "malformed program"
+  }
+
+; A local index below the current binder depth names a binder introduced
+; inside the body, and is untouched. At or above it, it names a parameter, and
+; the parameters have moved.
+judgment EraseCore [positions dropped core depth] =
+  match core {
+    case (#CLocal index) ->
+      let position = call NatOf [index] in
+      if prim #lt [position depth]
+      then core
+      else
+        prim #node [#CLocal list [
+          call NatValue [
+            prim #add [depth call ShiftedIndex [dropped prim #sub [position depth]]]
+          ]
+        ]]
+    case (#CApp fn argument) ->
+      call EraseApplication [
+        positions
+        dropped
+        call EraseSpine [core]
+        depth
+      ]
+    case (#CLet value body) ->
+      prim #node [#CLet list [
+        call EraseCore [positions dropped value depth]
+        call EraseCore [positions dropped body prim #add [depth 1]]
+      ]]
+    case (#CCase scrutinee branches) ->
+      prim #node [#CCase list [
+        call EraseCore [positions dropped scrutinee depth]
+        call EraseBranches [positions dropped branches depth]
+      ]]
+    case _ -> core
+  }
+
+judgment ShiftedIndex [dropped index] =
+  prim #sub [index prim #len [call BelowIndex [dropped index]]]
+
+judgment BelowIndex [dropped index] =
+  match dropped {
+    case [] -> list []
+    case position :: rest ->
+      if prim #lt [position index]
+      then prim #cons [position call BelowIndex [rest index]]
+      else call BelowIndex [rest index]
+  }
+
+judgment EraseBranches [positions dropped branches depth] =
+  match branches {
+    case (#NoBranch) -> prim #node [#NoBranch list []]
+    case (#Branch tag arity body rest) ->
+      prim #node [#Branch list [
+        tag
+        arity
+        call EraseCore [positions dropped body prim #add [depth call NatOf [arity]]]
+        call EraseBranches [positions dropped rest depth]
+      ]]
+    case _ -> fail #erase-error "malformed branches"
+  }
+
+judgment EraseSpine [core] =
+  match core {
+    case (#CApp fn argument) -> prim #snoc [call EraseSpine [fn] argument]
+    case _ -> list [core]
+  }
+
+judgment EraseApplication [positions dropped spine depth] =
+  match spine {
+    case head :: args ->
+      call RebuildApplication [
+        call EraseCore [positions dropped head depth]
+        call EraseArguments [
+          positions
+          dropped
+          args
+          depth
+          call DroppedForHead [positions head]
+          0
+        ]
+      ]
+    case _ -> fail #erase-error "malformed application"
+  }
+
+judgment DroppedForHead [positions head] =
+  match head {
+    case (#CGlobal index) -> call ErasedAt [positions call NatOf [index]]
+    case _ -> list []
+  }
+
+judgment EraseArguments [positions dropped args depth drops position] =
+  match args {
+    case [] -> list []
+    case argument :: rest ->
+      if prim #contains [drops position]
+      then call EraseArguments [positions dropped rest depth drops prim #add [position 1]]
+      else
+        prim #cons [
+          call EraseCore [positions dropped argument depth]
+          call EraseArguments [positions dropped rest depth drops prim #add [position 1]]
+        ]
+  }
+
+judgment RebuildApplication [head args] =
+  match args {
+    case [] -> head
+    case argument :: rest ->
+      call RebuildApplication [prim #node [#CApp list [head argument]] rest]
+  }
+
+; ---------------------------------------------------------------- driving
+
+judgment EffectDeclarations [grammar sources name] =
+  call LinkModule [call LoadModuleSet [grammar sources] name]
+
+judgment CheckLinkedCapabilities [grammar sources name] =
+  call CheckCapabilities [call EffectDeclarations [grammar sources name]]
+
+judgment CheckLinkedMultiplicities [grammar sources name] =
+  call CheckMultiplicities [call EffectDeclarations [grammar sources name]]
+
+judgment ErasedProgramOf [grammar sources name] =
+  let decls = call EffectDeclarations [grammar sources name] in
+  call EraseProgram [call ErasedPositions [decls] call ReadProgram [decls]]
+
+; What is erased is gone: no argument supplies it and no definition takes it.
+judgment ErasedArities [grammar sources name] =
+  call ArityList [call ErasedProgramOf [grammar sources name]]
+
+judgment ArityList [program] =
+  match program {
+    case (#NoDef) -> list []
+    case (#Def arity body rest) ->
+      prim #cons [call NatOf [arity] call ArityList [rest]]
+    case _ -> fail #erase-error "malformed program"
+  }
+
+judgment RunErased [grammar compilerSources sources name entry] =
+  let compiler = call CompilerDeclarations [grammar compilerSources] in
+  let decls = call EffectDeclarations [grammar sources name] in
+  let program = call EraseProgram [call ErasedPositions [decls] call ReadProgram [decls]] in
+  let tags = call ConstructorTags [decls] in
+  call FromMachineValue [
+    call TagNames [tags]
+    call RunBlock [
+      call BlockList [call CompileProgramWith [compiler program]]
+      call ArityList [program]
+      call IndexOfGlobal [call GlobalIndexes [decls] entry]
+      list []
+    ]
+  ]
+
+; Erasure preserves meaning: what the erased program computes is what the
+; source computes.
+judgment ErasurePreservesMeaning [grammar compilerSources sources name entry] =
+  prim #eq [
+    call RunErased [grammar compilerSources sources name entry]
+    call RunEvaluated [grammar sources name entry]
+  ]

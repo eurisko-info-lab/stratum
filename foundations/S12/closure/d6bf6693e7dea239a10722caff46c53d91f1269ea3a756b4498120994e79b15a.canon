@@ -1,0 +1,410 @@
+
+artifactsource
+source
+path#features/federation/federation.meta
+text mmodule agreement
+
+; Constituted agreement replaces the single publication authority.
+;
+; The ordering rule is: semantic validity before agreement. A replica votes
+; only after the proposed transition is valid under the selected foundation.
+
+record Replica [key]
+record ReplicaSet [federation members]
+record AgreementProposal [federation view slot predecessor successor proposer signature]
+record Vote [federation view slot subject voter signature]
+record FinalityCertificate [federation view slot subject votes]
+record ViewChange [federation view next voter signature]
+record FederationState [view slot head finalized]
+record EquivocationEvidence [voter view first second]
+record FederationTransition [from to certificate]
+
+; ------------------------------------------------------------------ quorum
+
+judgment MemberCount [replicaSet] = prim #len [call ReplicaSet'members [replicaSet]]
+
+; Classic 3f+1 membership.
+judgment Tolerance [replicaSet] =
+  prim #div [prim #sub [call MemberCount [replicaSet] 1] 3]
+
+judgment QuorumSize [replicaSet] =
+  prim #sub [call MemberCount [replicaSet] call Tolerance [replicaSet]]
+
+judgment IsMember [replicaSet key] =
+  prim #contains [call ReplicaSet'members [replicaSet] key]
+
+; ----------------------------------------------------------------- subjects
+
+judgment ProposalSubject [federation view slot predecessor successor] =
+  mk #proposal-subject [federation view slot predecessor successor]
+
+judgment ProposalDigest [proposal] =
+  prim #digest [
+    call ProposalSubject [
+      call AgreementProposal'federation [proposal]
+      call AgreementProposal'view [proposal]
+      call AgreementProposal'slot [proposal]
+      call AgreementProposal'predecessor [proposal]
+      call AgreementProposal'successor [proposal]
+    ]
+  ]
+
+judgment VoteSubject [federation view slot subject] =
+  mk #vote-subject [federation view slot subject]
+
+judgment MakeProposal [secret federation view slot predecessor successor] =
+  call AgreementProposal [
+    federation view slot predecessor successor
+    call PublicKey [secret]
+    call SignSubject [secret call ProposalSubject [federation view slot predecessor successor]]
+  ]
+
+; --------------------------------------------------------------- validation
+
+judgment ValidateProposal [replicaSet proposal] =
+  if prim #eq [call AgreementProposal'federation [proposal] call ReplicaSet'federation [replicaSet]]
+  then
+    if call IsMember [replicaSet call AgreementProposal'proposer [proposal]]
+    then
+      if call VerifySubject [
+           call AgreementProposal'proposer [proposal]
+           call ProposalSubject [
+             call AgreementProposal'federation [proposal]
+             call AgreementProposal'view [proposal]
+             call AgreementProposal'slot [proposal]
+             call AgreementProposal'predecessor [proposal]
+             call AgreementProposal'successor [proposal]
+           ]
+           call AgreementProposal'signature [proposal]
+         ]
+      then mk #valid []
+      else mk #invalid [#bad-proposal-signature]
+    else mk #invalid [#unknown-proposer]
+  else mk #invalid [#wrong-federation]
+
+; Semantic validity comes first: the successor must be compatible with the
+; predecessor under the selected foundation.
+judgment SemanticallyValid [proposal] =
+  call IsCompatible [
+    call AgreementProposal'predecessor [proposal]
+    call AgreementProposal'successor [proposal]
+  ]
+
+judgment CastVote [secret replicaSet proposal] =
+  match call ValidateProposal [replicaSet proposal] {
+    case (#invalid reason) -> mk #abstained [reason]
+    case (#valid) ->
+      if call SemanticallyValid [proposal]
+      then
+        mk #vote [
+          call Vote [
+            call AgreementProposal'federation [proposal]
+            call AgreementProposal'view [proposal]
+            call AgreementProposal'slot [proposal]
+            call ProposalDigest [proposal]
+            call PublicKey [secret]
+            call SignSubject [
+              secret
+              call VoteSubject [
+                call AgreementProposal'federation [proposal]
+                call AgreementProposal'view [proposal]
+                call AgreementProposal'slot [proposal]
+                call ProposalDigest [proposal]
+              ]
+            ]
+          ]
+        ]
+      else mk #abstained [#semantically-invalid]
+  }
+
+judgment ValidateVote [replicaSet subject vote] =
+  if prim #eq [call Vote'federation [vote] call ReplicaSet'federation [replicaSet]]
+  then
+    if call IsMember [replicaSet call Vote'voter [vote]]
+    then
+      if prim #eq [call Vote'subject [vote] subject]
+      then
+        if call VerifySubject [
+             call Vote'voter [vote]
+             call VoteSubject [
+               call Vote'federation [vote]
+               call Vote'view [vote]
+               call Vote'slot [vote]
+               call Vote'subject [vote]
+             ]
+             call Vote'signature [vote]
+           ]
+        then mk #valid []
+        else mk #invalid [#bad-vote-signature]
+      else mk #invalid [#certificate-for-another-proposal]
+    else mk #invalid [#unknown-voter]
+  else mk #invalid [#wrong-federation]
+
+judgment ValidateVotes [replicaSet subject votes voters] =
+  match votes {
+    case [] -> mk #voters [voters]
+    case head :: rest ->
+      match call ValidateVote [replicaSet subject head] {
+        case (#valid) ->
+          call ValidateVotes [
+            replicaSet subject rest
+            call Union [voters list [call Vote'voter [head]]]
+          ]
+        case (#invalid reason) -> mk #invalid [reason]
+      }
+  }
+
+judgment ValidateCertificate [replicaSet certificate] =
+  if prim #eq [call FinalityCertificate'federation [certificate] call ReplicaSet'federation [replicaSet]]
+  then
+    match call ValidateVotes [
+           replicaSet
+           call FinalityCertificate'subject [certificate]
+           call FinalityCertificate'votes [certificate]
+           list []
+         ] {
+      case (#invalid reason) -> mk #invalid [reason]
+      case (#voters voters) ->
+        if prim #ge [prim #len [voters] call QuorumSize [replicaSet]]
+        then mk #valid []
+        else mk #invalid [#insufficient-quorum]
+    }
+  else mk #invalid [#wrong-federation]
+
+judgment ValidateTransition [replicaSet proposal certificate] =
+  match call ValidateProposal [replicaSet proposal] {
+    case (#invalid reason) -> mk #invalid [reason]
+    case (#valid) ->
+      if prim #eq [call FinalityCertificate'subject [certificate] call ProposalDigest [proposal]]
+      then call ValidateCertificate [replicaSet certificate]
+      else mk #invalid [#certificate-for-another-proposal]
+  }
+
+; ------------------------------------------------------------------- replay
+
+judgment InitialFederationState [] = call FederationState [0 0 #genesis list []]
+
+judgment ApplyTransition [state proposal] =
+  call FederationState [
+    call AgreementProposal'view [proposal]
+    prim #add [call FederationState'slot [state] 1]
+    call AgreementProposal'successor [proposal]
+    prim #snoc [call FederationState'finalized [state] call ProposalDigest [proposal]]
+  ]
+
+judgment ReplayFinalizedHistory [replicaSet transitions state] =
+  match transitions {
+    case [] -> mk #settled [state]
+    case head :: rest ->
+      match head {
+        case (#step proposal certificate) ->
+          match call ValidateTransition [replicaSet proposal certificate] {
+            case (#valid) -> call ReplayFinalizedHistory [replicaSet rest call ApplyTransition [state proposal]]
+            case (#invalid reason) -> mk #rejected [reason]
+          }
+        case _ -> mk #rejected [#malformed-history]
+      }
+  }
+
+judgment SettledHeight [result] =
+  match result {
+    case (#settled state) -> call FederationState'slot [state]
+    case (#rejected reason) -> mk #rejected [reason]
+  }
+
+judgment SettlementRejection [result] =
+  match result {
+    case (#settled state) -> mk #settled []
+    case (#rejected reason) -> reason
+  }
+
+judgment SettledHead [result] =
+  match result {
+    case (#settled state) -> call FederationState'head [state]
+    case (#rejected reason) -> mk #none []
+  }
+
+; ------------------------------------------------------------ equivocation
+
+judgment DetectEquivocation [votes] =
+  match votes {
+    case [] -> mk #none []
+    case head :: rest -> call ScanEquivocation [head rest]
+  }
+
+judgment ScanEquivocation [candidate rest] =
+  match rest {
+    case [] -> mk #none []
+    case head :: more ->
+      if prim #eq [call Vote'voter [candidate] call Vote'voter [head]]
+      then
+        if prim #eq [call Vote'view [candidate] call Vote'view [head]]
+        then
+          if prim #eq [call Vote'slot [candidate] call Vote'slot [head]]
+          then
+            if prim #eq [call Vote'subject [candidate] call Vote'subject [head]]
+            then call ScanEquivocation [candidate more]
+            else
+              mk #equivocation [
+                call EquivocationEvidence [
+                  call Vote'voter [candidate]
+                  call Vote'view [candidate]
+                  call Vote'subject [candidate]
+                  call Vote'subject [head]
+                ]
+              ]
+          else call ScanEquivocation [candidate more]
+        else call ScanEquivocation [candidate more]
+      else call ScanEquivocation [candidate more]
+  }
+
+; ------------------------------------------------------- membership change
+
+; Membership changes are governed transitions, never ad hoc edits.
+judgment ChangeMembership [replicaSet added result] =
+  match result {
+    case (#settled state) ->
+      mk #members [
+        call ReplicaSet [
+          call ReplicaSet'federation [replicaSet]
+          call Union [call ReplicaSet'members [replicaSet] added]
+        ]
+      ]
+    case (#rejected reason) -> mk #blocked [reason]
+  }
+
+; ----------------------------------------------------------------- scenarios
+
+judgment ReplicaSecret [name] = prim #scat ["replica-" name]
+
+judgment ReplicaKey [name] = call PublicKey [call ReplicaSecret [name]]
+
+judgment FederationMembers [] =
+  list [call ReplicaKey ["a"] call ReplicaKey ["b"] call ReplicaKey ["c"] call ReplicaKey ["d"]]
+
+judgment Federation [] = call ReplicaSet [#stratum call FederationMembers []]
+
+judgment OtherFederation [] = call ReplicaSet [#other call FederationMembers []]
+
+judgment ProposalAt [slot predecessor successor] =
+  call MakeProposal [call ReplicaSecret ["a"] #stratum 1 slot predecessor successor]
+
+judgment VoteOn [name proposal] =
+  match call CastVote [call ReplicaSecret [name] call Federation [] proposal] {
+    case (#vote vote) -> vote
+    case (#abstained reason) -> mk #abstained [reason]
+  }
+
+judgment CertificateFor [proposal names] =
+  call FinalityCertificate [
+    #stratum
+    call AgreementProposal'view [proposal]
+    call AgreementProposal'slot [proposal]
+    call ProposalDigest [proposal]
+    call VotesFrom [names proposal]
+  ]
+
+judgment VotesFrom [names proposal] =
+  match names {
+    case [] -> list []
+    case head :: rest -> prim #cons [call VoteOn [head proposal] call VotesFrom [rest proposal]]
+  }
+
+judgment Quorum [] = list ["a" "b" "c"]
+judgment TooFew [] = list ["a" "b"]
+
+judgment FirstProposal [predecessor successor] = call ProposalAt [1 predecessor successor]
+judgment SecondProposal [predecessor successor] = call ProposalAt [2 predecessor successor]
+
+judgment TwoTransitions [first second third] =
+  list [
+    mk #step [
+      call FirstProposal [first second]
+      call CertificateFor [call FirstProposal [first second] call Quorum []]
+    ]
+    mk #step [
+      call SecondProposal [second third]
+      call CertificateFor [call SecondProposal [second third] call Quorum []]
+    ]
+  ]
+
+judgment SettleTwo [first second third] =
+  call ReplayFinalizedHistory [call Federation [] call TwoTransitions [first second third] call InitialFederationState []]
+
+judgment InsufficientQuorumHistory [first second] =
+  list [
+    mk #step [
+      call FirstProposal [first second]
+      call CertificateFor [call FirstProposal [first second] call TooFew []]
+    ]
+  ]
+
+judgment SettleInsufficient [first second] =
+  call ReplayFinalizedHistory [
+    call Federation []
+    call InsufficientQuorumHistory [first second]
+    call InitialFederationState []
+  ]
+
+judgment WrongCertificateHistory [first second third] =
+  list [
+    mk #step [
+      call FirstProposal [first second]
+      call CertificateFor [call SecondProposal [second third] call Quorum []]
+    ]
+  ]
+
+judgment SettleWrongCertificate [first second third] =
+  call ReplayFinalizedHistory [
+    call Federation []
+    call WrongCertificateHistory [first second third]
+    call InitialFederationState []
+  ]
+
+judgment WrongFederationHistory [first second] =
+  list [
+    mk #step [
+      call FirstProposal [first second]
+      call CertificateFor [call FirstProposal [first second] call Quorum []]
+    ]
+  ]
+
+judgment SettleWrongFederation [first second] =
+  call ReplayFinalizedHistory [
+    call OtherFederation []
+    call WrongFederationHistory [first second]
+    call InitialFederationState []
+  ]
+
+judgment SemanticallyInvalidVote [first second] =
+  call CastVote [
+    call ReplicaSecret ["a"]
+    call Federation []
+    call MakeProposal [call ReplicaSecret ["a"] #stratum 1 1 second first]
+  ]
+
+; The same replica votes twice in the same view and slot for different subjects.
+judgment DoubleVote [first second third] =
+  call DetectEquivocation [
+    list [
+      call VoteOn ["a" call FirstProposal [first second]]
+      call VoteOn ["a" call ProposalAt [1 second third]]
+    ]
+  ]
+
+judgment HonestVotes [first second] =
+  call DetectEquivocation [call VotesFrom [call Quorum [] call FirstProposal [first second]]]
+
+judgment MembershipAfterSettlement [first second third] =
+  prim #len [
+    call ReplicaSet'members [
+      match call ChangeMembership [
+        call Federation []
+        list [call ReplicaKey ["e"]]
+        call SettleTwo [first second third]
+      ] {
+        case (#members updated) -> updated
+        case (#blocked reason) -> call Federation []
+      }
+    ]
+  ]

@@ -1,0 +1,47 @@
+
+artifactsource
+source
+path#languages/markdown/markdown.grammar
+text¿	grammar "markdown"
+start document
+
+token heading sym "#{1,6}"
+token fence sym "```"
+token code str "`[^`]+`"
+token word str "[^ \\t\\r\\n#>`*!\\[\\]()-]+"
+token punctuation str "[#>`*_-]"
+token newline sym "\\n"
+
+category document
+  fold MarkdownDocument block
+
+category block
+  prod Heading level : heading content : inlines newline : newline
+  prod FenceClose marker : fence newline : newline
+  prod Fence marker : fence language : inlines newline : newline
+  prod Bullet "-" content : inlines newline : newline
+  prod Quote ">" content : inlines newline : newline
+  prod Paragraph content : inlines newline : newline
+  prod Blank newline : newline
+
+category inlines
+  fold Inlines inline
+
+category inline
+  prod Strong "**" content : inlines "**"
+  prod Emph "*" content : inlines "*"
+  prod Image "!" "[" text : inlines "]" "(" url : inlines ")"
+  prod Link "[" text : inlines "]" "(" url : inlines ")"
+  prod Code value : code
+  prod Word value : word
+  prod HeadingMark value : heading
+  prod Dash "-"
+  prod Greater ">"
+  prod StrongMark "**"
+  prod EmphMark "*"
+  prod Bang "!"
+  prod OpenBracket "["
+  prod CloseBracket "]"
+  prod OpenParen "("
+  prod CloseParen ")"
+  prod Punctuation value : punctuation

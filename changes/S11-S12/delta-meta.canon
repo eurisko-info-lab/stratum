@@ -1,0 +1,10 @@
+; delta-meta for S11 -> S12: the language declaration and studio profile cross
+; together, and the editor surface comes back as their projection.
+(change
+  (kind delta-meta)
+  (name "S11->S12 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (remembering strata)
+      (editing strata))))

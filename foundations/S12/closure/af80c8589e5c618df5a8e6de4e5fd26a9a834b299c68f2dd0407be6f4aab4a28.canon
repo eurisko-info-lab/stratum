@@ -1,0 +1,70 @@
+
+artifactsource
+source
+pathlanguages/html/html.grammar
+textÉgrammar "html"
+start document
+
+token quoted str "\"[^\"]*\"|'[^']*'"
+token word str "[A-Za-z_][A-Za-z0-9_-]*"
+token number str "[0-9]+(\\.[0-9]+)?"
+token symbol str "[^A-Za-z0-9_ \\t\\r\\n\"']"
+token newline sym "\\n"
+
+category document
+  fold HtmlDocument node
+
+category node
+  prod Doctype "<" "!" name : word kind : word ">"
+  prod VoidArea "<" "area" attributes : attributes ">"
+  prod VoidAreaBare "<" "area" ">"
+  prod VoidBase "<" "base" attributes : attributes ">"
+  prod VoidBaseBare "<" "base" ">"
+  prod VoidBr "<" "br" attributes : attributes ">"
+  prod VoidBrBare "<" "br" ">"
+  prod VoidCol "<" "col" attributes : attributes ">"
+  prod VoidColBare "<" "col" ">"
+  prod VoidEmbed "<" "embed" attributes : attributes ">"
+  prod VoidEmbedBare "<" "embed" ">"
+  prod VoidHr "<" "hr" attributes : attributes ">"
+  prod VoidHrBare "<" "hr" ">"
+  prod VoidImg "<" "img" attributes : attributes ">"
+  prod VoidImgBare "<" "img" ">"
+  prod VoidInput "<" "input" attributes : attributes ">"
+  prod VoidInputBare "<" "input" ">"
+  prod VoidLink "<" "link" attributes : attributes ">"
+  prod VoidLinkBare "<" "link" ">"
+  prod VoidMeta "<" "meta" attributes : attributes ">"
+  prod VoidMetaBare "<" "meta" ">"
+  prod VoidParam "<" "param" attributes : attributes ">"
+  prod VoidParamBare "<" "param" ">"
+  prod VoidSource "<" "source" attributes : attributes ">"
+  prod VoidSourceBare "<" "source" ">"
+  prod VoidTrack "<" "track" attributes : attributes ">"
+  prod VoidTrackBare "<" "track" ">"
+  prod VoidWbr "<" "wbr" attributes : attributes ">"
+  prod VoidWbrBare "<" "wbr" ">"
+  prod SelfClosing "<" name : word attributes : attributes "/" ">"
+  prod SelfClosingBare "<" name : word "/" ">"
+  prod Element "<" name : word attributes : attributes ">" children : document "</" closeName : word ">"
+  prod ElementBare "<" name : word ">" children : document "</" closeName : word ">"
+  prod EmptyElement "<" name : word attributes : attributes ">" "</" closeName : word ">"
+  prod EmptyElementBare "<" name : word ">" "</" closeName : word ">"
+  prod TextWord value : word
+  prod TextNumber value : number
+  prod TextQuoted value : quoted
+  prod TextSymbol value : symbol
+  prod TextLess "<"
+  prod TextGreater ">"
+  prod TextSlash "/"
+  prod TextBang "!"
+  prod TextEquals "="
+  prod LineBreak newline : newline
+
+category attributes
+  fold Attributes attribute
+
+category attribute
+  prod Attribute name : word "=" value : quoted
+  prod BareAttribute name : word
+  prod AttributeSymbol value : symbol

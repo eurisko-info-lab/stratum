@@ -1,0 +1,107 @@
+module stratastudio
+
+; The editor surface, crossed into Strata and back.
+;
+; This module translates shape, not policy. Language names, extensions, tool
+; roles, views, commands and workflow stages all arrive as values supplied by
+; the world. The only decisions are made by `strata/system/studio.strata`.
+
+judgment StrataStudioSystem [prelude native octets artifact cas repository studio] =
+  list [prelude native octets artifact cas repository studio]
+
+judgment StudioTexts [items] =
+  match items {
+    case [] -> prim #node [#NoText list []]
+    case head :: rest -> mk #MoreText [head call StudioTexts [rest]]
+  }
+
+judgment StudioViews [items] =
+  match items {
+    case [] -> prim #node [#NoView list []]
+    case (#view name primitive placement) :: rest ->
+      mk #MoreView [mk #View [name primitive placement] call StudioViews [rest]]
+    case head :: rest -> fail #studio-error "not a view declaration"
+  }
+
+judgment StudioActions [items] =
+  match items {
+    case [] -> prim #node [#NoAction list []]
+    case (#action name title) :: rest ->
+      mk #MoreAction [mk #Action [name title] call StudioActions [rest]]
+    case head :: rest -> fail #studio-error "not an action declaration"
+  }
+
+judgment StudioDeclaration [declaration] =
+  match declaration {
+    case (#language name label extensions comment roles) ->
+      mk #LanguageDeclaration [
+        name label call StudioTexts [extensions] comment call StudioTexts [roles]
+      ]
+    case _ -> fail #studio-error "not a language declaration"
+  }
+
+judgment StudioProfile [profile] =
+  match profile {
+    case (#profile name language layout views actions workflow) ->
+      mk #Profile [
+        name
+        language
+        layout
+        call StudioViews [views]
+        call StudioActions [actions]
+        call StudioTexts [workflow]
+      ]
+    case _ -> fail #studio-error "not a studio profile"
+  }
+
+judgment AskStudio [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.studio" entry arguments]
+
+judgment StrataSurface [grammar sources declaration profile] =
+  call AskStudio [
+    grammar
+    sources
+    #deriveSurface
+    list [call StudioDeclaration [declaration] call StudioProfile [profile]]
+  ]
+
+judgment StrataSurfaceShape [grammar sources declaration profile] =
+  call AskStudio [
+    grammar
+    sources
+    #surfaceShape
+    list [call StrataSurface [grammar sources declaration profile]]
+  ]
+
+judgment StrataCapabilities [grammar sources declaration] =
+  call AskStudio [
+    grammar sources #capabilitiesOf list [call StudioDeclaration [declaration]]
+  ]
+
+; ---------------------------------------------------------- service adapter
+;
+; These are the fixed names the protocol courier calls. Their implementations
+; are generic over the grammar supplied by the world; none dispatches on a
+; language name.
+
+judgment ServiceDiagnostics [grammar text] =
+  match cap #grammar-parse [grammar text] {
+    case (#ok document) -> list []
+    case (#denied reason) -> call ParseDiagnostics [reason]
+  }
+
+judgment ServiceSymbols [grammar text] = list []
+
+judgment ServiceCompletions [grammar text] = call GrammarCompletions [grammar]
+
+judgment ServiceKeywords [grammar] = call GrammarKeywords [grammar]
+
+judgment ServiceFormat [grammar text] = call PrintBuffer [grammar text]
+
+judgment ServiceSemanticTokens [grammar text] = call SemanticTokens [grammar text]
+
+judgment ServiceTokenPatterns [grammar] = list []
+
+judgment ServiceCommentPatterns [grammar] = list [";"]
+
+judgment ServiceCommand [grammar text command] = mk #denied ["the profile declares no implementation for this command"]

@@ -1,0 +1,284 @@
+; Generated from features/strata/studio.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratastudio)
+  (judgment
+    StrataStudioSystem
+    [prelude native octets artifact cas repository studio]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)
+      (v studio)))
+  (judgment
+    StudioTexts
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoText)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (mk
+          MoreText
+          (v head)
+          (call
+            StudioTexts
+            (v rest))))))
+  (judgment
+    StudioViews
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoView)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            view
+            (pv name)
+            (pv primitive)
+            (pv placement))
+          (pv rest))
+        (mk
+          MoreView
+          (mk
+            View
+            (v name)
+            (v primitive)
+            (v placement))
+          (call
+            StudioViews
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (fail
+          studio-error
+          (q "not a view declaration")))))
+  (judgment
+    StudioActions
+    [items]
+    (match
+      (v items)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoAction)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            action
+            (pv name)
+            (pv title))
+          (pv rest))
+        (mk
+          MoreAction
+          (mk
+            Action
+            (v name)
+            (v title))
+          (call
+            StudioActions
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (fail
+          studio-error
+          (q "not an action declaration")))))
+  (judgment
+    StudioDeclaration
+    [declaration]
+    (match
+      (v declaration)
+      (case
+        (pm
+          language
+          (pv name)
+          (pv label)
+          (pv extensions)
+          (pv comment)
+          (pv roles))
+        (mk
+          LanguageDeclaration
+          (v name)
+          (v label)
+          (call
+            StudioTexts
+            (v extensions))
+          (v comment)
+          (call
+            StudioTexts
+            (v roles))))
+      (case
+        _
+        (fail
+          studio-error
+          (q "not a language declaration")))))
+  (judgment
+    StudioProfile
+    [profile]
+    (match
+      (v profile)
+      (case
+        (pm
+          profile
+          (pv name)
+          (pv language)
+          (pv layout)
+          (pv views)
+          (pv actions)
+          (pv workflow))
+        (mk
+          Profile
+          (v name)
+          (v language)
+          (v layout)
+          (call
+            StudioViews
+            (v views))
+          (call
+            StudioActions
+            (v actions))
+          (call
+            StudioTexts
+            (v workflow))))
+      (case
+        _
+        (fail
+          studio-error
+          (q "not a studio profile")))))
+  (judgment
+    AskStudio
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.studio")
+      (v entry)
+      (v arguments)))
+  (judgment
+    StrataSurface
+    [grammar sources declaration profile]
+    (call
+      AskStudio
+      (v grammar)
+      (v sources)
+      (q deriveSurface)
+      (lst
+        (call
+          StudioDeclaration
+          (v declaration))
+        (call
+          StudioProfile
+          (v profile)))))
+  (judgment
+    StrataSurfaceShape
+    [grammar sources declaration profile]
+    (call
+      AskStudio
+      (v grammar)
+      (v sources)
+      (q surfaceShape)
+      (lst
+        (call
+          StrataSurface
+          (v grammar)
+          (v sources)
+          (v declaration)
+          (v profile)))))
+  (judgment
+    StrataCapabilities
+    [grammar sources declaration]
+    (call
+      AskStudio
+      (v grammar)
+      (v sources)
+      (q capabilitiesOf)
+      (lst
+        (call
+          StudioDeclaration
+          (v declaration)))))
+  (judgment
+    ServiceDiagnostics
+    [grammar text]
+    (match
+      (cap
+        grammar-parse
+        (v grammar)
+        (v text))
+      (case
+        (pm
+          ok
+          (pv document))
+        (lst))
+      (case
+        (pm
+          denied
+          (pv reason))
+        (call
+          ParseDiagnostics
+          (v reason)))))
+  (judgment
+    ServiceSymbols
+    [grammar text]
+    (lst))
+  (judgment
+    ServiceCompletions
+    [grammar text]
+    (call
+      GrammarCompletions
+      (v grammar)))
+  (judgment
+    ServiceKeywords
+    [grammar]
+    (call
+      GrammarKeywords
+      (v grammar)))
+  (judgment
+    ServiceFormat
+    [grammar text]
+    (call
+      PrintBuffer
+      (v grammar)
+      (v text)))
+  (judgment
+    ServiceSemanticTokens
+    [grammar text]
+    (call
+      SemanticTokens
+      (v grammar)
+      (v text)))
+  (judgment
+    ServiceTokenPatterns
+    [grammar]
+    (lst))
+  (judgment
+    ServiceCommentPatterns
+    [grammar]
+    (lst
+      (q ";")))
+  (judgment
+    ServiceCommand
+    [grammar text command]
+    (mk
+      denied
+      (q "the profile declares no implementation for this command"))))

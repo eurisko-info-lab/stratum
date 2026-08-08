@@ -1,0 +1,12 @@
+
+artifactevidence
+evidence	
+check'strata-the-studio-module-prints-exactlyok
+checkstrata-the-studio-checksok
+checkstrata-the-studio-is-totalok
+check+strata-the-studio-declares-its-capabilitiesok
+check*strata-the-studio-agrees-with-the-host-setok
+check:declaration-roles-derive-the-language-service-capabilitiesok
+check(a-profile-derives-the-whole-editor-shapeok
+check,another-profile-derives-another-editor-shapeok
+check7a-profile-for-another-language-is-not-an-editor-surfaceok

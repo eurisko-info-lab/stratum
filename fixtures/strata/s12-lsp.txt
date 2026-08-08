@@ -1,0 +1,7 @@
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///memory/example.strata","languageId":"strata","version":1,"text":"module \"example\"\nversion 1\n\n"}}}
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"file:///memory/example.strata"},"position":{"line":2,"character":0}}}
+{"jsonrpc":"2.0","id":3,"method":"textDocument/formatting","params":{"textDocument":{"uri":"file:///memory/example.strata"},"options":{"tabSize":2,"insertSpaces":true}}}
+{"jsonrpc":"2.0","id":4,"method":"textDocument/semanticTokens/full","params":{"textDocument":{"uri":"file:///memory/example.strata"}}}
+{"jsonrpc":"2.0","id":5,"method":"shutdown","params":{}}
+{"jsonrpc":"2.0","method":"exit","params":{}}

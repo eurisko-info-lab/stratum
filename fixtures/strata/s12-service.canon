@@ -1,0 +1,19 @@
+; The protocol binding for the S12 world. It names the language and how an
+; adapter recognizes its files; the editor arrangement itself is derived by
+; `strata.studio` from the profile exercised by the checks.
+{
+  name "stratum-s12"
+  languages [{
+    name strata
+    label "Strata"
+    extensions [".strata"]
+    comment ";"
+  }]
+  commands [
+    {name verify title "Verify module"}
+    {name format title "Format module"}
+  ]
+  editor {format document diagnostics live symbols outline completion grammar}
+  placements {outline left diagnostics bottom}
+  navigator {name modules title "Modules" placement left reveal #t}
+}
