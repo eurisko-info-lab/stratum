@@ -1,0 +1,14 @@
+
+artifactevidence
+evidence
+
+check,strata-the-performance-module-prints-exactlyok
+check$strata-the-performance-system-checksok
+check&strata-the-performance-system-is-totalok
+check7strata-the-performance-system-declares-its-capabilitiesok
+check3matching-observations-and-twofold-work-are-acceptedok
+checkchanged-observation-is-rejectedok
+check insufficient-speedup-is-rejectedok
+checkallocation-overhead-is-rejectedok
+check$benchmark-policy-is-fixed-at-twofoldok
+check8replaying-the-same-performance-evidence-is-deterministicok

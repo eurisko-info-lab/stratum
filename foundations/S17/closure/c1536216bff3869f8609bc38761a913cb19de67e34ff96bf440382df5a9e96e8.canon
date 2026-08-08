@@ -1,0 +1,356 @@
+
+artifactsource
+source
+pathfeatures/strata/metasource.meta
+textÃdmodule stratametasource
+
+; Meta elaboration, crossed into Strata and back.
+;
+; The same arrangement S8 made for grammars, for a bigger tree: a reader that
+; turns a parsed Meta source into a Strata value, a writer that turns the
+; result back into canonical Meta0, and a judgment that asks whether what
+; comes out is what was committed.
+;
+; A name crosses as the text it spells. That is the only thing here that S8
+; did not need -- it could carry a name without looking at one, and this
+; cannot, because Meta elaboration invents names. Nothing new crosses the
+; boundary to make that possible: `sym->str` and `str->sym` are Meta's own
+; primitives, used here in Meta, and the set S7 declared to Strata is
+; unchanged.
+
+; ------------------------------------------------------------- the reader
+
+judgment ReadMetaDecls [node] =
+  match node {
+    case (#Seq lhs rhs) -> mk #MSeq [call ReadMetaDecls [lhs] call ReadMetaDecls [rhs]]
+    case _ -> mk #MOneDecl [call ReadMetaDecl [node]]
+  }
+
+judgment ReadMetaDecl [node] =
+  match node {
+    case (#Module name) -> mk #DModule [prim #sym->str [name]]
+    case (#Import name) -> mk #DImport [prim #sym->str [name]]
+    case (#Capability name) -> mk #DCapability [prim #sym->str [name]]
+    case (#Evidence name) -> mk #DEvidence [prim #sym->str [name]]
+    case (#Mode name modes) ->
+      mk #DMode [prim #sym->str [name] call ReadMetaParams [modes]]
+    case (#Measure name body) ->
+      mk #DMeasure [prim #sym->str [name] call ReadMetaExpr [body]]
+    case (#Data name variants) ->
+      mk #DData [prim #sym->str [name] call ReadMetaVariants [variants]]
+    case (#Record name fields) ->
+      mk #DRecord [prim #sym->str [name] call ReadMetaParams [fields]]
+    case (#JudgmentRules name params rules) ->
+      mk #DJudgmentRules [
+        prim #sym->str [name]
+        call ReadMetaParams [params]
+        call ReadMetaRules [rules]
+      ]
+    case (#JudgmentBody name params body) ->
+      mk #DJudgmentBody [
+        prim #sym->str [name]
+        call ReadMetaParams [params]
+        call ReadMetaExpr [body]
+      ]
+    case _ -> fail #metasource-error "a declaration the reader does not know"
+  }
+
+judgment ReadMetaVariants [node] =
+  match node {
+    case (#Variants lhs rhs) ->
+      mk #MVariantSeq [call ReadMetaVariants [lhs] call ReadMetaVariants [rhs]]
+    case _ -> mk #MOneVariant [call ReadMetaVariant [node]]
+  }
+
+judgment ReadMetaVariant [node] =
+  match node {
+    case (#Variant name fields) ->
+      mk #MVariant [prim #sym->str [name] call ReadMetaParams [fields]]
+    case _ -> fail #metasource-error "a variant the reader does not know"
+  }
+
+judgment ReadMetaParams [node] =
+  match node {
+    case (#Params names) -> mk #MSomeParams [call ReadMetaIdents [names]]
+    case _ -> mk #MNoParams []
+  }
+
+judgment ReadMetaIdents [node] =
+  match node {
+    case (#Idents lhs rhs) ->
+      mk #MIdentSeq [call ReadMetaIdents [lhs] call ReadMetaIdents [rhs]]
+    case _ -> mk #MOneIdent [prim #sym->str [node]]
+  }
+
+judgment ReadMetaRules [node] =
+  match node {
+    case (#Rules lhs rhs) -> mk #MRuleSeq [call ReadMetaRules [lhs] call ReadMetaRules [rhs]]
+    case _ -> mk #MOneRule [call ReadMetaRule [node]]
+  }
+
+judgment ReadMetaRule [node] =
+  match node {
+    case (#Rule pattern body) ->
+      mk #MRule [call ReadMetaPattern [pattern] call ReadMetaExpr [body]]
+    case _ -> fail #metasource-error "a rule the reader does not know"
+  }
+
+judgment ReadMetaCases [node] =
+  match node {
+    case (#Cases lhs rhs) -> mk #MCaseSeq [call ReadMetaCases [lhs] call ReadMetaCases [rhs]]
+    case _ -> mk #MOneCase [call ReadMetaCase [node]]
+  }
+
+judgment ReadMetaCase [node] =
+  match node {
+    case (#Case pattern body) ->
+      mk #MCase [call ReadMetaPattern [pattern] call ReadMetaExpr [body]]
+    case _ -> fail #metasource-error "a case the reader does not know"
+  }
+
+judgment ReadMetaExprs [node] =
+  match node {
+    case (#Exprs items) -> mk #MSomeExprs [call ReadMetaExprSeq [items]]
+    case _ -> mk #MNoExprs []
+  }
+
+judgment ReadMetaExprSeq [node] =
+  match node {
+    case (#ExprSeq lhs rhs) ->
+      mk #MExprMore [call ReadMetaExprSeq [lhs] call ReadMetaExprSeq [rhs]]
+    case _ -> mk #MOneExpr [call ReadMetaExpr [node]]
+  }
+
+judgment ReadMetaExpr [node] =
+  match node {
+    case (#Var name) -> mk #EVar [prim #sym->str [name]]
+    case (#Symbol value) -> mk #ESymbol [prim #sym->str [value]]
+    case (#Natural value) -> mk #ENatural [value]
+    case (#Negative value) -> mk #ENegative [value]
+    case (#Text value) -> mk #EText [value]
+    case (#True) -> mk #ETrue []
+    case (#False) -> mk #EFalse []
+    case (#Unit) -> mk #EUnit []
+    case (#Mk tag arguments) ->
+      mk #EMk [prim #sym->str [tag] call ReadMetaExprs [arguments]]
+    case (#Call name arguments) ->
+      mk #ECall [prim #sym->str [name] call ReadMetaExprs [arguments]]
+    case (#Prim name arguments) ->
+      mk #EPrim [prim #sym->str [name] call ReadMetaExprs [arguments]]
+    case (#Cap name arguments) ->
+      mk #ECap [prim #sym->str [name] call ReadMetaExprs [arguments]]
+    case (#ListOf items) -> mk #EListOf [call ReadMetaExprs [items]]
+    case (#MapOf items) -> mk #EMapOf [call ReadMetaExprs [items]]
+    case (#If condition consequent alternative) ->
+      mk #EIf [
+        call ReadMetaExpr [condition]
+        call ReadMetaExpr [consequent]
+        call ReadMetaExpr [alternative]
+      ]
+    case (#Let name value body) ->
+      mk #ELet [
+        prim #sym->str [name]
+        call ReadMetaExpr [value]
+        call ReadMetaExpr [body]
+      ]
+    case (#Fail kind message) ->
+      mk #EFail [prim #sym->str [kind] call ReadMetaExpr [message]]
+    case (#Match scrutinee cases) ->
+      mk #EMatch [call ReadMetaExpr [scrutinee] call ReadMetaCases [cases]]
+    case _ -> fail #metasource-error "an expression the reader does not know"
+  }
+
+judgment ReadMetaPattern [node] =
+  match node {
+    case (#PatWild) -> mk #PatWild []
+    case (#PatVar name) -> mk #PatVar [prim #sym->str [name]]
+    case (#PatSymbol value) -> mk #PatSymbol [prim #sym->str [value]]
+    case (#PatNatural value) -> mk #PatNatural [value]
+    case (#PatText value) -> mk #PatText [value]
+    case (#PatNil) -> mk #PatNil []
+    case (#PatNodeEmpty tag) -> mk #PatNodeEmpty [prim #sym->str [tag]]
+    case (#PatNode tag arguments) ->
+      mk #PatNode [prim #sym->str [tag] call ReadMetaPatSeq [arguments]]
+    case (#PatList items) -> mk #PatList [call ReadMetaPatSeq [items]]
+    case (#PatCons head tail) ->
+      mk #PatCons [call ReadMetaPattern [head] call ReadMetaPattern [tail]]
+    case _ -> fail #metasource-error "a pattern the reader does not know"
+  }
+
+judgment ReadMetaPatSeq [node] =
+  match node {
+    case (#PatSeq lhs rhs) ->
+      mk #MPatMore [call ReadMetaPatSeq [lhs] call ReadMetaPatSeq [rhs]]
+    case _ -> mk #MOnePat [call ReadMetaPattern [node]]
+  }
+
+; ------------------------------------------------------------- the writer
+
+judgment WriteMetaProgram [value] =
+  match value {
+    case (#OProgram decls) -> prim #node [#program call WriteMetaDecls [decls]]
+    case _ -> fail #metasource-error "elaboration did not produce a program"
+  }
+
+judgment WriteMetaDecls [decls] =
+  match decls {
+    case (#OMoreDecl head tail) ->
+      prim #cons [call WriteMetaDecl [head] call WriteMetaDecls [tail]]
+    case _ -> list []
+  }
+
+judgment WriteMetaDecl [decl] =
+  match decl {
+    case (#OModule name) -> mk #module [prim #str->sym [name]]
+    case (#OJudgment name params body) ->
+      prim #node [#judgment list [
+        prim #str->sym [name]
+        call WriteNames [params]
+        call WriteMetaExpr [body]
+      ]]
+    case _ -> fail #metasource-error "a declaration the writer does not know"
+  }
+
+judgment WriteNames [names] =
+  match names {
+    case (#MoreName head tail) ->
+      prim #cons [prim #str->sym [head] call WriteNames [tail]]
+    case _ -> list []
+  }
+
+judgment WriteMetaExprs [exprs] =
+  match exprs {
+    case (#MoreOExpr head tail) ->
+      prim #cons [call WriteMetaExpr [head] call WriteMetaExprs [tail]]
+    case _ -> list []
+  }
+
+judgment WriteMetaExpr [expr] =
+  match expr {
+    case (#OVar name) -> mk #v [prim #str->sym [name]]
+    case (#OQuote value) -> mk #q [call WriteQuoted [value]]
+    case (#OMk tag args) ->
+      prim #node [#mk prim #cons [prim #str->sym [tag] call WriteMetaExprs [args]]]
+    case (#OCall name args) ->
+      prim #node [#call prim #cons [prim #str->sym [name] call WriteMetaExprs [args]]]
+    case (#OPrim name args) ->
+      prim #node [#prim prim #cons [prim #str->sym [name] call WriteMetaExprs [args]]]
+    case (#OCap name args) ->
+      prim #node [#cap prim #cons [prim #str->sym [name] call WriteMetaExprs [args]]]
+    case (#OList items) -> prim #node [#lst call WriteMetaExprs [items]]
+    case (#OMap items) -> prim #node [#mp call WriteMetaExprs [items]]
+    case (#OIf condition consequent alternative) ->
+      prim #node [#if list [
+        call WriteMetaExpr [condition]
+        call WriteMetaExpr [consequent]
+        call WriteMetaExpr [alternative]
+      ]]
+    case (#OLet name value body) ->
+      prim #node [#let list [
+        prim #str->sym [name]
+        call WriteMetaExpr [value]
+        call WriteMetaExpr [body]
+      ]]
+    case (#OFail kind message) ->
+      mk #fail [prim #str->sym [kind] call WriteMetaExpr [message]]
+    case (#OMatch scrutinee cases) ->
+      prim #node [#match
+        prim #cons [call WriteMetaExpr [scrutinee] call WriteMetaCases [cases]]
+      ]
+    case _ -> fail #metasource-error "an expression the writer does not know"
+  }
+
+judgment WriteMetaCases [cases] =
+  match cases {
+    case (#MoreOArm head tail) ->
+      prim #cons [call WriteMetaCase [head] call WriteMetaCases [tail]]
+    case _ -> list []
+  }
+
+judgment WriteMetaCase [arm] =
+  match arm {
+    case (#OArm pattern body) ->
+      mk #case [call WriteMetaPat [pattern] call WriteMetaExpr [body]]
+    case _ -> fail #metasource-error "a case the writer does not know"
+  }
+
+judgment WriteMetaPats [patterns] =
+  match patterns {
+    case (#MoreOPat head tail) ->
+      prim #cons [call WriteMetaPat [head] call WriteMetaPats [tail]]
+    case _ -> list []
+  }
+
+judgment WriteMetaPat [pattern] =
+  match pattern {
+    case (#PWild) -> #_
+    case (#PVar name) -> mk #pv [prim #str->sym [name]]
+    case (#PQuote value) -> mk #pq [call WriteQuoted [value]]
+    case (#PNil) -> prim #node [#pnil list []]
+    case (#PNode tag args) ->
+      prim #node [#pm prim #cons [prim #str->sym [tag] call WriteMetaPats [args]]]
+    case (#PList items) -> prim #node [#pl call WriteMetaPats [items]]
+    case (#PCons head tail) ->
+      mk #pcons [call WriteMetaPat [head] call WriteMetaPat [tail]]
+    case _ -> fail #metasource-error "a pattern the writer does not know"
+  }
+
+judgment WriteQuotedList [items] =
+  match items {
+    case (#MoreQ head tail) ->
+      prim #cons [call WriteQuoted [head] call WriteQuotedList [tail]]
+    case _ -> list []
+  }
+
+judgment WriteQuoted [value] =
+  match value {
+    case (#QSym name) -> prim #str->sym [name]
+    case (#QNat number) -> number
+    case (#QNeg number) -> prim #sub [0 number]
+    case (#QText text) -> text
+    case (#QTrue) -> true
+    case (#QFalse) -> false
+    case (#QUnit) -> unit
+    case (#QListOf items) -> call WriteQuotedList [items]
+    case (#QNode tag args) ->
+      prim #node [prim #str->sym [tag] call WriteQuotedList [args]]
+    case _ -> fail #metasource-error "a quoted value the writer does not know"
+  }
+
+; -------------------------------------------------------------- the round
+
+judgment StrataMetaSystem [prelude native meta] = list [prelude native meta]
+
+judgment ElaborateMetaInStrata [strataGrammar sources metaGrammar source] =
+  call WriteMetaProgram [
+    call RunStrataOn [
+      strataGrammar sources "strata.meta" #elaborate
+      call ReadMetaDecls [call Parse [metaGrammar source]]
+    ]
+  ]
+
+; The claim: what Strata elaborates is what is committed, byte for byte.
+judgment StrataMetaAgrees [strataGrammar sources metaGrammar source artifactReference] =
+  match call Fetch [artifactReference #meta-program] {
+    case (#some committed) ->
+      if prim #eq [
+        committed
+        call ElaborateMetaInStrata [strataGrammar sources metaGrammar source]
+      ]
+      then mk #agree [#ok]
+      else mk #agree [#mismatch]
+    case _ -> mk #agree [#artifact-missing]
+  }
+
+; The same claim for a source with no committed artifact, which is how the
+; bootstrap programs are carried: run both elaborators and compare. This is
+; the form that reaches `languages/meta/elaborate.meta` -- the elaborator being
+; replaced, elaborated by its replacement.
+judgment StrataMetaMatchesMeta [strataGrammar sources metaGrammar source] =
+  if prim #eq [
+    call ElaborateSource [metaGrammar source]
+    call ElaborateMetaInStrata [strataGrammar sources metaGrammar source]
+  ]
+  then mk #agree [#ok]
+  else mk #agree [#mismatch]
+

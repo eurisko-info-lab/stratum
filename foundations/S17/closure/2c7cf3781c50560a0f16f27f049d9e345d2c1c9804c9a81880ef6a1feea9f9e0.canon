@@ -1,0 +1,88 @@
+
+artifactsource
+source
+pathstrata/system/artifact.strata
+textÅGmodule "strata.artifact"
+version 1
+; What an artifact is, and what it weighs.
+;
+; Every authoritative value in the system is a value of eleven shapes, and its
+; identity is the SHA-256 of the octets it canonically encodes to. Both halves
+; of that sentence were the host's. This is the first half in Strata: the
+; universe, the order the universe is compared in, the rule that says which
+; values are canonical, and the encoding itself -- shape, length, contents,
+; recursively, with every count a varint.
+;
+; The second half stays where it belongs. Hashing is not a decision, it is a
+; function of octets, and it crosses at the boundary the way addition does.
+; What is decided here is which octets.
+;
+; The encoder never joins two encodings. It is given what comes after and puts
+; itself in front of it, so encoding a value costs what the value weighs
+; rather than what the tree above it weighs -- which is the difference between
+; a closure artifact taking a second and taking an afternoon.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+
+data Value = | VUnit [] | VBool [flag #1: Bool] | VNat [size #1: Number] | VInt [magnitude #1: Number, negative #2: Bool] | VBytes [content #1: Octets] | VText [spelling #1: Text] | VName [naming #1: Text] | VRef [pointing #1: Text] | VList [items #1: Values] | VMap [pairs #1: Pairs] | VNode [tag #1: Text, arguments #2: Values]
+data Values = | NoValue [] | MoreValue [valueHead #1: Value, valueTail #2: Values]
+data Pairs = | NoPair [] | MorePair [pairKey #1: Value, pairValue #2: Value, pairTail #3: Pairs]
+
+def countValues [vs: Values] ! arith: Number = match vs of case NoValue -> c0 case MoreValue head tail -> numberAdd c1 (countValues tail) end
+def countPairs [ps: Pairs] ! arith: Number = match ps of case NoPair -> c0 case MorePair key value tail -> numberAdd c1 (countPairs tail) end
+
+; ---------------------------------------------------------------- the shapes
+;
+; The order of the eleven shapes is the order two values of different shapes
+; are compared in, and it is also the octet each shape's encoding begins with.
+; They are the same number because a canonical form has one arbitrary choice
+; in it, not two.
+
+def shapeOf [v: Value] ! arith: Number = match v of case VUnit -> c0 case VBool flag -> c1 case VNat size -> c2 case VInt magnitude negative -> c3 case VBytes content -> c4 case VText spelling -> c5 case VName naming -> c6 case VRef pointing -> c7 case VList items -> c8 case VMap pairs -> c9 case VNode tag arguments -> c10 end
+
+; -------------------------------------------------------------- the encoding
+
+def boolOctet [b: Bool] ! arith: Number = match b of case True -> c1 case False -> c0 end
+def measured [o: Octets, rest: Octets] ! arith: Octets = match joinSized o rest of case Sized counted joined -> varintOf counted joined end
+
+; A signed integer is folded onto the naturals before it is spelled, so that a
+; small negative number is a short varint rather than a maximal one.
+def zigzagOf [magnitude: Number, negative: Bool] ! arith: Number = match negative of case True -> numberMonus (numberAdd magnitude magnitude) c1 case False -> numberAdd magnitude magnitude end
+
+def encodeInto [v: Value, rest: Octets] ! text arith: Octets = match v of case VUnit -> MoreOctet c0 rest case VBool flag -> MoreOctet c1 (MoreOctet (boolOctet flag) rest) case VNat size -> MoreOctet c2 (varintOf size rest) case VInt magnitude negative -> MoreOctet c3 (varintOf (zigzagOf magnitude negative) rest) case VBytes content -> MoreOctet c4 (measured content rest) case VText spelling -> MoreOctet c5 (measured (textOctets spelling) rest) case VName naming -> MoreOctet c6 (measured (textOctets naming) rest) case VRef pointing -> MoreOctet c7 (octetsOfHex pointing rest) case VList items -> MoreOctet c8 (varintOf (countValues items) (encodeValues items rest)) case VMap pairs -> MoreOctet c9 (varintOf (countPairs pairs) (encodePairs pairs rest)) case VNode tag arguments -> MoreOctet c10 (measured (textOctets tag) (varintOf (countValues arguments) (encodeValues arguments rest))) end
+def encodeValues [vs: Values, rest: Octets] ! text arith: Octets = match vs of case NoValue -> rest case MoreValue head tail -> encodeInto head (encodeValues tail rest) end
+def encodePairs [ps: Pairs, rest: Octets] ! text arith: Octets = match ps of case NoPair -> rest case MorePair key value tail -> encodeInto key (encodeInto value (encodePairs tail rest)) end
+def encodeValue [v: Value] ! text arith: Octets = encodeInto v NoOctet
+
+; The identity of a value is the hash of the octets it encodes to. This is the
+; one line in the layer that asks the host for something it cannot work out.
+def nameOfValue [v: Value] ! text arith hash: Text = bytesDigest (bytesOfOctets (encodeValue v))
+
+; ------------------------------------------------------------------ the order
+;
+; Map keys are stored in this order, so two values carrying the same entries
+; in different orders are not two spellings of one value: one of them is not a
+; value at all.
+
+data Order = | Below [] | Same [] | Above []
+
+def compareNumber [a: Number, b: Number] ! arith: Order = match numberEq a b of case True -> Same case False -> match numberLess a b of case True -> Below case False -> Above end end
+def compareOctets [a: Octets, b: Octets] ! arith: Order = match a of case NoOctet -> match b of case NoOctet -> Same case MoreOctet y ys -> Below end case MoreOctet x xs -> match b of case NoOctet -> Above case MoreOctet y ys -> match compareNumber x y of case Same -> compareOctets xs ys case Below -> Below case Above -> Above end end end
+def compareText [a: Text, b: Text] ! text arith: Order = compareOctets (textOctets a) (textOctets b)
+def compareInt [leftSize: Number, leftNegative: Bool, rightSize: Number, rightNegative: Bool] ! arith: Order = match leftNegative of case True -> match rightNegative of case True -> compareNumber rightSize leftSize case False -> Below end case False -> match rightNegative of case True -> Above case False -> compareNumber leftSize rightSize end end
+
+def compareValue [a: Value, b: Value] ! text arith: Order = match compareNumber (shapeOf a) (shapeOf b) of case Below -> Below case Above -> Above case Same -> compareAlike a b end
+def compareAlike [a: Value, b: Value] ! text arith: Order = match a of case VUnit -> Same case VBool x -> match b of case VBool y -> compareNumber (boolOctet x) (boolOctet y) case _ -> Same end case VNat x -> match b of case VNat y -> compareNumber x y case _ -> Same end case VInt xs xn -> match b of case VInt ys yn -> compareInt xs xn ys yn case _ -> Same end case VBytes x -> match b of case VBytes y -> compareOctets x y case _ -> Same end case VText x -> match b of case VText y -> compareText x y case _ -> Same end case VName x -> match b of case VName y -> compareText x y case _ -> Same end case VRef x -> match b of case VRef y -> compareText x y case _ -> Same end case VList x -> match b of case VList y -> compareValues x y case _ -> Same end case VMap x -> match b of case VMap y -> comparePairs x y case _ -> Same end case VNode xt xa -> match b of case VNode yt ya -> match compareText xt yt of case Same -> compareValues xa ya case Below -> Below case Above -> Above end case _ -> Same end end
+def compareValues [a: Values, b: Values] ! text arith: Order = match a of case NoValue -> match b of case NoValue -> Same case MoreValue y ys -> Below end case MoreValue x xs -> match b of case NoValue -> Above case MoreValue y ys -> match compareValue x y of case Same -> compareValues xs ys case Below -> Below case Above -> Above end end end
+def comparePairs [a: Pairs, b: Pairs] ! text arith: Order = match a of case NoPair -> match b of case NoPair -> Same case MorePair yk yv ys -> Below end case MorePair xk xv xs -> match b of case NoPair -> Above case MorePair yk yv ys -> match compareValue xk yk of case Same -> match compareValue xv yv of case Same -> comparePairs xs ys case Below -> Below case Above -> Above end case Below -> Below case Above -> Above end end end
+
+; ---------------------------------------------------------------- canonicity
+;
+; A value that encodes to octets nobody can decode back is not a value with an
+; unusual spelling. It is not canonical, and the store will not name it.
+
+def ascendingKeys [ps: Pairs] ! text arith: Bool = match ps of case NoPair -> True case MorePair key value tail -> match tail of case NoPair -> True case MorePair nextKey nextValue rest -> match compareValue key nextKey of case Below -> ascendingKeys tail case Same -> False case Above -> False end end end
+def isCanonical [v: Value] ! text arith: Bool = match v of case VList items -> valuesCanonical items case VMap pairs -> and (ascendingKeys pairs) (pairsCanonical pairs) case VNode tag arguments -> valuesCanonical arguments case _ -> True end
+def valuesCanonical [vs: Values] ! text arith: Bool = match vs of case NoValue -> True case MoreValue head tail -> and (isCanonical head) (valuesCanonical tail) end
+def pairsCanonical [ps: Pairs] ! text arith: Bool = match ps of case NoPair -> True case MorePair key value tail -> and (and (isCanonical key) (isCanonical value)) (pairsCanonical tail) end

@@ -1,0 +1,33 @@
+
+artifactsource
+source
+pathlanguages/toml/toml.grammar
+textÆgrammar "toml"
+start file
+
+token string str "\"[^\"]*\""
+token integer str "[+-]?[0-9]+"
+token key sym "[A-Za-z_][A-Za-z0-9_.-]*"
+token newline sym "\\n"
+skip "#[^\\n]*"
+
+category file
+  fold TomlFile statement
+
+category statement
+  prod Assignment key : key "=" value : value newline : newline
+  prod Table "[" name : key "]" newline : newline
+  prod ArrayTable "[[" name : key "]]" newline : newline
+  prod Blank newline : newline
+
+category value
+  prod String value : string
+  prod Integer value : integer
+  prod True "true"
+  prod False "false"
+  prod EmptyArray "[" "]"
+  prod Array "[" values : values "]"
+
+category values
+  prod MoreValues value : value "," rest : values
+  prod LastValue value : value

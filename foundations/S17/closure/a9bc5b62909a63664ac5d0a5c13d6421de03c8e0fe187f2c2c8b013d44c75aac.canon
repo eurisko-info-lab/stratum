@@ -1,0 +1,13 @@
+
+artifactsource
+source
+pathlanguages/text/text.meta
+textŞmodule text
+record TextFile [text]
+judgment ParseText [grammar source] = call Parse [grammar source]
+judgment PrintText [grammar syntax] = call Print [grammar syntax]
+judgment TextWellFormed [grammar source] =
+  match call ParseText [grammar source] {
+    case (#TextFile text) -> mk #valid [prim #slen [text]]
+    case _ -> mk #invalid [#parse]
+  }

@@ -1,0 +1,330 @@
+; Generated from features/strata/performance.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module strataperformance)
+  (judgment
+    StrataPerformanceSystem
+    [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention agent performance]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)
+      (v studio)
+      (v foundation)
+      (v governance)
+      (v ledger)
+      (v sync)
+      (v federation)
+      (v retention)
+      (v agent)
+      (v performance)))
+  (judgment
+    AskPerformance
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.performance")
+      (v entry)
+      (v arguments)))
+  (judgment
+    PerformancePath
+    [path]
+    (match
+      (v path)
+      (case
+        (pq interpreted)
+        (prim
+          node
+          (q Interpreted)
+          (lst)))
+      (case
+        (pq compiled)
+        (prim
+          node
+          (q Compiled)
+          (lst)))
+      (case
+        _
+        (fail
+          performance-error
+          (q "not an execution path")))))
+  (judgment
+    PerformanceObservation
+    [observation]
+    (match
+      (v observation)
+      (case
+        (pm
+          observation
+          (pv path)
+          (pv result)
+          (pv trace)
+          (pv instructions)
+          (pv allocations))
+        (mk
+          PerformanceObservation
+          (call
+            PerformancePath
+            (v path))
+          (v result)
+          (v trace)
+          (v instructions)
+          (v allocations)))
+      (case
+        _
+        (fail
+          performance-error
+          (q "not a performance observation")))))
+  (judgment
+    PerformanceEvidence
+    [measurement]
+    (match
+      (v measurement)
+      (case
+        (pm
+          performance
+          (pv workload)
+          (pv baseline)
+          (pv candidate))
+        (mk
+          PerformanceEvidence
+          (v workload)
+          (call
+            PerformanceObservation
+            (v baseline))
+          (call
+            PerformanceObservation
+            (v candidate))))
+      (case
+        _
+        (fail
+          performance-error
+          (q "not performance evidence")))))
+  (judgment
+    PerformancePolicy
+    [policy]
+    (match
+      (v policy)
+      (case
+        (pm
+          policy
+          (pv speedup)
+          (pv allowance))
+        (mk
+          PerformancePolicy
+          (v speedup)
+          (v allowance)))
+      (case
+        _
+        (fail
+          performance-error
+          (q "not a performance policy")))))
+  (judgment
+    StrataPerformanceEvaluate
+    [grammar sources measurement policy]
+    (match
+      (v measurement)
+      (case
+        (pm
+          performance
+          (pv workload)
+          (pv baseline)
+          (pv candidate))
+        (match
+          (v policy)
+          (case
+            (pm
+              policy
+              (pv speedup)
+              (pv allowance))
+            (if
+              (prim
+                eq
+                (v speedup)
+                (q 2))
+              (if
+                (prim
+                  eq
+                  (call
+                    AskPerformance
+                    (v grammar)
+                    (v sources)
+                    (q observationResultOf)
+                    (lst
+                      (call
+                        PerformanceObservation
+                        (v baseline))))
+                  (call
+                    AskPerformance
+                    (v grammar)
+                    (v sources)
+                    (q observationResultOf)
+                    (lst
+                      (call
+                        PerformanceObservation
+                        (v candidate)))))
+                (if
+                  (prim
+                    eq
+                    (call
+                      AskPerformance
+                      (v grammar)
+                      (v sources)
+                      (q observationTraceOf)
+                      (lst
+                        (call
+                          PerformanceObservation
+                          (v baseline))))
+                    (call
+                      AskPerformance
+                      (v grammar)
+                      (v sources)
+                      (q observationTraceOf)
+                      (lst
+                        (call
+                          PerformanceObservation
+                          (v candidate)))))
+                  (if
+                    (prim
+                      lt
+                      (call
+                        AskPerformance
+                        (v grammar)
+                        (v sources)
+                        (q observationInstructionsOf)
+                        (lst
+                          (call
+                            PerformanceObservation
+                            (v baseline))))
+                      (prim
+                        add
+                        (call
+                          AskPerformance
+                          (v grammar)
+                          (v sources)
+                          (q observationInstructionsOf)
+                          (lst
+                            (call
+                              PerformanceObservation
+                              (v candidate))))
+                        (call
+                          AskPerformance
+                          (v grammar)
+                          (v sources)
+                          (q observationInstructionsOf)
+                          (lst
+                            (call
+                              PerformanceObservation
+                              (v candidate))))))
+                    (mk
+                      PerformanceRejected
+                      (q "speedup-target-missed"))
+                    (if
+                      (prim
+                        lt
+                        (prim
+                          add
+                          (call
+                            AskPerformance
+                            (v grammar)
+                            (v sources)
+                            (q observationAllocationsOf)
+                            (lst
+                              (call
+                                PerformanceObservation
+                                (v baseline))))
+                          (v allowance))
+                        (call
+                          AskPerformance
+                          (v grammar)
+                          (v sources)
+                          (q observationAllocationsOf)
+                          (lst
+                            (call
+                              PerformanceObservation
+                              (v candidate)))))
+                      (mk
+                        PerformanceRejected
+                        (q "allocation-budget-exceeded"))
+                      (mk
+                        PerformanceAccepted
+                        (call
+                          StrataPerformanceIdentity
+                          (v grammar)
+                          (v sources)
+                          (v measurement)))))
+                  (mk
+                    PerformanceRejected
+                    (q "observations-differ")))
+                (mk
+                  PerformanceRejected
+                  (q "observations-differ")))
+              (mk
+                PerformanceRejected
+                (q "unsupported-speedup-policy"))))
+          (case
+            _
+            (fail
+              performance-error
+              (q "not a performance policy")))))
+      (case
+        _
+        (fail
+          performance-error
+          (q "not a performance policy")))))
+  (judgment
+    StrataPerformanceVerdictTag
+    [grammar sources measurement policy]
+    (match
+      (call
+        StrataPerformanceEvaluate
+        (v grammar)
+        (v sources)
+        (v measurement)
+        (v policy))
+      (case
+        (pm
+          PerformanceRejected
+          (pv reason))
+        (v reason))
+      (case
+        (pm
+          PerformanceAccepted
+          (pv identity))
+        (q "accepted"))
+      (case
+        _
+        (fail
+          performance-error
+          (q "not a performance verdict")))))
+  (judgment
+    StrataPerformanceIdentity
+    [grammar sources measurement]
+    (call
+      AskPerformance
+      (v grammar)
+      (v sources)
+      (q measurementIdentity)
+      (lst
+        (call
+          PerformanceEvidence
+          (v measurement)))))
+  (judgment
+    StrataPerformanceRunsAgree
+    [grammar sources first second]
+    (prim
+      eq
+      (call
+        StrataPerformanceIdentity
+        (v grammar)
+        (v sources)
+        (v first))
+      (call
+        StrataPerformanceIdentity
+        (v grammar)
+        (v sources)
+        (v second)))))

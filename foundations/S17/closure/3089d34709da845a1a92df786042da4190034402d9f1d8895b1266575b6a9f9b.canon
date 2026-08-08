@@ -1,0 +1,34 @@
+
+artifactsource
+source
+path*languages/gitattributes/gitattributes.meta
+text¸module gitattributes
+
+record GitAttributesFile [lines]
+record Attributes [pattern values newline]
+record Attribute [value]
+record Blank [newline]
+
+judgment ParseGitAttributes [grammar source] = call Parse [grammar source]
+judgment PrintGitAttributes [grammar syntax] = call Print [grammar syntax]
+
+judgment GitAttributesWellFormed [grammar source] =
+	match call ParseGitAttributes [grammar source] {
+		case (#GitAttributesFile lines) -> mk #valid [lines]
+		case _ -> mk #invalid [#parse]
+	}
+
+judgment GitAttributesLines [node] = call FlattenSeq [node #GitAttributesFile]
+
+judgment GitAttributesInferLines [lines] =
+	match lines {
+		case [] -> list []
+		case (#Attributes pattern values newline) :: rest ->
+			prim #cons [mk #type [pattern #attributes #declared #attributes] call GitAttributesInferLines [rest]]
+		case head :: rest -> call GitAttributesInferLines [rest]
+	}
+
+judgment InferGitAttributes [grammar source] =
+	call GitAttributesInferLines [call GitAttributesLines [call ParseGitAttributes [grammar source]]]
+
+judgment TypeCheckGitAttributes [grammar source] = list []

@@ -1,0 +1,42 @@
+
+artifactsource
+source
+path strata/system/performance.strata
+textÈmodule "strata.performance"
+version 1
+; Performance is constituted evidence over identical observations. Deterministic
+; work enters identity; environmental timing remains a host attestation.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+import "strata.studio" 1
+import "strata.foundation" 1
+import "strata.governance" 1
+import "strata.ledger" 1
+import "strata.sync" 1
+import "strata.federation" 1
+import "strata.retention" 1
+import "strata.agent" 1
+
+data ExecutionPath = | Interpreted [] | Compiled []
+data PerformanceObservation = | PerformanceObservation [observationPath #1: ExecutionPath, observationResult #2: Text, observationTrace #3: Text, observationInstructions #4: Number, observationAllocations #5: Number]
+data PerformanceEvidence = | PerformanceEvidence [performanceWorkload #1: Text, performanceBaseline #2: PerformanceObservation, performanceCandidate #3: PerformanceObservation]
+data PerformancePolicy = | PerformancePolicy [requiredSpeedup #1: Number, allocationAllowance #2: Number]
+data PerformanceVerdict = | PerformanceRejected [performanceRejection #1: Text] | PerformanceAccepted [acceptedEvidenceIdentity #1: Text]
+
+def observationResultOf [observation: PerformanceObservation]: Text = match observation of case PerformanceObservation path result trace instructions allocations -> result end
+def observationTraceOf [observation: PerformanceObservation]: Text = match observation of case PerformanceObservation path result trace instructions allocations -> trace end
+def observationInstructionsOf [observation: PerformanceObservation]: Number = match observation of case PerformanceObservation path result trace instructions allocations -> instructions end
+def observationAllocationsOf [observation: PerformanceObservation]: Number = match observation of case PerformanceObservation path result trace instructions allocations -> allocations end
+def executionPathValue [path: ExecutionPath]: Value = match path of case Interpreted -> VText "interpreted" case Compiled -> VText "compiled" end
+def metricValues [instructions: Number, allocations: Number]: Values = MoreValue (VNat instructions) (MoreValue (VNat allocations) NoValue)
+def observationTail [result: Text, trace: Text, instructions: Number, allocations: Number]: Values = MoreValue (VText result) (MoreValue (VText trace) (metricValues instructions allocations))
+def observationValues [observation: PerformanceObservation]: Values = match observation of case PerformanceObservation path result trace instructions allocations -> MoreValue (executionPathValue path) (observationTail result trace instructions allocations) end
+def observationValue [observation: PerformanceObservation]: Value = VNode "performance-observation" (observationValues observation)
+def evidenceTail [baseline: PerformanceObservation, candidate: PerformanceObservation]: Values = MoreValue (observationValue baseline) (MoreValue (observationValue candidate) NoValue)
+def performanceEvidenceValues [performance: PerformanceEvidence]: Values = match performance of case PerformanceEvidence workload baseline candidate -> MoreValue (VText workload) (evidenceTail baseline candidate) end
+def performanceEvidenceValue [performance: PerformanceEvidence]: Value = VNode "performance-evidence" (performanceEvidenceValues performance)
+def measurementIdentity [performance: PerformanceEvidence] ! text arith hash: Text = nameOfValue (performanceEvidenceValue performance)

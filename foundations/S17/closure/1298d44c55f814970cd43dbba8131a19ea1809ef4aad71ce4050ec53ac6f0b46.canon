@@ -1,0 +1,21 @@
+
+artifactchange
+change
+kind
+foundation
+nameS16->S17
+predecessor
+foundation-offoundations/S16
+
+delta-meta
+file changes/S16-S17/delta-meta.canon
+delta-grammar
+file#changes/S16-S17/delta-grammar.canon
+feature
+feature
+name constituted performance evidence
+programs
+file*features/strata/performance.generated.meta
+sources
+	text-file features/strata/performance.meta
+	text-file strata/system/performance.strata

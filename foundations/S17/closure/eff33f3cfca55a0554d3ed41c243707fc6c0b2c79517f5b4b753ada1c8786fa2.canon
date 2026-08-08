@@ -1,0 +1,125 @@
+
+artifactsource
+source
+pathlanguages/lambda/lambda.meta
+textÞmodule lambda
+
+data Term =
+  | #var [index]
+  | #free [name]
+  | #lam [body]
+  | #app [fn argument]
+
+judgment Shift [d cutoff term] =
+  match term {
+    case (#var index) ->
+      if prim #lt [index cutoff]
+      then mk #var [index]
+      else mk #var [prim #add [index d]]
+    case (#free name) -> mk #free [name]
+    case (#lam body) -> mk #lam [call Shift [d prim #add [cutoff 1] body]]
+    case (#app fn argument) ->
+      mk #app [call Shift [d cutoff fn] call Shift [d cutoff argument]]
+  }
+
+judgment Substitute [target replacement term] =
+  match term {
+    case (#var index) ->
+      if prim #eq [index target] then replacement else mk #var [index]
+    case (#free name) -> mk #free [name]
+    case (#lam body) ->
+      mk #lam [call Substitute [prim #add [target 1] call Shift [1 0 replacement] body]]
+    case (#app fn argument) ->
+      mk #app [
+        call Substitute [target replacement fn]
+        call Substitute [target replacement argument]
+      ]
+  }
+
+judgment Beta [body argument] =
+  call Shift [-1 0 call Substitute [0 call Shift [1 0 argument] body]]
+
+judgment StepNormalOrder [term] =
+  match term {
+    case (#app (#lam body) argument) -> mk #some [call Beta [body argument]]
+    case (#app fn argument) ->
+      match call StepNormalOrder [fn] {
+        case (#some reduced) -> mk #some [mk #app [reduced argument]]
+        case (#none) ->
+          match call StepNormalOrder [argument] {
+            case (#some reduced) -> mk #some [mk #app [fn reduced]]
+            case (#none) -> mk #none []
+          }
+      }
+    case (#lam body) ->
+      match call StepNormalOrder [body] {
+        case (#some reduced) -> mk #some [mk #lam [reduced]]
+        case (#none) -> mk #none []
+      }
+    case _ -> mk #none []
+  }
+
+judgment Normalize [term fuel] =
+  if prim #eq [fuel 0]
+  then fail #resource-exhausted "normalization fuel exhausted"
+  else
+    match call StepNormalOrder [term] {
+      case (#some next) -> call Normalize [next prim #sub [fuel 1]]
+      case (#none) -> term
+    }
+
+judgment ToDeBruijn [term scope] =
+  match term {
+    case (#Var name) ->
+      match prim #index-of [scope name] {
+        case (#some index) -> mk #var [index]
+        case (#none) -> mk #free [name]
+      }
+    case (#Lam name body) -> mk #lam [call ToDeBruijn [body prim #cons [name scope]]]
+    case (#App fn argument) ->
+      mk #app [call ToDeBruijn [fn scope] call ToDeBruijn [argument scope]]
+  }
+
+judgment FreshName [depth] =
+  prim #str->sym [prim #scat ["v" prim #nat->str [depth]]]
+
+judgment FromDeBruijn [term scope] =
+  match term {
+    case (#var index) ->
+      if prim #lt [index prim #len [scope]]
+      then mk #Var [prim #nth [scope index]]
+      else mk #Var [prim #str->sym [prim #scat ["free" prim #nat->str [index]]]]
+    case (#free name) -> mk #Var [name]
+    case (#lam body) ->
+      let name = call FreshName [prim #len [scope]] in
+      mk #Lam [name call FromDeBruijn [body prim #cons [name scope]]]
+    case (#app fn argument) ->
+      mk #App [call FromDeBruijn [fn scope] call FromDeBruijn [argument scope]]
+  }
+
+judgment NormalizeTerm [term] =
+  call FromDeBruijn [
+    call Normalize [call ToDeBruijn [term list []] 100000]
+    list []
+  ]
+
+judgment NormalizeSource [grammar source] =
+  call NormalizeTerm [call Parse [grammar source]]
+
+judgment NormalizeToText [grammar source] =
+  call Print [grammar call NormalizeSource [grammar source]]
+
+judgment AlphaEquivalent [grammar left right] =
+  prim #eq [
+    call ToDeBruijn [call Parse [grammar left] list []]
+    call ToDeBruijn [call Parse [grammar right] list []]
+  ]
+
+judgment FreeVariables [term scope] =
+  match term {
+    case (#Var name) ->
+      if prim #contains [scope name] then list [] else prim #cons [name list []]
+    case (#Lam name body) -> call FreeVariables [body prim #cons [name scope]]
+    case (#App fn argument) ->
+      call Union [call FreeVariables [fn scope] call FreeVariables [argument scope]]
+  }

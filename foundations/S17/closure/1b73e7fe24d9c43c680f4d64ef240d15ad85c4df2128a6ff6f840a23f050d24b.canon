@@ -1,0 +1,21 @@
+
+artifactchange
+change
+kind
+foundation
+nameF3->F4
+predecessor
+foundation-offoundations/F3
+
+delta-meta
+filechanges/F3-F4/delta-meta.canon
+delta-grammar
+file!changes/F3-F4/delta-grammar.canon
+feature
+feature
+name"schema-derived language toolchains
+programs
+file'features/tooling/tooling.generated.meta
+sources
+	text-filefeatures/tooling/tooling.meta
+target-languagestack

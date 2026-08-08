@@ -1,0 +1,25 @@
+
+artifactchange
+change
+kind
+foundation
+nameS9->S10
+predecessor
+foundation-offoundations/S9
+
+delta-meta
+filechanges/S9-S10/delta-meta.canon
+delta-grammar
+file"changes/S9-S10/delta-grammar.canon
+feature
+feature
+name)artifacts and the content addressed store
+programs
+file$features/strata/index.generated.meta
+file$features/strata/store.generated.meta
+sources
+	text-filefeatures/strata/index.meta
+	text-filefeatures/strata/store.meta
+	text-filestrata/system/octets.strata
+	text-filestrata/system/artifact.strata
+	text-filestrata/system/cas.strata

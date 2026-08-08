@@ -1,6 +1,6 @@
 # Strata rebuild roadmap
 
-## Rebuilding Stratum in Strata, in seventeen commits
+## Rebuilding Stratum in Strata, in eighteen commits
 
 This roadmap starts at `182b7bc` — the commit that completed the first-floor
 landing and defined the second-floor architecture in
@@ -8,8 +8,8 @@ landing and defined the second-floor architecture in
 carried forward.
 
 The plan is the staircase specified in
-[docs/strata.md §24](../docs/strata.md), realized literally: **seventeen
-commits, seventeen foundations, one layer per commit.**
+[docs/strata.md §24](../docs/strata.md), realized literally: **eighteen
+commits, eighteen foundations, one layer per commit.**
 
 $$
 F_{11} \vdash S_0 \qquad S_n \vdash S_{n+1}
@@ -57,10 +57,10 @@ strata/lib/            Strata standard library, written in Strata
 strata/compiler/       Strata compiler, written in Strata
 strata/system/         Stratum itself, written in Strata
 fixtures/strata/       acceptance transcripts
-foundations/S0..S16/   second-floor staircase
+foundations/S0..S17/   second-floor staircase
 ```
 
-## The seventeen commits
+## The eighteen commits
 
 | # | Layer | Constructs | Authority moves to Strata |
 | --- | --- | --- | --- |
@@ -81,6 +81,7 @@ foundations/S0..S16/   second-floor staircase
 | 15 | S14 | ledger, sync, federation | distribution |
 | 16 | S15 | retention and reconstruction | durability |
 | 17 | S16 | investigation agents | the agent substrate |
+| 18 | S17 | performance constitution and evidence | performance acceptance |
 
 S1 was originally written here as "the total dependent core". It is two
 layers, not one. S1 gives a declaration a type; S2 lets a type depend on a
@@ -917,29 +918,54 @@ $$
 When this holds, Scala leaves active implementation and remains as independent
 reference.
 
-## What the plan does not yet provide
+## Commit 18 — S17: performance constitution and evidence
 
-Strata runs by being interpreted: Meta0 walks its terms, and S5's machine is
-itself interpreted by Meta0. That is fast enough for everything the floor has
-needed so far — a foundation builds in seconds — and it is not fast enough to
-take over work that is currently done by compiled Scala on the whole
-repository at once. S8 records where that bites first.
+**Constructs** $S_{16} \vdash S_{17}$, and makes performance a constituted,
+replayable claim rather than an informal timing observation.
 
-The endgame in §24 is that Stratum runs on Strata and the first floor becomes
-reference. That needs an execution path that is not interpretation: Strata
-compiled to something the host runs directly, rather than to a machine another
-interpreter walks. Nothing in these seventeen commits provides one.
+**Adds**
 
-This is written down rather than discovered later. Whether it becomes a
-seventeenth layer or a change to S5's target is a decision that should be
-taken with a measurement in hand, not now.
+- `strata/system/performance.strata` — typed execution paths, observations,
+  policies, verdicts and canonical measurement identity
+- `features/strata/performance.meta` — representation crossing and constituted
+  evaluator for semantic agreement, instruction work and allocation bounds
+- committed compiler-bootstrap, grammar-corpus, foundation-verification and
+  repository observations with expected verdicts
+- `fixtures/strata/s17.transcript`, `foundations/S17/`
+
+**Performance evidence has two parts.** Deterministic evidence records workload,
+execution path, result, effect trace, dynamic instruction count and allocation
+count. Environmental evidence may record host, runtime, warm-up count, sample
+count, median elapsed time and peak resident memory, but those measurements are
+attestations and never inputs to foundation identity.
+
+**Acceptance**
+
+1. Candidate and interpreter observations must have identical canonical results
+  and effect traces.
+2. The fixed policy requires at least a twofold reduction in dynamic instruction
+  work and rejects any weaker policy presented as S17 evidence.
+3. Candidate allocations may exceed baseline only by the constituted allowance.
+4. Workload, path, result, trace, instruction and allocation fields all bind the
+  canonical evidence identity; replaying identical evidence is deterministic.
+5. Timing and memory measurements remain labeled attestations outside foundation
+  identity, so environmental noise cannot alter the staircase.
+6. All S16 replacement criteria, staircase derivation, independent-host parity
+  and clean-room reconstruction remain green.
+
+**Boundary** — execution paths only supply typed observations. They may not
+choose the comparison policy, canonical identity or acceptance verdict.
+
+**Exit condition** — any future direct execution path has a deterministic gate
+that can reject semantic drift, insufficient work reduction or excess
+allocation before it becomes authoritative.
 
 ## Definition of done
 
 Fully operational means all three hold simultaneously:
 
 $$
-F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 16
+F_{11} \vdash S_0, \quad S_n \vdash S_{n+1} \text{ for } n < 17
 $$
 
 $$

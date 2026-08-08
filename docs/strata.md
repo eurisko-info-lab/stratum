@@ -313,7 +313,7 @@ Stage 3:
 
 ## 24. Second-floor staircase
 
-Second floor uses `S0 -> S16`:
+Second floor uses `S0 -> S17`:
 
 - S0: Strata seed
 - S1: canonical data
@@ -332,6 +332,7 @@ Second floor uses `S0 -> S16`:
 - S14: ledger, sync, federation
 - S15: retention and reconstruction
 - S16: investigation agents
+- S17: performance constitution and evidence
 
 The dependent core is its own layer because it is a change to what can be
 said, not to what is done with what was already said. S1 gives a declaration
@@ -357,6 +358,19 @@ that decides where it is allowed.
 
 At S16, second floor reconstructs the first-floor capability set and extends it
 with agent substrate.
+
+S17 changes how execution performance is accepted, not what programs mean. A
+typed observation binds its execution path, canonical result, effect trace,
+dynamic instruction count and allocation count. Candidate observations are
+accepted only when they agree with the interpreted oracle, meet the fixed
+twofold work target and remain within the constituted allocation allowance.
+
+Performance claims are constituted observations. Canonical evidence includes
+workload, path, result, trace and deterministic work counts. Elapsed time and
+peak memory are labeled host attestations and never influence a foundation
+digest. A faster result that changes canonical output or effects is a failed
+result. This gate is the prerequisite for choosing and promoting a direct
+execution backend.
 
 ## 25. Rewrite strategy
 

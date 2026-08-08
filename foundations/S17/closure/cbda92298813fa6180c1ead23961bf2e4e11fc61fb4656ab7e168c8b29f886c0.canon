@@ -1,0 +1,9 @@
+
+artifactsource
+source
+pathlanguages/text/text.grammar
+textagrammar "text"
+start source
+token body str "[^\\r]+"
+category source
+  prod TextFile text : body
