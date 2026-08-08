@@ -1,0 +1,75 @@
+# S16 acceptance transcript: investigation is replayable, capability-bounded
+# state, and every constituted first-floor observation still replays.
+
+$ foundation verify --dir foundations/S16
+> foundation S16
+> digest ecc08ba7f0337d91ccbaaaa6d898d50bbdf02c0202654da391cf874c6a83d9aa
+> closure 315 artifacts
+> check strata-the-agent-module-prints-exactly ok
+> check strata-the-agent-system-checks ok
+> check strata-the-agent-system-is-total ok
+> check strata-the-agent-system-declares-its-capabilities ok
+> check strata-the-agent-system-agrees-with-the-host-set ok
+> check declaration-context-identity-is-stable ok
+> check declared-capability-and-budget-authorize-an-edit ok
+> check undeclared-capability-rejects-an-edit ok
+> check over-budget-edit-is-rejected ok
+> check context-identity-binds-declaration-effects ok
+> check stale-edit-predecessor-is-rejected ok
+> check investigation-expands-the-requested-semantic-view ok
+> check evidence-driven-replay-advances-the-edit-chain ok
+> check replaying-the-same-investigation-is-deterministic ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S15 --successor foundations/S16
+> predecessor S15
+> successor S16
+> result (valid #d32054f6abc07280a3507ce25577a8e675bc9dfbed054cb8c0ead7b3c8edbdc1f)
+
+$ foundation reconstruct --dir foundations/S16
+> reconstructed S16
+> digest ecc08ba7f0337d91ccbaaaa6d898d50bbdf02c0202654da391cf874c6a83d9aa
+> stable yes
+> closure 315 artifacts
+> checks 14 ok
+
+$ foundation derive-successor --predecessor foundations/S15 --derivation changes/S15-S16/derivation.canon --expect foundations/S16
+> predecessor S15
+> derived ecc08ba7f0337d91ccbaaaa6d898d50bbdf02c0202654da391cf874c6a83d9aa
+> matches foundations/S16 yes
+
+$ transcript run fixtures/lambda/f0.transcript
+> ok fixtures/lambda/f0.transcript 14 steps
+
+$ transcript run fixtures/meta/f1.transcript
+> ok fixtures/meta/f1.transcript 12 steps
+
+$ transcript run fixtures/change/f2.transcript
+> ok fixtures/change/f2.transcript 12 steps
+
+$ transcript run fixtures/repository/f3.transcript
+> ok fixtures/repository/f3.transcript 14 steps
+
+$ transcript run fixtures/tooling/f4.transcript
+> ok fixtures/tooling/f4.transcript 14 steps
+
+$ transcript run fixtures/governance/f5.transcript
+> ok fixtures/governance/f5.transcript 16 steps
+
+$ transcript run fixtures/foundation/f6.transcript
+> ok fixtures/foundation/f6.transcript 10 steps
+
+$ transcript run fixtures/ledger/f7.transcript
+> ok fixtures/ledger/f7.transcript 10 steps
+
+$ transcript run fixtures/sync/f8.transcript
+> ok fixtures/sync/f8.transcript 11 steps
+
+$ transcript run fixtures/federation/f9.transcript
+> ok fixtures/federation/f9.transcript 12 steps
+
+$ transcript run fixtures/retention/f10.transcript
+> ok fixtures/retention/f10.transcript 13 steps
+
+$ transcript run fixtures/studio/f11.transcript
+> ok fixtures/studio/f11.transcript 23 steps

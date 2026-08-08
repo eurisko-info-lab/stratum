@@ -1,0 +1,152 @@
+module strataagent
+
+; Investigation declarations and actions cross as constructor values. Context
+; identity, state advancement and edit authorization remain Strata decisions.
+
+judgment StrataAgentSystem [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention agent] =
+  list [prelude native octets artifact cas repository studio foundation governance ledger sync federation retention agent]
+
+judgment AskAgent [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.agent" entry arguments]
+
+judgment AgentTexts [items] =
+  match items {
+    case [] -> prim #node [#NoAgentText list []]
+    case head :: tail -> mk #MoreAgentText [head call AgentTexts [tail]]
+  }
+
+judgment AgentTopic [topic] =
+  match topic {
+    case #identities -> prim #node [#StableIdentities list []]
+    case #schemas -> prim #node [#Schemas list []]
+    case #fields -> prim #node [#FieldPaths list []]
+    case #effects -> prim #node [#Effects list []]
+    case #laws -> prim #node [#Laws list []]
+    case #changes -> prim #node [#Changes list []]
+    case #history -> prim #node [#History list []]
+    case _ -> fail #agent-error "not an investigation topic"
+  }
+
+judgment AgentDeclaration [declaration] =
+  match declaration {
+    case (#declaration identity schema fields effects laws changes history) ->
+      mk #AgentDeclaration [
+        identity schema
+        call AgentTexts [fields]
+        call AgentTexts [effects]
+        call AgentTexts [laws]
+        call AgentTexts [changes]
+        call AgentTexts [history]
+      ]
+    case _ -> fail #agent-error "not an agent declaration"
+  }
+
+judgment AgentEvidence [proof] =
+  match proof {
+    case (#evidence kind reference) -> mk #AgentEvidence [kind reference]
+    case _ -> fail #agent-error "not agent evidence"
+  }
+
+judgment AgentEdit [alteration] =
+  match alteration {
+    case (#edit predecessor successor permission cost) ->
+      mk #AgentEdit [predecessor successor permission cost]
+    case _ -> fail #agent-error "not an agent edit"
+  }
+
+judgment AgentAction [action] =
+  match action {
+    case (#inspect topic) -> mk #Inspect [call AgentTopic [topic]]
+    case (#record proof) -> mk #RecordEvidence [call AgentEvidence [proof]]
+    case (#propose alteration) -> mk #ProposeEdit [call AgentEdit [alteration]]
+    case _ -> fail #agent-error "not an agent action"
+  }
+
+judgment AgentActions [actions] =
+  match actions {
+    case [] -> prim #node [#NoAgentAction list []]
+    case head :: tail ->
+      mk #MoreAgentAction [call AgentAction [head] call AgentActions [tail]]
+  }
+
+judgment StrataAgentInitial [grammar sources declaration capabilities budget] =
+  call AskAgent [
+    grammar sources #initialInvestigation
+    list [call AgentDeclaration [declaration] call AgentTexts [capabilities] budget]
+  ]
+
+judgment StrataAgentAdvance [grammar sources declaration capabilities budget action] =
+  call AskAgent [
+    grammar sources #advanceInvestigation
+    list [
+      call StrataAgentInitial [grammar sources declaration capabilities budget]
+      call AgentAction [action]
+    ]
+  ]
+
+judgment StrataAgentRun [grammar sources declaration capabilities budget actions] =
+  call AskAgent [
+    grammar sources #runInvestigation
+    list [
+      call StrataAgentInitial [grammar sources declaration capabilities budget]
+      call AgentActions [actions]
+    ]
+  ]
+
+judgment StrataAgentRunState [grammar sources declaration capabilities budget actions] =
+  call AskAgent [
+    grammar sources #resultState
+    list [
+      call StrataAgentInitial [grammar sources declaration capabilities budget]
+      call StrataAgentRun [grammar sources declaration capabilities budget actions]
+    ]
+  ]
+
+judgment StrataAgentRunCurrent [grammar sources declaration capabilities budget actions] =
+  call AskAgent [
+    grammar sources #currentInvestigationIdentity
+    list [call StrataAgentRunState [grammar sources declaration capabilities budget actions]]
+  ]
+
+judgment StrataAgentRunBudget [grammar sources declaration capabilities budget actions] =
+  call AskAgent [
+    grammar sources #remainingBudget
+    list [call StrataAgentRunState [grammar sources declaration capabilities budget actions]]
+  ]
+
+judgment StrataAgentRunViewContains [grammar sources declaration capabilities budget actions wanted] =
+  call AskAgent [
+    grammar sources #investigationViewContains
+    list [call StrataAgentRunState [grammar sources declaration capabilities budget actions] wanted]
+  ]
+
+judgment StrataAgentResultTag [grammar sources declaration capabilities budget action] =
+  call AskAgent [
+    grammar sources #resultTag
+    list [call StrataAgentAdvance [grammar sources declaration capabilities budget action]]
+  ]
+
+judgment StrataAgentContextIdentity [grammar sources declaration] =
+  call AskAgent [
+    grammar sources #declarationContextIdentity list [call AgentDeclaration [declaration]]
+  ]
+
+judgment StrataAgentContextsAgree [grammar sources first second] =
+  prim #eq [
+    call StrataAgentContextIdentity [grammar sources first]
+    call StrataAgentContextIdentity [grammar sources second]
+  ]
+
+judgment StrataAgentContextsDiffer [grammar sources first second] =
+  if prim #eq [
+    call StrataAgentContextIdentity [grammar sources first]
+    call StrataAgentContextIdentity [grammar sources second]
+  ]
+  then false
+  else true
+
+judgment StrataAgentRunsAgree [grammar sources declaration capabilities budget first second] =
+  prim #eq [
+    call StrataAgentRunState [grammar sources declaration capabilities budget first]
+    call StrataAgentRunState [grammar sources declaration capabilities budget second]
+  ]
