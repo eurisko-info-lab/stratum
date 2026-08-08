@@ -1,0 +1,10 @@
+; delta-meta for S12 -> S13: foundation construction and governance enter the
+; second-floor language application.
+(change
+  (kind delta-meta)
+  (name "S12->S13 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (remembering strata)
+      (editing strata))))

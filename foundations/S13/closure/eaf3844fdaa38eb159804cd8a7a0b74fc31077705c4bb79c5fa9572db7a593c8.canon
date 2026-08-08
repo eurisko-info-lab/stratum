@@ -1,0 +1,21 @@
+
+artifactchange
+change
+kind
+foundation
+nameS8->S9
+predecessor
+foundation-offoundations/S8
+
+delta-meta
+filechanges/S8-S9/delta-meta.canon
+delta-grammar
+file!changes/S8-S9/delta-grammar.canon
+feature
+feature
+namemeta definitions rewritten
+programs
+file)features/strata/metasource.generated.meta
+sources
+	text-filefeatures/strata/metasource.meta
+	text-filestrata/system/meta.strata

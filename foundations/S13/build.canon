@@ -1,0 +1,56 @@
+; S13: foundations and governance, and the fourteenth foundation of the
+; second floor.
+;
+; Foundation roots, attestations, proposal acceptance, sponsorship and run
+; validity are Strata derivations. The host retains hashing, signatures and
+; the journal that performs or reverses filesystem effects.
+(build
+  (name "S13")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/S12"))
+  (change (file "changes/S12-S13/change.canon"))
+  (application
+    (application
+      (name "strata-s13")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        (file "features/strata/index.generated.meta")
+        (file "features/strata/store.generated.meta")
+        (file "features/strata/repository.generated.meta")
+        (file "features/strata/studio.generated.meta")
+        (file "features/strata/foundation.generated.meta")
+        (file "features/strata/governance.generated.meta")
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "foundations/S13/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+        (file "features/strata/metasource.generated.meta")
+        (file "languages/service/service.generated.meta")
+      ]))
+      (grammars {
+        strata (file "foundations/S13/surface/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (service (file "fixtures/strata/s12-service.canon"))
+      (checks (include "fixtures/strata/s13-checks.canon"))
+      (kernel (kernel (allow
+        cas-get cas-has hash grammar-parse grammar-print grammar-lex
+        text-octets octets-of-bytes bytes-of-octets digest-of-bytes)))
+      (resources (budget (steps 1000000000) (depth 240000))))))

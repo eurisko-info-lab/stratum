@@ -1,0 +1,36 @@
+
+artifactmeta-program
+program
+modulesource
+judgment
+SourceText	reference
+match
+callFetch
+v	reference
+qsource
+case
+pmsome
+pvbody
+callRequire
+vbody
+qtext
+case
+pmnone
+failmissing-source
+qsource artifact missing
+judgment
+SourcePath	reference
+match
+callFetch
+v	reference
+qsource
+case
+pmsome
+pvbody
+callRequire
+vbody
+qpath
+case
+pmnone
+failmissing-source
+qsource artifact missing

@@ -1,0 +1,83 @@
+module stratafoundation
+
+; Foundation construction, crossed into Strata and back. The crossing changes
+; only representation: all five root fields are explicit inputs, and the
+; authoritative construction and naming remain in `strata.foundation`.
+
+judgment StrataFoundationSystem [prelude native octets artifact cas repository studio foundation] =
+  list [prelude native octets artifact cas repository studio foundation]
+
+judgment FoundationOptionalReference [reference] =
+  match reference {
+    case (#none) -> prim #node [#NoReference list []]
+    case (#some name) -> mk #Reference [name]
+    case _ -> fail #foundation-error "not an optional foundation reference"
+  }
+
+judgment FoundationInputOf [name bootstrap application predecessor change] =
+  mk #FoundationInput [
+    name
+    bootstrap
+    application
+    call FoundationOptionalReference [predecessor]
+    call FoundationOptionalReference [change]
+  ]
+
+judgment FoundationInputsOf [inputs] =
+  match inputs {
+    case [] -> prim #node [#NoFoundationInput list []]
+    case (#foundation name application predecessor change) :: rest ->
+      mk #MoreFoundationInput [
+        call FoundationInputOf [name "StratumHost0/1" application predecessor change]
+        call FoundationInputsOf [rest]
+      ]
+    case head :: rest -> fail #foundation-error "not a foundation reconstruction input"
+  }
+
+judgment FoundationNamesOf [names] =
+  match names {
+    case [] -> prim #node [#NoFoundationName list []]
+    case head :: rest -> mk #MoreFoundationName [head call FoundationNamesOf [rest]]
+  }
+
+judgment AskFoundation [grammar sources entry arguments] =
+  call RunStrataWith [grammar sources "strata.foundation" entry arguments]
+
+judgment StrataFoundationOptionalValue [grammar sources reference] =
+  call AskFoundation [
+    grammar sources #optionalValue list [call FoundationOptionalReference [reference]]
+  ]
+
+judgment StrataFoundationValue [grammar sources name bootstrap application predecessor change] =
+  call AskFoundation [
+    grammar
+    sources
+    #foundationValue
+    list [call FoundationInputOf [name bootstrap application predecessor change]]
+  ]
+
+judgment StrataFoundationIdentity [grammar sources name bootstrap application predecessor change] =
+  call AskFoundation [
+    grammar
+    sources
+    #foundationIdentity
+    list [call FoundationInputOf [name bootstrap application predecessor change]]
+  ]
+
+judgment StrataFoundationsMatch [grammar sources inputs expected] =
+  call AskFoundation [
+    grammar
+    sources
+    #foundationIdentitiesMatch
+    list [call FoundationInputsOf [inputs] call FoundationNamesOf [expected]]
+  ]
+
+judgment StrataAttestationIdentity [grammar sources name foundation application meta closure kinds] =
+  call AskFoundation [
+    grammar
+    sources
+    #attestationIdentity
+    list [mk #AttestationInput [
+      name foundation application meta closure call ReadCanonValue [kinds]
+    ]]
+  ]

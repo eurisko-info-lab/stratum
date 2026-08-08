@@ -1,0 +1,225 @@
+; Generated from features/strata/governance.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratagovernance)
+  (judgment
+    StrataGovernanceSystem
+    [prelude native octets artifact cas repository studio foundation governance]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)
+      (v studio)
+      (v foundation)
+      (v governance)))
+  (judgment
+    AskGovernance
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.governance")
+      (v entry)
+      (v arguments)))
+  (judgment
+    GovernanceBool
+    [value]
+    (if
+      (prim
+        eq
+        (v value)
+        (q #t))
+      (prim
+        node
+        (q True)
+        (lst))
+      (prim
+        node
+        (q False)
+        (lst))))
+  (judgment
+    StrataConstitution
+    [kind tests proof budget]
+    (mk
+      Constitution
+      (v kind)
+      (call
+        GovernanceBool
+        (v tests))
+      (call
+        GovernanceBool
+        (v proof))
+      (v budget)))
+  (judgment
+    StrataProposal
+    [foundation predecessor kind signed tests proof budget]
+    (mk
+      Proposal
+      (v foundation)
+      (v predecessor)
+      (v kind)
+      (call
+        GovernanceBool
+        (v signed))
+      (call
+        GovernanceBool
+        (v tests))
+      (call
+        GovernanceBool
+        (v proof))
+      (v budget)))
+  (judgment
+    StrataDecision
+    [grammar sources constitution proposal]
+    (call
+      AskGovernance
+      (v grammar)
+      (v sources)
+      (q evaluateProposal)
+      (lst
+        (v constitution)
+        (v proposal))))
+  (judgment
+    StrataDecisionTag
+    [grammar sources constitution proposal]
+    (call
+      AskGovernance
+      (v grammar)
+      (v sources)
+      (q decisionTag)
+      (lst
+        (call
+          StrataDecision
+          (v grammar)
+          (v sources)
+          (v constitution)
+          (v proposal)))))
+  (judgment
+    StrataSponsorship
+    [grammar sources sponsor decision]
+    (call
+      AskGovernance
+      (v grammar)
+      (v sources)
+      (q sponsor)
+      (lst
+        (v sponsor)
+        (v decision))))
+  (judgment
+    StrataSponsorshipTag
+    [grammar sources sponsor decision]
+    (call
+      AskGovernance
+      (v grammar)
+      (v sources)
+      (q sponsorshipTag)
+      (lst
+        (call
+          StrataSponsorship
+          (v grammar)
+          (v sources)
+          (v sponsor)
+          (v decision)))))
+  (judgment
+    StrataRunSteps
+    [steps]
+    (match
+      (v steps)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoRunStep)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (mk
+          MoreRunStep
+          (mk
+            RunStep
+            (prim
+              mget
+              (v head)
+              (q exit)
+              (q 1)))
+          (call
+            StrataRunSteps
+            (v rest))))))
+  (judgment
+    StrataRunChanges
+    [changes]
+    (match
+      (v changes)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoRunChange)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (mk
+          MoreRunChange
+          (mk
+            RunChange
+            (call
+              GovernanceBool
+              (prim
+                mhas
+                (v head)
+                (q after))))
+          (call
+            StrataRunChanges
+            (v rest))))))
+  (judgment
+    StrataRunReport
+    [report]
+    (mk
+      RunReport
+      (call
+        StrataRunSteps
+        (prim
+          mget
+          (v report)
+          (q steps)
+          (lst)))
+      (call
+        StrataRunChanges
+        (prim
+          mget
+          (v report)
+          (q changed)
+          (lst)))))
+  (judgment
+    StrataRunDecision
+    [grammar sources report]
+    (call
+      AskGovernance
+      (v grammar)
+      (v sources)
+      (q evaluateRun)
+      (lst
+        (call
+          StrataRunReport
+          (v report)))))
+  (judgment
+    StrataRunDecisionTag
+    [grammar sources report]
+    (call
+      AskGovernance
+      (v grammar)
+      (v sources)
+      (q runDecisionTag)
+      (lst
+        (call
+          StrataRunDecision
+          (v grammar)
+          (v sources)
+          (v report))))))

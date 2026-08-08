@@ -1,0 +1,19 @@
+
+artifactsource
+source
+pathlanguages/lambda/lambda.grammar
+textègrammar "lambda"
+start term
+
+token ident sym "[A-Za-z_][A-Za-z0-9_']*"
+
+category term
+  prod Lam "\\" name : ident "." body : term
+  pass app
+
+category app
+  fold App atom
+
+category atom
+  prod Var name : ident
+  paren "(" term ")"

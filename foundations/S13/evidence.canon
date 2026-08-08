@@ -1,0 +1,17 @@
+
+artifactevidence
+evidence
+check+strata-the-foundation-module-prints-exactlyok
+check+strata-the-governance-module-prints-exactlyok
+check#strata-the-governance-system-checksok
+check%strata-the-governance-system-is-totalok
+check6strata-the-governance-system-declares-its-capabilitiesok
+check5strata-the-governance-system-agrees-with-the-host-setok
+checkstrata-builds-the-f0-root-valueok
+check"strata-reconstructs-f0-through-f11ok
+checkstrata-attests-f1-exactlyok
+check/governance-accepts-complete-foundation-evidenceok
+check+governance-rejects-failing-foundation-testsok
+check'an-accepted-foundation-can-be-sponsoredok
+check)rebuild-a-foundation-replays-under-strataok
+check(attest-a-foundation-replays-under-strataok

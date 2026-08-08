@@ -1,0 +1,111 @@
+
+artifactsource
+source
+pathstrata/system/octets.strata
+text–8module "strata.octets"
+version 1
+; Octets, and the arithmetic a canonical encoding is made of.
+;
+; S7 drew the native boundary and declared what Strata may reach: a text can
+; be split into characters and two texts joined, a number can be added and
+; compared, a value can be hashed. That was the set the layers that needed it
+; needed, and it is not the set this one needs. `Bytes` is there but sealed --
+; nothing makes one and nothing looks inside one -- so a program that wants to
+; say which bytes an artifact is cannot say it; and a number can be added but
+; not divided, so a program that wants to say seven bits at a time cannot say
+; that either.
+;
+; This is the same boundary, widened by the layer that needs it, in the module
+; that needs it. S7's module is untouched and its foundation is untouched.
+; What S7 built was the mechanism -- a primitive is declared, the host is
+; asked whether it agrees, and the declaration is checked like any other --
+; and a module that needs more of the host uses that mechanism to say so.
+;
+; Seven primitives are added and every one is a crossing that cannot be
+; computed on this side. Three are arithmetic the host already does: taking
+; away, the quotient, the remainder. Four are the byte string: which octets
+; spell a text, which octets a byte string is, which byte string some octets
+; are, and what the hash of a byte string is. None of the seven is part of a
+; canonical encoding. Which octets an artifact encodes to is decided in
+; `strata/system/artifact.strata` and nowhere else.
+;
+; An octet is a `Number` rather than a chain of `Succ`. The prelude's `Nat` is
+; still what termination is argued on -- the digit loop below recurses on one
+; -- but counting to two hundred and fifty five once per byte of a closure is
+; not arithmetic, it is a way of not finishing.
+import "strata.prelude" 1
+import "strata.native" 1
+
+; A byte string, as numbers. `Bytes` stays what it was, the host's and opaque,
+; and this is what one looks like from here.
+data Octets = | NoOctet [] | MoreOctet [octetHead #1: Number, octetTail #2: Octets]
+
+prim numberMonus [a: Number, b: Number] ! arith: Number
+prim numberQuotient [a: Number, b: Number] ! arith: Number
+prim numberRemainder [a: Number, b: Number] ! arith: Number
+prim textOctets [t: Text] ! text: Octets
+prim octetsOfBytes [b: Bytes] ! text: Octets
+prim bytesOfOctets [o: Octets] ! text: Bytes
+prim bytesDigest [b: Bytes] ! hash: Text
+
+; --------------------------------------------------------------- the numbers
+;
+; Strata has no numeral that means a number: a literal is a `Nat`, and a `Nat`
+; is a chain. These are the constants the encoding needs, each one addition
+; away from the one before it.
+
+def c0 [] ! arith: Number = numberOfNat Zero
+def c1 [] ! arith: Number = numberOfNat (Succ Zero)
+def c2 [] ! arith: Number = numberAdd c1 c1
+def c3 [] ! arith: Number = numberAdd c2 c1
+def c4 [] ! arith: Number = numberAdd c2 c2
+def c5 [] ! arith: Number = numberAdd c4 c1
+def c6 [] ! arith: Number = numberAdd c4 c2
+def c7 [] ! arith: Number = numberAdd c4 c3
+def c8 [] ! arith: Number = numberAdd c4 c4
+def c9 [] ! arith: Number = numberAdd c8 c1
+def c10 [] ! arith: Number = numberAdd c8 c2
+def c16 [] ! arith: Number = numberAdd c8 c8
+def c32 [] ! arith: Number = numberAdd c16 c16
+def c64 [] ! arith: Number = numberAdd c32 c32
+def c128 [] ! arith: Number = numberAdd c64 c64
+def timesTwo [x: Number] ! arith: Number = numberAdd x x
+def timesSixteen [x: Number] ! arith: Number = timesTwo (timesTwo (timesTwo (timesTwo x)))
+
+; ------------------------------------------------------------------- octets
+
+def oneOctet [n: Number]: Octets = MoreOctet n NoOctet
+def octetsJoin [a: Octets, b: Octets]: Octets = match a of case NoOctet -> b case MoreOctet head tail -> MoreOctet head (octetsJoin tail b) end
+def octetsCount [o: Octets] ! arith: Number = match o of case NoOctet -> c0 case MoreOctet head tail -> numberAdd c1 (octetsCount tail) end
+
+; How long something is and what it is, worked out together. A length prefix
+; needs the count before the contents, and the contents have to be put in
+; front of what follows them anyway, so counting them in a second pass is
+; walking the same chain twice for no reason.
+data Sized = | Sized [sizedCount #1: Number, sizedOctets #2: Octets]
+def joinSized [o: Octets, rest: Octets] ! arith: Sized = match o of case NoOctet -> Sized c0 rest case MoreOctet head tail -> match joinSized tail rest of case Sized counted joined -> Sized (numberAdd c1 counted) (MoreOctet head joined) end end
+
+; ------------------------------------------------------------------ varints
+;
+; Seven bits at a time, least significant first, every octet but the last
+; carrying the mark that says another follows.
+;
+; The loop takes a digit off at a time, which is not structural: a quotient is
+; not a part of what it was taken from. So it is given a chain to spend
+; instead, and the chain is what makes the definition total. Forty places in
+; base one hundred and twenty eight is more than any number in an artifact has
+; ever needed.
+
+def eightMore [n: Nat]: Nat = Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ n)))))))
+def digitBound []: Nat = eightMore (eightMore (eightMore (eightMore (eightMore Zero))))
+def varintInto [n: Number, fuel: Nat, rest: Octets] ! arith: Octets = match fuel of case Zero -> rest case Succ spend -> match numberLess n c128 of case True -> MoreOctet n rest case False -> MoreOctet (numberAdd c128 (numberRemainder n c128)) (varintInto (numberQuotient n c128) spend rest) end end
+def varintOf [n: Number, rest: Octets] ! arith: Octets = varintInto n digitBound rest
+
+; -------------------------------------------------------------- hexadecimal
+;
+; A digest reaches Strata as the sixty four characters that spell it, and a
+; digest inside an artifact is the thirty two octets those characters name.
+
+def hexValue [c: Text] ! text arith: Number = match textEq c "0" of case True -> c0 case False -> match textEq c "1" of case True -> c1 case False -> match textEq c "2" of case True -> c2 case False -> match textEq c "3" of case True -> c3 case False -> match textEq c "4" of case True -> c4 case False -> match textEq c "5" of case True -> c5 case False -> match textEq c "6" of case True -> c6 case False -> match textEq c "7" of case True -> c7 case False -> match textEq c "8" of case True -> c8 case False -> match textEq c "9" of case True -> c9 case False -> match textEq c "a" of case True -> c10 case False -> match textEq c "b" of case True -> numberAdd c10 c1 case False -> match textEq c "c" of case True -> numberAdd c10 c2 case False -> match textEq c "d" of case True -> numberAdd c10 c3 case False -> match textEq c "e" of case True -> numberAdd c10 c4 case False -> numberAdd c10 c5 end end end end end end end end end end end end end end end
+def hexInto [cs: Chars, rest: Octets] ! text arith: Octets = match cs of case NoChar -> rest case MoreChar high after -> match after of case NoChar -> rest case MoreChar low tail -> MoreOctet (numberAdd (timesSixteen (hexValue high)) (hexValue low)) (hexInto tail rest) end end
+def octetsOfHex [hex: Text, rest: Octets] ! text arith: Octets = hexInto (textCharacters hex) rest

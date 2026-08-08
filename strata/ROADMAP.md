@@ -758,6 +758,11 @@ uses only text comparison and arithmetic from the boundary S10 established.
 
 - `strata/system/foundation.strata` — construction, closure, attestation
 - `strata/system/governance.strata` — proposal, acceptance, sponsorship
+- `features/strata/foundation.meta` and
+  `features/strata/governance.meta` — representation-only crossings for root
+  inputs, proposal evidence and journaled run reports
+- recorded rehearsals of both foundation runbooks, restored by the journal and
+  then judged by Strata
 - `fixtures/strata/s13.transcript`, `foundations/S13/`
 
 **Acceptance**
@@ -765,6 +770,28 @@ uses only text comparison and arithmetic from the boundary S10 established.
 - Strata reconstructs `foundations/F0` through `F11` with identical digests
 - `runbooks/attest-a-foundation.transcript` and
   `runbooks/rebuild-a-foundation.transcript` replay under Strata
+
+**A foundation root is five fields, and Strata now decides all five.** Given a
+name, bootstrap identity, application reference, predecessor and change,
+`foundationArtifact` emits the canonical envelope whose name is the foundation
+identity. One recursive check reconstructs F0 through F11 from those inputs and
+agrees with every committed digest; it does not read or hash a supplied
+`foundation.canon`. Attestation is likewise canonical construction: S13 emits
+the same F1 attestation digest as the first-floor command from the root,
+application, Meta program and closure summary.
+
+**Governance consumes evidence rather than effects.** A constitution decides
+the governed kind, required tests and proof, and minimum resource budget. An
+accepted proposal may then be sponsored only by an identity whose scope names
+that kind. The two runbooks are rehearsed through the existing journal, which
+records their steps and restores every touched path; Strata reads those keyed
+reports and decides whether all steps succeeded and every removal had a
+replacement.
+
+**Nothing is added to the native boundary.** Hashing and signature verification
+remain deterministic capabilities. Directory traversal, writes and undo remain
+host journal effects. What moved is the authority to say which root those bytes
+constitute and whether the evidence permits it.
 
 **Exit condition** — the staircase itself is built by Strata.
 

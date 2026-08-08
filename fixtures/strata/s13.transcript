@@ -1,0 +1,51 @@
+# S13 acceptance transcript: Strata constructs and attests foundation roots,
+# governs their acceptance and sponsorship, and judges journaled runbooks.
+
+$ foundation verify --dir foundations/S13
+> foundation S13
+> digest 6e24fcf88bd220192297f654da7103862f995be0b03f75c27c4e1751ea651c53
+> closure 293 artifacts
+> check strata-the-foundation-module-prints-exactly ok
+> check strata-the-governance-module-prints-exactly ok
+> check strata-the-governance-system-checks ok
+> check strata-the-governance-system-is-total ok
+> check strata-the-governance-system-declares-its-capabilities ok
+> check strata-the-governance-system-agrees-with-the-host-set ok
+> check strata-builds-the-f0-root-value ok
+> check strata-reconstructs-f0-through-f11 ok
+> check strata-attests-f1-exactly ok
+> check governance-accepts-complete-foundation-evidence ok
+> check governance-rejects-failing-foundation-tests ok
+> check an-accepted-foundation-can-be-sponsored ok
+> check rebuild-a-foundation-replays-under-strata ok
+> check attest-a-foundation-replays-under-strata ok
+> verdict ok
+
+$ foundation verify-successor --predecessor foundations/S12 --successor foundations/S13
+> predecessor S12
+> successor S13
+> result (valid #ddef4e382db988290a2481b4f1314452a8ae064bfd639cf0735071820bb75d609)
+
+$ foundation reconstruct --dir foundations/S13
+> reconstructed S13
+> digest 6e24fcf88bd220192297f654da7103862f995be0b03f75c27c4e1751ea651c53
+> stable yes
+> closure 293 artifacts
+> checks 14 ok
+
+$ foundation derive-successor --predecessor foundations/S12 --derivation changes/S12-S13/derivation.canon --expect foundations/S13
+> predecessor S12
+> derived 6e24fcf88bd220192297f654da7103862f995be0b03f75c27c4e1751ea651c53
+> matches foundations/S13 yes
+
+$ transcript rehearse runbooks/rebuild-a-foundation.transcript --record fixtures/strata/s13-rebuild-run.canon
+> rehearsed runbooks/rebuild-a-foundation.transcript 3 steps
+>   node = foundations/F1
+>   undone 33 paths, nothing kept
+>   recorded fixtures/strata/s13-rebuild-run.canon
+
+$ transcript rehearse runbooks/attest-a-foundation.transcript --record fixtures/strata/s13-attest-run.canon
+> rehearsed runbooks/attest-a-foundation.transcript 4 steps
+>   node = foundations/F1
+>   undone 33 paths, nothing kept
+>   recorded fixtures/strata/s13-attest-run.canon

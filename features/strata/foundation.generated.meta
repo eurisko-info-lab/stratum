@@ -1,0 +1,200 @@
+; Generated from features/strata/foundation.meta by ElaborateSource. Do not edit by hand.
+(program
+  (module stratafoundation)
+  (judgment
+    StrataFoundationSystem
+    [prelude native octets artifact cas repository studio foundation]
+    (lst
+      (v prelude)
+      (v native)
+      (v octets)
+      (v artifact)
+      (v cas)
+      (v repository)
+      (v studio)
+      (v foundation)))
+  (judgment
+    FoundationOptionalReference
+    [reference]
+    (match
+      (v reference)
+      (case
+        (pm none)
+        (prim
+          node
+          (q NoReference)
+          (lst)))
+      (case
+        (pm
+          some
+          (pv name))
+        (mk
+          Reference
+          (v name)))
+      (case
+        _
+        (fail
+          foundation-error
+          (q "not an optional foundation reference")))))
+  (judgment
+    FoundationInputOf
+    [name bootstrap application predecessor change]
+    (mk
+      FoundationInput
+      (v name)
+      (v bootstrap)
+      (v application)
+      (call
+        FoundationOptionalReference
+        (v predecessor))
+      (call
+        FoundationOptionalReference
+        (v change))))
+  (judgment
+    FoundationInputsOf
+    [inputs]
+    (match
+      (v inputs)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoFoundationInput)
+          (lst)))
+      (case
+        (pcons
+          (pm
+            foundation
+            (pv name)
+            (pv application)
+            (pv predecessor)
+            (pv change))
+          (pv rest))
+        (mk
+          MoreFoundationInput
+          (call
+            FoundationInputOf
+            (v name)
+            (q "StratumHost0/1")
+            (v application)
+            (v predecessor)
+            (v change))
+          (call
+            FoundationInputsOf
+            (v rest))))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (fail
+          foundation-error
+          (q "not a foundation reconstruction input")))))
+  (judgment
+    FoundationNamesOf
+    [names]
+    (match
+      (v names)
+      (case
+        (pnil)
+        (prim
+          node
+          (q NoFoundationName)
+          (lst)))
+      (case
+        (pcons
+          (pv head)
+          (pv rest))
+        (mk
+          MoreFoundationName
+          (v head)
+          (call
+            FoundationNamesOf
+            (v rest))))))
+  (judgment
+    AskFoundation
+    [grammar sources entry arguments]
+    (call
+      RunStrataWith
+      (v grammar)
+      (v sources)
+      (q "strata.foundation")
+      (v entry)
+      (v arguments)))
+  (judgment
+    StrataFoundationOptionalValue
+    [grammar sources reference]
+    (call
+      AskFoundation
+      (v grammar)
+      (v sources)
+      (q optionalValue)
+      (lst
+        (call
+          FoundationOptionalReference
+          (v reference)))))
+  (judgment
+    StrataFoundationValue
+    [grammar sources name bootstrap application predecessor change]
+    (call
+      AskFoundation
+      (v grammar)
+      (v sources)
+      (q foundationValue)
+      (lst
+        (call
+          FoundationInputOf
+          (v name)
+          (v bootstrap)
+          (v application)
+          (v predecessor)
+          (v change)))))
+  (judgment
+    StrataFoundationIdentity
+    [grammar sources name bootstrap application predecessor change]
+    (call
+      AskFoundation
+      (v grammar)
+      (v sources)
+      (q foundationIdentity)
+      (lst
+        (call
+          FoundationInputOf
+          (v name)
+          (v bootstrap)
+          (v application)
+          (v predecessor)
+          (v change)))))
+  (judgment
+    StrataFoundationsMatch
+    [grammar sources inputs expected]
+    (call
+      AskFoundation
+      (v grammar)
+      (v sources)
+      (q foundationIdentitiesMatch)
+      (lst
+        (call
+          FoundationInputsOf
+          (v inputs))
+        (call
+          FoundationNamesOf
+          (v expected)))))
+  (judgment
+    StrataAttestationIdentity
+    [grammar sources name foundation application meta closure kinds]
+    (call
+      AskFoundation
+      (v grammar)
+      (v sources)
+      (q attestationIdentity)
+      (lst
+        (mk
+          AttestationInput
+          (v name)
+          (v foundation)
+          (v application)
+          (v meta)
+          (v closure)
+          (call
+            ReadCanonValue
+            (v kinds)))))))
