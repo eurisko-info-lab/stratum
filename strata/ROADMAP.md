@@ -710,13 +710,41 @@ command surface does.
 **Adds**
 
 - `strata/system/studio.strata` — profile-derived editor surface
-- LSP service derived from language declarations, replacing `host-scala/lsp`
+- `features/strata/studio.meta` — structural crossing and the generic service
+  entry points used by the protocol adapter
+- `fixtures/strata/s12-service.canon` — the language binding published by the
+  world, including extensions and commands
+- LSP service derived from language declarations, leaving `host-scala/lsp` as
+  the JSON-RPC, UTF-16 position and filesystem adapter
 - `fixtures/strata/s12.transcript`, `foundations/S12/`
 
 **Acceptance**
 
-- `tools/lsp.sh` scenarios pass against the Strata service
-- studio surface is derived from a profile, never hand-listed
+- `tools/lsp.sh` initializes the S12 world, and an in-memory editing replay
+  returns diagnostics, grammar-derived completion, canonical formatting and
+  semantic tokens
+- declaration roles derive the service capabilities
+- two profiles derive visibly different surfaces, while a profile naming a
+  different language is refused rather than coerced
+
+**The two inputs stay separate.** A language declaration says which files it
+recognizes and which tool roles it supplies. A profile says how those tools
+are arranged: layout, views, commands and workflow. `deriveSurface` is the
+only place they meet, and it accepts them only when they name the same
+language. The adapter therefore cannot invent a panel or advertise a language
+feature that neither input declares.
+
+**The protocol remains an adapter.** JSON parsing, `Content-Length` framing,
+buffer lifetime and conversion from source offsets to LSP's UTF-16 positions
+stay in Scala because they are wire and process effects. Parsing, diagnostics,
+completion, formatting and token classification are judgments in the S12
+world. A replay opens a `.strata` buffer that exists on no disk and records the
+answers from that world, while a separate process check exercises the actual
+stdio launcher.
+
+**Nothing is added to the native boundary.** The service uses grammar parsing,
+printing and lexing already supplied by the host. The studio derivation itself
+uses only text comparison and arithmetic from the boundary S10 established.
 
 **Exit condition** — the editor is a projection of the language declarations.
 

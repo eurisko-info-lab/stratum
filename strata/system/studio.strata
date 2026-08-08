@@ -1,0 +1,36 @@
+module "strata.studio"
+version 1
+; The editor surface is a projection of language declarations and a profile.
+;
+; A language declaration says what can be edited. A studio profile says how
+; it is arranged. Neither the LSP adapter nor this module carries a table of
+; languages, panels or commands: `deriveSurface` reads every one of them from
+; those two values.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.cas" 1
+import "strata.repository" 1
+
+data Texts = | NoText [] | MoreText [textHead #1: Text, textTail #2: Texts]
+data LanguageDeclaration = | LanguageDeclaration [languageName #1: Text, languageLabel #2: Text, languageExtensions #3: Texts, languageComment #4: Text, languageRoles #5: Texts]
+data View = | View [viewName #1: Text, viewPrimitive #2: Text, viewPlacement #3: Text]
+data Views = | NoView [] | MoreView [viewHead #1: View, viewTail #2: Views]
+data Action = | Action [actionName #1: Text, actionTitle #2: Text]
+data Actions = | NoAction [] | MoreAction [actionHead #1: Action, actionTail #2: Actions]
+data Profile = | Profile [profileName #1: Text, profileLanguage #2: Text, profileLayout #3: Text, profileViews #4: Views, profileActions #5: Actions, profileWorkflow #6: Texts]
+data Surface = | Surface [surfaceName #1: Text, surfaceLanguage #2: LanguageDeclaration, surfaceLayout #3: Text, surfaceViews #4: Views, surfaceActions #5: Actions, surfaceWorkflow #6: Texts]
+data Derivation = | NotForLanguage [] | Derived [derivedSurface #1: Surface]
+data Capabilities = | Capabilities [canDiagnose #1: Bool, canFindSymbols #2: Bool, canComplete #3: Bool, canFormat #4: Bool, canHighlight #5: Bool]
+data SurfaceShape = | SurfaceShape [shapeName #1: Text, shapeLayout #2: Text, shapeViews #3: Number, shapeActions #4: Number, shapeWorkflow #5: Number]
+
+def hasText [items: Texts, wanted: Text] ! text: Bool = match items of case NoText -> False case MoreText head tail -> match textEq head wanted of case True -> True case False -> hasText tail wanted end end
+def rolesOf [declaration: LanguageDeclaration]: Texts = match declaration of case LanguageDeclaration name label extensions comment roles -> roles end
+def capabilitiesOf [declaration: LanguageDeclaration] ! text: Capabilities = Capabilities (hasText (rolesOf declaration) "diagnostics") (hasText (rolesOf declaration) "symbols") (hasText (rolesOf declaration) "completion") (hasText (rolesOf declaration) "format") (hasText (rolesOf declaration) "tokens")
+def deriveSurface [declaration: LanguageDeclaration, profile: Profile] ! text: Derivation = match declaration of case LanguageDeclaration name label extensions comment roles -> match profile of case Profile studio forLanguage layout views actions workflow -> match textEq name forLanguage of case True -> Derived (Surface studio declaration layout views actions workflow) case False -> NotForLanguage end end end
+
+def viewCount [views: Views] ! arith: Number = match views of case NoView -> numberOfNat Zero case MoreView head tail -> numberAdd (numberOfNat (Succ Zero)) (viewCount tail) end
+def actionCount [actions: Actions] ! arith: Number = match actions of case NoAction -> numberOfNat Zero case MoreAction head tail -> numberAdd (numberOfNat (Succ Zero)) (actionCount tail) end
+def textCount [items: Texts] ! arith: Number = match items of case NoText -> numberOfNat Zero case MoreText head tail -> numberAdd (numberOfNat (Succ Zero)) (textCount tail) end
+def surfaceShape [derived: Derivation] ! arith: SurfaceShape = match derived of case NotForLanguage -> SurfaceShape "" "" (numberOfNat Zero) (numberOfNat Zero) (numberOfNat Zero) case Derived surface -> match surface of case Surface name language layout views actions workflow -> SurfaceShape name layout (viewCount views) (actionCount actions) (textCount workflow) end end

@@ -1,0 +1,124 @@
+; Executable acceptance checks for S12: tooling and studios are projections of
+; declarations and profiles rather than tables in the host adapter.
+[
+  (check strata-the-studio-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/studio.strata"))))
+    (value #t))
+
+  (check strata-the-studio-checks
+    (call CheckLinkedNative
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call StrataStudioSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata"))))
+      (q "strata.studio"))
+    (value (checked ok)))
+
+  (check strata-the-studio-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call StrataStudioSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata"))))
+      (q "strata.studio"))
+    (value (total ok)))
+
+  (check strata-the-studio-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call StrataStudioSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata"))))
+      (q "strata.studio"))
+    (value (permitted ok)))
+
+  (check strata-the-studio-agrees-with-the-host-set
+    (call CheckLinkedBoundary
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call StrataStudioSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata"))))
+      (q "strata.studio"))
+    (value (bounded ok)))
+
+  (check declaration-roles-derive-the-language-service-capabilities
+    (call StrataCapabilities
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call StrataStudioSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata"))))
+      (q (language "strata" "Strata" [".strata"] ";" ["diagnostics" "symbols" "completion" "format" "tokens"])))
+    (value (Capabilities (True) (True) (True) (True) (True))))
+
+  (check a-profile-derives-the-whole-editor-shape
+    (call StrataSurfaceShape
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call StrataStudioSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata"))))
+      (q (language "strata" "Strata" [".strata"] ";" ["diagnostics" "symbols" "completion" "format" "tokens"]))
+      (q (profile "strata-editor" "strata" "workbench" [(view "outline" "tree" "left") (view "source" "text" "centre") (view "diagnostics" "list" "bottom")] [(action "verify" "Verify module") (action "format" "Format module")] ["open" "edit" "verify"])))
+    (value (SurfaceShape "strata-editor" "workbench" 3 2 3)))
+
+  (check another-profile-derives-another-editor-shape
+    (call StrataSurfaceShape
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call StrataStudioSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata"))))
+      (q (language "strata" "Strata" [".strata"] ";" ["diagnostics" "format"]))
+      (q (profile "review-studio" "strata" "review" [(view "change" "diff" "centre")] [(action "accept" "Accept change")] ["inspect" "accept"])))
+    (value (SurfaceShape "review-studio" "review" 1 1 2)))
+
+  (check a-profile-for-another-language-is-not-an-editor-surface
+    (call StrataSurfaceShape
+      (q (file "foundations/S12/surface/strata.generated.grammar"))
+      (call StrataStudioSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/cas.strata")))
+        (call SourceText (q (text-file "strata/system/repository.strata")))
+        (call SourceText (q (text-file "strata/system/studio.strata"))))
+      (q (language "strata" "Strata" [".strata"] ";" ["diagnostics"]))
+      (q (profile "foreign" "other" "single" [] [] [])))
+    (value (SurfaceShape "" "" 0 0 0)))
+]

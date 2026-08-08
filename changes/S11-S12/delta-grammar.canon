@@ -1,0 +1,5 @@
+; S12 changes no concrete syntax.
+(change
+  (kind delta-grammar)
+  (name "S11->S12 delta-grammar")
+  (same second-floor-grammar))
