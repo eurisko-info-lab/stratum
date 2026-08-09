@@ -9,7 +9,12 @@ cd "$(dirname "$0")/.."
 actual=$(mktemp)
 trap 'rm -f "$actual"' EXIT
 
-find applications features foundations languages -type f \
+roots=(features foundations languages)
+if [[ -d applications ]]; then
+  roots=(applications "${roots[@]}")
+fi
+
+find "${roots[@]}" -type f \
   \( -name '*.generated.meta' -o -name '*.generated.grammar' \) \
   -print | LC_ALL=C sort | while IFS= read -r file; do
     sha256sum "$file"
