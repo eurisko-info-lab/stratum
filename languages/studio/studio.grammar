@@ -22,6 +22,7 @@ category statement
   prod StudioAssertDocuments "assertDocuments" value : value ";"
   prod StudioAssertDocumentsContain "assertDocumentsContain" value : value ";"
   prod StudioAssertTraceContains "assertTraceContains" value : value ";"
+  prod StudioAssertTraceExcludes "assertTraceExcludes" value : value ";"
   prod StudioAssertOutputContains "assertOutputContains" value : value ";"
   prod StudioAssertDiagnostics "assertDiagnostics" value : value ";"
   prod StudioClearTrace "clearTrace" ";"
