@@ -154,6 +154,62 @@ judgment DiscloseComponent [sealed certificates identity fraction] =
     }
   else mk #redacted [#wrong-recipient]
 
+judgment SdsBool [value] =
+  if prim #eq [value true]
+  then mk #True []
+  else mk #False []
+
+judgment SdsTrustDecision [certificateTrusted] =
+  if prim #eq [certificateTrusted true]
+  then mk #CertificateTrusted []
+  else mk #CertificateRejected []
+
+judgment SdsPublicationDecision [publicationTrusted] =
+  if prim #eq [publicationTrusted true]
+  then mk #Publish []
+  else mk #RejectPublication []
+
+judgment SdsDisclosureEvidence [certificateTrusted publicationTrusted commitmentMatches] =
+  mk #DisclosureEvidence [
+    call SdsTrustDecision [certificateTrusted]
+    call SdsPublicationDecision [publicationTrusted]
+    call SdsBool [commitmentMatches]
+  ]
+
+judgment SdsCompilerSources [prelude compiler] = list [prelude compiler]
+judgment SdsPolicySources [prelude pki law policy] = list [prelude pki law policy]
+
+judgment SdsDisclosureDecision [grammar prelude compiler pki law policy certificateTrusted publicationTrusted commitmentMatches] =
+  call RunApplicationStrataWith [
+    grammar
+    call SdsCompilerSources [prelude compiler]
+    call SdsPolicySources [prelude pki law policy]
+    "app.sds"
+    #disclosureDecision
+    list [call SdsDisclosureEvidence [certificateTrusted publicationTrusted commitmentMatches]]
+  ]
+
+judgment SdsPolicyPreservesMeaning [grammar prelude compiler pki law policy certificateTrusted publicationTrusted commitmentMatches] =
+  call ApplicationStrataPreservesMeaning [
+    grammar
+    call SdsCompilerSources [prelude compiler]
+    call SdsPolicySources [prelude pki law policy]
+    "app.sds"
+    #disclosureDecision
+    list [call SdsDisclosureEvidence [certificateTrusted publicationTrusted commitmentMatches]]
+  ]
+
+judgment SdsVirtualApp [grammar prelude native octets artifact virtualApp pki law policy app] =
+  call WriteCanonValue [
+    call RunStrataWith [
+      grammar
+      list [prelude native octets artifact virtualApp pki law policy app]
+      "app.sds.virtual-app"
+      #sdsVirtualApp
+      list []
+    ]
+  ]
+
 judgment RegulatoryReferences [entries] =
   match entries {
     case [] -> list []

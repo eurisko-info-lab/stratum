@@ -1,0 +1,13 @@
+module "app.sds.virtual-app"
+version 1
+import "strata.prelude" 1
+import "strata.artifact" 1
+import "strata.virtual-app" 1
+import "app.sds" 1
+
+def sdsEditor []: Fields = MoreField "category" "Stratum" (MoreField "description" "Editor support for every language an SDS world publishes." (MoreField "display" "Stratum Studio" (MoreField "identifier" "stratum-studio" (MoreField "license" "Apache-2.0" (MoreField "publisher" "eurisko" (MoreField "version" "0.1.0" (MoreField "view" "Stratum Studio" NoField)))))))
+def sdsPlacements []: Fields = MoreField "bottom" "panel" (MoreField "centre" "panel" (MoreField "centre-lower" "panel" (MoreField "left" "activitybar" (MoreField "right" "beside" NoField))))
+def languageWithoutComment [name: Text, label: Text, extensions: Texts]: Value = VMap (MorePair (VName "extensions") (VList (textValues extensions)) (MorePair (VName "label") (VText label) (MorePair (VName "name") (VText name) NoPair)))
+def sdsLanguages []: Languages = MoreLanguage (language "sds3" "SDS" (MoreText ".sds" NoText) ";") (MoreLanguage (language "meta" "Meta" (MoreText ".meta" NoText) ";") (MoreLanguage (languageWithoutComment "grammar" "Grammar" (MoreText ".grammar" NoText)) (MoreLanguage (languageWithoutComment "lambda" "Lambda" (MoreText ".lambda" NoText)) NoLanguage)))
+def sdsCommands []: Commands = MoreCommand (command "run-validation" "SDS: run validation") (MoreCommand (command "classify-hazard" "SDS: classify hazards") (MoreCommand (command "export-document" "SDS: export canonical form") NoCommand))
+def sdsVirtualApp []: Value = virtualApp "sds" (sdsEditor) (sdsPlacements) (navigator "catalogue" "Chemicals and reports" "left" True) (sdsLanguages) (sdsCommands)

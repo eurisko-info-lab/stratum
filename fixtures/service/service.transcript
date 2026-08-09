@@ -1,0 +1,61 @@
+# The language service, derived inside the foundation.
+#
+# Everything an editor shows for these languages is computed here, under a step
+# budget, from artifacts in the closure. The LSP adapter adds no language
+# knowledge: it converts offsets to line/character and canon to JSON.
+
+# A malformed document produces positioned findings. The parse tree carries no
+# spans, so the offset is found by locating the key the finding is about.
+$ derive --foundation applications/sds --goal '(call ServiceDiagnostics (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-invalid.sds")))'
+> [{length 13 message "unknown-unit: boiling-point" offset 98 severity warning} {length 11 message "fraction-out-of-range: cas-67-64-1" offset 162 severity warning}]
+
+# A syntax error is positioned from the offset the grammar machine reports.
+$ derive --foundation applications/sds --goal '(call ParseErrorOffset (q "unexpected character (;) at offset 42"))'
+> (some 42)
+
+$ derive --foundation applications/sds --goal '(call ServiceDiagnostics (grammar sds) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> [{length 1 message "unconsumed input at offset 267" offset 267 severity error}]
+
+# A clean document has nothing to report.
+$ derive --foundation applications/sds --goal '(call ServiceDiagnostics (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> []
+
+# Symbols carry their own position, so hover and outline need no lexer.
+$ derive --foundation applications/sds --goal '(call ServiceSymbols (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> [{detail "section 1" kind namespace label "\"Identification\"" length 16 offset 186} {detail "\"Acetone\"" kind string label "product" length 7 offset 214} {detail "56 celsius" kind number label "boiling-point" length 13 offset 240} {detail "\"Highly flammable liquid and vapour\"" kind event label "h225" length 4 offset 274} {detail "section 3" kind namespace label "\"Composition\"" length 13 offset 328} {detail "99 percent" kind number label "cas-67-64-1" length 11 offset 354}]
+
+# Completion keywords are read out of the grammar artifact itself, so every
+# language in the world gets them without a line of code.
+$ derive --foundation applications/sds --goal '(call GrammarKeywords (grammar sds2))'
+> ["component" "document" "field" "hazard" "section" "sentence"]
+
+$ derive --foundation applications/sds --goal '(call GrammarKeywords (grammar grammar))'
+> [":" "category" "fold" "grammar" "paren" "pass" "prod" "skip" "start" "token"]
+
+$ derive --foundation applications/sds --goal '(call GrammarKeywords (grammar lambda))'
+> ["." "\\"]
+
+# Formatting is the round trip the platform already guarantees.
+$ derive --foundation applications/sds --goal '(call ServiceFormat (grammar sds2) (q "document \"x\" section 1 \"S\" field t 5 celsius"))'
+> (some "document \"x\" section 1 \"S\" field t 5 celsius")
+
+# The service is total over foreign documents: one world serves five languages.
+$ derive --foundation applications/sds --goal '(call ServiceSymbols (grammar lambda) (q "(\\x. x) y"))'
+> []
+
+# Commands are the profile's commands, answered by the foundation.
+$ derive --foundation applications/sds --goal '(call ServiceCommand (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-invalid.sds")) (q run-validation))'
+> (ok "2 findings")
+
+$ derive --foundation applications/sds --goal '(call ServiceCommand (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")) (q classify-hazard))'
+> (ok "1 hazard")
+
+$ derive --foundation applications/sds --goal '(call ServiceCommand (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")) (q no-such-command))'
+> (denied "unknown command")
+
+# The editor panels are the Studio panels, rendered by F11's generic runtime.
+$ derive --foundation applications/sds --goal '(call ServiceViews (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> {composition [] entries ["Sentence product" "Field boiling-point" "Hazard h225" "Component cas-67-64-1"] findings [] hazards ["h225"] preview [] regulations [] sections ["Section 1" "Section 3"]}
+
+$ derive --foundation applications/sds --goal '(call ServiceFormat (grammar sds2) (q "document \"Acetone\"\n\nsection 1 \"Identification\"\n  sentence product \"Acetone\"\n  field boiling-point 65 fahrenheit\n"))'
+> (some "document \"Acetone\" section 1 \"Identification\" sentence product \"Acetone\" field boiling-point 65 fahrenheit")

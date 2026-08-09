@@ -1,1 +1,1 @@
-applications/law
+foundations/S18

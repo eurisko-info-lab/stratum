@@ -1,20 +1,32 @@
-; The SDS deployment, branched from the Law and PKI applications.
+; The SDS deployment, branched directly from S18.
 ;
 ; This is not a step of the bootstrap staircase. It is an application built on
-; the finished platform: it inherits Law and PKI, and reuses F11's Meta, Grammar,
+; the finished platform: it links Law and PKI as Strata modules, and reuses S18's Strata runtime,
 ; change calculus, repository, toolchain, governance, ledger, agreement,
 ; retention and Studio runtime, and it adds only its own language, profiles and
 ; documents.
 (build
   (name "SDS")
   (bootstrap "StratumHost0/1")
-  (predecessor (dir "applications/law"))
-  (change (file "changes/law-sds/change.canon"))
+  (predecessor (dir "foundations/S18"))
+  (change (file "changes/S18-sds/change.canon"))
   (application
     (application
       (name "sds-deployment")
       (host (file "host/core.canon"))
       (meta (program-of [
+        (file "features/strata/index.generated.meta")
+        (file "features/strata/store.generated.meta")
+        (file "features/strata/repository.generated.meta")
+        (file "features/strata/foundation.generated.meta")
+        (file "features/strata/governance.generated.meta")
+        (file "features/strata/ledger.generated.meta")
+        (file "features/strata/sync.generated.meta")
+        (file "features/strata/federation.generated.meta")
+        (file "features/strata/retention.generated.meta")
+        (file "features/strata/agent.generated.meta")
+        (file "features/strata/performance.generated.meta")
+        (file "features/strata/optimization.generated.meta")
         (file "languages/meta/prelude.meta")
         (file "languages/meta/source.meta")
         (file "languages/meta/elaborate.meta")
@@ -22,6 +34,20 @@
         (file "languages/foundation/foundation.meta")
         (file "languages/foundation/derive.meta")
         (file "languages/foundation/delta.meta")
+        (file "foundations/S18/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/application-resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+        (file "features/strata/metasource.generated.meta")
+        (file "features/strata/application.generated.meta")
         (file "languages/lambda/lambda.generated.meta")
         (file "features/change/change.generated.meta")
         (file "features/repository/repository.generated.meta")
@@ -42,6 +68,7 @@
         (file "applications/sds/sds.generated.meta")
       ]))
       (grammars {
+        strata (file "foundations/S18/surface/strata.generated.grammar")
         lambda (file "languages/lambda/lambda.generated.grammar")
         meta (file "languages/meta/meta.generated.grammar")
         grammar (file "languages/grammar/grammar.generated.grammar")
@@ -49,7 +76,20 @@
         sds2 (file "applications/sds/sds-v2.generated.grammar")
         sds3 (file "applications/sds/sds-v3.generated.grammar")
       })
-      (entries {})
+      (entries {
+        virtual-app
+          (call SdsVirtualApp
+            (grammar strata)
+            (call SourceText (q (text-file "strata/lib/prelude.strata")))
+            (call SourceText (q (text-file "strata/system/native.strata")))
+            (call SourceText (q (text-file "strata/system/octets.strata")))
+            (call SourceText (q (text-file "strata/system/artifact.strata")))
+            (call SourceText (q (text-file "features/strata/virtual-app.strata")))
+            (call SourceText (q (text-file "applications/pki/pki.strata")))
+            (call SourceText (q (text-file "applications/law/law.strata")))
+            (call SourceText (q (text-file "applications/sds/sds.strata")))
+            (call SourceText (q (text-file "applications/sds/virtual-app.strata"))))
+      })
       (documents {
         acetone-v1 (text-file "applications/sds/documents/acetone-v1.sds")
         acetone-v2 (text-file "applications/sds/documents/acetone-v2.sds")
@@ -64,4 +104,4 @@
       (checks (include "applications/sds/checks.canon"))
       (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print grammar-lex sign verify public-key
                             send receive open-connection close-connection pending)))
-      (resources (budget (steps 60000000) (depth 20000))))))
+      (resources (budget (steps 1000000000) (depth 240000))))))

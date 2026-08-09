@@ -1,0 +1,17 @@
+module "app.sds"
+version 1
+import "strata.prelude" 1
+import "app.pki" 1
+import "app.law" 1
+
+; Host adapters provide verified certificate and commitment evidence. Strata
+; owns what an SDS consumer is allowed to observe.
+data DisclosureEvidence = | DisclosureEvidence [certificate #1: TrustDecision, publication #2: PublicationDecision, commitmentMatches #3: Bool]
+data DisclosureDecision = | Disclose [] | KeepSealed [] | RejectDisclosure []
+data RegulatoryReference = | RegulatoryReference [key #1: Text, sentence #2: Text]
+data RegulatoryReferences = | NoRegulatoryReference [] | MoreRegulatoryReference [head #1: RegulatoryReference, tail #2: RegulatoryReferences]
+data Profile = | Authoring [] | PublicView [] | RegulatorView []
+data Panel = | Editor [] | Preview [] | PrivateComposition [] | RegulatoryData []
+
+def disclosureDecision [evidence: DisclosureEvidence]: DisclosureDecision = match evidence of case DisclosureEvidence certificate publication matches -> match certificate of case CertificateRejected -> RejectDisclosure case CertificateTrusted -> match publication of case RejectPublication -> RejectDisclosure case Publish -> match matches of case True -> Disclose case False -> KeepSealed end end end end
+def panelEnabled [profile: Profile, panel: Panel]: Bool = match profile of case Authoring -> True case PublicView -> match panel of case Editor -> False case Preview -> True case PrivateComposition -> False case RegulatoryData -> True end case RegulatorView -> match panel of case Editor -> False case Preview -> True case PrivateComposition -> True case RegulatoryData -> True end end

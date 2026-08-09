@@ -7,8 +7,8 @@
 
 $ foundation verify --dir applications/sds
 > foundation SDS
-> digest 91e15a0512e0b9c65e9fde4055ef43bd0ea3974f3c06b0bc1c6fcf2b0f4ada4e
-> closure 95 artifacts
+> digest c7e9d05acd7fce64e69aa274104570fb502d6023fa1338724c4e05c0157debc8
+> closure 351 artifacts
 > check document-round-trips ok
 > check document-index-is-generated ok
 > check a-clean-document-has-no-findings ok
@@ -17,12 +17,21 @@ $ foundation verify --dir applications/sds
 > check the-evolved-language-accepts-it ok
 > check the-evolved-language-is-backwards-compatible ok
 > check the-evolved-language-round-trips ok
+> check the-private-multilingual-language-round-trips ok
+> check english-regulatory-text-is-referenced ok
+> check french-regulatory-text-is-referenced ok
+> check the-regulator-can-disclose-a-committed-fraction ok
+> check another-recipient-sees-only-redaction ok
+> check a-mismatched-secret-is-not-disclosed ok
+> check trusted-matching-evidence-is-disclosed-by-compiled-strata ok
+> check compiled-sds-policy-preserves-interpreted-strata-meaning ok
 > check the-measured-value-was-wrong ok
 > check the-measured-value-is-corrected ok
 > check the-hazard-statement-appears ok
 > check the-first-profile-has-no-hazard-panel ok
 > check the-evolved-profile-adds-a-hazard-panel ok
 > check the-evolved-profile-adds-a-command ok
+> check the-private-profile-adds-law-and-composition-panels ok
 > check a-surface-change-does-not-change-the-language ok
 > check the-release-branch-holds-three-patches ok
 > check language-and-surface-patches-are-independent ok
@@ -45,23 +54,25 @@ $ foundation verify --dir applications/sds
 $ foundation verify-successor --predecessor foundations/F11 --successor applications/sds
 > predecessor F11
 > successor SDS
-> result (valid #de7094836a2152dc6205da52044cf4d297fffbc778d73bd4e762683e78394be61)
+> result (invalid wrong-predecessor)
+> exit 1
 
 $ foundation derive-successor --predecessor foundations/F11 --derivation changes/F11-sds/derivation.canon --expect applications/sds
 > predecessor F11
 > derived 91e15a0512e0b9c65e9fde4055ef43bd0ea3974f3c06b0bc1c6fcf2b0f4ada4e
-> matches applications/sds yes
+> matches applications/sds no
+> exit 1
 
 $ foundation reconstruct --dir applications/sds
 > reconstructed SDS
-> digest 91e15a0512e0b9c65e9fde4055ef43bd0ea3974f3c06b0bc1c6fcf2b0f4ada4e
+> digest c7e9d05acd7fce64e69aa274104570fb502d6023fa1338724c4e05c0157debc8
 > stable yes
-> closure 95 artifacts
-> checks 30 ok
+> closure 351 artifacts
+> checks 39 ok
 
 $ foundation attest --dir applications/sds
-> (attestation (name "SDS") (foundation #d91e15a0512e0b9c65e9fde4055ef43bd0ea3974f3c06b0bc1c6fcf2b0f4ada4e) (application #dcc3dda110c2b7a8272f7bcf0150f7f0a8deeed3b882b316308684f4ed369fd29) (meta #de255a811eac7529477444d7ad5169a66b0b240d56db6de3a634e357700f0897e) (closure 95) (kinds {application 13 change 14 data 2 foundation 13 grammar 5 meta-program 37 profile 4 source 7}) (complete #t))
-> attestation c233dff76b91030f29dc572f50069c3d20d6b1bcfe67be8721c96ef5cec1777d
+> (attestation (name "SDS") (foundation #dc7e9d05acd7fce64e69aa274104570fb502d6023fa1338724c4e05c0157debc8) (application #d8e45e6d6633b8110adc76177a3c6f6d42297d5fda11f4955c1300e7d2f54a44b) (meta #df0346ded10a4923a4836c1e3fed9f72814482b2e5685aba8428979f6c216e5f8) (closure 351) (kinds {application 32 block 2 change 33 data 3 foundation 32 grammar 27 language 1 materialization-profile 1 materializer 1 meta-program 106 patch 2 profile 5 source 96 structured-content 4 syntax 4 tree 2}) (complete #t))
+> attestation 8e3c548874a795aa62a1dd4fb649b7659887d93461afceb4b13ba8fd2ff7fe2b
 
 # A real object language with concrete syntax.
 $ derive --foundation applications/sds --goal '(call DocumentRoundTrip (grammar sds) (call SourceText (source "applications/sds/documents/acetone-v1.sds")))'

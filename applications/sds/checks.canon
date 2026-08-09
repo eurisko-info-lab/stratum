@@ -1,4 +1,4 @@
-; Acceptance checks for the SDS deployment on F11.
+; Acceptance checks for the SDS deployment on S18.
 ;
 ; This is an application living on the platform: a real object language with
 ; concrete syntax, a validation pass, two Studio profiles, and one coherent
@@ -93,6 +93,28 @@
       (q regulator)
       (q 2))
     (value (redacted commitment-mismatch)))
+
+  (check trusted-matching-evidence-is-disclosed-by-compiled-strata
+    (call SdsDisclosureDecision
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata")))
+      (call SourceText (q (text-file "strata/compiler/compile.strata")))
+      (call SourceText (q (text-file "applications/pki/pki.strata")))
+      (call SourceText (q (text-file "applications/law/law.strata")))
+      (call SourceText (q (text-file "applications/sds/sds.strata")))
+      (q #t) (q #t) (q #t))
+    (value (Disclose)))
+
+  (check compiled-sds-policy-preserves-interpreted-strata-meaning
+    (call SdsPolicyPreservesMeaning
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata")))
+      (call SourceText (q (text-file "strata/compiler/compile.strata")))
+      (call SourceText (q (text-file "applications/pki/pki.strata")))
+      (call SourceText (q (text-file "applications/law/law.strata")))
+      (call SourceText (q (text-file "applications/sds/sds.strata")))
+      (q #f) (q #t) (q #t))
+    (value #t))
 
   ; ------------------------------------------------------------ data evolution
 

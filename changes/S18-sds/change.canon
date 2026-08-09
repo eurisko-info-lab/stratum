@@ -1,0 +1,41 @@
+; SDS links its PKI, regulatory, virtual-app and disclosure modules directly on S18.
+(change
+  (kind application)
+  (name "S18->SDS")
+  (predecessor (foundation-of "foundations/S18"))
+  (feature
+    (feature
+      (name "partially confidential multilingual SDS in Strata")
+      (languages [
+        (file "applications/sds/sds.generated.grammar")
+        (file "applications/sds/sds-v2.generated.grammar")
+        (file "applications/sds/sds-v3.generated.grammar")
+      ])
+      (programs [
+        (file "applications/pki/pki.generated.meta")
+        (file "applications/law/law.generated.meta")
+        (file "languages/service/service.generated.meta")
+        (file "applications/sds/sds.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/virtual-app.strata")
+        (text-file "applications/pki/pki.strata")
+        (text-file "applications/law/law.strata")
+        (text-file "applications/sds/sds.grammar")
+        (text-file "applications/sds/sds-v2.grammar")
+        (text-file "applications/sds/sds-v3.grammar")
+        (text-file "applications/sds/sds.meta")
+        (text-file "applications/sds/sds.strata")
+        (text-file "applications/sds/virtual-app.strata")
+      ])
+      (profiles [
+        (file "applications/sds/profile-v1.canon")
+        (file "applications/sds/profile-v2.canon")
+        (file "applications/sds/profile-v3.canon")
+      ])
+      (services [(file "applications/sds/service.canon")])
+      (documents [
+        (text-file "applications/sds/documents/acetone-v1.sds")
+        (text-file "applications/sds/documents/acetone-v2.sds")
+        (text-file "applications/sds/documents/acetone-v3.sds")
+      ]))))
