@@ -7,6 +7,7 @@
 # retention and Studio runtime, and adds only its own language, profiles and
 # documents.
 set -euo pipefail
+shopt -s nullglob
 
 cd "$(dirname "$0")/.."
 
