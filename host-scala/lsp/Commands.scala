@@ -263,7 +263,10 @@ object Commands:
         "watch" -> Str("tsc -watch -p ."),
         "package" -> Str("vsce package")
       ),
-      "dependencies" -> Json.obj("vscode-languageclient" -> Str("^9.0.1")),
+      "dependencies" -> Json.obj(
+        "pdfjs-dist" -> Str("^4.10.38"),
+        "vscode-languageclient" -> Str("^9.0.1")
+      ),
       "devDependencies" -> Json.obj(
         "@types/node" -> Str("^20.11.0"),
         "@types/vscode" -> Str("^1.85.0"),
