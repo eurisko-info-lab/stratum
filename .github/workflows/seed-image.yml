@@ -72,6 +72,7 @@ jobs:
             fi
 
             ./tools/image.sh clear
+            mkdir -p applications
             ./tools/regenerate.sh
             ./tools/staircase.sh
             ./tools/image.sh build "$child_image"
