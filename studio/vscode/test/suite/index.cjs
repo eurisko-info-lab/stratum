@@ -149,6 +149,14 @@ async function runStep(step, workspaceRoot) {
     }
     return;
   }
+  if (step.assertTraceExcludes) {
+    const state = await snapshot();
+    const methods = state.trace.filter(entry => entry.kind === 'request').map(entry => entry.method);
+    for (const method of step.assertTraceExcludes) {
+      assert(!methods.includes(method), `expected trace to exclude ${method}; saw ${methods.join(', ')}`);
+    }
+    return;
+  }
   if (step.assertOutputContains) {
     const state = await snapshot();
     for (const fragment of step.assertOutputContains) {
