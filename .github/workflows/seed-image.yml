@@ -72,7 +72,7 @@ jobs:
             fi
 
             ./tools/image.sh clear
-            ./tools/regenerate-image.sh
+            ./tools/regenerate.sh
             ./tools/staircase.sh
             ./tools/image.sh build "$child_image"
           else
