@@ -38,6 +38,47 @@ judgment PkiCertificateFor [authority certificates identity purpose] =
       else call PkiCertificateFor [authority rest identity purpose]
   }
 
+judgment PkiPurpose [purpose] =
+  if prim #eq [purpose #signing]
+  then mk #Signing []
+  else mk #Encryption []
+
+judgment PkiBool [value] =
+  if prim #eq [value true]
+  then mk #True []
+  else mk #False []
+
+judgment PkiTrustEvidence [declared required issuerTrusted signatureValid] =
+  mk #CertificateEvidence [
+    call PkiPurpose [declared]
+    call PkiPurpose [required]
+    call PkiBool [issuerTrusted]
+    call PkiBool [signatureValid]
+  ]
+
+judgment PkiCompilerSources [prelude compiler] = list [prelude compiler]
+judgment PkiPolicySources [prelude policy] = list [prelude policy]
+
+judgment PkiPolicyDecision [grammar prelude compiler policy declared required issuerTrusted signatureValid] =
+  call RunApplicationStrataWith [
+    grammar
+    call PkiCompilerSources [prelude compiler]
+    call PkiPolicySources [prelude policy]
+    "app.pki"
+    #evaluateCertificate
+    list [call PkiTrustEvidence [declared required issuerTrusted signatureValid]]
+  ]
+
+judgment PkiPolicyPreservesMeaning [grammar prelude compiler policy declared required issuerTrusted signatureValid] =
+  call ApplicationStrataPreservesMeaning [
+    grammar
+    call PkiCompilerSources [prelude compiler]
+    call PkiPolicySources [prelude policy]
+    "app.pki"
+    #evaluateCertificate
+    list [call PkiTrustEvidence [declared required issuerTrusted signatureValid]]
+  ]
+
 judgment RootSecret [] = "stratum-pki-root"
 judgment RootAuthority [] = call CertificateAuthority [#stratum-pki call PublicKey [call RootSecret []]]
 judgment RegulatorSecret [] = "regulator-disclosure"
