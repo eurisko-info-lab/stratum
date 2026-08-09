@@ -362,7 +362,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const byName = new Map<string, string[]>(result.map(view => [view.name, view.items]));
       panels.forEach((view, name) => view.refresh(byName.get(name) ?? []));
       catalogue.refresh(await request<Subject[]>('stratum/documents', {}));
-      await showPreview(editor.document);
+      if (currentLayout?.views.some(view => view.primitive === 'preview')) {
+        await showPreview(editor.document);
+      }
     } catch {
       panels.forEach(view => view.refresh([]));
     }
