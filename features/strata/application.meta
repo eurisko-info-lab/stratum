@@ -1,0 +1,29 @@
+module strataapplication
+
+; Generic crossing for application policy written in Strata. Protocol and
+; grammar adapters remain Meta judgments; decisions cross this boundary and
+; execute through S18's lowered compiled machine.
+
+judgment RunApplicationStrataWith [grammar compilerSources sources name entry arguments] =
+  let compiler = call CompilerDeclarations [grammar compilerSources] in
+  let declarations = call LinkedDeclarations [grammar sources name] in
+  call RunBlocksOn [
+    declarations
+    call CompileProgramWith [compiler call ReadProgram [declarations]]
+    entry
+    arguments
+  ]
+
+judgment EvaluateApplicationStrataWith [grammar sources name entry arguments] =
+  let declarations = call LinkedDeclarations [grammar sources name] in
+  call EnterDefinition [
+    declarations
+    call RequiredDefinition [declarations entry]
+    arguments
+  ]
+
+judgment ApplicationStrataPreservesMeaning [grammar compilerSources sources name entry arguments] =
+  prim #eq [
+    call RunApplicationStrataWith [grammar compilerSources sources name entry arguments]
+    call EvaluateApplicationStrataWith [grammar sources name entry arguments]
+  ]
