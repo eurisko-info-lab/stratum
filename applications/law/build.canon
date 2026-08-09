@@ -36,7 +36,7 @@
         (file "features/strata/depend.generated.meta")
         (file "features/strata/change.generated.meta")
         (file "features/strata/law.generated.meta")
-        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/application-resolve.generated.meta")
         (file "features/strata/compile.generated.meta")
         (file "features/strata/effect.generated.meta")
         (file "features/strata/native.generated.meta")

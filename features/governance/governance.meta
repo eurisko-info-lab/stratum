@@ -203,12 +203,12 @@ judgment CheckRequirement [constitution proposal now requirement] =
 judgment ProofGoals [constitution proposal] =
   list [call ProofGoal [mk #well-founded [call Proposal'patch [proposal]]]]
 
-judgment CheckAcceptanceRequirements [constitution proposal now requirements] =
+judgment CheckRequirements [constitution proposal now requirements] =
   match requirements {
     case [] -> mk #valid []
     case head :: rest ->
       match call CheckRequirement [constitution proposal now head] {
-        case (#valid) -> call CheckAcceptanceRequirements [constitution proposal now rest]
+        case (#valid) -> call CheckRequirements [constitution proposal now rest]
         case (#invalid reason) -> mk #invalid [reason]
       }
   }
@@ -221,7 +221,7 @@ judgment EvidenceOf [proposal] =
   ]
 
 judgment EvaluateAcceptance [constitution proposal now] =
-  match call CheckAcceptanceRequirements [
+  match call CheckRequirements [
          constitution proposal now
          call AcceptanceConstitution'requirements [constitution]
        ] {

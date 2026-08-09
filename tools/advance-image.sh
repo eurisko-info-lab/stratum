@@ -31,8 +31,8 @@ fi
 if git rev-parse HEAD^ >/dev/null 2>&1; then
   mapfile -t worlds < <(
     git diff --name-only HEAD^ HEAD |
-      grep -E '^(foundations|applications)/[^/]+/digest\.txt$' |
-      sed 's|/digest\.txt$||' |
+      grep -E '^(foundations|applications)/[^/]+/[^/]+$' |
+      sed 's|/[^/]*$||' |
       sort -Vu || true
   )
 else
