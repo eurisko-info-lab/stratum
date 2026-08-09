@@ -100,7 +100,32 @@ fixtures rather than silently accepted by a permissive grammar.
 Unknown formats must fail repository recording with the exact unclassified
 path.
 
-## 6. Validate every branch before publication
+## 6. Record native graph transitions
+
+Ordinary Stratum commits are graph transitions, not working-tree snapshots.
+After the initial explicit import, a change manifest names each added,
+replaced, or removed path and binds replacements and removals to the expected
+parent content digest. `record-change` structures only those named paths,
+stores their typed successor entries, and advances the branch by one patch.
+
+Successor trees use a content-addressed bucket map. A graph transition rewrites
+only buckets containing changed paths plus the small root index; all untouched
+buckets retain their identities. `verify-head` checks the immediate-parent
+claims, changed entry invariants, and derived successor root from that local
+delta. It does not scan a checkout or replay older snapshots. Full `record`,
+`status`, and `verify` remain explicit import, working-tree audit, and complete
+history audit operations.
+
+The change manifest is Canon data:
+
+```canon
+(repository-change
+  (add "new/path")
+  (replace "existing/path" "<expected-parent-content-digest>")
+  (remove "obsolete/path" "<expected-parent-content-digest>"))
+```
+
+## 7. Validate every branch before publication
 
 For each target Git branch:
 
@@ -115,7 +140,7 @@ For each target Git branch:
 
 No branch is published until every gate succeeds.
 
-## 7. Replace the failed history
+## 8. Replace the failed history
 
 After all language packages pass:
 

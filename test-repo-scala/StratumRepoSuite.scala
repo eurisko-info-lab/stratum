@@ -88,6 +88,120 @@ class StratumRepoSuite extends munit.FunSuite:
     assertEquals(run("log", repository, source).lines.length, 1)
   }
 
+  test("record-change structures only declared graph changes") {
+    val temp = Files.createTempDirectory("stratum-repository-test-")
+    val source = temp.resolve("source")
+    val repository = temp.resolve("chain")
+    val change = temp.resolve("change.canon")
+    Files.createDirectories(source)
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
+    assertEquals(run("init", repository, source).code, 0)
+    assertEquals(run("record", repository, source, "--message", "genesis").code, 0)
+
+    val cas = DirectoryCas(repository.resolve("objects"))
+    val head = readRef(repository, "main").getOrElse(fail("missing main head"))
+    val (_, patchDigest, _) = readBlockSummary(cas, head)
+    val tree = readTreeEntries(cas, readPatchTree(cas, patchDigest))
+    val before = readEntryContent(tree.getOrElse("Good.scala", fail("missing Good.scala")))
+
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 2 }\n")
+    Files.writeString(source.resolve("Unrelated.xyz"), "not declared and not part of the delta\n")
+    Files.writeString(
+      change,
+      s"(repository-change (replace \"Good.scala\" \"${before.hex}\"))\n"
+    )
+
+    val recorded = run("record-change", repository, source, "--change", change.toString, "--message", "one node")
+    assertEquals(recorded.code, 0, recorded.output)
+    assert(recorded.lines.contains("changes 1"))
+    assertEquals(run("verify-head", repository, source).output.linesIterator.next(), "valid head main")
+    assertEquals(run("log", repository, source).lines.map(_.split(" ", 3).last), Vector("one node", "genesis"))
+
+    val checkout = temp.resolve("checkout")
+    assertEquals(run("checkout", repository, source, "--out", checkout.toString).code, 0)
+    assert(Files.readString(checkout.resolve("Good.scala")).contains("def value = 2"))
+    assert(!Files.exists(checkout.resolve("Unrelated.xyz")))
+  }
+
+  test("record-change adds and removes nodes while rejecting ambiguous parent claims") {
+    val temp = Files.createTempDirectory("stratum-repository-test-")
+    val source = temp.resolve("source")
+    val repository = temp.resolve("chain")
+    val change = temp.resolve("change.canon")
+    Files.createDirectories(source)
+    Files.writeString(source.resolve("Good.scala"), "object Good { def value = 1 }\n")
+    assertEquals(run("init", repository, source).code, 0)
+    assertEquals(run("record", repository, source, "--message", "genesis").code, 0)
+
+    Files.writeString(source.resolve("Added.scala"), "object Added\n")
+    Files.writeString(change, "(repository-change (add \"Added.scala\"))\n")
+    assertEquals(run("record-change", repository, source, "--change", change.toString).code, 0)
+
+    val cas = DirectoryCas(repository.resolve("objects"))
+    val addedHead = readRef(repository, "main").getOrElse(fail("missing add head"))
+    val (_, addedPatch, _) = readBlockSummary(cas, addedHead)
+    val entries = readTreeEntries(cas, readPatchTree(cas, addedPatch))
+    val addedContent = readEntryContent(entries.getOrElse("Added.scala", fail("missing added entry")))
+
+    Files.writeString(
+      change,
+      s"(repository-change (remove \"Added.scala\" \"${addedContent.hex}\"))\n"
+    )
+    assertEquals(run("record-change", repository, source, "--change", change.toString).code, 0)
+    val checkout = temp.resolve("checkout")
+    assertEquals(run("checkout", repository, source, "--out", checkout.toString).code, 0)
+    assert(!Files.exists(checkout.resolve("Added.scala")))
+
+    Files.writeString(change, s"(repository-change (replace \"Good.scala\" \"${"0" * 64}\"))\n")
+    val stale = run("record-change", repository, source, "--change", change.toString)
+    assertEquals(stale.code, 1)
+    assert(stale.output.contains("change expected"))
+
+    val goodContent = readEntryContent(readTreeEntries(cas, currentTree(cas, repository))("Good.scala"))
+    Files.writeString(
+      change,
+      s"(repository-change (replace \"Good.scala\" \"${goodContent.hex}\") (replace \"Good.scala\" \"${goodContent.hex}\"))\n"
+    )
+    val duplicate = run("record-change", repository, source, "--change", change.toString)
+    assertEquals(duplicate.code, 1)
+    assert(duplicate.output.contains("duplicate changed path"))
+  }
+
+  test("consecutive graph changes share untouched tree buckets") {
+    val temp = Files.createTempDirectory("stratum-repository-test-")
+    val source = temp.resolve("source")
+    val repository = temp.resolve("chain")
+    val change = temp.resolve("change.canon")
+    val firstPath = "First.scala"
+    val secondPath = Iterator.from(1).map(index => s"Second$index.scala")
+      .find(path => treeBucket(path) != treeBucket(firstPath)).get
+    Files.createDirectories(source)
+    Files.writeString(source.resolve(firstPath), "object First { def value = 1 }\n")
+    Files.writeString(source.resolve(secondPath), "object Second { def value = 1 }\n")
+    assertEquals(run("init", repository, source).code, 0)
+    assertEquals(run("record", repository, source, "--message", "genesis").code, 0)
+
+    val cas = DirectoryCas(repository.resolve("objects"))
+    val firstBefore = readEntryContent(readTreeEntries(cas, currentTree(cas, repository))(firstPath))
+    Files.writeString(source.resolve(firstPath), "object First { def value = 2 }\n")
+    Files.writeString(change, s"(repository-change (replace \"$firstPath\" \"${firstBefore.hex}\"))\n")
+    assertEquals(run("record-change", repository, source, "--change", change.toString).code, 0)
+    val firstTree = currentTree(cas, repository)
+    val firstIndex = readTreeIndex(cas, firstTree)
+
+    val secondBefore = readEntryContent(readTreeEntries(cas, firstTree)(secondPath))
+    Files.writeString(source.resolve(secondPath), "object Second { def value = 2 }\n")
+    Files.writeString(change, s"(repository-change (replace \"$secondPath\" \"${secondBefore.hex}\"))\n")
+    assertEquals(run("record-change", repository, source, "--change", change.toString).code, 0)
+    val secondTree = currentTree(cas, repository)
+    val secondIndex = readTreeIndex(cas, secondTree)
+
+    assertNotEquals(firstTree, secondTree)
+    assertEquals(secondIndex(treeBucket(firstPath)), firstIndex(treeBucket(firstPath)))
+    assertNotEquals(secondIndex(treeBucket(secondPath)), firstIndex(treeBucket(secondPath)))
+    assertEquals(run("verify-head", repository, source).code, 0)
+  }
+
   test("record rejects unknown materialization profiles") {
     val temp = Files.createTempDirectory("stratum-repository-test-")
     val source = temp.resolve("source")
@@ -333,6 +447,22 @@ class StratumRepoSuite extends munit.FunSuite:
       case Some(Artifact("patch", Canon.Node("patch", Vector(_, Canon.R(tree), _, _)))) => tree
       case _ => fail(s"invalid patch ${digest.hex}")
 
+  private def currentTree(cas: DirectoryCas, repository: Path): Digest =
+    val head = readRef(repository, "main").getOrElse(fail("missing main head"))
+    val (_, patch, _) = readBlockSummary(cas, head)
+    readPatchTree(cas, patch)
+
+  private def treeBucket(path: String): String =
+    Digest.of(path.getBytes(java.nio.charset.StandardCharsets.UTF_8)).hex.take(2)
+
+  private def readTreeIndex(cas: DirectoryCas, digest: Digest): Map[String, Digest] =
+    cas.get(digest) match
+      case Some(Artifact("tree", Canon.Node("tree-map", Vector(Canon.L(buckets))))) =>
+        buckets.collect {
+          case Canon.Node("bucket", Vector(Canon.Sym(key), Canon.R(bucket))) => key -> bucket
+        }.toMap
+      case _ => fail(s"tree ${digest.hex} is not persistent")
+
   private def readTreeEntries(cas: DirectoryCas, digest: Digest): Map[String, Canon] =
     cas.get(digest) match
       case Some(Artifact("tree", Canon.Node("tree", Vector(Canon.L(entries))))) =>
@@ -340,6 +470,16 @@ class StratumRepoSuite extends munit.FunSuite:
           case entry @ Canon.Node("entry", Vector(Canon.S(path), _, _, _, _, _, _, _)) => path -> entry
           case entry @ Canon.Node("entry", Vector(Canon.S(path), _, _, _, _, _, _))    => path -> entry
           case entry @ Canon.Node("entry", Vector(Canon.S(path), _, _, _, _, _))       => path -> entry
+        }.toMap
+      case Some(Artifact("tree", Canon.Node("tree-map", Vector(Canon.L(buckets))))) =>
+        buckets.flatMap {
+          case Canon.Node("bucket", Vector(_, Canon.R(bucket))) =>
+            cas.get(bucket) match
+              case Some(Artifact("tree-bucket", Canon.Node("tree-bucket", Vector(Canon.L(entries))))) => entries
+              case _ => fail(s"invalid tree bucket ${bucket.hex}")
+          case _ => fail(s"invalid bucket in tree ${digest.hex}")
+        }.collect {
+          case entry @ Canon.Node("entry", Vector(Canon.S(path), _*)) => path -> entry
         }.toMap
       case _ => fail(s"invalid tree ${digest.hex}")
 
@@ -350,3 +490,9 @@ class StratumRepoSuite extends munit.FunSuite:
           case Some(Artifact("materializer", Canon.Node("materializer", Vector(Canon.Sym(id))))) => id
           case _ => fail(s"invalid materializer ${materializer.hex}")
       case _ => fail("entry does not carry explicit materializer identity")
+
+  private def readEntryContent(entry: Canon): Digest =
+    entry match
+      case Canon.Node("entry", Vector(_, Canon.S(hex), _*)) =>
+        Digest.fromHex(hex).fold(error => fail(error), identity)
+      case _ => fail("entry does not carry structured content identity")

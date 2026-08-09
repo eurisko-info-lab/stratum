@@ -24,7 +24,14 @@ object StratumRepo:
 
   private final case class LanguageInfo(name: String, reader: String)
 
-  private final case class PatchChange(path: String, before: Option[Digest], after: Option[Digest])
+  private final case class PatchChange(
+      path: String,
+      before: Option[Digest],
+      after: Option[Digest],
+      afterEntry: Option[Digest] = None
+  )
+
+  private final case class RequestedChange(path: String, before: Option[Digest], remove: Boolean)
 
   private final case class MaterializationProfile(name: String, allowed: Set[String])
 
@@ -82,6 +89,17 @@ object StratumRepo:
               opts.getOrElse("message", "record working tree"),
               opts.getOrElse("materialization-profile", MaterializationProfileV1.name)
             )
+          case "record-change" =>
+            val source = resolve(root, opts.getOrElse("source", "."))
+            recordChange(
+              dir,
+              opts.getOrElse("branch", "main"),
+              source,
+              opts.get("declaration-root").map(resolve(root, _)).getOrElse(source),
+              resolve(root, opts.getOrElse("change", "")),
+              opts.getOrElse("message", "record graph change"),
+              opts.get("materialization-profile")
+            )
           case "status" =>
             status(
               dir,
@@ -91,6 +109,7 @@ object StratumRepo:
             )
           case "log"    => log(dir, opts.getOrElse("branch", "main"))
           case "verify" => verify(dir, opts.getOrElse("branch", "main"))
+          case "verify-head" => verifyHead(dir, opts.getOrElse("branch", "main"))
           case other    => CommandResult.fail(s"unknown repository command $other")
 
   private def resolve(root: Path, value: String): Path =
@@ -260,6 +279,136 @@ object StratumRepo:
               s"height $height"
             )
 
+  private def recordChange(
+      dir: Path,
+      branch: String,
+      source: Path,
+      declarationRoot: Path,
+      changeFile: Path,
+      message: String,
+      requestedProfile: Option[String]
+  ): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(cas) =>
+        val previous = readRef(dir, branch) match
+          case None => return CommandResult.fail(s"branch $branch has no parent; import genesis with record")
+          case Some(value) => value
+        val previousTree = blockTree(cas, previous) match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(value) => value
+        val persistentTree = ensurePersistentTree(cas, previousTree) match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(value) => value
+        val changes = readRequestedChanges(changeFile) match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(value) => value
+        val declarations = LanguageDeclarations.load(declarationRoot) match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(value) => value
+        val changedEntries = mutable.Map.empty[String, Option[TreeEntry]]
+        val patchChanges = Vector.newBuilder[Canon]
+
+        var changeIndex = 0
+        while changeIndex < changes.length do
+          val change = changes(changeIndex)
+          val current = persistentTreeEntry(cas, persistentTree, change.path) match
+            case Left(error) => return CommandResult.fail(error)
+            case Right(value) => value
+          (change.before, current.map(_.content), change.remove) match
+            case (None, None, false) => ()
+            case (None, Some(_), false) => return CommandResult.fail(s"add expects missing path ${change.path}")
+            case (Some(expected), Some(found), _) if expected != found =>
+              return CommandResult.fail(s"change expected ${expected.hex} at ${change.path} but found ${found.hex}")
+            case (Some(_), None, _) => return CommandResult.fail(s"change expects existing path ${change.path}")
+            case (None, _, true) => return CommandResult.fail(s"remove requires the expected content digest at ${change.path}")
+            case _ => ()
+
+          if change.remove then
+            val before = current match
+              case None => return CommandResult.fail(s"remove expects existing path ${change.path}")
+              case Some(value) => value
+            changedEntries.update(change.path, None)
+            patchChanges += Canon.node("remove", Canon.S(change.path), Canon.S(before.content.hex))
+          else
+            val path = source.resolve(change.path).normalize()
+            if !path.startsWith(source) then return CommandResult.fail(s"unsafe changed path ${change.path}")
+            if !Files.isRegularFile(path) then return CommandResult.fail(s"changed path is not a file: ${change.path}")
+            val structured = LanguageDeclarations.structure(
+              declarationRoot,
+              change.path,
+              Files.readAllBytes(path),
+              declarations,
+              cas
+            ) match
+              case Left(error) => return CommandResult.fail(s"${change.path}: $error")
+              case Right(value) => value
+            current match
+              case None =>
+                val entry = treeEntry(change.path, structured)
+                val entryDigest = cas.put(Artifact("tree-entry", treeEntryCanon(entry)))
+                changedEntries.update(change.path, Some(entry))
+                patchChanges += Canon.node("add", Canon.S(change.path), Canon.S(structured.content.hex), Canon.R(entryDigest))
+              case Some(before) if before.content == structured.content => ()
+              case Some(before) =>
+                val entry = treeEntry(change.path, structured)
+                val entryDigest = cas.put(Artifact("tree-entry", treeEntryCanon(entry)))
+                changedEntries.update(change.path, Some(entry))
+                patchChanges += Canon.node(
+                  "replace",
+                  Canon.S(change.path),
+                  Canon.S(before.content.hex),
+                  Canon.S(structured.content.hex),
+                  Canon.R(entryDigest)
+                )
+          changeIndex += 1
+
+        val emittedChanges = patchChanges.result()
+        if emittedChanges.isEmpty then return CommandResult.fail("graph change does not alter the parent tree")
+        val treeDigest = updatePersistentTree(cas, persistentTree, changedEntries.toMap) match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(value) => value
+        val selectedProfile = requestedProfile match
+          case Some(name) => resolveMaterializationProfile(name)
+          case None => readBlock(cas, previous).flatMap { case (_, _, _, digest) => readMaterializationProfile(cas, digest) }
+        val profile = selectedProfile match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(value) => value
+        val profileDigest = cas.put(materializationProfileArtifact(profile))
+        validateTreeEntryInvariants(cas, treeDigest, Some(profileDigest), changedEntries.collect {
+          case (path, Some(entry)) => path -> entry
+        }.toMap) match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(_) => ()
+        val patchDigest = cas.put(
+          Artifact(
+            "patch",
+            Canon.node("patch", Canon.R(previous), Canon.R(treeDigest), Canon.S(message), Canon.L(emittedChanges))
+          )
+        )
+        val height = blockHeight(cas, previous) match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(value) => value + 1L
+        val blockDigest = cas.put(
+          Artifact(
+            "block",
+            Canon.node("block", Canon.N(BigInt(height)), Canon.R(previous), Canon.R(patchDigest), Canon.R(profileDigest))
+          )
+        )
+        val target = refPath(dir, branch) match
+          case Left(error) => return CommandResult.fail(error)
+          case Right(value) => value
+        Journal.writeString(target, blockDigest.hex + "\n")
+        if branch == "main" then Journal.writeString(dir.resolve("HEAD"), "ref: refs/main\n")
+        CommandResult.ok(
+          s"branch $branch",
+          s"changes ${emittedChanges.length}",
+          s"tree ${treeDigest.hex}",
+          s"patch ${patchDigest.hex}",
+          s"block ${blockDigest.hex}",
+          s"height $height"
+        )
+
   private def status(dir: Path, branch: String, source: Path, declarationRoot: Path): CommandResult =
     open(dir) match
       case Left(error) => CommandResult.fail(error)
@@ -377,6 +526,88 @@ object StratumRepo:
                   current = predecessor
             if expectedHeight.exists(_ != 0) then CommandResult.fail("chain does not end at height 1")
             else CommandResult.ok(s"valid branch $branch", s"chain ${seen.size} blocks", s"head ${head.hex}")
+
+  private def verifyHead(dir: Path, branch: String): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(cas) =>
+        val head = readRef(dir, branch) match
+          case None => return CommandResult.fail(s"no such branch: $branch")
+          case Some(value) => value
+        readBlock(cas, head) match
+          case Left(error) => CommandResult.fail(error)
+          case Right((height, predecessor, patchDigest, profileDigest)) =>
+            (readMaterializationProfile(cas, profileDigest), readPatch(cas, patchDigest)) match
+              case (Left(error), _) => CommandResult.fail(error)
+              case (_, Left(error)) => CommandResult.fail(error)
+              case (Right(_), Right((patchPredecessor, treeDigest, changes))) =>
+                if patchPredecessor != predecessor then
+                  CommandResult.fail(s"block ${head.hex} predecessor does not match patch ${patchDigest.hex}")
+                else
+                  val persistent = predecessor.flatMap(parent => blockTree(cas, parent).toOption).flatMap { parentTree =>
+                    ensurePersistentTree(cas, parentTree).toOption
+                  }
+                  if persistent.nonEmpty && changes.forall(change => change.after.isEmpty || change.afterEntry.nonEmpty) then
+                    verifyPersistentTransition(cas, persistent.get, treeDigest, profileDigest, changes) match
+                      case Left(error) => CommandResult.fail(s"invalid patch ${patchDigest.hex}: $error")
+                      case Right(_) => CommandResult.ok(s"valid head $branch", s"height $height", s"head ${head.hex}")
+                  else
+                    val before = predecessor match
+                      case None => Right(Map.empty[String, Digest])
+                      case Some(parent) => blockTree(cas, parent).flatMap(treeEntries(cas, _)).map(_.view.mapValues(_.content).toMap)
+                    val after = treeEntries(cas, treeDigest)
+                    (before, after) match
+                      case (Left(error), _) => CommandResult.fail(error)
+                      case (_, Left(error)) => CommandResult.fail(error)
+                      case (Right(beforeMap), Right(afterEntries)) =>
+                        validateTreeEntryInvariants(cas, treeDigest, profileDigest, afterEntries) match
+                          case Left(error) => CommandResult.fail(error)
+                          case Right(_) =>
+                            applyPatch(beforeMap, changes) match
+                              case Left(error) => CommandResult.fail(s"invalid patch ${patchDigest.hex}: $error")
+                              case Right(rebuilt) if rebuilt != afterEntries.view.mapValues(_.content).toMap =>
+                                CommandResult.fail(s"patch ${patchDigest.hex} does not derive tree ${treeDigest.hex}")
+                              case Right(_) => CommandResult.ok(s"valid head $branch", s"height $height", s"head ${head.hex}")
+
+  private def verifyPersistentTransition(
+      cas: DirectoryCas,
+      beforeTree: Digest,
+      afterTree: Digest,
+      profileDigest: Option[Digest],
+      changes: Vector[PatchChange]
+  ): Either[String, Unit] =
+    val updates = mutable.Map.empty[String, Option[TreeEntry]]
+    var index = 0
+    while index < changes.length do
+      val change = changes(index)
+      val current = persistentTreeEntry(cas, beforeTree, change.path).flatMap { entry =>
+        if entry.map(_.content) == change.before then Right(entry)
+        else Left(s"change at ${change.path} expected ${change.before.map(_.hex).getOrElse("missing")}")
+      }
+      current match
+        case Left(error) => return Left(error)
+        case Right(_) => ()
+      change.after match
+        case None => updates.update(change.path, None)
+        case Some(expectedContent) =>
+          val entryDigest = change.afterEntry match
+            case None => return Left(s"change at ${change.path} has no successor entry")
+            case Some(value) => value
+          val entry = readTreeEntryArtifact(cas, entryDigest) match
+            case Left(error) => return Left(error)
+            case Right(value) => value
+          if entry.path != change.path || entry.content != expectedContent then
+            return Left(s"successor entry ${entryDigest.hex} does not match ${change.path}")
+          updates.update(change.path, Some(entry))
+      index += 1
+    validateTreeEntryInvariants(cas, afterTree, profileDigest, updates.collect {
+      case (path, Some(entry)) => path -> entry
+    }.toMap).flatMap { _ =>
+      updatePersistentTree(cas, beforeTree, updates.toMap).flatMap { derived =>
+        if derived == afterTree then Right(())
+        else Left(s"changes derive tree ${derived.hex}, not ${afterTree.hex}")
+      }
+    }
 
   private def validateTreeEntryInvariants(
       cas: DirectoryCas,
@@ -513,7 +744,141 @@ object StratumRepo:
           case None        => previous.map(value => (value, tree, parsed.collect { case Right(change) => change }))
       case _ => Left(s"invalid patch ${digest.hex}")
 
+  private def readRequestedChanges(path: Path): Either[String, Vector[RequestedChange]] =
+    if !Files.isRegularFile(path) then Left(s"change manifest does not exist: $path")
+    else
+      CanonText.read(Files.readString(path)).left.map(error => s"$path: $error").flatMap {
+        case Canon.Node("repository-change", operations) =>
+          val parsed = operations.map {
+            case Canon.Node("add", Vector(Canon.S(changedPath))) =>
+              Right(RequestedChange(changedPath, None, remove = false))
+            case Canon.Node("replace", Vector(Canon.S(changedPath), Canon.S(beforeHex))) =>
+              Digest.fromHex(beforeHex)
+                .map(digest => RequestedChange(changedPath, Some(digest), remove = false))
+                .left.map(_ => s"invalid expected digest for $changedPath")
+            case Canon.Node("remove", Vector(Canon.S(changedPath), Canon.S(beforeHex))) =>
+              Digest.fromHex(beforeHex)
+                .map(digest => RequestedChange(changedPath, Some(digest), remove = true))
+                .left.map(_ => s"invalid expected digest for $changedPath")
+            case other => Left(s"invalid repository change operation: ${CanonText.write(other)}")
+          }
+          parsed.collectFirst { case Left(error) => error } match
+            case Some(error) => Left(error)
+            case None =>
+              val changes = parsed.collect { case Right(change) => change }
+              val duplicate = changes.groupBy(_.path).collectFirst { case (changedPath, values) if values.lengthCompare(1) > 0 => changedPath }
+              duplicate.toLeft(changes).left.map(changedPath => s"duplicate changed path $changedPath")
+        case other => Left(s"not a repository-change manifest: ${CanonText.write(other)}")
+      }
+
+  private def ensurePersistentTree(cas: DirectoryCas, digest: Digest): Either[String, Digest] =
+    cas.get(digest) match
+      case Some(Artifact("tree", Canon.Node("tree-map", Vector(Canon.L(_))))) => Right(digest)
+      case Some(Artifact("tree", Canon.Node("tree", Vector(Canon.L(_))))) =>
+        treeEntries(cas, digest).map(entries => persistentTreeArtifact(cas, entries.values.toVector))
+      case _ => Left(s"invalid tree ${digest.hex}")
+
+  private def persistentTreeArtifact(cas: DirectoryCas, entries: Vector[TreeEntry]): Digest =
+    val buckets = entries.groupBy(entry => treeBucket(entry.path)).toVector.sortBy(_._1).map { (key, values) =>
+      val digest = cas.put(treeBucketArtifact(values))
+      Canon.node("bucket", Canon.Sym(key), Canon.R(digest))
+    }
+    cas.put(Artifact("tree", Canon.node("tree-map", Canon.L(buckets))))
+
+  private def updatePersistentTree(
+      cas: DirectoryCas,
+      root: Digest,
+      changes: Map[String, Option[TreeEntry]]
+  ): Either[String, Digest] =
+    persistentTreeIndex(cas, root).flatMap { originalIndex =>
+      val index = mutable.Map.from(originalIndex)
+      val grouped = changes.toVector.groupBy((path, _) => treeBucket(path))
+      grouped.toVector.sortBy(_._1).foldLeft[Either[String, Unit]](Right(())) { case (result, (key, bucketChanges)) =>
+        result.flatMap { _ =>
+          val existing = index.get(key) match
+            case None => Right(Map.empty[String, TreeEntry])
+            case Some(bucketDigest) => treeBucketEntries(cas, bucketDigest)
+          existing.map { values =>
+            val updated = mutable.Map.from(values)
+            bucketChanges.sortBy(_._1).foreach {
+              case (path, Some(entry)) => updated.update(path, entry)
+              case (path, None) => updated.remove(path)
+            }
+            if updated.isEmpty then index.remove(key)
+            else index.update(key, cas.put(treeBucketArtifact(updated.values.toVector)))
+          }
+        }
+      }.map { _ =>
+        val buckets = index.toVector.sortBy(_._1).map { (key, digest) =>
+          Canon.node("bucket", Canon.Sym(key), Canon.R(digest))
+        }
+        cas.put(Artifact("tree", Canon.node("tree-map", Canon.L(buckets))))
+      }
+    }
+
+  private def persistentTreeEntry(cas: DirectoryCas, root: Digest, path: String): Either[String, Option[TreeEntry]] =
+    persistentTreeIndex(cas, root).flatMap { index =>
+      index.get(treeBucket(path)) match
+        case None => Right(None)
+        case Some(bucket) => treeBucketEntries(cas, bucket).map(_.get(path))
+    }
+
+  private def persistentTreeIndex(cas: DirectoryCas, root: Digest): Either[String, Map[String, Digest]] =
+    cas.get(root) match
+      case Some(Artifact("tree", Canon.Node("tree-map", Vector(Canon.L(buckets))))) =>
+        val parsed = buckets.map {
+          case Canon.Node("bucket", Vector(Canon.Sym(key), Canon.R(digest))) if key.matches("[0-9a-f]{2}") => Right(key -> digest)
+          case _ => Left(s"invalid bucket in tree ${root.hex}")
+        }
+        parsed.collectFirst { case Left(error) => error } match
+          case Some(error) => Left(error)
+          case None =>
+            val values = parsed.collect { case Right(value) => value }
+            if values.map(_._1).distinct.length != values.length then Left(s"duplicate bucket in tree ${root.hex}")
+            else Right(values.toMap)
+      case _ => Left(s"tree ${root.hex} is not persistent")
+
+  private def treeBucket(path: String): String =
+    Digest.of(path.getBytes(UTF_8)).hex.take(2)
+
+  private def treeBucketArtifact(entries: Iterable[TreeEntry]): Artifact =
+    Artifact("tree-bucket", Canon.node("tree-bucket", Canon.L(entries.toVector.sortBy(_.path).map(treeEntryCanon))))
+
+  private def treeBucketEntries(cas: DirectoryCas, digest: Digest): Either[String, Map[String, TreeEntry]] =
+    cas.get(digest) match
+      case Some(Artifact("tree-bucket", Canon.Node("tree-bucket", Vector(Canon.L(entries))))) =>
+        val parsed = entries.map(parseTreeEntry(digest, _))
+        parsed.collectFirst { case Left(error) => error } match
+          case Some(error) => Left(error)
+          case None => Right(parsed.collect { case Right(entry) => entry }.toMap)
+      case _ => Left(s"invalid tree bucket ${digest.hex}")
+
+  private def treeEntry(path: String, file: StructuredFile): TreeEntry =
+    TreeEntry(path, file.content, file.blob, Some(file.materializer), file.language, file.grammar, file.meta, file.syntax)
+
+  private def treeEntryCanon(entry: TreeEntry): Canon =
+    Canon.node(
+      "entry",
+      Canon.S(entry.path),
+      Canon.S(entry.content.hex),
+      entry.blob.map(Canon.R.apply).getOrElse(Canon.Sym("generated")),
+      entry.materializer.map(Canon.R.apply).getOrElse(Canon.Sym("legacy")),
+      Canon.R(entry.language),
+      entry.grammar.map(Canon.R.apply).getOrElse(Canon.Sym("native")),
+      entry.meta.map(Canon.R.apply).getOrElse(Canon.Sym("native")),
+      Canon.R(entry.syntax)
+    )
+
+  private def readTreeEntryArtifact(cas: DirectoryCas, digest: Digest): Either[String, TreeEntry] =
+    cas.get(digest) match
+      case Some(Artifact("tree-entry", body)) => parseTreeEntry(digest, body).map(_._2)
+      case _ => Left(s"invalid tree entry ${digest.hex}")
+
   private def parsePatchChange(patchDigest: Digest, value: Canon): Either[String, PatchChange] = value match
+    case Canon.Node("add", Vector(Canon.S(path), Canon.S(afterHex), Canon.R(entry))) =>
+      Digest.fromHex(afterHex)
+        .map(after => PatchChange(path, None, Some(after), Some(entry)))
+        .left.map(_ => s"invalid add digest in patch ${patchDigest.hex}")
     case Canon.Node("add", Vector(Canon.S(path), Canon.S(afterHex))) =>
       Digest.fromHex(afterHex)
         .map(after => PatchChange(path, None, Some(after)))
@@ -527,6 +892,11 @@ object StratumRepo:
         before <- Digest.fromHex(beforeHex).left.map(_ => s"invalid replace old digest in patch ${patchDigest.hex}")
         after <- Digest.fromHex(afterHex).left.map(_ => s"invalid replace new digest in patch ${patchDigest.hex}")
       yield PatchChange(path, Some(before), Some(after))
+    case Canon.Node("replace", Vector(Canon.S(path), Canon.S(beforeHex), Canon.S(afterHex), Canon.R(entry))) =>
+      for
+        before <- Digest.fromHex(beforeHex).left.map(_ => s"invalid replace old digest in patch ${patchDigest.hex}")
+        after <- Digest.fromHex(afterHex).left.map(_ => s"invalid replace new digest in patch ${patchDigest.hex}")
+      yield PatchChange(path, Some(before), Some(after), Some(entry))
     case _ => Left(s"invalid change in patch ${patchDigest.hex}")
 
   private def applyPatch(before: Map[String, Digest], changes: Vector[PatchChange]): Either[String, Map[String, Digest]] =
@@ -535,20 +905,20 @@ object StratumRepo:
     while index < changes.length do
       val change = changes(index)
       change match
-        case PatchChange(path, None, Some(after)) =>
+        case PatchChange(path, None, Some(after), _) =>
           if updated.contains(path) then return Left(s"add expects missing path $path")
           updated.update(path, after)
-        case PatchChange(path, Some(expected), None) =>
+        case PatchChange(path, Some(expected), None, _) =>
           updated.get(path) match
             case Some(found) if found == expected => updated.remove(path)
             case Some(found) => return Left(s"remove expected ${expected.hex} at $path but found ${found.hex}")
             case None => return Left(s"remove expects existing path $path")
-        case PatchChange(path, Some(expected), Some(after)) =>
+        case PatchChange(path, Some(expected), Some(after), _) =>
           updated.get(path) match
             case Some(found) if found == expected => updated.update(path, after)
             case Some(found) => return Left(s"replace expected ${expected.hex} at $path but found ${found.hex}")
             case None => return Left(s"replace expects existing path $path")
-        case PatchChange(path, None, None) =>
+        case PatchChange(path, None, None, _) =>
           return Left(s"change at $path has neither before nor after")
       index += 1
     Right(updated.toMap)
@@ -560,6 +930,16 @@ object StratumRepo:
         parsed.collectFirst { case Left(error) => error } match
           case Some(error) => Left(error)
           case None        => Right(parsed.collect { case Right(entry) => entry }.toMap)
+      case Some(Artifact("tree", Canon.Node("tree-map", Vector(Canon.L(_))))) =>
+        persistentTreeIndex(cas, digest).flatMap { index =>
+          index.toVector.sortBy(_._1).foldLeft[Either[String, Map[String, TreeEntry]]](Right(Map.empty)) {
+            case (result, (_, bucket)) =>
+              for
+                accumulated <- result
+                entries <- treeBucketEntries(cas, bucket)
+              yield accumulated ++ entries
+          }
+        }
       case _ => Left(s"invalid tree ${digest.hex}")
 
   private def parseTreeEntry(treeDigest: Digest, value: Canon): Either[String, (String, TreeEntry)] =
