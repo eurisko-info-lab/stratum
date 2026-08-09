@@ -14,14 +14,33 @@ run() {
   sbt -batch --error "runMain stratum.cli.Stratum $*"
 }
 
-platform=$(ls -d foundations/F* | sort -V | tail -n 1)
+platform=$(ls -d foundations/F* foundations/S* 2>/dev/null | sort -V | tail -n 1)
 platform_name=$(basename "$platform")
 
-for dir in $(ls -d applications/*/ 2>/dev/null | sed 's|/$||'); do
+declare -A deployed
+
+deploy() {
+  local dir="$1"
+  if [ "${deployed[$dir]:-}" = done ]; then
+    return
+  fi
+
+  local predecessor="$platform"
+  if [ -f "$dir/predecessor.txt" ]; then
+    predecessor=$(cat "$dir/predecessor.txt")
+    deploy "$predecessor"
+  fi
+
+  local name
+  local predecessor_name
+  local golden
+  local rebuilt
+  local derivation
   name=$(basename "$dir")
+  predecessor_name=$(basename "$predecessor")
   golden=$(cat "$dir/digest.txt")
 
-  echo "== $name on $platform_name"
+  echo "== $name on $predecessor_name"
   run foundation build --spec "$dir/build.canon" --out "$dir"
 
   rebuilt=$(cat "$dir/digest.txt")
@@ -32,15 +51,15 @@ for dir in $(ls -d applications/*/ 2>/dev/null | sed 's|/$||'); do
 
   run foundation verify --dir "$dir"
   run foundation reconstruct --dir "$dir"
-  run foundation verify-successor --predecessor "$platform" --successor "$dir"
+  run foundation verify-successor --predecessor "$predecessor" --successor "$dir"
 
-  derivation="changes/$platform_name-$name/derivation.canon"
+  derivation="changes/$predecessor_name-$name/derivation.canon"
   run foundation derive-change \
-    --predecessor "$platform" \
+    --predecessor "$predecessor" \
     --successor "$dir" \
     --out "$derivation"
   # The platform constructs the deployment. No deployment manifest is given.
-  run foundation derive-successor --predecessor "$platform" --derivation "$derivation" --expect "$dir"
+  run foundation derive-successor --predecessor "$predecessor" --derivation "$derivation" --expect "$dir"
 
   # A world that publishes a service must be able to serve it.
   if [ -f "$dir/service.canon" ]; then
@@ -56,7 +75,12 @@ for dir in $(ls -d applications/*/ 2>/dev/null | sed 's|/$||'); do
     echo "   $name language server answers"
   fi
 
-  echo "   $platform_name |- $name"
+  echo "   $predecessor_name |- $name"
+  deployed[$dir]=done
+}
+
+for dir in applications/*/; do
+  deploy "${dir%/}"
 done
 
 echo "deployments ok"
