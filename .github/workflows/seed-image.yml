@@ -7,6 +7,11 @@ on:
         description: Exact Git revision to materialize
         required: true
         type: string
+      source_only_checkpoint:
+        description: Rebuild the source-only migration checkpoint from scratch
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -59,15 +64,28 @@ jobs:
           revision=$(git rev-parse HEAD)
           child_image="$repository:git-$revision"
 
-          if parent=$(git rev-parse HEAD^ 2>/dev/null); then
-            parent_image="$repository:git-$parent"
-            if ! docker pull "$parent_image"; then
-              echo "required parent image is unavailable: $parent_image" >&2
+          if [[ '${{ inputs.source_only_checkpoint }}' == 'true' ]]; then
+            checkpoint=94072ff4252d923751f44de53f0a3fe8a12c03a9
+            if [[ "$revision" != "$checkpoint" ]]; then
+              echo "source-only checkpoint is restricted to $checkpoint" >&2
               exit 1
             fi
-            ./tools/advance-image.sh "$child_image" "$parent_image"
+
+            ./tools/image.sh clear
+            ./tools/regenerate-image.sh
+            ./tools/staircase.sh
+            ./tools/image.sh build "$child_image"
           else
-            ./tools/advance-image.sh "$child_image"
+            if parent=$(git rev-parse HEAD^ 2>/dev/null); then
+              parent_image="$repository:git-$parent"
+              if ! docker pull "$parent_image"; then
+                echo "required parent image is unavailable: $parent_image" >&2
+                exit 1
+              fi
+              ./tools/advance-image.sh "$child_image" "$parent_image"
+            else
+              ./tools/advance-image.sh "$child_image"
+            fi
           fi
 
           ./tools/image.sh restore "$child_image" "$revision"
