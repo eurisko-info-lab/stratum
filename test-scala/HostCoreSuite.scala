@@ -23,24 +23,24 @@ final case class DerivedValue(label: String, count: Int)
 class HostCoreSuite extends munit.FunSuite:
 
   private val root: Path = Paths.get(System.getProperty("user.dir")).toAbsolutePath.normalize()
-  private val committedPath: Path = root.resolve("host/core.canon")
+  private val generatedPath: Path = root.resolve("host/core.canon")
 
-  private def committedManifest: Canon =
-    CanonText.read(Files.readString(committedPath)) match
+  private def generatedManifest: Canon =
+    CanonText.read(Files.readString(generatedPath)) match
       case Right(value) => value
       case Left(message) => fail(s"host/core.canon is not canonical text: $message")
 
-  private def committedReference: Digest =
-    Artifact("data", committedManifest).digest
+  private def generatedReference: Digest =
+    Artifact("data", generatedManifest).digest
 
   private def foundations: Vector[String] =
     Vector("F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11")
 
-  test("the committed host core manifest matches the live host") {
+  test("the generated host core manifest matches the live host") {
     assertEquals(
-      CanonText.write(committedManifest),
+      CanonText.write(generatedManifest),
       CanonText.write(HostCore.manifest),
-      "regenerate with `stratum host manifest --out host/core.canon` and review the change"
+      "regenerate with `tools/check-generated.sh` and review the change"
     )
   }
 
@@ -50,7 +50,7 @@ class HostCoreSuite extends munit.FunSuite:
   }
 
   test("every foundation from F1 onward references the same host core") {
-    val expected = committedReference
+    val expected = generatedReference
     foundations.foreach { name =>
       Cli.loadFoundation(root, root.resolve(s"foundations/$name")) match
         case Left(message) => fail(s"$name: $message")

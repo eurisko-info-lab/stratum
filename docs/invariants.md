@@ -94,8 +94,17 @@ $$
 No successor manifest is supplied. The judgment applies the field-identity
 change to the predecessor's application manifest, recomputes the application
 identity, assembles the successor foundation manifest and returns its digest.
-A match with the committed `digest.txt` is evidence that $F_n$ genuinely builds
-$F_{n+1}$. Enforced for every step by [tools/staircase.sh](../tools/staircase.sh).
+A match with the tracked `digest.txt` is evidence that $F_n$ genuinely builds
+$F_{n+1}$. Enforced when the commit is advanced by
+[tools/advance-image.sh](../tools/advance-image.sh).
+
+## Reproducible generation
+
+Meta and Grammar elaborations are disposable working-tree outputs. Their exact
+bytes are checked against `generated.sha256`; foundation and application
+outputs are checked semantically against each world's `digest.txt`. Generated
+closures, manifests, evidence, transition derivations and editor packages are
+never authoritative repository inputs.
 
 ## Frozen host core
 

@@ -49,18 +49,40 @@ F0  ->  F1  ->  ...  ->  F12  ->  F13  ->  F14
 
 ```bash
 ./tools/advance-image.sh child-image parent-image
+./tools/check-generated.sh
 sbt test                # replay every transcript
 ./tools/parity.sh       # make the two hosts agree
 ./tools/cleanroom.sh    # rebuild from executable, digest and closure alone
 ```
 
-Materialization images carry accepted generated artifacts and closures without
-putting them in Git. F0 is the only root image; every later image requires the
-exact image of its Git parent. See [materialization images](docs/images.md).
+Generated files are not tracked. `tools/check-generated.sh` elaborates Meta and
+Grammar sources, writes the frozen host manifest and checks their exact bytes
+against the tracked `generated.sha256`. CI restores the parent's content-
+addressed [materialization image](docs/images.md), regenerates only outputs whose
+declared hash changed, and builds only worlds whose tracked `digest.txt` changed
+in the current commit. F0 is the only root image; every later image requires the
+exact image of its Git parent.
 
 Start reading at [docs/staircase.md](docs/staircase.md) for how the layers
 stack up, or [docs/invariants.md](docs/invariants.md) for what is actually
 guaranteed. The original specification is [PROMPT.md](PROMPT.md).
+
+### External language corpora
+
+The Rust and Scala repositories are upstream test corpora, not parts of this
+repository. To include them in `repoTool/test`, clone them separately and pass
+their checkout roots explicitly:
+
+```bash
+git clone --depth 1 https://github.com/rust-lang/rust.git ../rust
+git clone --depth 1 https://github.com/scala/scala3.git ../scala3
+STRATUM_RUST_CORPUS=../rust \
+STRATUM_SCALA_CORPUS=../scala3 \
+  sbt repoTool/test
+```
+
+Without those variables, acceptance tests cover only files and fixtures owned
+by Stratum.
 
 ## The shape of the system
 
@@ -88,7 +110,7 @@ verdict with evidence.
 | [languages](languages) | Meta, Grammar and object language artifacts |
 | [features](features) | canonical feature artifacts added by each step |
 | [profiles](profiles) | studio profiles |
-| [foundations](foundations) | one directory per foundation, with its closure |
+| [foundations](foundations) | one directory per foundation, with source, build specification and expected digest |
 | [changes](changes) | the canonical change between consecutive foundations |
 | [fixtures](fixtures) | transcripts, the functional acceptance mechanism |
 | [test-scala](test-scala) | transcript replay, canon properties, boundary gate, host parity |

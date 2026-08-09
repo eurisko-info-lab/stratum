@@ -13,4 +13,14 @@ verifier-lean/.lake/
 tmp/
 node_modules/
 studio/vscode/out/
+studio/vscode/package.json
+studio/repository/out/
 .idea/
+.vscode-test/
+*.generated.meta
+*.generated.grammar
+**/closure/
+**/foundation.canon
+**/evidence.canon
+**/derivation.canon
+host/core.canon

@@ -2,12 +2,14 @@
 # Rebuilds every foundation in order, verifies each successor with its
 # predecessor, and requires the predecessor to *derive* the successor.
 #
-# The workflow fails if any foundation drifts from its committed golden digest,
+# The workflow fails if any foundation drifts from its tracked golden digest,
 # if a closure is incomplete, if a predecessor refuses its successor, or if a
 # predecessor cannot construct the successor from the canonical change alone.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+
+./tools/check-generated.sh
 
 # The loop below issues dozens of Stratum invocations. Compiling and asking
 # sbt for the runtime classpath once, then invoking `java` directly for every
@@ -34,17 +36,6 @@ trap 'rm -rf "$work"' EXIT
 
 mapfile -t all_foundations < <(ls -d foundations/F* | sort -V; ls -d foundations/S* 2>/dev/null | sort -V)
 foundations=("${all_foundations[@]}")
-if [[ -n "${STRATUM_STAIRCASE_SHARD:-}" ]]; then
-  IFS=/ read -r shard_index shard_count <<< "$STRATUM_STAIRCASE_SHARD"
-  if [[ ! "$shard_index" =~ ^[0-9]+$ || ! "$shard_count" =~ ^[1-9][0-9]*$ || "$shard_index" -ge "$shard_count" ]]; then
-    echo "STRATUM_STAIRCASE_SHARD must be INDEX/COUNT with INDEX < COUNT" >&2
-    exit 1
-  fi
-  foundations=()
-  for ((i = shard_index; i < ${#all_foundations[@]}; i += shard_count)); do
-    foundations+=("${all_foundations[i]}")
-  done
-fi
 
 build_world() {
   local dir=$1 name golden rebuilt
@@ -55,7 +46,7 @@ build_world() {
 
   rebuilt=$(cat "$dir/digest.txt")
   if [[ "$golden" != "$rebuilt" ]]; then
-    echo "digest drift in $name: committed $golden, rebuilt $rebuilt" >&2
+    echo "digest drift in $name: expected $golden, rebuilt $rebuilt" >&2
     return 1
   fi
 }
@@ -77,11 +68,10 @@ verify_transition() {
   previous_name=$(basename "$previous")
   name=$(basename "$dir")
   derivation="changes/$previous_name-$name/derivation.canon"
-
-  if [[ ! -f "$derivation" ]]; then
-      echo "no canonical derivation for $previous_name -> $name" >&2
-      return 1
-  fi
+  run foundation derive-change \
+    --predecessor "$previous" \
+    --successor "$dir" \
+    --out "$derivation" > "$work/$name.derive-change"
 
   {
     run foundation verify-successor --predecessor "$previous" --successor "$dir"
@@ -122,7 +112,7 @@ for dir in "${foundations[@]}"; do
     if [[ "$current" != "$dir" ]]; then
       continue
     fi
-    cat "$work/$name.transition"
+    cat "$work/$name.derive-change" "$work/$name.transition"
     echo "   $(basename "$previous") |- $name"
   done
 done

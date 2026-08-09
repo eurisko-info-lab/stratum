@@ -26,7 +26,7 @@ for dir in $(ls -d applications/*/ 2>/dev/null | sed 's|/$||'); do
 
   rebuilt=$(cat "$dir/digest.txt")
   if [ "$golden" != "$rebuilt" ]; then
-    echo "digest drift in $name: committed $golden, rebuilt $rebuilt" >&2
+    echo "digest drift in $name: expected $golden, rebuilt $rebuilt" >&2
     exit 1
   fi
 
@@ -35,10 +35,10 @@ for dir in $(ls -d applications/*/ 2>/dev/null | sed 's|/$||'); do
   run foundation verify-successor --predecessor "$platform" --successor "$dir"
 
   derivation="changes/$platform_name-$name/derivation.canon"
-  if [ ! -f "$derivation" ]; then
-    echo "no canonical derivation for $platform_name -> $name" >&2
-    exit 1
-  fi
+  run foundation derive-change \
+    --predecessor "$platform" \
+    --successor "$dir" \
+    --out "$derivation"
   # The platform constructs the deployment. No deployment manifest is given.
   run foundation derive-successor --predecessor "$platform" --derivation "$derivation" --expect "$dir"
 

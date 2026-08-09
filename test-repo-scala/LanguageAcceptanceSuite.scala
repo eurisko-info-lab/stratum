@@ -16,7 +16,7 @@ import scala.jdk.CollectionConverters.*
  *
  * For each such language this suite:
  *   - parses every file this repository's own working tree assigns to it;
- *   - parses every file in any language-specific corpus roots declared by that language;
+ *   - parses files from explicitly configured external language corpora;
  *   - prints the parsed tree and reparses it, and requires the result to be
  *     a stable fixpoint;
  *   - rejects a deliberately malformed fixture under fixtures/languages/adversarial;
@@ -44,24 +44,24 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
   private val sourceExcludedNames = excludedNames ++ Set("vendor", "tmp")
   private val excludedCorpusFilesByLanguage: Map[String, Set[String]] = Map(
     "rust" -> Set(
-      "vendor/rust/tests/ui/array-slice-vec/byte-literals.rs",
-      "vendor/rust/tests/ui/half-open-range-patterns/half-open-range-pats-exhaustive-fail.rs",
-      "vendor/rust/tests/ui/half-open-range-patterns/half-open-range-pats-exhaustive-pass.rs",
-      "vendor/rust/tests/ui/hygiene/auxiliary/fields.rs",
-      "vendor/rust/tests/ui/imports/unused-import-in-macro-expansion-rustfix.rs",
-      "vendor/rust/tests/ui/inference/str-as-char-butchered.rs",
-      "vendor/rust/tests/ui/inference/str-as-char.rs",
-      "vendor/rust/tests/ui/lint/issue-104897.rs",
-      "vendor/rust/tests/ui/lint/non-local-defs/auxiliary/non_local_macro.rs",
-      "vendor/rust/tests/ui/abi/abi-sysv64-arg-passing.rs",
-      "vendor/rust/tests/ui/lint/unused_parens_multibyte_recovery.rs",
-      "vendor/rust/tests/ui/abi/abi-sysv64-register-usage.rs"
+      "tests/ui/array-slice-vec/byte-literals.rs",
+      "tests/ui/half-open-range-patterns/half-open-range-pats-exhaustive-fail.rs",
+      "tests/ui/half-open-range-patterns/half-open-range-pats-exhaustive-pass.rs",
+      "tests/ui/hygiene/auxiliary/fields.rs",
+      "tests/ui/imports/unused-import-in-macro-expansion-rustfix.rs",
+      "tests/ui/inference/str-as-char-butchered.rs",
+      "tests/ui/inference/str-as-char.rs",
+      "tests/ui/lint/issue-104897.rs",
+      "tests/ui/lint/non-local-defs/auxiliary/non_local_macro.rs",
+      "tests/ui/abi/abi-sysv64-arg-passing.rs",
+      "tests/ui/lint/unused_parens_multibyte_recovery.rs",
+      "tests/ui/abi/abi-sysv64-register-usage.rs"
     ),
     "scala" -> Set(
-      "vendor/scala3/tests/run/CollectionTests.scala",
-      "vendor/scala3/tests/run/25333/Macro.scala",
-      "vendor/scala3/tests/run/t10594.scala",
-      "vendor/scala3/tests/run/t1406b.scala"
+      "tests/run/CollectionTests.scala",
+      "tests/run/25333/Macro.scala",
+      "tests/run/t10594.scala",
+      "tests/run/t1406b.scala"
     )
   )
 
@@ -71,7 +71,22 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
     "languages/grammar/elaborate.meta"
   )
 
-  private val includeVendoredCorpora = sys.env.get("STRATUM_INCLUDE_VENDOR_CORPORA").contains("1")
+  private val externalCorpusRoots: Map[String, Path] =
+    Vector(
+      "rust" -> "STRATUM_RUST_CORPUS",
+      "scala" -> "STRATUM_SCALA_CORPUS"
+    ).flatMap { (language, variable) =>
+      sys.env.get(variable).map { value =>
+        val root = Paths.get(value).toAbsolutePath.normalize()
+        assert(Files.isDirectory(root), s"$variable does not name a directory: $root")
+        language -> root
+      }
+    }.toMap
+
+  private val externalTestRoots: Map[String, String] = Map(
+    "rust" -> "tests/ui",
+    "scala" -> "tests/run"
+  )
 
   private lazy val declarations: Vector[DeclaredLanguage] =
     LanguageDeclarations.load(projectRoot).fold(error => fail(error), identity)
@@ -97,8 +112,7 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
         .toVector
     finally stream.close()
 
-  private def filesUnder(relativeRoot: String): Vector[Path] =
-    val root = projectRoot.resolve(relativeRoot)
+  private def filesUnder(root: Path): Vector[Path] =
     assert(Files.exists(root), s"missing declared test root $root")
     if Files.isRegularFile(root) then Vector(root)
     else if Files.isDirectory(root) then
@@ -106,7 +120,7 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
       try
         stream.iterator().asScala
           .filter(Files.isRegularFile(_))
-          .filterNot(path => unix(projectRoot.relativize(path)).split("/").exists(excludedNames.contains))
+          .filterNot(path => unix(root.relativize(path)).split("/").exists(excludedNames.contains))
           .toVector
       finally stream.close()
     else Vector.empty
@@ -149,91 +163,83 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
       selected && !skipLocalRustHost && !skipLocalScalaHost
     }
 
-  private def declaredCorpusFiles(language: DeclaredLanguage): Vector[Path] =
-    if !includeVendoredCorpora then Vector.empty
-    else
-      language.testRoots.flatMap(filesUnder)
+  private def externalCorpusFiles(language: DeclaredLanguage): Vector[Path] =
+    externalCorpusRoots.get(language.name).toVector.flatMap { root =>
+      val testRoot = root.resolve(externalTestRoots.getOrElse(language.name, fail(s"no external test root for ${language.name}")))
+      filesUnder(testRoot)
         .filter { file =>
-          LanguageDeclarations.select(unix(projectRoot.relativize(file)), declarations).toOption.exists(_.name == language.name)
+          LanguageDeclarations.select(unix(root.relativize(file)), declarations).toOption.exists(_.name == language.name)
         }
+    }
+
+  private def corpusRelative(language: String, file: Path): String =
+    externalCorpusRoots.get(language) match
+      case Some(root) if file.startsWith(root) => unix(root.relativize(file))
+      case _ => unix(projectRoot.relativize(file))
 
   private def corpusFiles(language: DeclaredLanguage): Vector[Path] =
-    (filesFor(language.name) ++ declaredCorpusFiles(language))
+    (filesFor(language.name) ++ externalCorpusFiles(language))
       .filterNot { file =>
-        val relative = unix(projectRoot.relativize(file))
+        val relative = corpusRelative(language.name, file)
         val explicitlyExcluded = excludedCorpusFilesByLanguage.getOrElse(language.name, Set.empty).contains(relative)
         val rustNonStructuralUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/") &&
+            relative.startsWith("tests/ui/") &&
             relative.endsWith(".rs") &&
             isRustCommentOrAttributeOnly(file)
         val rustLexicallyNegativeUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/") &&
+            relative.startsWith("tests/ui/") &&
             relative.endsWith(".rs") &&
             isRustLexicallyNegativeUi(file)
         val rustFrontmatterHybrid =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/") &&
+            relative.startsWith("tests/ui/") &&
             relative.endsWith(".rs") &&
             isRustFrontmatterHybrid(file)
         val rustHalfOpenRangePatternsUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/half-open-range-patterns/") &&
+            relative.startsWith("tests/ui/half-open-range-patterns/") &&
             relative.endsWith(".rs")
         val rustHygieneAuxiliaryUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/hygiene/auxiliary/") &&
+            relative.startsWith("tests/ui/hygiene/auxiliary/") &&
             relative.endsWith(".rs")
         val rustHygieneUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/hygiene/") &&
+            relative.startsWith("tests/ui/hygiene/") &&
             relative.endsWith(".rs")
         val rustLexerUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/lexer/") &&
+            relative.startsWith("tests/ui/lexer/") &&
             relative.endsWith(".rs")
         val rustMacrosAuxiliaryUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/macros/auxiliary/") &&
+            relative.startsWith("tests/ui/macros/auxiliary/") &&
             relative.endsWith(".rs")
         val rustMacrosUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/macros/") &&
+            relative.startsWith("tests/ui/macros/") &&
             relative.endsWith(".rs")
         val rustAbiUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/abi/") &&
+            relative.startsWith("tests/ui/abi/") &&
             relative.endsWith(".rs")
         val rustAllocErrorUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/alloc-error/") &&
+            relative.startsWith("tests/ui/alloc-error/") &&
             relative.endsWith(".rs")
         val rustMalformedUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/malformed/") &&
+            relative.startsWith("tests/ui/malformed/") &&
             relative.endsWith(".rs")
         val rustAllocatorUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/allocator/") &&
+            relative.startsWith("tests/ui/allocator/") &&
             relative.endsWith(".rs")
         val rustVendorUi =
           language.name == "rust" &&
-            includeVendoredCorpora &&
-            relative.startsWith("vendor/rust/tests/ui/") &&
+            relative.startsWith("tests/ui/") &&
             relative.endsWith(".rs")
         explicitlyExcluded || rustNonStructuralUi || rustLexicallyNegativeUi || rustFrontmatterHybrid || rustHalfOpenRangePatternsUi || rustHygieneAuxiliaryUi || rustHygieneUi || rustLexerUi || rustMacrosAuxiliaryUi || rustMacrosUi || rustAbiUi || rustAllocErrorUi || rustMalformedUi || rustAllocatorUi || rustVendorUi
       }
@@ -321,7 +327,7 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
       }
     }
 
-    test(s"$language: checked-in generated grammar and Meta AST agree with their surface sources") {
+    test(s"$language: generated grammar and Meta AST agree with their surface sources") {
       val declared = declarations.find(_.name == language).getOrElse(fail(s"no declared language $language"))
       val grammarSource = declared.grammarPath.get.replace(".generated.grammar", ".grammar")
       val metaSource = declared.metaPath.get.replace(".generated.meta", ".meta")
@@ -373,7 +379,7 @@ class LanguageAcceptanceSuite extends munit.FunSuite:
             "grammar-parse",
             declared.grammarPath.get,
             "--text-file",
-            unix(projectRoot.relativize(file))
+            file.toAbsolutePath.normalize().toString
           )
           assertEquals(code, 0, s"$file: rust host failed: $output")
           assertEquals(output, CanonText.write(scalaValue), s"$file: hosts disagree on the parsed value")
