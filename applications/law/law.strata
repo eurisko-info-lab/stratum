@@ -1,0 +1,13 @@
+module "app.law"
+version 1
+import "strata.prelude" 1
+
+; Signature validation is supplied by the Meta crypto boundary. Strata owns
+; publication and locale selection policy.
+data Locale = | English [] | French []
+data Sentence = | Sentence [key #1: Text, locale #2: Locale, text #3: Text]
+data PublicationEvidence = | PublicationEvidence [issuerTrusted #1: Bool, signatureValid #2: Bool]
+data PublicationDecision = | Publish [] | RejectPublication []
+
+def publicationDecision [evidence: PublicationEvidence]: PublicationDecision = match evidence of case PublicationEvidence issuer signature -> match and issuer signature of case True -> Publish case False -> RejectPublication end end
+def sameLocale [left: Locale, right: Locale]: Bool = match left of case English -> match right of case English -> True case French -> False end case French -> match right of case English -> False case French -> True end end

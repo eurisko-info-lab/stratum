@@ -70,3 +70,34 @@ judgment RegulatoryTextFor [catalog key locale] =
     case (#some sentence) -> call RegulatorySentence'body [sentence]
     case (#none) -> ""
   }
+
+judgment LawBool [value] =
+  if prim #eq [value true]
+  then mk #True []
+  else mk #False []
+
+judgment LawPublicationEvidence [issuerTrusted signatureValid] =
+  mk #PublicationEvidence [call LawBool [issuerTrusted] call LawBool [signatureValid]]
+
+judgment LawCompilerSources [prelude compiler] = list [prelude compiler]
+judgment LawPolicySources [prelude policy] = list [prelude policy]
+
+judgment LawPublicationDecision [grammar prelude compiler policy issuerTrusted signatureValid] =
+  call RunApplicationStrataWith [
+    grammar
+    call LawCompilerSources [prelude compiler]
+    call LawPolicySources [prelude policy]
+    "app.law"
+    #publicationDecision
+    list [call LawPublicationEvidence [issuerTrusted signatureValid]]
+  ]
+
+judgment LawPolicyPreservesMeaning [grammar prelude compiler policy issuerTrusted signatureValid] =
+  call ApplicationStrataPreservesMeaning [
+    grammar
+    call LawCompilerSources [prelude compiler]
+    call LawPolicySources [prelude policy]
+    "app.law"
+    #publicationDecision
+    list [call LawPublicationEvidence [issuerTrusted signatureValid]]
+  ]
