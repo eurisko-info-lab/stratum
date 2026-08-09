@@ -1,0 +1,13 @@
+[
+  (check english-regulatory-sentence-resolves
+    (call RegulatoryTextFor (call RegulatoryCatalog) (q h225) (q en))
+    (value "Highly flammable liquid and vapour"))
+
+  (check french-regulatory-sentence-resolves
+    (call RegulatoryTextFor (call RegulatoryCatalog) (q h225) (q fr))
+    (value "Liquide et vapeurs tres inflammables"))
+
+  (check an-unknown-translation-does-not-resolve
+    (call RegulatorySentenceFor (call RegulatoryCatalog) (q h225) (q de))
+    (value (none)))
+]

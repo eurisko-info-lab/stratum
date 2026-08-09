@@ -56,6 +56,44 @@
       (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds"))))
     (value (roundtrip ok)))
 
+  (check the-private-multilingual-language-round-trips
+    (call DocumentRoundTrip
+      (q (file "applications/sds/sds-v3.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v3.sds"))))
+    (value (roundtrip ok)))
+
+  (check english-regulatory-text-is-referenced
+    (call RegulatoryTextFor (call RegulatoryCatalog) (q h225) (q en))
+    (value "Highly flammable liquid and vapour"))
+
+  (check french-regulatory-text-is-referenced
+    (call RegulatoryTextFor (call RegulatoryCatalog) (q h225) (q fr))
+    (value "Liquide et vapeurs tres inflammables"))
+
+  (check the-regulator-can-disclose-a-committed-fraction
+    (call DiscloseComponent
+      (call SealComponent (q proprietary-stabilizer) (q 1) (q regulator))
+      (call TrustedCertificates)
+      (q regulator)
+      (q 1))
+    (value (disclosed 1)))
+
+  (check another-recipient-sees-only-redaction
+    (call DiscloseComponent
+      (call SealComponent (q proprietary-stabilizer) (q 1) (q regulator))
+      (call TrustedCertificates)
+      (q regulatory-publisher)
+      (q 1))
+    (value (redacted wrong-recipient)))
+
+  (check a-mismatched-secret-is-not-disclosed
+    (call DiscloseComponent
+      (call SealComponent (q proprietary-stabilizer) (q 1) (q regulator))
+      (call TrustedCertificates)
+      (q regulator)
+      (q 2))
+    (value (redacted commitment-mismatch)))
+
   ; ------------------------------------------------------------ data evolution
 
   (check the-measured-value-was-wrong
@@ -91,6 +129,10 @@
   (check the-evolved-profile-adds-a-command
     (call DeriveActions (call DeployedProfileV2))
     (value [run-validation submit-for-review classify-hazard]))
+
+  (check the-private-profile-adds-law-and-composition-panels
+    (call ProfilePanelNames (call DeployedProfileV3))
+    (value [sections entries findings preview hazards regulations composition]))
 
   (check a-surface-change-does-not-change-the-language
     (call ProfileEvolutionIsSurfaceOnly (q (file "applications/sds/sds-v2.generated.grammar")))

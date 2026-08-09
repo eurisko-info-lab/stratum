@@ -1,0 +1,27 @@
+grammar "sds"
+start document
+
+token ident sym "[A-Za-z_][A-Za-z0-9_'-]*"
+token number nat "[0-9]+"
+token text str "\"[^\"]*\""
+skip ";[^\n]*"
+
+category document
+  prod Document "document" title : text sections : sections
+
+category sections
+  fold Sections section
+
+category section
+  prod Section "section" number : number heading : text entries : entries
+
+category entries
+  fold Entries entry
+
+category entry
+  prod Sentence "sentence" key : ident body : text
+  prod SentenceRef "sentence-ref" key : ident regulation : ident locale : ident
+  prod Field "field" key : ident amount : number units : ident
+  prod Component "component" key : ident fraction : number
+  prod PrivateComponent "private-component" key : ident recipient : ident
+  prod Hazard "hazard" key : ident statement : text severity : number

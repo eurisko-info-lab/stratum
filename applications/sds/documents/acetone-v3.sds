@@ -1,0 +1,15 @@
+; Acetone, revision 3.
+; Regulatory prose is referenced by stable key and locale. The proprietary
+; stabilizer fraction is absent from this public document and disclosed only
+; through a separately committed, recipient-bound record.
+document "Acetone safety data"
+section 1 "Identification"
+  sentence product "Acetone"
+  field boiling-point 56 celsius
+  sentence-ref flammability h225 en
+  sentence-ref inflammabilite h225 fr
+section 2 "Hazards"
+  hazard h225 "Highly flammable liquid and vapour" 2
+section 3 "Composition"
+  component cas-67-64-1 99
+  private-component proprietary-stabilizer regulator

@@ -48,6 +48,11 @@ judgment KnownUnits [] = list [#celsius #kelvin #pascal #percent]
 
 judgment ValidateEntry [entry] =
   match entry {
+    case (#SentenceRef key regulation locale) ->
+      match call RegulatorySentenceFor [call RegulatoryCatalog [] regulation locale] {
+        case (#some sentence) -> list []
+        case (#none) -> list [mk #finding [#missing-regulatory-translation key]]
+      }
     case (#Field key amount units) ->
       if prim #contains [call KnownUnits [] units]
       then list []
@@ -56,6 +61,11 @@ judgment ValidateEntry [entry] =
       if prim #gt [fraction 100]
       then list [mk #finding [#fraction-out-of-range key]]
       else list []
+    case (#PrivateComponent key recipient) ->
+      match call PkiCertificateFor [call RootAuthority [] call TrustedCertificates [] recipient #encryption] {
+        case (#some certificate) -> list []
+        case (#none) -> list [mk #finding [#untrusted-disclosure-recipient key]]
+      }
     case (#Hazard key statement severity) ->
       if prim #gt [severity 4]
       then list [mk #finding [#severity-out-of-range key]]
@@ -120,19 +130,71 @@ judgment HazardKeys [entries] =
 judgment Hazards [grammar source] =
   call HazardKeys [call DocumentEntries [call ParseDocument [grammar source]]]
 
+; ------------------------------------------ regulatory text and private data
+
+record SealedComponent [key commitment recipient]
+
+judgment CompositionValue [key fraction] = mk #composition [key fraction]
+
+judgment SealComponent [key fraction recipient] =
+  call SealedComponent [key prim #digest [call CompositionValue [key fraction]] recipient]
+
+judgment DiscloseComponent [sealed certificates identity fraction] =
+  if prim #eq [call SealedComponent'recipient [sealed] identity]
+  then
+    match call PkiCertificateFor [call RootAuthority [] certificates identity #encryption] {
+      case (#some certificate) ->
+        if prim #eq [
+          call SealedComponent'commitment [sealed]
+          prim #digest [call CompositionValue [call SealedComponent'key [sealed] fraction]]
+        ]
+        then mk #disclosed [fraction]
+        else mk #redacted [#commitment-mismatch]
+      case (#none) -> mk #redacted [#untrusted-recipient]
+    }
+  else mk #redacted [#wrong-recipient]
+
+judgment RegulatoryReferences [entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest ->
+      match head {
+        case (#SentenceRef key regulation locale) ->
+          prim #cons [
+            mk #regulation [key regulation locale
+              call RegulatoryTextFor [call RegulatoryCatalog [] regulation locale]]
+            call RegulatoryReferences [rest]
+          ]
+        case _ -> call RegulatoryReferences [rest]
+      }
+  }
+
+judgment PrivateComponents [entries] =
+  match entries {
+    case [] -> list []
+    case head :: rest ->
+      match head {
+        case (#PrivateComponent key recipient) ->
+          prim #cons [mk #private-component [key recipient #redacted] call PrivateComponents [rest]]
+        case _ -> call PrivateComponents [rest]
+      }
+  }
+
 ; ------------------------------------------------------------ studio profiles
 
 judgment DeployedLanguage [grammar] =
   call LanguageSchema [
     #sds
     grammar
-    list [#Document #Section #Sentence #Field #Component]
+    list [#Document #Section #Sentence #SentenceRef #Field #Component #PrivateComponent]
     list [
       mk #constructor [#Document list [#title #sections]]
       mk #constructor [#Section list [#number #heading #entries]]
       mk #constructor [#Sentence list [#key #body]]
+      mk #constructor [#SentenceRef list [#key #regulation #locale]]
       mk #constructor [#Field list [#key #amount #units]]
       mk #constructor [#Component list [#key #fraction]]
+      mk #constructor [#PrivateComponent list [#key #recipient]]
     ]
     map [
       #parse #ParseDocument
@@ -155,6 +217,15 @@ judgment DeployedPanelsV2 [] =
   prim #append [
     call DeployedPanelsV1 []
     list [call PanelSchema [#hazards call ViewSchema [#hazards #table #hazards] #centre-lower]]
+  ]
+
+judgment DeployedPanelsV3 [] =
+  prim #append [
+    call DeployedPanelsV2 []
+    list [
+      call PanelSchema [#regulations call ViewSchema [#regulations #table #law] #centre-lower]
+      call PanelSchema [#composition call ViewSchema [#composition #inspector #pki] #bottom]
+    ]
   ]
 
 judgment DeployedActionsV1 [] =
@@ -215,6 +286,14 @@ judgment LanguageDigestUnderProfiles [grammar] =
   prim #eq [
     prim #digest [call DeployedLanguage [grammar]]
     prim #digest [call DeployedLanguage [grammar]]
+  ]
+
+judgment DeployedProfileV3 [] =
+  call DeployedProfile [
+    #sds-editor-v3
+    call DeployedPanelsV3 []
+    call DeployedEditorsV2 []
+    call DeployedActionsV2 []
   ]
 
 judgment ProfileEvolutionIsSurfaceOnly [grammar] =
@@ -384,11 +463,15 @@ judgment ReleaseSettled [first second third] =
 ; ------------------------------------------------------ reopening the studio
 
 judgment ReleaseState [grammar source] =
+  let document = call ParseDocument [grammar source] in
+  let entries = call DocumentEntries [document] in
   map [
-    #sections call DocumentSections [call ParseDocument [grammar source]]
-    #entries call DocumentEntries [call ParseDocument [grammar source]]
+    #sections call DocumentSections [document]
+    #entries entries
     #findings call ValidateSource [grammar source]
     #hazards call Hazards [grammar source]
+    #regulations call RegulatoryReferences [entries]
+    #composition call PrivateComponents [entries]
     #pdf mk #preview [#page-1]
   ]
 
@@ -482,6 +565,9 @@ judgment EntrySymbols [text entries] =
 judgment EntrySymbol [text entry] =
   match entry {
     case (#Sentence key body) -> call KeySymbol [text key #string body]
+    case (#SentenceRef key regulation locale) ->
+      call KeySymbol [text key #reference
+        call RegulatoryTextFor [call RegulatoryCatalog [] regulation locale]]
     case (#Field key amount units) ->
       call KeySymbol [
         text key #number
@@ -489,6 +575,8 @@ judgment EntrySymbol [text entry] =
       ]
     case (#Component key fraction) ->
       call KeySymbol [text key #number prim #scat [prim #nat->str [fraction] " percent"]]
+    case (#PrivateComponent key recipient) ->
+      call KeySymbol [text key #object prim #scat ["private for " prim #sym->str [recipient]]]
     case (#Hazard key statement severity) -> call KeySymbol [text key #event statement]
     case _ -> call KeySymbol [text #entry #object ""]
   }
@@ -531,7 +619,7 @@ judgment ServiceViews [grammar text] =
   match cap #grammar-parse [grammar text] {
     case (#ok document) ->
       call ViewMap [
-        call ProfilePanelNames [call DeployedProfileV2 []]
+        call ProfilePanelNames [call DeployedProfileV3 []]
         call ReleaseState [grammar text]
       ]
     case (#denied reason) -> prim #mnew []
@@ -591,7 +679,7 @@ judgment ServiceSemanticTokens [grammar text] = call SemanticTokens [grammar tex
 ; region the profile puts them in, so the editor arranges itself the way the
 ; deployment says rather than the way the client happens to feel like.
 judgment ServiceLayout [grammar] =
-  let profile = call DeployedProfileV2 [] in
+  let profile = call DeployedProfileV3 [] in
   prim #mfrom [list [
     mk #entry [#name call StudioProfile'layout [profile]]
     mk #entry [#views call ViewDescriptors [call StudioProfile'panels [profile]]]
@@ -763,6 +851,14 @@ judgment PreviewEntry [entry] =
   match entry {
     case (#Sentence key body) ->
       call PreviewBlock [#entry prim #scat [prim #scat [prim #sym->str [key] ": "] call Unquoted [body]]]
+    case (#SentenceRef key regulation locale) ->
+      call PreviewBlock [
+        #regulation
+        prim #scat [
+          prim #scat [prim #sym->str [key] ": "]
+          call RegulatoryTextFor [call RegulatoryCatalog [] regulation locale]
+        ]
+      ]
     case (#Field key amount units) ->
       call PreviewBlock [
         #entry
@@ -775,6 +871,14 @@ judgment PreviewEntry [entry] =
       call PreviewBlock [
         #entry
         prim #scat [prim #scat [prim #sym->str [key] ": "] prim #scat [prim #nat->str [fraction] " percent"]]
+      ]
+    case (#PrivateComponent key recipient) ->
+      call PreviewBlock [
+        #entry
+        prim #scat [
+          prim #scat [prim #sym->str [key] ": redacted for "]
+          prim #sym->str [recipient]
+        ]
       ]
     case (#Hazard key statement severity) ->
       call PreviewBlock [

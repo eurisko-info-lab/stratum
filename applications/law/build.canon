@@ -1,18 +1,12 @@
-; The SDS deployment, branched from the Law and PKI applications.
-;
-; This is not a step of the bootstrap staircase. It is an application built on
-; the finished platform: it inherits Law and PKI, and reuses F11's Meta, Grammar,
-; change calculus, repository, toolchain, governance, ledger, agreement,
-; retention and Studio runtime, and it adds only its own language, profiles and
-; documents.
+; Signed, locale-aware regulatory data deployed over the PKI application.
 (build
-  (name "SDS")
+  (name "Law")
   (bootstrap "StratumHost0/1")
-  (predecessor (dir "applications/law"))
-  (change (file "changes/law-sds/change.canon"))
+  (predecessor (dir "applications/pki"))
+  (change (file "changes/pki-law/change.canon"))
   (application
     (application
-      (name "sds-deployment")
+      (name "law-deployment")
       (host (file "host/core.canon"))
       (meta (program-of [
         (file "languages/meta/prelude.meta")
@@ -35,33 +29,18 @@
         (file "features/federation/federation.generated.meta")
         (file "features/retention/retention.generated.meta")
         (file "features/studio/studio.generated.meta")
-        (file "languages/service/service.generated.meta")
-        (file "languages/pdf/pdf.generated.meta")
         (file "applications/pki/pki.generated.meta")
         (file "applications/law/law.generated.meta")
-        (file "applications/sds/sds.generated.meta")
       ]))
       (grammars {
         lambda (file "languages/lambda/lambda.generated.grammar")
         meta (file "languages/meta/meta.generated.grammar")
         grammar (file "languages/grammar/grammar.generated.grammar")
-        sds (file "applications/sds/sds.generated.grammar")
-        sds2 (file "applications/sds/sds-v2.generated.grammar")
-        sds3 (file "applications/sds/sds-v3.generated.grammar")
       })
       (entries {})
-      (documents {
-        acetone-v1 (text-file "applications/sds/documents/acetone-v1.sds")
-        acetone-v2 (text-file "applications/sds/documents/acetone-v2.sds")
-        acetone-v3 (text-file "applications/sds/documents/acetone-v3.sds")
-      })
-      (studios {
-        sds-editor-v1 (file "applications/sds/profile-v1.canon")
-        sds-editor-v2 (file "applications/sds/profile-v2.canon")
-        sds-editor-v3 (file "applications/sds/profile-v3.canon")
-      })
-      (service (file "applications/sds/service.canon"))
-      (checks (include "applications/sds/checks.canon"))
+      (documents {})
+      (studios {})
+      (checks (include "applications/law/checks.canon"))
       (kernel (kernel (allow cas-get cas-has hash grammar-parse grammar-print grammar-lex sign verify public-key
-                            send receive open-connection close-connection pending)))
+                send receive open-connection close-connection pending)))
       (resources (budget (steps 60000000) (depth 20000))))))

@@ -1,0 +1,13 @@
+; SDS v3 adds signed regulatory references and certificate-bound private composition.
+; The authoritative definition is `DeployedProfileV3` in sds.meta.
+(profile
+  (name "sds-editor-v3")
+  (language sds)
+  (layout document-workflow)
+  (navigation document-centric)
+  (panels [sections entries findings preview hazards regulations composition])
+  (commands [run-validation submit-for-review classify-hazard])
+  (workflow [draft review approve publish])
+  (roles [author reviewer regulator])
+  (projections [spreadsheet regulatory-catalog])
+  (foreign [pdf pki law]))

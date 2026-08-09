@@ -43,6 +43,35 @@ else
 fi
 
 if ((${#worlds[@]} > 0)); then
+  ordered_worlds=()
+  pending_worlds=("${worlds[@]}")
+  while ((${#pending_worlds[@]} > 0)); do
+    next_worlds=()
+    progressed=false
+    for world in "${pending_worlds[@]}"; do
+      predecessor=$(sed -n 's/.*(predecessor (dir "\([^"]*\)")).*/\1/p' "$world/build.canon" | head -n 1)
+      blocked=false
+      for pending in "${pending_worlds[@]}"; do
+        if [[ "$predecessor" == "$pending" ]]; then
+          blocked=true
+          break
+        fi
+      done
+      if [[ "$blocked" == true ]]; then
+        next_worlds+=("$world")
+      else
+        ordered_worlds+=("$world")
+        progressed=true
+      fi
+    done
+    [[ "$progressed" == true ]] || {
+      echo "changed worlds contain a predecessor cycle: ${pending_worlds[*]}" >&2
+      exit 1
+    }
+    pending_worlds=("${next_worlds[@]}")
+  done
+  worlds=("${ordered_worlds[@]}")
+
   classpath=$(sbt -batch --error 'export Runtime/fullClasspath' | grep -E 'classes|\.jar' | tail -n 1) || {
     echo "sbt did not report a runtime classpath" >&2
     exit 1
