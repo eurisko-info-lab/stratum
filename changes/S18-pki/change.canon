@@ -1,0 +1,18 @@
+(change
+  (kind application)
+  (name "S18->PKI")
+  (predecessor (foundation-of "foundations/S18"))
+  (feature
+    (feature
+      (name "purpose-specific certificate policy in Strata")
+      (programs [
+        (file "features/strata/application.generated.meta")
+        (file "features/strata/application-resolve.generated.meta")
+        (file "applications/pki/pki.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/application.meta")
+        (text-file "features/strata/application-resolve.meta")
+        (text-file "applications/pki/pki.meta")
+        (text-file "applications/pki/pki.strata")
+      ]))))

@@ -1,0 +1,13 @@
+module "app.pki"
+version 1
+import "strata.prelude" 1
+
+; Cryptographic verification crosses as evidence. This module owns the policy
+; decision: issuer trust, purpose separation and signature validity are all
+; required before a certificate can authorize an operation.
+data Purpose = | Signing [] | Encryption []
+data CertificateEvidence = | CertificateEvidence [declaredPurpose #1: Purpose, requiredPurpose #2: Purpose, issuerTrusted #3: Bool, signatureValid #4: Bool]
+data TrustDecision = | CertificateTrusted [] | CertificateRejected []
+
+def samePurpose [declared: Purpose, required: Purpose]: Bool = match declared of case Signing -> match required of case Signing -> True case Encryption -> False end case Encryption -> match required of case Signing -> False case Encryption -> True end end
+def evaluateCertificate [evidence: CertificateEvidence]: TrustDecision = match evidence of case CertificateEvidence declared required issuer signature -> match and issuer signature of case False -> CertificateRejected case True -> match samePurpose declared required of case True -> CertificateTrusted case False -> CertificateRejected end end end
