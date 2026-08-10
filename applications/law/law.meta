@@ -1,0 +1,72 @@
+module law
+
+record RegulatorySentence [key jurisdiction citation locale body]
+record RegulatoryPublication [sentence publisher signature]
+
+judgment RegulatorySubject [sentence publisher] =
+  mk #regulatory-sentence [
+    call RegulatorySentence'key [sentence]
+    call RegulatorySentence'jurisdiction [sentence]
+    call RegulatorySentence'citation [sentence]
+    call RegulatorySentence'locale [sentence]
+    call RegulatorySentence'body [sentence]
+    publisher
+  ]
+
+judgment PublishRegulatorySentence [sentence] =
+  let certificate = call RegulatoryPublisherCertificate [] in
+  let publisher = call Certificate'identity [certificate] in
+  call RegulatoryPublication [
+    sentence
+    publisher
+    call SignSubject ["regulatory-publisher" call RegulatorySubject [sentence publisher]]
+  ]
+
+judgment RegulatoryPublicationTrusted [publication] =
+  match call PkiCertificateFor [
+    call RootAuthority []
+    call TrustedCertificates []
+    call RegulatoryPublication'publisher [publication]
+    #signing
+  ] {
+    case (#some certificate) ->
+      call VerifySubject [
+        call Certificate'key [certificate]
+        call RegulatorySubject [
+          call RegulatoryPublication'sentence [publication]
+          call RegulatoryPublication'publisher [publication]
+        ]
+        call RegulatoryPublication'signature [publication]
+      ]
+    case (#none) -> false
+  }
+
+judgment RegulatoryCatalog [] =
+  list [
+    call PublishRegulatorySentence [
+      call RegulatorySentence [#h225 #eu #clp-h225 #en "Highly flammable liquid and vapour"]]
+    call PublishRegulatorySentence [
+      call RegulatorySentence [#h225 #eu #clp-h225 #fr "Liquide et vapeurs tres inflammables"]]
+  ]
+
+judgment RegulatorySentenceFor [catalog key locale] =
+  match catalog {
+    case [] -> mk #none []
+    case head :: rest ->
+      let sentence = call RegulatoryPublication'sentence [head] in
+      if prim #eq [call RegulatorySentence'key [sentence] key]
+      then
+        if prim #eq [call RegulatorySentence'locale [sentence] locale]
+        then
+          if call RegulatoryPublicationTrusted [head]
+          then mk #some [sentence]
+          else mk #none []
+        else call RegulatorySentenceFor [rest key locale]
+      else call RegulatorySentenceFor [rest key locale]
+  }
+
+judgment RegulatoryTextFor [catalog key locale] =
+  match call RegulatorySentenceFor [catalog key locale] {
+    case (#some sentence) -> call RegulatorySentence'body [sentence]
+    case (#none) -> ""
+  }

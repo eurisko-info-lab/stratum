@@ -1,0 +1,15 @@
+(change
+  (kind application)
+  (name "PKI->Law")
+  (predecessor (foundation-of "applications/pki"))
+  (feature
+    (feature
+      (name "signed multilingual regulatory catalog")
+      (programs [
+        (file "applications/pki/pki.generated.meta")
+        (file "applications/law/law.generated.meta")
+      ])
+      (sources [
+        (text-file "applications/pki/pki.meta")
+        (text-file "applications/law/law.meta")
+      ]))))
