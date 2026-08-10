@@ -1,0 +1,21 @@
+module "strata.virtual-app"
+version 1
+import "strata.prelude" 1
+import "strata.artifact" 1
+
+data Texts = | NoText [] | MoreText [head #1: Text, tail #2: Texts]
+data Fields = | NoField [] | MoreField [key #1: Text, value #2: Text, tail #3: Fields]
+data Languages = | NoLanguage [] | MoreLanguage [head #1: Value, tail #2: Languages]
+data Commands = | NoCommand [] | MoreCommand [head #1: Value, tail #2: Commands]
+
+def textValues [texts: Texts]: Values = match texts of case NoText -> NoValue case MoreText head tail -> MoreValue (VText head) (textValues tail) end
+def fieldPairs [fields: Fields]: Pairs = match fields of case NoField -> NoPair case MoreField key value tail -> MorePair (VName key) (VText value) (fieldPairs tail) end
+def languageValues [languages: Languages]: Values = match languages of case NoLanguage -> NoValue case MoreLanguage head tail -> MoreValue head (languageValues tail) end
+def commandValues [commands: Commands]: Values = match commands of case NoCommand -> NoValue case MoreCommand head tail -> MoreValue head (commandValues tail) end
+
+def navigator [name: Text, title: Text, placement: Text, reveal: Bool]: Value = VMap (MorePair (VName "name") (VText name) (MorePair (VName "placement") (VText placement) (MorePair (VName "reveal") (VBool reveal) (MorePair (VName "title") (VText title) NoPair))))
+def language [name: Text, label: Text, extensions: Texts, comment: Text]: Value = VMap (MorePair (VName "comment") (VText comment) (MorePair (VName "extensions") (VList (textValues extensions)) (MorePair (VName "label") (VText label) (MorePair (VName "name") (VText name) NoPair))))
+def command [name: Text, title: Text]: Value = VMap (MorePair (VName "name") (VText name) (MorePair (VName "title") (VText title) NoPair))
+def virtualApp [name: Text, editor: Fields, placements: Fields, navigation: Value, languages: Languages, commands: Commands]: Value = VMap (MorePair (VName "commands") (VList (commandValues commands)) (MorePair (VName "editor") (VMap (fieldPairs editor)) (MorePair (VName "languages") (VList (languageValues languages)) (MorePair (VName "name") (VText name) (MorePair (VName "navigator") navigation (MorePair (VName "placements") (VMap (fieldPairs placements)) NoPair))))))
+
+def plainVirtualApp [name: Text]: Value = virtualApp name NoField NoField (navigator "documents" "Documents" "left" True) NoLanguage NoCommand

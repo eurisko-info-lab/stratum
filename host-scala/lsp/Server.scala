@@ -1,6 +1,7 @@
 package stratum.lsp
 
 import Json.*
+import stratum.canon.Canon
 
 import java.io.{InputStream, OutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
@@ -260,6 +261,10 @@ object Server:
             })
           )
 
+        case "stratum/virtualApp" =>
+          val layout = service.virtualApp.bindings.headOption.flatMap(b => service.layout(b.name))
+          respond(id, virtualAppJson(service.virtualApp, layout))
+
         case "stratum/layout" =>
           // The arrangement the profile describes, so the client places its
           // views where the deployment says rather than where it prefers.
@@ -452,3 +457,46 @@ object Server:
         if c != '\r' then sb.append(c.toChar)
         c = in.read()
       Some(sb.toString)
+
+  def virtualAppJson(app: VirtualApp, layout: Option[Canon]): Json =
+    val identifiers = Service.identifiers(app)
+    val workflow = layout.toVector.flatMap(l => Service.list(Service.get(l, "workflow").getOrElse(Canon.U)))
+    val views = layout.toVector.flatMap(l => Service.list(Service.get(l, "views").getOrElse(Canon.U)))
+    Json.obj(
+      "name" -> Str(app.name),
+      "title" -> Str(app.editor.getOrElse("display", app.name)),
+      "layout" -> Str(layout.map(l => Service.string(l, "name")).getOrElse("plain-navigator")),
+      "workflow" -> Json.arr(workflow.map(v => Str(Service.text(v)))),
+      "navigation" -> Str(
+        layout.map(l => Service.string(Service.get(l, "navigation").getOrElse(Canon.U), "model")).getOrElse("plain")
+      ),
+      "navigator" -> app.navigator
+        .map(n =>
+          Json.obj(
+            "name" -> Str(n.name),
+            "title" -> Str(n.title),
+            "placement" -> Str(n.placement),
+            "reveal" -> Bool(n.reveal)
+          )
+        )
+        .getOrElse(Null),
+      "views" -> Json.arr(views.map { view =>
+        Json.obj(
+          "name" -> Str(Service.string(view, "name")),
+          "placement" -> Str(Service.string(view, "placement")),
+          "primitive" -> Str(Service.string(view, "primitive"))
+        )
+      }),
+      "languages" -> Json.arr(app.bindings.map { binding =>
+        Json.obj(
+          "name" -> Str(binding.name),
+          "id" -> Str(identifiers(binding.name)),
+          "label" -> Str(binding.label),
+          "extensions" -> Json.arr(binding.extensions.map(Str.apply)),
+          "lineComment" -> binding.comment.map(Str.apply).getOrElse(Null)
+        )
+      }),
+      "commands" -> Json.arr(app.actions.map { action =>
+        Json.obj("name" -> Str(action.name), "title" -> Str(action.title))
+      })
+    )

@@ -14,7 +14,7 @@ final case class Action(name: String, title: String)
 /** The world's own navigator, as distinct from a document's profile. */
 final case class Navigator(name: String, title: String, placement: String, reveal: Boolean)
 
-final case class Descriptor(
+final case class VirtualApp(
     name: String,
     editor: Map[String, String],
     placements: Map[String, String],
@@ -40,13 +40,24 @@ final class Service(val root: Path, val worldDir: Path, val world: LoadedFoundat
 
   private val cache = mutable.Map.empty[String, Canon]
 
-  val descriptor: Descriptor =
-    Cli
-      .applicationField(world.application, "service")
-      .collect { case Canon.R(d) => d }
-      .flatMap(world.cas.get)
-      .map(a => Service.readDescriptor(a.body))
-      .getOrElse(Descriptor(worldDir.getFileName.toString, Map.empty, Map.empty, None, Vector.empty, Vector.empty))
+  val virtualApp: VirtualApp =
+    world.entries.get("virtual-app") match
+      case Some(goal) =>
+        val verdict = Cli.deriveIn(world, root, goal, world.budget)
+        MetaMachine0
+          .result(verdict)
+          .map(Service.readVirtualApp)
+          .getOrElse(throw IllegalArgumentException(s"virtual-app entry failed: ${CanonText.write(verdict)}"))
+      case None =>
+        Cli
+          .applicationField(world.application, "service")
+          .collect { case Canon.R(d) => d }
+          .flatMap(world.cas.get)
+          .map(a => Service.readVirtualApp(a.body))
+          .getOrElse(Service.plainVirtualApp(worldDir.getFileName.toString))
+
+  /** Compatibility name while clients migrate to the virtual-app contract. */
+  val descriptor: VirtualApp = virtualApp
 
   def bindingForUri(uri: String): Option[Binding] =
     val path = uri.stripPrefix("file://")
@@ -169,9 +180,9 @@ object Service:
     Cli.loadFoundation(root, dir).map(f => Service(root, dir, f))
 
   /** The editor identifier for each binding, derived from what it is called. */
-  def identifiers(descriptor: Descriptor): Map[String, String] =
+  def identifiers(app: VirtualApp): Map[String, String] =
     val taken = scala.collection.mutable.Set.empty[String]
-    descriptor.bindings.map { b =>
+    app.bindings.map { b =>
       val base = if b.label.isEmpty then b.name else b.label.toLowerCase.replace(' ', '-')
       val id = if taken.contains(base) then b.name else base
       taken += id
@@ -209,7 +220,10 @@ object Service:
   def strings(c: Canon, key: String): Vector[String] =
     get(c, key).map(list).getOrElse(Vector.empty).collect { case Canon.S(s) => s }
 
-  def readDescriptor(body: Canon): Descriptor =
+  def plainVirtualApp(name: String): VirtualApp =
+    VirtualApp(name, Map.empty, Map.empty, Some(Navigator("documents", "Documents", "left", true)), Vector.empty, Vector.empty)
+
+  def readVirtualApp(body: Canon): VirtualApp =
     val bindings = get(body, "languages").map(list).getOrElse(Vector.empty).map { entry =>
       Binding(
         name = string(entry, "name"),
@@ -237,7 +251,7 @@ object Service:
         flag(n, "reveal")
       )
     }
-    Descriptor(
+    VirtualApp(
       string(body, "name", "stratum"),
       editor,
       placements,
@@ -245,6 +259,8 @@ object Service:
       bindings.filter(_.name.nonEmpty),
       actions
     )
+
+  def readDescriptor(body: Canon): VirtualApp = readVirtualApp(body)
 
   /** Line starts, so a character offset can be reported as line and character. */
   final class Lines(text: String):
