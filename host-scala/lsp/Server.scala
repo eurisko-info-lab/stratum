@@ -34,7 +34,11 @@ object Server:
   /** The legend the client is told about, and the order its indices refer to. */
   private val tokenTypes = Vector("keyword", "string", "number", "variable")
 
-  final class Session(service: Service, out: OutputStream):
+  final class Session(
+      service: Service,
+      out: OutputStream,
+      source: String => Option[String] = _ => None
+  ):
     private val documents = mutable.Map.empty[String, String]
     var running = true
 
@@ -318,6 +322,17 @@ object Server:
             })
           )
 
+        case "stratum/source" =>
+          val path = (params / "path").str.getOrElse("")
+          val result = source(path).map { content =>
+            Json.obj(
+              "path" -> Str(path),
+              "language" -> Str(service.bindingForUri(s"file:///$path").map(_.name).getOrElse("")),
+              "content" -> Str(content)
+            )
+          }
+          respond(id, result.getOrElse(Null))
+
         case "stratum/preview" =>
           val previewUri = (params / "uri").str.getOrElse("")
           val rendered =
@@ -415,8 +430,13 @@ object Server:
       )
 
   /** Reads framed messages until the client says exit. */
-  def serve(service: Service, in: InputStream, out: OutputStream): Unit =
-    val session = Session(service, out)
+  def serve(
+      service: Service,
+      in: InputStream,
+      out: OutputStream,
+      source: String => Option[String] = _ => None
+  ): Unit =
+    val session = Session(service, out, source)
     while session.running do
       readMessage(in) match
         case None => session.running = false

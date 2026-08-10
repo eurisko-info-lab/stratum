@@ -109,11 +109,20 @@ cleanly rather than fail.
 ```bash
 sbt "runMain stratum.cli.Stratum lsp languages --world <world>"
 sbt "runMain stratum.cli.Stratum lsp replay    --world <world> --script <script>"
+sbt "runMain stratum.remote.RemoteServer --world <world> --host 127.0.0.1 --port 2087"
 ```
 
-A client binds itself to a world by generating its own manifest from what the
-world publishes, so it cannot drift from the languages it edits. The generator
-lives with the client.
+A client that must register languages before activation binds itself to a world
+by generating its own manifest from what the world publishes, so it cannot
+drift from the languages it edits. A client that supports runtime discovery,
+such as Android, asks the world directly after connecting. Any required
+generator lives with its client.
+
+The standalone remote launcher lives outside the frozen host. It wraps the
+same stream-based server in a reconnecting TCP listener, binding to loopback by
+default. This keeps networking out of the native boundary while allowing
+clients that cannot launch a local JVM process, including Android, to consume
+the same protocol. See [the Android client](../studio/android/README.md).
 
 ## Testing
 
