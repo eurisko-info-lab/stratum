@@ -14,4 +14,22 @@
       (q regulatory-publisher)
       (q encryption))
     (value (none)))
+
+  (check trusted-purpose-specific-evidence-is-authorized-by-compiled-strata
+    (call PkiPolicyDecision
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata")))
+      (call SourceText (q (text-file "strata/compiler/compile.strata")))
+      (call SourceText (q (text-file "applications/pki/pki.strata")))
+      (q encryption) (q encryption) (q #t) (q #t))
+    (value (CertificateTrusted)))
+
+  (check compiled-pki-policy-preserves-interpreted-strata-meaning
+    (call PkiPolicyPreservesMeaning
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata")))
+      (call SourceText (q (text-file "strata/compiler/compile.strata")))
+      (call SourceText (q (text-file "applications/pki/pki.strata")))
+      (q signing) (q encryption) (q #t) (q #t))
+    (value #t))
 ]
