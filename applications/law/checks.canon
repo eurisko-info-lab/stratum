@@ -10,4 +10,22 @@
   (check an-unknown-translation-does-not-resolve
     (call RegulatorySentenceFor (call RegulatoryCatalog) (q h225) (q de))
     (value (none)))
+
+  (check verified-regulatory-evidence-is-published-by-compiled-strata
+    (call LawPublicationDecision
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata")))
+      (call SourceText (q (text-file "strata/compiler/compile.strata")))
+      (call SourceText (q (text-file "applications/law/law.strata")))
+      (q #t) (q #t))
+    (value (Publish)))
+
+  (check compiled-law-policy-preserves-interpreted-strata-meaning
+    (call LawPolicyPreservesMeaning
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata")))
+      (call SourceText (q (text-file "strata/compiler/compile.strata")))
+      (call SourceText (q (text-file "applications/law/law.strata")))
+      (q #t) (q #f))
+    (value #t))
 ]

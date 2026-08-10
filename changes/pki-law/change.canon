@@ -12,4 +12,5 @@
       (sources [
         (text-file "applications/pki/pki.meta")
         (text-file "applications/law/law.meta")
+        (text-file "applications/law/law.strata")
       ]))))
