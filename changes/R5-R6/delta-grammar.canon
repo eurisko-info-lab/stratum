@@ -1,0 +1,10 @@
+; R6 adds no Strata surface. The R5 grammar is inherited exactly: a closure
+; is a definition over sets and queues, and both were already here.
+(change
+  (kind delta-grammar)
+  (name "R5->R6 delta-grammar")
+  (replace
+    (ReplaceChange
+      second-floor-grammar
+      (decomposing strata)
+      (reaching strata))))

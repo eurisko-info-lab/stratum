@@ -1,0 +1,19 @@
+; The canonical change from R4 to R5.
+;
+; R4 |- R5. Large objects gain a canonical decomposition.
+(change
+  (kind foundation)
+  (name "R4->R5")
+  (predecessor (foundation-of "foundations/R4"))
+  (delta-meta (file "changes/R4-R5/delta-meta.canon"))
+  (delta-grammar (file "changes/R4-R5/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "canonical Merkle decomposition")
+      (programs [
+        (file "features/strata/merkle.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/merkle.meta")
+        (text-file "strata/system/merkle.strata")
+      ]))))

@@ -1,0 +1,68 @@
+module "strata.causal"
+version 1
+; History as a causal graph, not a line.
+;
+; The repository below is intentionally simple: a block has one predecessor,
+; a branch points at one block, and verification walks that chain. This
+; module says what the final history means instead. A block names the set of
+; blocks it depends on; a branch is the set of blocks it has accepted plus
+; its frontier -- the accepted blocks no other accepted block depends on --
+; and acceptance is a law rather than a position: a block may be accepted
+; exactly when everything it depends on already was. Order between blocks
+; that do not depend on each other is not part of the history, and the
+; convergence law at the bottom makes that sentence executable: accepting
+; independent blocks in either order produces the same accepted set and the
+; same frontier.
+;
+; A sequence of blocks would merely replace a linked list with a faster
+; linked line. Causal histories belong to sets, dependencies and frontiers;
+; sequences belong to things that are inherently ordered.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.collections" 1
+
+data Block = | Block [blockName #1: Text, blockDependencies #2: Values, blockPatch #3: Text, blockResult #4: Text]
+data BranchState = | BranchState [branchAccepted #1: Set, branchFrontier #2: Set, branchTree #3: Text]
+data Outcome = | Accepted [acceptedState #1: BranchState] | Rejected [rejectedReason #1: Text]
+data BlockList = | NoBlockInList [] | MoreBlockInList [blockHead #1: Block, blockTail #2: BlockList]
+
+; ------------------------------------------------------------- construction
+
+def emptyBranch [] ! collections: BranchState = BranchState setEmpty setEmpty ""
+def blockValue [b: Block] ! text arith: Value = match b of case Block name dependencies patch result -> VMap (MorePair (VName "dependencies") (VList dependencies) (MorePair (VName "name") (VText name) (MorePair (VName "patch") (VText patch) (MorePair (VName "result") (VText result) NoPair)))) end
+def branchValue [state: BranchState] ! collections text arith: Value = match state of case BranchState accepted frontier tree -> VMap (MorePair (VName "accepted") (VList (setMembers accepted)) (MorePair (VName "frontier") (VList (setMembers frontier)) (MorePair (VName "tree") (VText tree) NoPair))) end
+
+; --------------------------------------------------------------- acceptance
+;
+; The one rule. Nothing about positions, nothing about clocks: a block is
+; acceptable when its dependencies are accepted, twice is never, and the
+; frontier afterwards is the frontier before it minus what the block covers
+; plus the block itself.
+
+def allAccepted [dependencies: Values, accepted: Set] ! collections text arith: Bool = match dependencies of case NoValue -> True case MoreValue head tail -> match setHas accepted head of case False -> False case True -> allAccepted tail accepted end end
+def dropAll [s: Set, keys: Values] ! collections: Set = match keys of case NoValue -> s case MoreValue head tail -> dropAll (setDrop s head) tail end
+def acceptBlock [state: BranchState, b: Block] ! collections text arith: Outcome = match state of case BranchState accepted frontier tree -> match b of case Block name dependencies patch result -> match setHas accepted (VText name) of case True -> Rejected "already-accepted" case False -> match allAccepted dependencies accepted of case False -> Rejected "missing-dependency" case True -> Accepted (BranchState (setPut accepted (VText name)) (setPut (dropAll frontier dependencies) (VText name)) result) end end end end
+def acceptAll [state: BranchState, blocks: BlockList] ! collections text arith: Outcome = match blocks of case NoBlockInList -> Accepted state case MoreBlockInList head tail -> match acceptBlock state head of case Rejected reason -> Rejected reason case Accepted next -> acceptAll next tail end end
+
+; ---------------------------------------------------------------- the laws
+
+def sameBranch [a: Outcome, b: Outcome] ! collections text arith: Bool = match a of case Rejected r -> match b of case Rejected s -> textEq r s case Accepted y -> False end case Accepted x -> match b of case Rejected s -> False case Accepted y -> sameValue (branchValue x) (branchValue y) end end
+
+def rootBlock [] ! text arith: Block = Block "b1" NoValue "p1" "t1"
+def leftBlock [] ! text arith: Block = Block "b2" (MoreValue (VText "b1") NoValue) "p2" "t2"
+def rightBlock [] ! text arith: Block = Block "b3" (MoreValue (VText "b1") NoValue) "p3" "t3"
+def mergeBlock [] ! text arith: Block = Block "b4" (MoreValue (VText "b2") (MoreValue (VText "b3") NoValue)) "p4" "t4"
+
+def orderedOneWay [] ! collections text arith: Outcome = acceptAll emptyBranch (MoreBlockInList rootBlock (MoreBlockInList leftBlock (MoreBlockInList rightBlock (MoreBlockInList mergeBlock NoBlockInList))))
+def orderedOtherWay [] ! collections text arith: Outcome = acceptAll emptyBranch (MoreBlockInList rootBlock (MoreBlockInList rightBlock (MoreBlockInList leftBlock (MoreBlockInList mergeBlock NoBlockInList))))
+
+def independentOrdersConverge [] ! collections text arith: Bool = sameBranch orderedOneWay orderedOtherWay
+def acceptanceNeedsDependencies [] ! collections text arith: Bool = sameBranch (acceptBlock emptyBranch mergeBlock) (Rejected "missing-dependency")
+def acceptanceHappensOnce [] ! collections text arith: Bool = match acceptBlock emptyBranch rootBlock of case Rejected reason -> False case Accepted advanced -> sameBranch (acceptBlock advanced rootBlock) (Rejected "already-accepted") end
+def frontierCoversTheDiamond [] ! collections text arith: Bool = match orderedOneWay of case Rejected reason -> False case Accepted state -> match state of case BranchState accepted frontier tree -> sameValues (setMembers frontier) (MoreValue (VText "b4") NoValue) end end
+def frontierHoldsOpenBranches [] ! collections text arith: Bool = match acceptAll emptyBranch (MoreBlockInList rootBlock (MoreBlockInList leftBlock (MoreBlockInList rightBlock NoBlockInList))) of case Rejected reason -> False case Accepted state -> match state of case BranchState accepted frontier tree -> sameValues (setMembers frontier) (MoreValue (VText "b2") (MoreValue (VText "b3") NoValue)) end end
+def historyCountsItsBlocks [] ! collections text arith: Bool = match orderedOneWay of case Rejected reason -> False case Accepted state -> match state of case BranchState accepted frontier tree -> numberEq (setCount accepted) c4 end end
+def resultFollowsAcceptance [] ! collections text arith: Bool = match orderedOneWay of case Rejected reason -> False case Accepted state -> match state of case BranchState accepted frontier tree -> textEq tree "t4" end end
+def causalLaws [] ! collections text arith: Bool = and (and (and independentOrdersConverge acceptanceNeedsDependencies) (and acceptanceHappensOnce frontierCoversTheDiamond)) (and (and frontierHoldsOpenBranches historyCountsItsBlocks) resultFollowsAcceptance)

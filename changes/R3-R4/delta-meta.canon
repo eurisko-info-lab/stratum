@@ -1,0 +1,10 @@
+; delta-meta for R3 -> R4: Meta gains only a source list. Acceptance,
+; frontiers and convergence are Strata's own.
+(change
+  (kind delta-meta)
+  (name "R3->R4 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (addressing strata)
+      (converging strata))))

@@ -1,0 +1,19 @@
+; The canonical change from R6 to R7.
+;
+; R6 |- R7. Performance becomes evidence.
+(change
+  (kind foundation)
+  (name "R6->R7")
+  (predecessor (foundation-of "foundations/R6"))
+  (delta-meta (file "changes/R6-R7/delta-meta.canon"))
+  (delta-grammar (file "changes/R6-R7/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "the performance corpus")
+      (programs [
+        (file "features/strata/corpus.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/corpus.meta")
+        (text-file "strata/system/corpus.strata")
+      ]))))

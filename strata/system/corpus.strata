@@ -1,0 +1,74 @@
+module "strata.corpus"
+version 1
+; The performance corpus: the claim, made executable.
+;
+; "Millions of nodes become feasible" is not an architectural assertion the
+; forge can constitute; it is a family of workloads with counted costs. This
+; module is that family, at check scale. The reference engines count their
+; own comparisons -- deterministically, because counting is part of the
+; definition -- and the indexed engines must produce the same answers for a
+; cost the accounting shows growing linearly where the reference grows
+; quadratically. The decision is a policy in Strata, the way the
+; performance layer already decides compiled against interpreted: a required
+; factor, met or not met, and the whole observation is a canonical value
+; with an artifact name, so the performance claim is itself an artifact.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.collections" 1
+import "strata.reach" 1
+
+; ------------------------------------------------------------ the workload
+
+def four []: Nat = Succ (Succ (Succ (Succ Zero)))
+def eight []: Nat = add four four
+def sixteen []: Nat = add eight eight
+def thirtyTwo []: Nat = add sixteen sixteen
+def corpusKey [n: Nat] ! text arith: Value = VNat (numberOfNat n)
+def corpusItem [n: Nat] ! text arith: Value = VList (MoreValue (VNat (numberOfNat n)) NoValue)
+def corpusMapUpTo [n: Nat] ! collections text arith: Map = match n of case Zero -> mapEmpty case Succ p -> mapPut (corpusMapUpTo p) (corpusKey n) (corpusItem n) end
+def corpusPairsUpTo [n: Nat] ! text arith: Pairs = match n of case Zero -> NoPair case Succ p -> referencePut (corpusPairsUpTo p) (corpusKey n) (corpusItem n) end
+
+; ---------------------------------------------------------- the accounting
+;
+; The reference engine counts every comparison it makes; the indexed engine
+; counts every question it is asked. Both counts are part of the answer, so
+; a host cannot make the corpus pass by answering differently.
+
+def referenceFindCost [ps: Pairs, key: Value] ! text arith: Number = match ps of case NoPair -> c1 case MorePair k v tail -> match compareValue key k of case Same -> c1 case _ -> numberAdd c1 (referenceFindCost tail key) end end
+def referenceSweepCost [ps: Pairs, n: Nat] ! text arith: Number = match n of case Zero -> c0 case Succ p -> numberAdd (referenceFindCost ps (corpusKey n)) (referenceSweepCost ps p) end
+def indexedSweepProbes [m: Map, n: Nat] ! collections text arith: Number = match n of case Zero -> c0 case Succ p -> numberAdd c1 (indexedSweepProbes m p) end
+def sweepAgrees [m: Map, ps: Pairs, n: Nat] ! collections text arith: Bool = match n of case Zero -> True case Succ p -> match sameLookup (mapFind m (corpusKey n)) (referenceFind ps (corpusKey n)) of case False -> False case True -> sweepAgrees m ps p end end
+
+; -------------------------------------------------------------- the corpus
+
+def smallSweepCost [] ! collections text arith: Number = referenceSweepCost (corpusPairsUpTo sixteen) sixteen
+def largeSweepCost [] ! collections text arith: Number = referenceSweepCost (corpusPairsUpTo thirtyTwo) thirtyTwo
+def largeSweepProbes [] ! collections text arith: Number = indexedSweepProbes (corpusMapUpTo thirtyTwo) thirtyTwo
+
+def corpusAnswersAgree [] ! collections text arith: Bool = sweepAgrees (corpusMapUpTo thirtyTwo) (corpusPairsUpTo thirtyTwo) thirtyTwo
+def referenceCostIsSuperlinear [] ! collections text arith: Bool = numberLess (numberAdd smallSweepCost (numberAdd smallSweepCost smallSweepCost)) largeSweepCost
+def indexedCostIsTheCorpusSize [] ! collections text arith: Bool = numberEq largeSweepProbes (numberOfNat thirtyTwo)
+
+; The chain closure: n artifacts in a line, visited once each, so the
+; visited count is the corpus size and nothing is walked twice.
+def chainGraph [n: Nat] ! text arith hash: ReachArtifacts = match n of case Zero -> NoReachArtifact case Succ p -> MoreReachArtifact (ReachArtifact (nameOfValue (corpusKey n)) (chainNext p) True) (chainGraph p) end
+def chainNext [p: Nat] ! text arith hash: Values = match p of case Zero -> NoValue case Succ q -> MoreValue (VText (nameOfValue (corpusKey p))) NoValue end
+def chainRoot [] ! text arith hash: Values = MoreValue (VText (nameOfValue (corpusKey sixteen))) NoValue
+def closureVisitsEachOnce [] ! collections text arith hash: Bool = numberEq (setCount (reachClosure (chainGraph sixteen) chainRoot)) (numberOfNat sixteen)
+
+; ------------------------------------------------------------ the decision
+;
+; The policy the corpus must meet, decided here and nowhere else: the
+; reference cost is at least eight times the indexed cost on the large
+; sweep. The evidence is one canonical value naming both counts, so the
+; verdict has an artifact digest a foundation can pin.
+
+def costAtLeastTimes [cost: Number, factor: Nat, base: Number] ! text arith: Bool = match factor of case Zero -> True case Succ p -> match numberLess cost base of case True -> False case False -> costAtLeastTimes (numberMonus cost base) p base end end
+def corpusSpeedupMeetsPolicy [] ! collections text arith: Bool = costAtLeastTimes largeSweepCost eight largeSweepProbes
+def corpusEvidence [] ! collections text arith: Value = VNode "performance" (MoreValue (VMap (MorePair (VName "baseline") (VNat largeSweepCost) (MorePair (VName "candidate") (VNat largeSweepProbes) (MorePair (VName "workload") (VText "sweep-32") NoPair)))) NoValue)
+def corpusEvidenceIsCanonical [] ! collections text arith: Bool = isCanonical corpusEvidence
+def corpusEvidenceName [] ! collections text arith hash: Text = nameOfValue corpusEvidence
+
+def corpusLaws [] ! collections text arith hash: Bool = and (and (and corpusAnswersAgree referenceCostIsSuperlinear) (and indexedCostIsTheCorpusSize closureVisitsEachOnce)) (and corpusSpeedupMeetsPolicy corpusEvidenceIsCanonical)

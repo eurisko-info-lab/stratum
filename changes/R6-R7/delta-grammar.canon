@@ -1,0 +1,10 @@
+; R7 adds no Strata surface. The R6 grammar is inherited exactly: a counted
+; cost is a number, a policy is a definition, and both were already here.
+(change
+  (kind delta-grammar)
+  (name "R6->R7 delta-grammar")
+  (replace
+    (ReplaceChange
+      second-floor-grammar
+      (reaching strata)
+      (measuring strata))))

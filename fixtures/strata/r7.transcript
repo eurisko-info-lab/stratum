@@ -1,0 +1,31 @@
+# R7 acceptance transcript: the performance corpus.
+#
+# R6 |- R7. Performance becomes evidence.
+#
+# The reference engine counts every comparison it makes; the indexed engine
+# counts the questions it is asked; both must answer alike; and the factor
+# between the two costs is a policy decided in Strata. The observation is a
+# canonical value with an artifact name, so the performance claim is an
+# artifact a foundation can pin rather than a sentence in a document.
+
+$ foundation verify --dir foundations/R7
+> foundation R7
+> digest ca4593b3dc6518cb077fbdd67e1d8be2e7342778b7c5c8bef5fc2d1b75368b32
+> closure 364 artifacts
+> check strata-the-tree-module-prints-exactly ok
+> check strata-the-tree-module-checks ok
+> check strata-the-tree-module-is-total ok
+> check strata-the-tree-module-declares-its-capabilities ok
+> check strata-a-rename-preserves-identity ok
+> check strata-a-rename-is-a-names-only-change ok
+> check strata-a-rename-applies-through-the-calculus ok
+> check strata-the-tree-laws-hold-together ok
+> verdict ok
+
+$ derive --foundation foundations/R7 --goal '(call RunStrataWith (grammar strata) (call StrataCorpusSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/reach.strata")) (call SourceText (source "strata/system/corpus.strata"))) (q "strata.corpus") (q corpusLaws) (q []))'
+> error missing-source "source artifact missing"
+> exit 1
+
+$ derive --foundation foundations/R7 --goal '(call RunStrataWith (grammar strata) (call StrataCorpusSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/reach.strata")) (call SourceText (source "strata/system/corpus.strata"))) (q "strata.corpus") (q corpusEvidenceName) (q []))'
+> error missing-source "source artifact missing"
+> exit 1

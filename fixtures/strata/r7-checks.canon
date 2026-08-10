@@ -1,0 +1,121 @@
+; Executable acceptance checks for R7, the performance corpus.
+;
+; The claim that indexed collections make scale feasible is not asserted; it
+; is counted. The reference engine counts its own comparisons, the indexed
+; engine counts the questions it is asked, both engines must answer alike,
+; and the required factor between the two costs is a policy decided in
+; Strata -- with the whole observation a canonical value, so the performance
+; claim is itself an artifact.
+[
+  (check strata-the-corpus-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/R7/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/corpus.strata"))))
+    (value #t))
+
+  (check strata-the-corpus-module-checks
+    (call CheckLinkedNative
+      (q (file "foundations/R7/surface/strata.generated.grammar"))
+      (call StrataCorpusSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata")))
+        (call SourceText (q (text-file "strata/system/corpus.strata"))))
+      (q "strata.corpus"))
+    (value (checked ok)))
+
+  (check strata-the-corpus-module-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/R7/surface/strata.generated.grammar"))
+      (call StrataCorpusSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata")))
+        (call SourceText (q (text-file "strata/system/corpus.strata"))))
+      (q "strata.corpus"))
+    (value (total ok)))
+
+  (check strata-the-corpus-module-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/R7/surface/strata.generated.grammar"))
+      (call StrataCorpusSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata")))
+        (call SourceText (q (text-file "strata/system/corpus.strata"))))
+      (q "strata.corpus"))
+    (value (permitted ok)))
+
+  (check strata-the-corpus-answers-agree
+    (call RunStrataWith
+      (q (file "foundations/R7/surface/strata.generated.grammar"))
+      (call StrataCorpusSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata")))
+        (call SourceText (q (text-file "strata/system/corpus.strata"))))
+      (q "strata.corpus")
+      (q corpusAnswersAgree)
+      (q []))
+    (value (True)))
+
+  (check strata-the-reference-cost-is-superlinear
+    (call RunStrataWith
+      (q (file "foundations/R7/surface/strata.generated.grammar"))
+      (call StrataCorpusSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata")))
+        (call SourceText (q (text-file "strata/system/corpus.strata"))))
+      (q "strata.corpus")
+      (q referenceCostIsSuperlinear)
+      (q []))
+    (value (True)))
+
+  (check strata-the-corpus-speedup-meets-policy
+    (call RunStrataWith
+      (q (file "foundations/R7/surface/strata.generated.grammar"))
+      (call StrataCorpusSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata")))
+        (call SourceText (q (text-file "strata/system/corpus.strata"))))
+      (q "strata.corpus")
+      (q corpusSpeedupMeetsPolicy)
+      (q []))
+    (value (True)))
+
+  (check strata-the-corpus-laws-hold-together
+    (call RunStrataWith
+      (q (file "foundations/R7/surface/strata.generated.grammar"))
+      (call StrataCorpusSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata")))
+        (call SourceText (q (text-file "strata/system/corpus.strata"))))
+      (q "strata.corpus")
+      (q corpusLaws)
+      (q []))
+    (value (True)))
+]

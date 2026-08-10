@@ -1,0 +1,32 @@
+# R5 acceptance transcript: canonical Merkle decomposition.
+#
+# R4 |- R5. Large objects gain a canonical decomposition.
+#
+# A large map gains a second, equally canonical spelling: a tree of chunks
+# whose boundaries are a pure function of the extensional entry set -- a key
+# closes its chunk exactly when its own artifact digest says so. The same
+# entries decompose identically whatever order they arrived in; an edit
+# re-hashes the chunks on one path and shares every other subtree; and the
+# root is named by naming its children, not by re-encoding the map.
+
+$ foundation verify --dir foundations/R5
+> foundation R5
+> digest a7a6c0c0a957c25ffde75d61458725f3009a45912121ba8b1de77ff99254124b
+> closure 354 artifacts
+> check strata-the-tree-module-prints-exactly ok
+> check strata-the-tree-module-checks ok
+> check strata-the-tree-module-is-total ok
+> check strata-the-tree-module-declares-its-capabilities ok
+> check strata-a-rename-preserves-identity ok
+> check strata-a-rename-is-a-names-only-change ok
+> check strata-a-rename-applies-through-the-calculus ok
+> check strata-the-tree-laws-hold-together ok
+> verdict ok
+
+$ derive --foundation foundations/R5 --goal '(call RunStrataWith (grammar strata) (call StrataMerkleSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/merkle.strata"))) (q "strata.merkle") (q merkleLaws) (q []))'
+> error missing-source "source artifact missing"
+> exit 1
+
+$ derive --foundation foundations/R5 --goal '(call RunStrataWith (grammar strata) (call StrataMerkleSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/merkle.strata"))) (q "strata.merkle") (q merkleEditTouchesOneChunk) (q []))'
+> error missing-source "source artifact missing"
+> exit 1

@@ -1,0 +1,81 @@
+; R6: reachability over indexed structure.
+;
+; Retention already states the right semantics -- reachability after policy,
+; expired artifacts removed before the closure is followed -- with an engine
+; that re-scans cons lists once per artifact. This layer walks the same
+; closure over the R1 vocabulary: the graph is a map from artifact name to
+; the names it references, the policy is a set of admitted names, and the
+; closure is a visited set fed by a work queue, so every artifact is
+; examined once and a cycle is only a name the visited set already holds.
+; The cons-list engine is restated beside it and the agreement law compares
+; the two on the same graphs. The same machinery is the checkout closure,
+; the retention closure, the sync closure and the context expansion; they
+; differ in seeds and policy, not in how they walk. No primitive is added
+; and no capability is widened.
+(build
+  (name "R6")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/R5"))
+  (change (file "changes/R5-R6/change.canon"))
+  (application
+    (application
+      (name "strata-r6")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        ; Ahead of everything they speak for. Where two modules define a
+        ; judgment the first one merged is the one that answers, so the
+        ; collections boundary stands ahead of the store's, and the layers
+        ; below keep what they were built with, and keep their digests.
+        (file "features/strata/index.generated.meta")
+        (file "features/strata/collections.generated.meta")
+        (file "features/strata/changeset.generated.meta")
+        (file "features/strata/tree.generated.meta")
+        (file "features/strata/causal.generated.meta")
+        (file "features/strata/merkle.generated.meta")
+        (file "features/strata/reach.generated.meta")
+        (file "features/strata/store.generated.meta")
+        (file "features/strata/repository.generated.meta")
+        (file "features/strata/studio.generated.meta")
+        (file "features/strata/foundation.generated.meta")
+        (file "features/strata/governance.generated.meta")
+        (file "features/strata/ledger.generated.meta")
+        (file "features/strata/sync.generated.meta")
+        (file "features/strata/federation.generated.meta")
+        (file "features/strata/retention.generated.meta")
+        (file "features/strata/agent.generated.meta")
+        (file "features/strata/performance.generated.meta")
+        (file "features/strata/optimization.generated.meta")
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "foundations/R6/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+        (file "features/strata/metasource.generated.meta")
+        (file "languages/service/service.generated.meta")
+      ]))
+      (grammars {
+        strata (file "foundations/R6/surface/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (service (file "fixtures/strata/s12-service.canon"))
+      (checks (include "fixtures/strata/r3-checks.canon"))
+      (kernel (kernel (allow
+        cas-get cas-has hash grammar-parse grammar-print grammar-lex
+        text-octets octets-of-bytes bytes-of-octets digest-of-bytes)))
+      (resources (budget (steps 1000000000) (depth 240000))))))

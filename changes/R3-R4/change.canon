@@ -1,0 +1,19 @@
+; The canonical change from R3 to R4.
+;
+; R3 |- R4. History stops being a line.
+(change
+  (kind foundation)
+  (name "R3->R4")
+  (predecessor (foundation-of "foundations/R3"))
+  (delta-meta (file "changes/R3-R4/delta-meta.canon"))
+  (delta-grammar (file "changes/R3-R4/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "history as a causal graph")
+      (programs [
+        (file "features/strata/causal.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/causal.meta")
+        (text-file "strata/system/causal.strata")
+      ]))))

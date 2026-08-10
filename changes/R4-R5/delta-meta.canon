@@ -1,0 +1,10 @@
+; delta-meta for R4 -> R5: Meta gains only a source list. The chunking rule
+; and the incremental root identity are Strata's own.
+(change
+  (kind delta-meta)
+  (name "R4->R5 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (converging strata)
+      (decomposing strata))))

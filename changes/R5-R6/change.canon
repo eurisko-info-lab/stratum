@@ -1,0 +1,19 @@
+; The canonical change from R5 to R6.
+;
+; R5 |- R6. Closure walks once.
+(change
+  (kind foundation)
+  (name "R5->R6")
+  (predecessor (foundation-of "foundations/R5"))
+  (delta-meta (file "changes/R5-R6/delta-meta.canon"))
+  (delta-grammar (file "changes/R5-R6/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "reachability over indexed structure")
+      (programs [
+        (file "features/strata/reach.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/reach.meta")
+        (text-file "strata/system/reach.strata")
+      ]))))

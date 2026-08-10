@@ -1,0 +1,29 @@
+# R4 acceptance transcript: history as a causal graph.
+#
+# R3 |- R4. History stops being a line.
+#
+# A block names the set of blocks it depends on; a branch is its accepted
+# set plus its frontier; acceptance is a law rather than a position. The
+# diamond -- one root, two independent middles, one merge -- is accepted in
+# both orders below, and the histories converge to the same accepted set,
+# the same frontier and the same tree.
+
+$ foundation verify --dir foundations/R4
+> foundation R4
+> digest 9b69044f6a8077099ff9ba43b132cf66069f81cd6b326301e064304ef26dcc6f
+> closure 350 artifacts
+> check strata-the-causal-module-prints-exactly ok
+> check strata-the-causal-module-checks ok
+> check strata-the-causal-module-is-total ok
+> check strata-the-causal-module-declares-its-capabilities ok
+> check strata-independent-orders-converge ok
+> check strata-acceptance-needs-dependencies ok
+> check strata-the-frontier-holds-open-branches ok
+> check strata-the-causal-laws-hold-together ok
+> verdict ok
+
+$ derive --foundation foundations/R4 --goal '(call RunStrataWith (grammar strata) (call StrataCausalSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/causal.strata"))) (q "strata.causal") (q causalLaws) (q []))'
+> (True)
+
+$ derive --foundation foundations/R4 --goal '(call RunStrataWith (grammar strata) (call StrataCausalSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/causal.strata"))) (q "strata.causal") (q frontierCoversTheDiamond) (q []))'
+> (True)

@@ -1,0 +1,113 @@
+; Executable acceptance checks for R5, canonical Merkle decomposition.
+;
+; A large map gains a second, equally canonical spelling: a tree of chunks
+; whose boundaries are a pure function of the extensional entry set. The
+; laws say the decomposition is history-independent, that its root identity
+; moves exactly when the map's meaning moves, that lookup through it agrees
+; with the map, and that an edit re-hashes one chunk and shares the rest.
+[
+  (check strata-the-merkle-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/R5/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/merkle.strata"))))
+    (value #t))
+
+  (check strata-the-merkle-module-checks
+    (call CheckLinkedNative
+      (q (file "foundations/R5/surface/strata.generated.grammar"))
+      (call StrataMerkleSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/merkle.strata"))))
+      (q "strata.merkle"))
+    (value (checked ok)))
+
+  (check strata-the-merkle-module-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/R5/surface/strata.generated.grammar"))
+      (call StrataMerkleSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/merkle.strata"))))
+      (q "strata.merkle"))
+    (value (total ok)))
+
+  (check strata-the-merkle-module-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/R5/surface/strata.generated.grammar"))
+      (call StrataMerkleSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/merkle.strata"))))
+      (q "strata.merkle"))
+    (value (permitted ok)))
+
+  (check strata-the-merkle-root-is-order-independent
+    (call RunStrataWith
+      (q (file "foundations/R5/surface/strata.generated.grammar"))
+      (call StrataMerkleSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/merkle.strata"))))
+      (q "strata.merkle")
+      (q merkleRootIsOrderIndependent)
+      (q []))
+    (value (True)))
+
+  (check strata-an-edit-touches-one-chunk
+    (call RunStrataWith
+      (q (file "foundations/R5/surface/strata.generated.grammar"))
+      (call StrataMerkleSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/merkle.strata"))))
+      (q "strata.merkle")
+      (q merkleEditTouchesOneChunk)
+      (q []))
+    (value (True)))
+
+  (check strata-merkle-lookup-agrees-with-the-map
+    (call RunStrataWith
+      (q (file "foundations/R5/surface/strata.generated.grammar"))
+      (call StrataMerkleSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/merkle.strata"))))
+      (q "strata.merkle")
+      (q merkleFindAgreesWithTheMap)
+      (q []))
+    (value (True)))
+
+  (check strata-the-merkle-laws-hold-together
+    (call RunStrataWith
+      (q (file "foundations/R5/surface/strata.generated.grammar"))
+      (call StrataMerkleSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/merkle.strata"))))
+      (q "strata.merkle")
+      (q merkleLaws)
+      (q []))
+    (value (True)))
+]

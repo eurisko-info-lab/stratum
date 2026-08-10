@@ -1,0 +1,113 @@
+; Executable acceptance checks for R6, reachability over indexed structure.
+;
+; The closure is a visited set fed by a work queue over a forward-reference
+; map, with policy applied before traversal. The laws hold it against the
+; cons-list engine written beside it: same members on the diamond, same
+; members under a gating policy, termination on the cycle, and nothing from
+; a root the policy does not admit.
+[
+  (check strata-the-reach-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/R6/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/reach.strata"))))
+    (value #t))
+
+  (check strata-the-reach-module-checks
+    (call CheckLinkedNative
+      (q (file "foundations/R6/surface/strata.generated.grammar"))
+      (call StrataReachSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata"))))
+      (q "strata.reach"))
+    (value (checked ok)))
+
+  (check strata-the-reach-module-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/R6/surface/strata.generated.grammar"))
+      (call StrataReachSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata"))))
+      (q "strata.reach"))
+    (value (total ok)))
+
+  (check strata-the-reach-module-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/R6/surface/strata.generated.grammar"))
+      (call StrataReachSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata"))))
+      (q "strata.reach"))
+    (value (permitted ok)))
+
+  (check strata-the-indexed-closure-agrees-with-the-reference
+    (call RunStrataWith
+      (q (file "foundations/R6/surface/strata.generated.grammar"))
+      (call StrataReachSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata"))))
+      (q "strata.reach")
+      (q indexedAgreesWithReference)
+      (q []))
+    (value (True)))
+
+  (check strata-cycles-terminate
+    (call RunStrataWith
+      (q (file "foundations/R6/surface/strata.generated.grammar"))
+      (call StrataReachSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata"))))
+      (q "strata.reach")
+      (q cyclesTerminate)
+      (q []))
+    (value (True)))
+
+  (check strata-policy-gates-traversal
+    (call RunStrataWith
+      (q (file "foundations/R6/surface/strata.generated.grammar"))
+      (call StrataReachSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata"))))
+      (q "strata.reach")
+      (q policyGatesTraversal)
+      (q []))
+    (value (True)))
+
+  (check strata-the-reach-laws-hold-together
+    (call RunStrataWith
+      (q (file "foundations/R6/surface/strata.generated.grammar"))
+      (call StrataReachSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/reach.strata"))))
+      (q "strata.reach")
+      (q reachLaws)
+      (q []))
+    (value (True)))
+]

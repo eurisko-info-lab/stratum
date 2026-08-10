@@ -1,0 +1,10 @@
+; delta-meta for R5 -> R6: Meta gains only a source list. The work-queue
+; closure and its agreement law are Strata's own.
+(change
+  (kind delta-meta)
+  (name "R5->R6 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (decomposing strata)
+      (reaching strata))))

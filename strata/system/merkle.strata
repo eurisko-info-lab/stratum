@@ -1,0 +1,86 @@
+module "strata.merkle"
+version 1
+; Canonical Merkle decomposition, for the objects too large to hash whole.
+;
+; The artifact layer defines identity as the hash of a value's complete
+; canonical encoding, and for almost everything that is the right price. It
+; is the wrong price for a repository tree with a million entries: a host
+; B-tree can make the update logarithmic and the re-encoding stays linear,
+; because the identity is over the whole map. This module gives a large map
+; a second, equally canonical spelling: a tree of chunks, each chunk an
+; ordinary small value with an ordinary artifact name, a branch naming its
+; children by digest rather than containing them. An update re-hashes the
+; chunks on one path and shares every other subtree, which is the property
+; the forge actually needs -- persistent structural sharing, content
+; addressing and incremental root identity, all at once.
+;
+; The decomposition is canonical because nothing about it remembers how the
+; map was built. A chunk boundary falls after a key exactly when the key's
+; own artifact digest says so, and the keys arrive in the one canonical
+; order, so the chunk tree is a pure function of the extensional map: two
+; maps with the same entries decompose identically, whatever order their
+; entries arrived in. The tree shape is visible here only because it is the
+; storage decomposition itself -- not because a host happened to choose one.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.collections" 1
+
+data Chunks = | NoChunk [] | MoreChunk [chunkPairs #1: Pairs, chunkTail #2: Chunks]
+data Texts = | NoText [] | MoreText [textHead #1: Text, textTail #2: Texts]
+
+; ------------------------------------------------------------ the boundary
+;
+; A key closes its chunk when the first character of its artifact digest is
+; an early hex digit. The rule sees one key at a time and no neighbour, so
+; an insertion can split or extend only the chunk it lands in.
+
+def isEarlyHex [c: Text] ! text: Bool = or (or (or (textEq c "0") (textEq c "1")) (or (textEq c "2") (textEq c "3"))) (or (or (textEq c "4") (textEq c "5")) (or (textEq c "6") (textEq c "7")))
+def closesChunk [key: Value] ! text arith hash: Bool = match textCharacters (nameOfValue key) of case NoChar -> False case MoreChar head tail -> isEarlyHex head end
+def chunksOf [ps: Pairs] ! text arith hash: Chunks = match ps of case NoPair -> NoChunk case MorePair key value tail -> placeInChunks key value (chunksOf tail) end
+def placeInChunks [key: Value, value: Value, rest: Chunks] ! text arith hash: Chunks = match closesChunk key of case True -> MoreChunk (MorePair key value NoPair) rest case False -> match rest of case NoChunk -> MoreChunk (MorePair key value NoPair) NoChunk case MoreChunk pairs tail -> MoreChunk (MorePair key value pairs) tail end end
+
+; ------------------------------------------------------------- the identity
+;
+; A leaf is a small canonical value and its name is the artifact layer's,
+; unchanged. A branch contains its children's names, not its children, so
+; naming the root re-encodes one small value per level rather than the map.
+
+def leafValue [ps: Pairs]: Value = VNode "leaf" (MoreValue (VMap ps) NoValue)
+def leafDigests [cs: Chunks] ! text arith hash: Texts = match cs of case NoChunk -> NoText case MoreChunk pairs tail -> MoreText (nameOfValue (leafValue pairs)) (leafDigests tail) end
+def digestValues [ts: Texts]: Values = match ts of case NoText -> NoValue case MoreText head tail -> MoreValue (VText head) (digestValues tail) end
+def rootValue [cs: Chunks] ! text arith hash: Value = VNode "branch" (MoreValue (VList (digestValues (leafDigests cs))) NoValue)
+def merkleRootOf [m: Map] ! collections text arith hash: Text = nameOfValue (rootValue (chunksOf (mapPairs m)))
+
+; --------------------------------------------------------------- the reads
+;
+; A lookup descends into exactly one chunk. Everything else is untouched,
+; unread and unhashed, which is what makes the decomposition worth having.
+
+def chunkFor [cs: Chunks, key: Value] ! text arith: Pairs = match cs of case NoChunk -> NoPair case MoreChunk pairs tail -> match pairsReach pairs key of case True -> pairs case False -> chunkFor tail key end end
+def pairsReach [ps: Pairs, key: Value] ! text arith: Bool = match ps of case NoPair -> False case MorePair k v tail -> match compareValue key k of case Above -> pairsReach tail key case _ -> True end end
+def merkleFind [cs: Chunks, key: Value] ! text arith: Lookup = referenceFind (chunkFor cs key) key
+
+; ---------------------------------------------------------------- the laws
+
+def countChunks [cs: Chunks] ! arith: Number = match cs of case NoChunk -> c0 case MoreChunk pairs tail -> numberAdd c1 (countChunks tail) end
+def sharedDigests [a: Texts, b: Texts] ! text arith: Number = match a of case NoText -> c0 case MoreText head tail -> numberAdd (matchOne head b) (sharedDigests tail b) end
+def matchOne [t: Text, b: Texts] ! text arith: Number = match b of case NoText -> c0 case MoreText head tail -> match textEq t head of case True -> c1 case False -> matchOne t tail end end
+
+def sampleEntry [n: Nat] ! text arith: Value = VNat (numberOfNat n)
+def sampleKey [n: Nat] ! text arith: Value = VList (MoreValue (VNat (numberOfNat n)) NoValue)
+def mapUpTo [n: Nat] ! collections text arith: Map = match n of case Zero -> mapEmpty case Succ p -> mapPut (mapUpTo p) (sampleKey n) (sampleEntry n) end
+def mapDownFrom [n: Nat, m: Map] ! collections text arith: Map = match n of case Zero -> m case Succ p -> mapDownFrom p (mapPut m (sampleKey n) (sampleEntry n)) end
+def ten []: Nat = Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))))
+def sampleLarge [] ! collections text arith: Map = mapUpTo ten
+def sampleLargeOtherOrder [] ! collections text arith: Map = mapDownFrom ten mapEmpty
+def sampleTouched [] ! collections text arith: Map = mapPut sampleLarge (sampleKey (Succ (Succ Zero))) (VText "replaced")
+
+def merkleRootIsOrderIndependent [] ! collections text arith hash: Bool = textEq (merkleRootOf sampleLarge) (merkleRootOf sampleLargeOtherOrder)
+def merkleRootSeesAnEdit [] ! collections text arith hash: Bool = not (textEq (merkleRootOf sampleLarge) (merkleRootOf sampleTouched))
+def merkleSplitsTheSample [] ! collections text arith hash: Bool = numberLess c2 (countChunks (chunksOf (mapPairs sampleLarge)))
+def merkleFindAgreesWithTheMap [] ! collections text arith hash: Bool = sameLookup (merkleFind (chunksOf (mapPairs sampleLarge)) (sampleKey (Succ Zero))) (mapFind sampleLarge (sampleKey (Succ Zero)))
+def merkleFindAgreesOnAMiss [] ! collections text arith hash: Bool = sameLookup (merkleFind (chunksOf (mapPairs sampleLarge)) (VText "absent")) Missing
+def merkleEditTouchesOneChunk [] ! collections text arith hash: Bool = numberEq (sharedDigests (leafDigests (chunksOf (mapPairs sampleLarge))) (leafDigests (chunksOf (mapPairs sampleTouched)))) (numberMonus (countChunks (chunksOf (mapPairs sampleLarge))) c1)
+def merkleLaws [] ! collections text arith hash: Bool = and (and (and merkleRootIsOrderIndependent merkleRootSeesAnEdit) (and merkleSplitsTheSample merkleFindAgreesWithTheMap)) (and merkleFindAgreesOnAMiss merkleEditTouchesOneChunk)

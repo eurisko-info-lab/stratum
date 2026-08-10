@@ -1,0 +1,11 @@
+module stratamerkle
+
+; Canonical Merkle decomposition.
+;
+; This layer adds no primitive and widens nothing. The chunking rule, the
+; chunk identities and the incremental root are Strata's own --
+; `strata/system/merkle.strata` -- and the only thing Meta contributes is
+; the source list the checks link.
+
+judgment StrataMerkleSystem [prelude native octets artifact collections merkle] =
+  list [prelude native octets artifact collections merkle]

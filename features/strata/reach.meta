@@ -1,0 +1,11 @@
+module stratareach
+
+; Reachability over indexed structure.
+;
+; This layer adds no primitive and widens nothing. The work-queue closure
+; and its agreement with the cons-list engine are Strata's own --
+; `strata/system/reach.strata` -- and the only thing Meta contributes is
+; the source list the checks link.
+
+judgment StrataReachSystem [prelude native octets artifact collections reach] =
+  list [prelude native octets artifact collections reach]

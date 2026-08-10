@@ -1,0 +1,113 @@
+; Executable acceptance checks for R4, history as a causal graph.
+;
+; A block names the set of blocks it depends on; a branch is its accepted
+; set plus its frontier; acceptance is a law, not a position. The diamond
+; below -- one root, two independent middles, one merge -- is accepted in
+; both orders, and the histories converge to the same accepted set, the
+; same frontier and the same tree.
+[
+  (check strata-the-causal-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/R4/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/causal.strata"))))
+    (value #t))
+
+  (check strata-the-causal-module-checks
+    (call CheckLinkedNative
+      (q (file "foundations/R4/surface/strata.generated.grammar"))
+      (call StrataCausalSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/causal.strata"))))
+      (q "strata.causal"))
+    (value (checked ok)))
+
+  (check strata-the-causal-module-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/R4/surface/strata.generated.grammar"))
+      (call StrataCausalSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/causal.strata"))))
+      (q "strata.causal"))
+    (value (total ok)))
+
+  (check strata-the-causal-module-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/R4/surface/strata.generated.grammar"))
+      (call StrataCausalSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/causal.strata"))))
+      (q "strata.causal"))
+    (value (permitted ok)))
+
+  (check strata-independent-orders-converge
+    (call RunStrataWith
+      (q (file "foundations/R4/surface/strata.generated.grammar"))
+      (call StrataCausalSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/causal.strata"))))
+      (q "strata.causal")
+      (q independentOrdersConverge)
+      (q []))
+    (value (True)))
+
+  (check strata-acceptance-needs-dependencies
+    (call RunStrataWith
+      (q (file "foundations/R4/surface/strata.generated.grammar"))
+      (call StrataCausalSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/causal.strata"))))
+      (q "strata.causal")
+      (q acceptanceNeedsDependencies)
+      (q []))
+    (value (True)))
+
+  (check strata-the-frontier-holds-open-branches
+    (call RunStrataWith
+      (q (file "foundations/R4/surface/strata.generated.grammar"))
+      (call StrataCausalSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/causal.strata"))))
+      (q "strata.causal")
+      (q frontierHoldsOpenBranches)
+      (q []))
+    (value (True)))
+
+  (check strata-the-causal-laws-hold-together
+    (call RunStrataWith
+      (q (file "foundations/R4/surface/strata.generated.grammar"))
+      (call StrataCausalSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/causal.strata"))))
+      (q "strata.causal")
+      (q causalLaws)
+      (q []))
+    (value (True)))
+]

@@ -1,0 +1,80 @@
+; R5: canonical Merkle decomposition.
+;
+; Identity by hashing a complete canonical encoding is the right price for
+; almost everything and the wrong price for a million-entry tree: a host
+; structure makes the update logarithmic, and re-encoding the whole map for
+; its new name stays linear. This layer gives a large map a second, equally
+; canonical spelling -- a tree of chunks, each an ordinary small artifact, a
+; branch naming its children by digest -- whose boundaries are a pure
+; function of the extensional entry set: a key closes its chunk exactly when
+; its own artifact digest says so. Two maps with the same entries decompose
+; identically whatever order they were built in; an edit re-hashes the
+; chunks on one path and shares every other subtree. The tree shape is
+; semantically visible only because it is the storage decomposition itself.
+; No primitive is added and no capability is widened.
+(build
+  (name "R5")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/R4"))
+  (change (file "changes/R4-R5/change.canon"))
+  (application
+    (application
+      (name "strata-r5")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        ; Ahead of everything they speak for. Where two modules define a
+        ; judgment the first one merged is the one that answers, so the
+        ; collections boundary stands ahead of the store's, and the layers
+        ; below keep what they were built with, and keep their digests.
+        (file "features/strata/index.generated.meta")
+        (file "features/strata/collections.generated.meta")
+        (file "features/strata/changeset.generated.meta")
+        (file "features/strata/tree.generated.meta")
+        (file "features/strata/causal.generated.meta")
+        (file "features/strata/merkle.generated.meta")
+        (file "features/strata/store.generated.meta")
+        (file "features/strata/repository.generated.meta")
+        (file "features/strata/studio.generated.meta")
+        (file "features/strata/foundation.generated.meta")
+        (file "features/strata/governance.generated.meta")
+        (file "features/strata/ledger.generated.meta")
+        (file "features/strata/sync.generated.meta")
+        (file "features/strata/federation.generated.meta")
+        (file "features/strata/retention.generated.meta")
+        (file "features/strata/agent.generated.meta")
+        (file "features/strata/performance.generated.meta")
+        (file "features/strata/optimization.generated.meta")
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "foundations/R5/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+        (file "features/strata/metasource.generated.meta")
+        (file "languages/service/service.generated.meta")
+      ]))
+      (grammars {
+        strata (file "foundations/R5/surface/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (service (file "fixtures/strata/s12-service.canon"))
+      (checks (include "fixtures/strata/r3-checks.canon"))
+      (kernel (kernel (allow
+        cas-get cas-has hash grammar-parse grammar-print grammar-lex
+        text-octets octets-of-bytes bytes-of-octets digest-of-bytes)))
+      (resources (budget (steps 1000000000) (depth 240000))))))

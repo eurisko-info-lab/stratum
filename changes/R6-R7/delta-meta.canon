@@ -1,0 +1,10 @@
+; delta-meta for R6 -> R7: Meta gains only a source list. The workloads, the
+; accounting and the policy are Strata's own.
+(change
+  (kind delta-meta)
+  (name "R6->R7 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (reaching strata)
+      (measuring strata))))

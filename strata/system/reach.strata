@@ -1,0 +1,69 @@
+module "strata.reach"
+version 1
+; Reachability over indexed structure.
+;
+; Retention already states the right semantics: reachability after policy,
+; expired artifacts removed before the closure is followed. Its engine walks
+; sorted cons lists and re-scans them once per artifact, which is an
+; excellent specification and the wrong physical model for a graph with a
+; million edges. This module is the same closure over the R1 vocabulary: the
+; graph is a `Map` from artifact name to the names it references, the policy
+; is a `Set` of admitted names, the closure is a visited `Set` fed by a work
+; `Seq`, and every artifact is examined once. The cons-list model is written
+; out beside it, in this module's own small vocabulary, and the agreement
+; law holds the two engines together on the same graph -- including a graph
+; with a cycle, because a visited set does not care how it was reached.
+;
+; The same machinery is the checkout closure, the retention closure, the
+; sync closure and the context expansion; they differ in which names seed
+; the queue and which policy gates admission, not in how they walk.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.collections" 1
+
+data ReachArtifact = | ReachArtifact [reachName #1: Text, reachRefs #2: Values, reachActive #3: Bool]
+data ReachArtifacts = | NoReachArtifact [] | MoreReachArtifact [reachHead #1: ReachArtifact, reachTail #2: ReachArtifacts]
+
+; ---------------------------------------------------------- the indexed form
+
+def reachGraphOf [artifacts: ReachArtifacts] ! collections text arith: Map = match artifacts of case NoReachArtifact -> mapEmpty case MoreReachArtifact head tail -> match head of case ReachArtifact name refs active -> mapPut (reachGraphOf tail) (VText name) (VList refs) end end
+def reachPolicyOf [artifacts: ReachArtifacts] ! collections text arith: Set = match artifacts of case NoReachArtifact -> setEmpty case MoreReachArtifact head tail -> match head of case ReachArtifact name refs active -> match active of case True -> setPut (reachPolicyOf tail) (VText name) case False -> reachPolicyOf tail end end end
+def reachSeeded [roots: Values] ! collections: Seq = seqOfValues roots
+def pushAll [pending: Seq, items: Values] ! collections: Seq = match items of case NoValue -> pending case MoreValue head tail -> pushAll (seqPushBack pending head) tail end
+def refsOf [graph: Map, name: Value] ! collections: Values = match mapFind graph name of case Missing -> NoValue case Present refs -> match refs of case VList items -> items case _ -> NoValue end end
+def reachStep [fuel: Nat, graph: Map, allowed: Set, visited: Set, pending: Seq] ! collections text arith: Set = match fuel of case Zero -> visited case Succ earlier -> match seqFront pending of case Missing -> visited case Present name -> match setHas visited name of case True -> reachStep earlier graph allowed visited (seqPopFront pending) case False -> match setHas allowed name of case False -> reachStep earlier graph allowed visited (seqPopFront pending) case True -> reachStep earlier graph allowed (setPut visited name) (pushAll (seqPopFront pending) (refsOf graph name)) end end end end
+def reachFuel [artifacts: ReachArtifacts]: Nat = match artifacts of case NoReachArtifact -> Succ Zero case MoreReachArtifact head tail -> match head of case ReachArtifact name refs active -> reachFuelRefs refs (Succ (reachFuel tail)) end end
+def reachFuelRefs [refs: Values, base: Nat]: Nat = match refs of case NoValue -> base case MoreValue head tail -> Succ (reachFuelRefs tail base) end
+def reachClosure [artifacts: ReachArtifacts, roots: Values] ! collections text arith: Set = reachStep (fuelTimes (reachFuel artifacts) (reachFuel artifacts)) (reachGraphOf artifacts) (reachPolicyOf artifacts) setEmpty (reachSeeded roots)
+def fuelTimes [a: Nat, b: Nat]: Nat = match a of case Zero -> Zero case Succ p -> fuelPlus b (fuelTimes p b) end
+def fuelPlus [a: Nat, b: Nat]: Nat = match a of case Zero -> b case Succ p -> Succ (fuelPlus p b) end
+
+; -------------------------------------------------------- the reference form
+;
+; The cons-list engine, restated in this module's own small vocabulary so
+; the law beside it compares two engines rather than one engine with itself.
+
+def referenceMember [names: Values, wanted: Value] ! text arith: Bool = match names of case NoValue -> False case MoreValue head tail -> match sameValue head wanted of case True -> True case False -> referenceMember tail wanted end end
+def referenceInsert [names: Values, name: Value] ! text arith: Values = match names of case NoValue -> MoreValue name NoValue case MoreValue head tail -> match compareValue name head of case Below -> MoreValue name names case Same -> names case Above -> MoreValue head (referenceInsert tail name) end end
+def referenceActive [artifacts: ReachArtifacts, wanted: Value] ! text arith: Bool = match artifacts of case NoReachArtifact -> False case MoreReachArtifact head tail -> match head of case ReachArtifact name refs active -> match sameValue (VText name) wanted of case True -> active case False -> referenceActive tail wanted end end end
+def referenceRefs [artifacts: ReachArtifacts, wanted: Value] ! text arith: Values = match artifacts of case NoReachArtifact -> NoValue case MoreReachArtifact head tail -> match head of case ReachArtifact name refs active -> match sameValue (VText name) wanted of case True -> refs case False -> referenceRefs tail wanted end end end
+def referenceRoots [artifacts: ReachArtifacts, roots: Values] ! text arith: Values = match roots of case NoValue -> NoValue case MoreValue head tail -> match referenceActive artifacts head of case True -> referenceInsert (referenceRoots artifacts tail) head case False -> referenceRoots artifacts tail end end
+def referenceExpandOne [artifacts: ReachArtifacts, reachable: Values, refs: Values] ! text arith: Values = match refs of case NoValue -> reachable case MoreValue head tail -> match referenceActive artifacts head of case True -> referenceExpandOne artifacts (referenceInsert reachable head) tail case False -> referenceExpandOne artifacts reachable tail end end
+def referenceExpand [remaining: ReachArtifacts, artifacts: ReachArtifacts, reachable: Values] ! text arith: Values = match remaining of case NoReachArtifact -> reachable case MoreReachArtifact head tail -> match head of case ReachArtifact name refs active -> match and (referenceMember reachable (VText name)) active of case True -> referenceExpand tail artifacts (referenceExpandOne artifacts reachable refs) case False -> referenceExpand tail artifacts reachable end end end
+def referenceRounds [fuel: Nat, artifacts: ReachArtifacts, reachable: Values] ! text arith: Values = match fuel of case Zero -> reachable case Succ earlier -> referenceRounds earlier artifacts (referenceExpand artifacts artifacts reachable) end
+def referenceClosure [artifacts: ReachArtifacts, roots: Values] ! text arith: Values = referenceRounds (reachFuel artifacts) artifacts (referenceRoots artifacts roots)
+
+; ---------------------------------------------------------------- the laws
+
+def diamondGraph [] ! text arith: ReachArtifacts = MoreReachArtifact (ReachArtifact "a" (MoreValue (VText "b") (MoreValue (VText "c") NoValue)) True) (MoreReachArtifact (ReachArtifact "b" (MoreValue (VText "d") NoValue) True) (MoreReachArtifact (ReachArtifact "c" (MoreValue (VText "d") NoValue) True) (MoreReachArtifact (ReachArtifact "d" (MoreValue (VText "a") NoValue) True) NoReachArtifact)))
+def gatedGraph [] ! text arith: ReachArtifacts = MoreReachArtifact (ReachArtifact "a" (MoreValue (VText "b") NoValue) True) (MoreReachArtifact (ReachArtifact "b" (MoreValue (VText "c") NoValue) False) (MoreReachArtifact (ReachArtifact "c" NoValue True) NoReachArtifact))
+def rootOnlyA [] ! text arith: Values = MoreValue (VText "a") NoValue
+
+def indexedAgreesWithReference [] ! collections text arith: Bool = sameValues (setMembers (reachClosure diamondGraph rootOnlyA)) (referenceClosure diamondGraph rootOnlyA)
+def cyclesTerminate [] ! collections text arith: Bool = numberEq (setCount (reachClosure diamondGraph rootOnlyA)) c4
+def policyGatesTraversal [] ! collections text arith: Bool = sameValues (setMembers (reachClosure gatedGraph rootOnlyA)) (MoreValue (VText "a") NoValue)
+def policyAgreesWithReference [] ! collections text arith: Bool = sameValues (setMembers (reachClosure gatedGraph rootOnlyA)) (referenceClosure gatedGraph rootOnlyA)
+def absentRootsReachNothing [] ! collections text arith: Bool = numberEq (setCount (reachClosure diamondGraph (MoreValue (VText "missing") NoValue))) c0
+def reachLaws [] ! collections text arith: Bool = and (and (and indexedAgreesWithReference cyclesTerminate) (and policyGatesTraversal policyAgreesWithReference)) absentRootsReachNothing
