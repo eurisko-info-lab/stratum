@@ -34,12 +34,16 @@ interface ViewPlacement {
   primitive: string;
 }
 
-interface Layout {
+interface VirtualApp {
   name: string;
+  title: string;
+  layout: string;
   workflow: string[];
   navigation: string;
-  navigator: { name: string; title: string; reveal: boolean } | null;
+  navigator: { name: string; title: string; placement: string; reveal: boolean } | null;
   views: ViewPlacement[];
+  languages: LanguageConfiguration[];
+  commands: { name: string; title: string }[];
 }
 
 interface Report {
@@ -66,7 +70,7 @@ interface LanguageConfiguration {
 interface StudioSnapshot {
   activeDocument: string | null;
   languages: string[];
-  layout: Layout | null;
+  layout: VirtualApp | null;
   views: Record<string, string[]>;
   documents: Subject[];
   output: string[];
@@ -238,7 +242,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const trace: LspTraceEntry[] = [];
   const outputLines: string[] = [];
   let declaredLanguages: LanguageConfiguration[] = [];
-  let currentLayout: Layout | null = null;
+  let currentApp: VirtualApp | null = null;
   let lastRefresh: Promise<void> = Promise.resolve();
 
   const request = async <T>(method: string, body: unknown): Promise<T> => {
@@ -263,11 +267,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   client = new LanguageClient('stratum', 'Stratum', serverOptions, clientOptions);
   await client.start();
 
-  // Comment tokens and brackets are the world's to declare, so they are asked
-  // for at activation rather than shipped as generated files. Highlighting
-  // arrives the same way, as semantic tokens over the grammar's own classes.
-  declaredLanguages = await request<LanguageConfiguration[]>('stratum/languages', {})
-    .catch(() => [] as LanguageConfiguration[]);
+  // The virtual app is the complete client-neutral behavior contract. The
+  // adapter maps it to native VS Code surfaces without inventing application
+  // navigation, commands or layout.
+  currentApp = await request<VirtualApp>('stratum/virtualApp', {})
+    .catch(() => null);
+  declaredLanguages = currentApp?.languages ?? [];
   for (const language of declaredLanguages) {
     context.subscriptions.push(
       vscode.languages.setLanguageConfiguration(language.id, {
@@ -281,11 +286,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     );
   }
 
-  // The layout is the profile's, not the client's.
-  currentLayout = await request<Layout | null>('stratum/layout', {})
-    .catch(() => null);
   const panels = new Map<string, RegionView>();
-  for (const placed of currentLayout?.views ?? []) {
+  for (const placed of currentApp?.views ?? []) {
     const view = new RegionView(placed.primitive);
     panels.set(placed.name, view);
     context.subscriptions.push(
@@ -295,22 +297,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // The workflow the profile declares, shown as the document's stages.
   const stages = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  if (currentLayout && currentLayout.workflow.length > 0) {
-    stages.text = `$(git-merge) ${currentLayout.workflow.join(' \u2192 ')}`;
-    stages.tooltip = `${currentLayout.name} \u00b7 ${currentLayout.navigation}`;
+  if (currentApp && currentApp.workflow.length > 0) {
+    stages.text = `$(git-merge) ${currentApp.workflow.join(' \u2192 ')}`;
+    stages.tooltip = `${currentApp.layout} \u00b7 ${currentApp.navigation}`;
     stages.show();
   }
   context.subscriptions.push(stages);
 
   const catalogue = new CatalogueView(folder.uri);
-  if (currentLayout?.navigator) {
+  if (currentApp?.navigator) {
     context.subscriptions.push(
-      vscode.window.registerTreeDataProvider(`stratum.view.${currentLayout.navigator.name}`, catalogue)
+      vscode.window.registerTreeDataProvider(`stratum.view.${currentApp.navigator.name}`, catalogue)
     );
     // Which view the editor opens on is the world's decision, not the client's.
-    if (currentLayout.navigator.reveal) {
+    if (currentApp.navigator.reveal) {
       await vscode.commands
-        .executeCommand(`stratum.view.${currentLayout.navigator.name}.focus`)
+        .executeCommand(`stratum.view.${currentApp.navigator.name}.focus`)
         .then(undefined, () => undefined);
     }
   }
@@ -362,7 +364,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const byName = new Map<string, string[]>(result.map(view => [view.name, view.items]));
       panels.forEach((view, name) => view.refresh(byName.get(name) ?? []));
       catalogue.refresh(await request<Subject[]>('stratum/documents', {}));
-      if (currentLayout?.views.some(view => view.primitive === 'preview')) {
+      if (currentApp?.views.some(view => view.primitive === 'preview')) {
         await showPreview(editor.document);
       }
     } catch {
@@ -397,7 +399,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return {
         activeDocument: vscode.window.activeTextEditor?.document.uri.toString() ?? null,
         languages: declaredLanguages.map(language => language.id),
-        layout: currentLayout,
+        layout: currentApp,
         views: Object.fromEntries([...panels.entries()].map(([name, view]) => [name, view.snapshot()])),
         documents: catalogue.snapshot(),
         output: [...outputLines],
