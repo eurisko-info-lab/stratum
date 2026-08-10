@@ -29,7 +29,7 @@ jobs:
           docker pull "$remote_image"
           docker tag "$remote_image" "$LOCAL_IMAGE"
           ./tools/image.sh restore "$LOCAL_IMAGE" "$GITHUB_SHA"
-          STRATUM_USE_GENERATED_CACHE=true ./tools/check-generated.sh
+          ./tools/check-generated.sh
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ${{ env.RUN_IMAGE_ARCHIVE }}

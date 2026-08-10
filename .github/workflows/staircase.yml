@@ -37,13 +37,15 @@ jobs:
             echo 'hit=false' >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.0.0
+      - if: steps.image.outputs.hit != 'true'
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.0.0
         with:
           distribution: temurin
           java-version: '17.0.20+8'
           cache: sbt
 
-      - uses: sbt/setup-sbt@bfea3c5f48abd221b04a6df4798aa5eb8b6a2baf # v1
+      - if: steps.image.outputs.hit != 'true'
+        uses: sbt/setup-sbt@bfea3c5f48abd221b04a6df4798aa5eb8b6a2baf # v1
 
       - if: steps.image.outputs.hit != 'true'
         name: Advance commit image
@@ -72,7 +74,7 @@ jobs:
       - name: Restore and validate the commit image
         run: |
           ./tools/image.sh restore "$LOCAL_IMAGE" "$GITHUB_SHA"
-          STRATUM_USE_GENERATED_CACHE=true ./tools/check-generated.sh
+          ./tools/check-generated.sh
           git diff --exit-code
 
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
