@@ -1,0 +1,145 @@
+# Living upstairs: an SDS deployment on the finished platform.
+#
+# F11 proved the staircase. This transcript uses it. Nothing below is bootstrap
+# machinery: it is one application branching from the platform, evolving its
+# object language, its Studio profile and its data, and publishing that
+# evolution back through the chain.
+
+$ foundation verify --dir applications/sds
+> foundation SDS
+> digest 91e15a0512e0b9c65e9fde4055ef43bd0ea3974f3c06b0bc1c6fcf2b0f4ada4e
+> closure 95 artifacts
+> check document-round-trips ok
+> check document-index-is-generated ok
+> check a-clean-document-has-no-findings ok
+> check validation-reports-regulated-findings ok
+> check the-old-language-rejects-the-new-construct ok
+> check the-evolved-language-accepts-it ok
+> check the-evolved-language-is-backwards-compatible ok
+> check the-evolved-language-round-trips ok
+> check the-measured-value-was-wrong ok
+> check the-measured-value-is-corrected ok
+> check the-hazard-statement-appears ok
+> check the-first-profile-has-no-hazard-panel ok
+> check the-evolved-profile-adds-a-hazard-panel ok
+> check the-evolved-profile-adds-a-command ok
+> check a-surface-change-does-not-change-the-language ok
+> check the-release-branch-holds-three-patches ok
+> check language-and-surface-patches-are-independent ok
+> check the-branch-adopts-the-evolved-language ok
+> check the-branch-adopts-the-evolved-profile ok
+> check the-branch-adopts-the-corrected-document ok
+> check the-release-is-accepted-with-full-evidence ok
+> check the-release-is-blocked-without-validation-evidence ok
+> check the-release-is-published-to-the-chain ok
+> check the-published-language-is-reconstructed-from-chain-plus-closure ok
+> check the-reconstructed-language-is-the-sds-language ok
+> check a-peer-branches-from-the-finalized-publication ok
+> check the-release-transition-is-settled ok
+> check the-studio-reopens-over-the-reconstructed-document ok
+> check the-reopened-studio-shows-the-new-hazard ok
+> check the-reopened-studio-offers-the-new-command ok
+> verdict ok
+
+# The platform validates the deployment, and constructs it from the change alone.
+$ foundation verify-successor --predecessor foundations/F11 --successor applications/sds
+> predecessor F11
+> successor SDS
+> result (valid #de7094836a2152dc6205da52044cf4d297fffbc778d73bd4e762683e78394be61)
+
+$ foundation derive-successor --predecessor foundations/F11 --derivation changes/F11-sds/derivation.canon --expect applications/sds
+> predecessor F11
+> derived 91e15a0512e0b9c65e9fde4055ef43bd0ea3974f3c06b0bc1c6fcf2b0f4ada4e
+> matches applications/sds yes
+
+$ foundation reconstruct --dir applications/sds
+> reconstructed SDS
+> digest 91e15a0512e0b9c65e9fde4055ef43bd0ea3974f3c06b0bc1c6fcf2b0f4ada4e
+> stable yes
+> closure 95 artifacts
+> checks 30 ok
+
+$ foundation attest --dir applications/sds
+> (attestation (name "SDS") (foundation #d91e15a0512e0b9c65e9fde4055ef43bd0ea3974f3c06b0bc1c6fcf2b0f4ada4e) (application #dcc3dda110c2b7a8272f7bcf0150f7f0a8deeed3b882b316308684f4ed369fd29) (meta #de255a811eac7529477444d7ad5169a66b0b240d56db6de3a634e357700f0897e) (closure 95) (kinds {application 13 change 14 data 2 foundation 13 grammar 5 meta-program 37 profile 4 source 7}) (complete #t))
+> attestation c233dff76b91030f29dc572f50069c3d20d6b1bcfe67be8721c96ef5cec1777d
+
+# A real object language with concrete syntax.
+$ derive --foundation applications/sds --goal '(call DocumentRoundTrip (grammar sds) (call SourceText (source "applications/sds/documents/acetone-v1.sds")))'
+> (roundtrip ok)
+
+$ derive --foundation applications/sds --goal '(call IndexSource (grammar sds) (call SourceText (source "applications/sds/documents/acetone-v1.sds")))'
+> [product boiling-point cas-67-64-1]
+
+# Regulated validation findings.
+$ derive --foundation applications/sds --goal '(call ValidateSource (grammar sds) (call SourceText (source "applications/sds/documents/acetone-invalid.sds")))'
+> [(finding unknown-unit boiling-point) (finding fraction-out-of-range cas-67-64-1)]
+
+# The language evolves: the old version rejects what the new version accepts.
+$ derive --foundation applications/sds --goal '(call TryParse (grammar sds) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> (rejected)
+
+$ derive --foundation applications/sds --goal '(call TryParse (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> (accepted)
+
+$ derive --foundation applications/sds --goal '(call TryParse (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v1.sds")))'
+> (accepted)
+
+# The data evolves: a wrong measurement is corrected and a hazard is added.
+$ derive --foundation applications/sds --goal '(call MeasuredValue (grammar sds) (call SourceText (source "applications/sds/documents/acetone-v1.sds")) (q boiling-point))'
+> (some 65)
+
+$ derive --foundation applications/sds --goal '(call MeasuredValue (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")) (q boiling-point))'
+> (some 56)
+
+$ derive --foundation applications/sds --goal '(call Hazards (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> [h225]
+
+# The surface evolves, and the language digest does not move.
+$ derive --foundation applications/sds --goal '(call ProfilePanelNames (call DeployedProfileV1))'
+> [sections entries findings preview]
+
+$ derive --foundation applications/sds --goal '(call ProfilePanelNames (call DeployedProfileV2))'
+> [sections entries findings preview hazards]
+
+$ derive --foundation applications/sds --goal '(call ProfileEvolutionIsSurfaceOnly (grammar sds2))'
+> #t
+
+# All three changes are recorded as semantic patches on one branch.
+$ derive --foundation applications/sds --goal '(call ReleasePatchCount (grammar sds) (grammar sds2) (q "v1") (q "v2"))'
+> 3
+
+$ derive --foundation applications/sds --goal '(call LanguageAndSurfaceCommute (grammar sds) (grammar sds2))'
+> #t
+
+$ derive --foundation applications/sds --goal '(call WorkspaceAdoptedProfile (grammar sds) (grammar sds2) (q "v1") (q "v2"))'
+> sds-editor-v2
+
+# Acceptance is constitutional, and incomplete evidence blocks the release.
+$ derive --foundation applications/sds --goal '(call AcceptedRelease (grammar sds) (grammar sds2) (q "v1") (q "v2"))'
+> accepted
+
+$ derive --foundation applications/sds --goal '(call RejectedRelease (grammar sds) (grammar sds2) (q "v1") (q "v2"))'
+> missing-test-evidence
+
+# The release is published, settled, and reconstructed from chain plus closure.
+$ derive --foundation applications/sds --goal '(call ReleaseHeight (grammar sds2) (source "applications/sds/documents/acetone-v2.sds"))'
+> 2
+
+$ derive --foundation applications/sds --goal '(call ReconstructedMatchesPublished (grammar sds2) (source "applications/sds/documents/acetone-v2.sds"))'
+> #t
+
+$ derive --foundation applications/sds --goal '(call BranchFromRelease (grammar sds2) (source "applications/sds/documents/acetone-v2.sds"))'
+> checkout
+
+$ derive --foundation applications/sds --goal '(call ReleaseSettled (file "foundations/F9/foundation.canon") (file "foundations/F10/foundation.canon") (file "foundations/F11/foundation.canon"))'
+> 2
+
+# The generated studio reopens over the reconstructed document.
+$ derive --foundation applications/sds --goal '(call ReopenedPanels (call DeployedProfileV2) (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> [sections entries findings preview hazards]
+
+$ derive --foundation applications/sds --goal '(call ReopenedHazards (call DeployedProfileV2) (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> [h225]
+
+$ derive --foundation applications/sds --goal '(call ReopenedActions (call DeployedProfileV2) (grammar sds2) (call SourceText (source "applications/sds/documents/acetone-v2.sds")))'
+> [run-validation submit-for-review classify-hazard]

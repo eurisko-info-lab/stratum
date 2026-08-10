@@ -1,0 +1,10 @@
+; Acetone, revision 2.
+; The boiling point is corrected and a regulated hazard statement is added,
+; which only the evolved language accepts.
+document "Acetone technical data"
+section 1 "Identification"
+  sentence product "Acetone"
+  field boiling-point 56 celsius
+  hazard h225 "Highly flammable liquid and vapour" 2
+section 3 "Composition"
+  component cas-67-64-1 99

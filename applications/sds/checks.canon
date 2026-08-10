@@ -1,0 +1,214 @@
+; Acceptance checks for the SDS deployment on F11.
+;
+; This is an application living on the platform: a real object language with
+; concrete syntax, a validation pass, two Studio profiles, and one coherent
+; evolution that travels the whole publication loop.
+[
+  ; ------------------------------------------------------- the object language
+
+  (check document-round-trips
+    (call DocumentRoundTrip
+      (q (file "applications/sds/sds.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v1.sds"))))
+    (value (roundtrip ok)))
+
+  (check document-index-is-generated
+    (call IndexSource
+      (q (file "applications/sds/sds.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v1.sds"))))
+    (value [product boiling-point cas-67-64-1]))
+
+  (check a-clean-document-has-no-findings
+    (call ValidateSource
+      (q (file "applications/sds/sds.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v1.sds"))))
+    (value []))
+
+  (check validation-reports-regulated-findings
+    (call ValidateSource
+      (q (file "applications/sds/sds.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-invalid.sds"))))
+    (value [(finding unknown-unit boiling-point) (finding fraction-out-of-range cas-67-64-1)]))
+
+  ; --------------------------------------------------------- language evolution
+
+  (check the-old-language-rejects-the-new-construct
+    (call TryParse
+      (q (file "applications/sds/sds.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds"))))
+    (value (rejected)))
+
+  (check the-evolved-language-accepts-it
+    (call TryParse
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds"))))
+    (value (accepted)))
+
+  (check the-evolved-language-is-backwards-compatible
+    (call TryParse
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v1.sds"))))
+    (value (accepted)))
+
+  (check the-evolved-language-round-trips
+    (call DocumentRoundTrip
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds"))))
+    (value (roundtrip ok)))
+
+  ; ------------------------------------------------------------ data evolution
+
+  (check the-measured-value-was-wrong
+    (call MeasuredValue
+      (q (file "applications/sds/sds.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v1.sds")))
+      (q boiling-point))
+    (value (some 65)))
+
+  (check the-measured-value-is-corrected
+    (call MeasuredValue
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds")))
+      (q boiling-point))
+    (value (some 56)))
+
+  (check the-hazard-statement-appears
+    (call Hazards
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds"))))
+    (value [h225]))
+
+  ; --------------------------------------------------------- surface evolution
+
+  (check the-first-profile-has-no-hazard-panel
+    (call ProfilePanelNames (call DeployedProfileV1))
+    (value [sections entries findings preview]))
+
+  (check the-evolved-profile-adds-a-hazard-panel
+    (call ProfilePanelNames (call DeployedProfileV2))
+    (value [sections entries findings preview hazards]))
+
+  (check the-evolved-profile-adds-a-command
+    (call DeriveActions (call DeployedProfileV2))
+    (value [run-validation submit-for-review classify-hazard]))
+
+  (check a-surface-change-does-not-change-the-language
+    (call ProfileEvolutionIsSurfaceOnly (q (file "applications/sds/sds-v2.generated.grammar")))
+    (value #t))
+
+  ; ------------------------------------------------------- local development
+
+  (check the-release-branch-holds-three-patches
+    (call ReleasePatchCount
+      (q (file "applications/sds/sds.generated.grammar"))
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q "v1")
+      (q "v2"))
+    (value 3))
+
+  (check language-and-surface-patches-are-independent
+    (call LanguageAndSurfaceCommute
+      (q (file "applications/sds/sds.generated.grammar"))
+      (q (file "applications/sds/sds-v2.generated.grammar")))
+    (value #t))
+
+  (check the-branch-adopts-the-evolved-language
+    (call WorkspaceAdoptedLanguage
+      (q (file "applications/sds/sds.generated.grammar"))
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q "v1")
+      (q "v2"))
+    (value #t))
+
+  (check the-branch-adopts-the-evolved-profile
+    (call WorkspaceAdoptedProfile
+      (q (file "applications/sds/sds.generated.grammar"))
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q "v1")
+      (q "v2"))
+    (value sds-editor-v2))
+
+  (check the-branch-adopts-the-corrected-document
+    (call WorkspaceAdoptedDocument
+      (q (file "applications/sds/sds.generated.grammar"))
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q "v1")
+      (q "v2"))
+    (value #t))
+
+  ; ------------------------------------------------------------- acceptance
+
+  (check the-release-is-accepted-with-full-evidence
+    (call AcceptedRelease
+      (q (file "applications/sds/sds.generated.grammar"))
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q "v1")
+      (q "v2"))
+    (value accepted))
+
+  (check the-release-is-blocked-without-validation-evidence
+    (call RejectedRelease
+      (q (file "applications/sds/sds.generated.grammar"))
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q "v1")
+      (q "v2"))
+    (value missing-test-evidence))
+
+  ; ------------------------------------------------------------ publication
+
+  (check the-release-is-published-to-the-chain
+    (call ReleaseHeight
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q (text-file "applications/sds/documents/acetone-v2.sds")))
+    (value 2))
+
+  (check the-published-language-is-reconstructed-from-chain-plus-closure
+    (call ReconstructedMatchesPublished
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q (text-file "applications/sds/documents/acetone-v2.sds")))
+    (value #t))
+
+  (check the-reconstructed-language-is-the-sds-language
+    (call ReconstructedLanguageName
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q (text-file "applications/sds/documents/acetone-v2.sds")))
+    (value "sds"))
+
+  (check a-peer-branches-from-the-finalized-publication
+    (call BranchFromRelease
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (q (text-file "applications/sds/documents/acetone-v2.sds")))
+    (value checkout))
+
+  ; ------------------------------------------------------------- settlement
+
+  (check the-release-transition-is-settled
+    (call ReleaseSettled
+      (q (file "foundations/F9/foundation.canon"))
+      (q (file "foundations/F10/foundation.canon"))
+      (q (file "foundations/F11/foundation.canon")))
+    (value 2))
+
+  ; -------------------------------------------------- reopening the studio
+
+  (check the-studio-reopens-over-the-reconstructed-document
+    (call ReopenedPanels
+      (call DeployedProfileV2)
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds"))))
+    (value [sections entries findings preview hazards]))
+
+  (check the-reopened-studio-shows-the-new-hazard
+    (call ReopenedHazards
+      (call DeployedProfileV2)
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds"))))
+    (value [h225]))
+
+  (check the-reopened-studio-offers-the-new-command
+    (call ReopenedActions
+      (call DeployedProfileV2)
+      (q (file "applications/sds/sds-v2.generated.grammar"))
+      (call SourceText (q (text-file "applications/sds/documents/acetone-v2.sds"))))
+    (value [run-validation submit-for-review classify-hazard]))
+]
