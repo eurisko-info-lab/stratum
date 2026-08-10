@@ -1,0 +1,29 @@
+# R2 acceptance transcript: changes with indexed structure.
+#
+# R1 |- R2. Changes gain indexed structure.
+#
+# `Then` stays the semantic constructor and `changeSetOf` becomes the
+# execution form: a `Map` from semantic path to the one change standing at
+# that path, same-path collisions composed in the order they arrived. What
+# the set forgets is only the interleaving of changes that could not observe
+# each other anyway, and the laws below make that sentence executable.
+
+$ foundation verify --dir foundations/R2
+> foundation R2
+> digest 853689a7a4bf43a75461975c0e633ad4989f8fe084c762f12b8f63b2ea19f0cf
+> closure 338 artifacts
+> check strata-the-changeset-module-prints-exactly ok
+> check strata-the-changeset-module-checks ok
+> check strata-the-changeset-module-is-total ok
+> check strata-the-changeset-module-declares-its-capabilities ok
+> check strata-the-change-codec-round-trips ok
+> check strata-independent-changes-commute ok
+> check strata-normalization-preserves-application ok
+> check strata-the-changeset-laws-hold-together ok
+> verdict ok
+
+$ derive --foundation foundations/R2 --goal '(call RunStrataWith (grammar strata) (call StrataChangeSetSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/changeset.strata"))) (q "strata.changeset") (q changeSetLaws) (q []))'
+> (True)
+
+$ derive --foundation foundations/R2 --goal '(call RunStrataWith (grammar strata) (call StrataChangeSetSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/changeset.strata"))) (q "strata.changeset") (q dependentChangesShareAPath) (q []))'
+> (True)

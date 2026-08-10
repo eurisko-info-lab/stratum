@@ -1,0 +1,104 @@
+module "strata.changeset"
+version 1
+; Changes with indexed structure.
+;
+; The first floor's change calculus already says the right thing: every path
+; is a semantic identity -- a field, a constructor, a collection key -- and
+; never a source offset or a bare list position. What it says recursively it
+; executes recursively: `Compose` nests, affected paths are computed into
+; lists, and independence walks both lists. This module keeps the algebra and
+; changes the engine. `Then` remains the semantic constructor; `changeSetOf`
+; produces the execution form -- a `Map` from semantic path to the one change
+; standing at that path, same-path collisions merged in order -- and
+; independence becomes a disjointness question over indexed path sets rather
+; than a repeated list scan.
+;
+; A change is also a canonical value here, written by `changeValue` and read
+; back by `readChange`, because a change that cannot be stored, named and
+; shipped is not a change this system can be made of.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.collections" 1
+
+data Change = | Keep [] | Replace [expected #1: Value, replacement #2: Value] | AtKey [atKey #1: Value, atInner #2: Change] | InsertKey [insertKey #1: Value, insertItem #2: Value] | DeleteKey [deleteKey #1: Value, deleteExpected #2: Value] | RenameKey [renameFrom #1: Value, renameTo #2: Value] | Then [thenFirst #1: Change, thenSecond #2: Change]
+data Applied = | Applied [appliedValue #1: Value] | Conflict [conflictReason #1: Text]
+data ParsedChange = | NoParsedChange [] | SomeParsedChange [parsedChange #1: Change]
+
+; ------------------------------------------------------------ the semantics
+;
+; The recursive definition, unchanged in spirit from the calculus it
+; promotes. Keyed changes apply to canonical maps; a change aimed at a key a
+; value does not carry is a conflict, not a repair.
+
+def applyChange [v: Value, c: Change] ! text arith: Applied = match c of case Keep -> Applied v case Replace expected replacement -> match sameValue v expected of case True -> Applied replacement case False -> Conflict "predecessor-mismatch" end case Then first second -> match applyChange v first of case Applied middle -> applyChange middle second case Conflict reason -> Conflict reason end case AtKey key inner -> applyAtKey v key inner case InsertKey key item -> applyInsertKey v key item case DeleteKey key expected -> applyDeleteKey v key expected case RenameKey from to -> applyRenameKey v from to end
+def applyAtKey [v: Value, key: Value, inner: Change] ! text arith: Applied = match v of case VMap pairs -> match referenceFind pairs key of case Missing -> Conflict "unknown-key" case Present item -> match applyChange item inner of case Applied updated -> Applied (VMap (referencePut pairs key updated)) case Conflict reason -> Conflict reason end end case _ -> Conflict "not-a-map" end
+def applyInsertKey [v: Value, key: Value, item: Value] ! text arith: Applied = match v of case VMap pairs -> match referenceFind pairs key of case Present old -> Conflict "key-already-present" case Missing -> Applied (VMap (referencePut pairs key item)) end case _ -> Conflict "not-a-map" end
+def applyDeleteKey [v: Value, key: Value, expected: Value] ! text arith: Applied = match v of case VMap pairs -> match referenceFind pairs key of case Missing -> Conflict "unknown-key" case Present item -> match sameValue item expected of case True -> Applied (VMap (referenceDrop pairs key)) case False -> Conflict "predecessor-mismatch" end end case _ -> Conflict "not-a-map" end
+def applyRenameKey [v: Value, from: Value, to: Value] ! text arith: Applied = match v of case VMap pairs -> match referenceFind pairs from of case Missing -> Conflict "unknown-key" case Present item -> match referenceFind pairs to of case Present blocking -> Conflict "key-already-present" case Missing -> Applied (VMap (referencePut (referenceDrop pairs from) to item)) end end case _ -> Conflict "not-a-map" end
+
+; ------------------------------------------------------------- the encoding
+;
+; A change is a canonical value. Encoding is total; reading is not, because
+; not every value spells a change, and saying so is the reader's job.
+
+def changeValue [c: Change] ! text arith: Value = match c of case Keep -> VNode "keep" NoValue case Replace expected replacement -> VNode "replace" (MoreValue expected (MoreValue replacement NoValue)) case AtKey key inner -> VNode "at-key" (MoreValue key (MoreValue (changeValue inner) NoValue)) case InsertKey key item -> VNode "insert-key" (MoreValue key (MoreValue item NoValue)) case DeleteKey key expected -> VNode "delete-key" (MoreValue key (MoreValue expected NoValue)) case RenameKey from to -> VNode "rename-key" (MoreValue from (MoreValue to NoValue)) case Then first second -> VNode "then" (MoreValue (changeValue first) (MoreValue (changeValue second) NoValue)) end
+def readChange [v: Value] ! text arith: ParsedChange = match v of case VNode tag arguments -> readChangeNode tag arguments case _ -> NoParsedChange end
+def readChangeNode [tag: Text, arguments: Values] ! text arith: ParsedChange = match textEq tag "keep" of case True -> SomeParsedChange Keep case False -> match textEq tag "then" of case True -> readThen arguments case False -> readLeafChange tag arguments end end
+def readThen [arguments: Values] ! text arith: ParsedChange = match arguments of case MoreValue first rest -> match rest of case MoreValue second more -> match readChange first of case NoParsedChange -> NoParsedChange case SomeParsedChange left -> match readChange second of case NoParsedChange -> NoParsedChange case SomeParsedChange right -> SomeParsedChange (Then left right) end end case NoValue -> NoParsedChange end case NoValue -> NoParsedChange end
+def readLeafChange [tag: Text, arguments: Values] ! text arith: ParsedChange = match arguments of case MoreValue first rest -> match rest of case MoreValue second more -> readLeafPair tag first second case NoValue -> NoParsedChange end case NoValue -> NoParsedChange end
+def readLeafPair [tag: Text, first: Value, second: Value] ! text arith: ParsedChange = match textEq tag "replace" of case True -> SomeParsedChange (Replace first second) case False -> match textEq tag "insert-key" of case True -> SomeParsedChange (InsertKey first second) case False -> match textEq tag "delete-key" of case True -> SomeParsedChange (DeleteKey first second) case False -> match textEq tag "rename-key" of case True -> SomeParsedChange (RenameKey first second) case False -> match textEq tag "at-key" of case True -> readAtKey first second case False -> NoParsedChange end end end end end
+def readAtKey [key: Value, encodedInner: Value] ! text arith: ParsedChange = match readChange encodedInner of case NoParsedChange -> NoParsedChange case SomeParsedChange inner -> SomeParsedChange (AtKey key inner) end
+
+; ----------------------------------------------------------------- the paths
+;
+; A path is the list of keys standing between the root and the change, as a
+; canonical value, so a path can be a map key. A rename touches both of its
+; ends; an order-free keyed edit touches exactly its key.
+
+def pathUnder [prefix: Value, key: Value] ! text arith: Value = match prefix of case VList items -> VList (valuesWith items key) case _ -> VList (MoreValue key NoValue) end
+def valuesWith [items: Values, key: Value]: Values = match items of case NoValue -> MoreValue key NoValue case MoreValue head tail -> MoreValue head (valuesWith tail key) end
+def joinValues [a: Values, b: Values]: Values = match a of case NoValue -> b case MoreValue head tail -> MoreValue head (joinValues tail b) end
+def pathsUnder [prefix: Value, c: Change] ! text arith: Values = match c of case Keep -> NoValue case Replace expected replacement -> MoreValue prefix NoValue case Then first second -> joinValues (pathsUnder prefix first) (pathsUnder prefix second) case AtKey key inner -> pathsUnder (pathUnder prefix key) inner case InsertKey key item -> MoreValue (pathUnder prefix key) NoValue case DeleteKey key expected -> MoreValue (pathUnder prefix key) NoValue case RenameKey from to -> MoreValue (pathUnder prefix from) (MoreValue (pathUnder prefix to) NoValue) end
+def pathsOfChange [c: Change] ! text arith: Values = pathsUnder (VList NoValue) c
+def pathSetOf [c: Change] ! collections text arith: Set = setOfValues (pathsOfChange c)
+def disjointFromSet [members: Values, s: Set] ! collections text arith: Bool = match members of case NoValue -> True case MoreValue head tail -> match setHas s head of case True -> False case False -> disjointFromSet tail s end end
+def independent [a: Change, b: Change] ! collections text arith: Bool = disjointFromSet (pathsOfChange a) (pathSetOf b)
+
+; ------------------------------------------------------------ normalization
+;
+; `Then` stays the constructor; this is the execution form. The set is a map
+; from path to the one change at that path, and two changes arriving at one
+; path stay one entry, composed in the order they arrived -- so what the set
+; forgets is only the interleaving of changes that could not observe each
+; other anyway.
+
+def changeSetInto [cs: Map, prefix: Value, c: Change] ! collections text arith: Map = match c of case Keep -> cs case Then first second -> changeSetInto (changeSetInto cs prefix first) prefix second case AtKey key inner -> changeSetInto cs (pathUnder prefix key) inner case _ -> changeSetAt cs prefix c end
+def changeSetAt [cs: Map, path: Value, c: Change] ! collections text arith: Map = match mapFind cs path of case Missing -> mapPut cs path (changeValue c) case Present existing -> match readChange existing of case NoParsedChange -> cs case SomeParsedChange before -> mapPut cs path (changeValue (Then before c)) end end
+def changeSetOf [c: Change] ! collections text arith: Map = changeSetInto mapEmpty (VList NoValue) c
+def rebuildAt [path: Values, c: Change]: Change = match path of case NoValue -> c case MoreValue key rest -> AtKey key (rebuildAt rest c) end
+def applyEntries [v: Value, entries: Pairs] ! collections text arith: Applied = match entries of case NoPair -> Applied v case MorePair path encoded rest -> match readChange encoded of case NoParsedChange -> Conflict "not-a-change" case SomeParsedChange leaf -> match path of case VList keys -> match applyChange v (rebuildAt keys leaf) of case Applied middle -> applyEntries middle rest case Conflict reason -> Conflict reason end case _ -> Conflict "not-a-path" end end end
+def applyChangeSet [v: Value, cs: Map] ! collections text arith: Applied = applyEntries v (mapPairs cs)
+
+; ---------------------------------------------------------------- the laws
+
+def sameApplied [a: Applied, b: Applied] ! text arith: Bool = match a of case Applied x -> match b of case Applied y -> sameValue x y case Conflict s -> False end case Conflict r -> match b of case Conflict s -> textEq r s case Applied y -> False end end
+
+def sampleDoc [] ! text arith: Value = VMap (MorePair (VName "body") (VMap (MorePair (VName "text") (VText "old") NoPair)) (MorePair (VName "title") (VText "draft") NoPair))
+def retitle [] ! text arith: Change = AtKey (VName "title") (Replace (VText "draft") (VText "final"))
+def rewriteBody [] ! text arith: Change = AtKey (VName "body") (AtKey (VName "text") (Replace (VText "old") (VText "new")))
+def retitleAgain [] ! text arith: Change = AtKey (VName "title") (Replace (VText "final") (VText "published"))
+def addAuthor [] ! text arith: Change = InsertKey (VName "author") (VText "ada")
+
+def composedSample [] ! text arith: Change = Then retitle (Then rewriteBody addAuthor)
+def dependentSample [] ! text arith: Change = Then retitle retitleAgain
+
+def changeCodecRoundTrips [] ! text arith: Bool = match readChange (changeValue composedSample) of case NoParsedChange -> False case SomeParsedChange back -> sameValue (changeValue back) (changeValue composedSample) end
+def independentChangesCommute [] ! collections text arith: Bool = and (independent retitle rewriteBody) (sameApplied (applyChange sampleDoc (Then retitle rewriteBody)) (applyChange sampleDoc (Then rewriteBody retitle)))
+def dependentChangesShareAPath [] ! collections text arith: Bool = not (independent retitle retitleAgain)
+def renameTouchesBothEnds [] ! collections text arith: Bool = not (independent (RenameKey (VName "title") (VName "headline")) (InsertKey (VName "headline") (VText "x")))
+def normalizePreservesApply [] ! collections text arith: Bool = sameApplied (applyChangeSet sampleDoc (changeSetOf composedSample)) (applyChange sampleDoc composedSample)
+def samePathEntriesMergeInOrder [] ! collections text arith: Bool = and (numberEq (mapCount (changeSetOf dependentSample)) c1) (sameApplied (applyChangeSet sampleDoc (changeSetOf dependentSample)) (applyChange sampleDoc dependentSample))
+def conflictsAreConflictsEitherWay [] ! collections text arith: Bool = sameApplied (applyChange sampleDoc retitleAgain) (Conflict "predecessor-mismatch")
+def changeSetLaws [] ! collections text arith: Bool = and (and (and changeCodecRoundTrips independentChangesCommute) (and dependentChangesShareAPath renameTouchesBothEnds)) (and (and normalizePreservesApply samePathEntriesMergeInOrder) conflictsAreConflictsEitherWay)

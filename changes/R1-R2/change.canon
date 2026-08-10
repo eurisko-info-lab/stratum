@@ -1,0 +1,19 @@
+; The canonical change from R1 to R2.
+;
+; R1 |- R2. Changes gain indexed structure.
+(change
+  (kind foundation)
+  (name "R1->R2")
+  (predecessor (foundation-of "foundations/R1"))
+  (delta-meta (file "changes/R1-R2/delta-meta.canon"))
+  (delta-grammar (file "changes/R1-R2/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "changes with indexed structure")
+      (programs [
+        (file "features/strata/changeset.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/changeset.meta")
+        (text-file "strata/system/changeset.strata")
+      ]))))

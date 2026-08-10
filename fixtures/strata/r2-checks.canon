@@ -1,0 +1,113 @@
+; Executable acceptance checks for R2, changes with indexed structure.
+;
+; `Then` stays the semantic constructor; `changeSetOf` is the execution form.
+; The laws say the engine change is invisible: normalized application agrees
+; with recursive application, independent changes commute, dependent changes
+; share a path, a rename touches both of its ends, and a change survives the
+; trip through its canonical encoding.
+[
+  (check strata-the-changeset-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/R2/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/changeset.strata"))))
+    (value #t))
+
+  (check strata-the-changeset-module-checks
+    (call CheckLinkedNative
+      (q (file "foundations/R2/surface/strata.generated.grammar"))
+      (call StrataChangeSetSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata"))))
+      (q "strata.changeset"))
+    (value (checked ok)))
+
+  (check strata-the-changeset-module-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/R2/surface/strata.generated.grammar"))
+      (call StrataChangeSetSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata"))))
+      (q "strata.changeset"))
+    (value (total ok)))
+
+  (check strata-the-changeset-module-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/R2/surface/strata.generated.grammar"))
+      (call StrataChangeSetSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata"))))
+      (q "strata.changeset"))
+    (value (permitted ok)))
+
+  (check strata-the-change-codec-round-trips
+    (call RunStrataWith
+      (q (file "foundations/R2/surface/strata.generated.grammar"))
+      (call StrataChangeSetSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata"))))
+      (q "strata.changeset")
+      (q changeCodecRoundTrips)
+      (q []))
+    (value (True)))
+
+  (check strata-independent-changes-commute
+    (call RunStrataWith
+      (q (file "foundations/R2/surface/strata.generated.grammar"))
+      (call StrataChangeSetSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata"))))
+      (q "strata.changeset")
+      (q independentChangesCommute)
+      (q []))
+    (value (True)))
+
+  (check strata-normalization-preserves-application
+    (call RunStrataWith
+      (q (file "foundations/R2/surface/strata.generated.grammar"))
+      (call StrataChangeSetSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata"))))
+      (q "strata.changeset")
+      (q normalizePreservesApply)
+      (q []))
+    (value (True)))
+
+  (check strata-the-changeset-laws-hold-together
+    (call RunStrataWith
+      (q (file "foundations/R2/surface/strata.generated.grammar"))
+      (call StrataChangeSetSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata"))))
+      (q "strata.changeset")
+      (q changeSetLaws)
+      (q []))
+    (value (True)))
+]

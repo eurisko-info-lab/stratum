@@ -1,0 +1,76 @@
+; R2: changes with indexed structure.
+;
+; R1 gave the forge its collection vocabulary. This layer spends it on the
+; change calculus: `strata/system/changeset.strata` promotes the first
+; floor's keyed change algebra into Strata's upper-floor vocabulary -- every
+; path a semantic identity, `Then` the semantic constructor -- and adds the
+; execution form the algebra was missing. `changeSetOf` normalizes a nested
+; composition into a `Map` from semantic path to the one change standing at
+; that path, application through the set agrees with recursive application,
+; and independence becomes disjointness over indexed path sets. A change is
+; also a canonical value, encoded and read back on this side of the boundary,
+; because a change that cannot be stored and named is not one the forge can
+; be made of. No primitive is added and no capability is widened.
+(build
+  (name "R2")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/R1"))
+  (change (file "changes/R1-R2/change.canon"))
+  (application
+    (application
+      (name "strata-r2")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        ; Ahead of everything they speak for. Where two modules define a
+        ; judgment the first one merged is the one that answers, so the
+        ; collections boundary stands ahead of the store's, and the layers
+        ; below keep what they were built with, and keep their digests.
+        (file "features/strata/index.generated.meta")
+        (file "features/strata/collections.generated.meta")
+        (file "features/strata/changeset.generated.meta")
+        (file "features/strata/store.generated.meta")
+        (file "features/strata/repository.generated.meta")
+        (file "features/strata/studio.generated.meta")
+        (file "features/strata/foundation.generated.meta")
+        (file "features/strata/governance.generated.meta")
+        (file "features/strata/ledger.generated.meta")
+        (file "features/strata/sync.generated.meta")
+        (file "features/strata/federation.generated.meta")
+        (file "features/strata/retention.generated.meta")
+        (file "features/strata/agent.generated.meta")
+        (file "features/strata/performance.generated.meta")
+        (file "features/strata/optimization.generated.meta")
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "foundations/R2/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+        (file "features/strata/metasource.generated.meta")
+        (file "languages/service/service.generated.meta")
+      ]))
+      (grammars {
+        strata (file "foundations/R2/surface/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (service (file "fixtures/strata/s12-service.canon"))
+      (checks (include "fixtures/strata/r2-checks.canon"))
+      (kernel (kernel (allow
+        cas-get cas-has hash grammar-parse grammar-print grammar-lex
+        text-octets octets-of-bytes bytes-of-octets digest-of-bytes)))
+      (resources (budget (steps 1000000000) (depth 240000))))))

@@ -1,0 +1,10 @@
+; R2 adds no Strata surface. The R1 grammar is inherited exactly: a change
+; is data, an application is a definition, and both were there from S0.
+(change
+  (kind delta-grammar)
+  (name "R1->R2 delta-grammar")
+  (replace
+    (ReplaceChange
+      second-floor-grammar
+      (collecting strata)
+      (indexing strata))))

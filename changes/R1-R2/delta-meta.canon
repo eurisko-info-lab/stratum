@@ -1,0 +1,10 @@
+; delta-meta for R1 -> R2: Meta gains only a source list. The calculus, its
+; encoding and its normalization are Strata's own.
+(change
+  (kind delta-meta)
+  (name "R1->R2 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (collecting strata)
+      (indexing strata))))
