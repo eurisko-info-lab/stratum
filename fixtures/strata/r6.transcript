@@ -10,22 +10,20 @@
 
 $ foundation verify --dir foundations/R6
 > foundation R6
-> digest 278cffcc4ba95ca886c4c0d6a7062e9cd11bf7cf4a48f35c8863049590ff09b2
-> closure 359 artifacts
-> check strata-the-tree-module-prints-exactly ok
-> check strata-the-tree-module-checks ok
-> check strata-the-tree-module-is-total ok
-> check strata-the-tree-module-declares-its-capabilities ok
-> check strata-a-rename-preserves-identity ok
-> check strata-a-rename-is-a-names-only-change ok
-> check strata-a-rename-applies-through-the-calculus ok
-> check strata-the-tree-laws-hold-together ok
+> digest ac2e1823ac3a32e17a63c41ef699a4954a1cf19b53da040187c7195a7eefb22b
+> closure 362 artifacts
+> check strata-the-reach-module-prints-exactly ok
+> check strata-the-reach-module-checks ok
+> check strata-the-reach-module-is-total ok
+> check strata-the-reach-module-declares-its-capabilities ok
+> check strata-the-indexed-closure-agrees-with-the-reference ok
+> check strata-cycles-terminate ok
+> check strata-policy-gates-traversal ok
+> check strata-the-reach-laws-hold-together ok
 > verdict ok
 
 $ derive --foundation foundations/R6 --goal '(call RunStrataWith (grammar strata) (call StrataReachSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/reach.strata"))) (q "strata.reach") (q reachLaws) (q []))'
-> error missing-source "source artifact missing"
-> exit 1
+> (True)
 
 $ derive --foundation foundations/R6 --goal '(call RunStrataWith (grammar strata) (call StrataReachSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/reach.strata"))) (q "strata.reach") (q policyGatesTraversal) (q []))'
-> error missing-source "source artifact missing"
-> exit 1
+> (True)
