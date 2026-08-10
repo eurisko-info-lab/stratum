@@ -140,6 +140,12 @@ internal data class Diagnostic(val message: String, val severity: Int, val line:
 internal data class WorldView(val name: String, val items: List<String>)
 internal data class Report(val name: String, val path: String, val findings: Int, val hazards: Int)
 internal data class Subject(val name: String, val reports: List<Report>)
+internal data class VirtualApp(
+    val name: String,
+    val title: String,
+    val workflow: List<String>,
+    val languages: List<String>
+)
 
 internal fun evaluationRange(value: TextFieldValue): Pair<Int, Int> {
     val offset = minOf(value.selection.start, value.selection.end).coerceAtMost(value.text.length)
@@ -198,17 +204,15 @@ internal class StudioViewModel : ViewModel() {
         viewModelScope.launch {
             runCatching {
                 connection.connect(current.host, port)
-                val languages = connection.request("stratum/languages", emptyObject())
-                    .jsonArray.mapNotNull { it.jsonObject["id"]?.jsonPrimitive?.contentOrNull }
-                val layout = connection.request("stratum/layout", emptyObject())
+                val app = decodeVirtualApp(connection.request("stratum/virtualApp", emptyObject()))
                 val subjects = decodeSubjects(connection.request("stratum/documents", emptyObject()))
                 mutableState.update {
                     it.copy(
                         connecting = false,
                         connected = true,
-                        serviceName = layout.field("name") ?: "Stratum Studio",
-                        workflow = layout.array("workflow").mapNotNull(JsonElement::string),
-                        languages = languages,
+                        serviceName = app.title,
+                        workflow = app.workflow,
+                        languages = app.languages,
                         subjects = subjects
                     )
                 }
@@ -601,6 +605,16 @@ private fun emptyObject() = buildJsonObject {}
 private fun JsonElement?.string(): String? = (this as? JsonPrimitive)?.contentOrNull
 private fun JsonElement.field(name: String): String? = (this as? JsonObject)?.get(name).string()
 private fun JsonElement.array(name: String): JsonArray = (this as? JsonObject)?.get(name) as? JsonArray ?: JsonArray(emptyList())
+
+internal fun decodeVirtualApp(element: JsonElement): VirtualApp {
+    val name = element.field("name") ?: error("Virtual app name is missing")
+    return VirtualApp(
+        name = name,
+        title = element.field("title") ?: name,
+        workflow = element.array("workflow").mapNotNull(JsonElement::string),
+        languages = element.array("languages").mapNotNull { it.field("id") }
+    )
+}
 
 private fun decodeSubjects(element: JsonElement): List<Subject> = element.jsonArray.map { subject ->
     Subject(
