@@ -73,7 +73,7 @@
       })
       (entries {})
       (service (file "fixtures/strata/s12-service.canon"))
-      (checks (include "fixtures/strata/r3-checks.canon"))
+      (checks (include "fixtures/strata/r5-checks.canon"))
       (kernel (kernel (allow
         cas-get cas-has hash grammar-parse grammar-print grammar-lex
         text-octets octets-of-bytes bytes-of-octets digest-of-bytes)))

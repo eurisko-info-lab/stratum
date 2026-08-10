@@ -11,22 +11,20 @@
 
 $ foundation verify --dir foundations/R5
 > foundation R5
-> digest a7a6c0c0a957c25ffde75d61458725f3009a45912121ba8b1de77ff99254124b
-> closure 354 artifacts
-> check strata-the-tree-module-prints-exactly ok
-> check strata-the-tree-module-checks ok
-> check strata-the-tree-module-is-total ok
-> check strata-the-tree-module-declares-its-capabilities ok
-> check strata-a-rename-preserves-identity ok
-> check strata-a-rename-is-a-names-only-change ok
-> check strata-a-rename-applies-through-the-calculus ok
-> check strata-the-tree-laws-hold-together ok
+> digest adbd8879c79f0c5b19f5193f1db5ffeb0793998c95400c0e7970e43118dd7a68
+> closure 356 artifacts
+> check strata-the-merkle-module-prints-exactly ok
+> check strata-the-merkle-module-checks ok
+> check strata-the-merkle-module-is-total ok
+> check strata-the-merkle-module-declares-its-capabilities ok
+> check strata-the-merkle-root-is-order-independent ok
+> check strata-an-edit-touches-one-chunk ok
+> check strata-merkle-lookup-agrees-with-the-map ok
+> check strata-the-merkle-laws-hold-together ok
 > verdict ok
 
 $ derive --foundation foundations/R5 --goal '(call RunStrataWith (grammar strata) (call StrataMerkleSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/merkle.strata"))) (q "strata.merkle") (q merkleLaws) (q []))'
-> error missing-source "source artifact missing"
-> exit 1
+> (True)
 
 $ derive --foundation foundations/R5 --goal '(call RunStrataWith (grammar strata) (call StrataMerkleSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/merkle.strata"))) (q "strata.merkle") (q merkleEditTouchesOneChunk) (q []))'
-> error missing-source "source artifact missing"
-> exit 1
+> (True)
