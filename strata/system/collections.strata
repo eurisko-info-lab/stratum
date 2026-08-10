@@ -1,0 +1,143 @@
+module "strata.collections"
+version 1
+; Extensional collections: what a collection means, said once.
+;
+; The system below this layer already has the correct semantic notion of a
+; canonical map -- `VMap` is a value only when its keys ascend in the one
+; canonical order -- but its operational representation is still a chain of
+; `MorePair`, and every large structure built on it walks that chain. This
+; module draws the boundary the other way around: Strata owns what a
+; collection IS -- unique keys, canonical iteration order, persistent update,
+; membership, explicit sequence order, keyed sequence identity -- and the
+; host owns how an element is reached quickly. A `Map` here has no
+; constructors, so no program on this side can observe whether the host used
+; a B-tree, a HAMT or a sorted vector. What a program can observe is pinned
+; by the laws at the bottom of this file: every host answer must agree with
+; the cons-list reference model written in plain Strata beside it.
+;
+; Four shapes, because the forge needs exactly four. `Map` is the workhorse:
+; unique keys, canonical enumeration by `compareValue`. `Set` is membership,
+; the shape of visited sets, frontiers and closures. `Seq` is for data whose
+; order is itself semantic -- work queues, transcripts, event streams. And
+; `KeySeq` is the keyed sequence: elements with stable semantic identity AND
+; an explicit order, the shape a grammar's productions or a studio's panels
+; actually have. An integer index is a presentation coordinate, not an
+; identity, and nothing here hands one out.
+;
+; The boundary is widened the way S7 made possible and S10 exercised: the
+; primitives are declared here, `features/strata/collections.meta` states the
+; wider host set, and every layer below keeps what it was built with.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+
+type Map
+type Set
+type Seq
+type KeySeq
+
+; A lookup that can miss, said as data rather than as an absent answer.
+data Lookup = | Missing [] | Present [presentValue #1: Value]
+
+prim mapEmpty [] ! collections: Map
+prim mapCount [m: Map] ! collections: Number
+prim mapHas [m: Map, key: Value] ! collections: Bool
+prim mapFind [m: Map, key: Value] ! collections: Lookup
+prim mapPut [m: Map, key: Value, value: Value] ! collections: Map
+prim mapDrop [m: Map, key: Value] ! collections: Map
+prim mapPairs [m: Map] ! collections: Pairs
+prim mapOfPairs [ps: Pairs] ! collections: Map
+
+prim setEmpty [] ! collections: Set
+prim setCount [s: Set] ! collections: Number
+prim setHas [s: Set, key: Value] ! collections: Bool
+prim setPut [s: Set, key: Value] ! collections: Set
+prim setDrop [s: Set, key: Value] ! collections: Set
+prim setMembers [s: Set] ! collections: Values
+prim setOfValues [vs: Values] ! collections: Set
+
+prim seqEmpty [] ! collections: Seq
+prim seqCount [s: Seq] ! collections: Number
+prim seqPushBack [s: Seq, item: Value] ! collections: Seq
+prim seqFront [s: Seq] ! collections: Lookup
+prim seqPopFront [s: Seq] ! collections: Seq
+prim seqItems [s: Seq] ! collections: Values
+prim seqOfValues [vs: Values] ! collections: Seq
+
+prim keySeqEmpty [] ! collections: KeySeq
+prim keySeqCount [ks: KeySeq] ! collections: Number
+prim keySeqFind [ks: KeySeq, key: Value] ! collections: Lookup
+prim keySeqPutBack [ks: KeySeq, key: Value, item: Value] ! collections: KeySeq
+prim keySeqPutBefore [ks: KeySeq, anchor: Value, key: Value, item: Value] ! collections: KeySeq
+prim keySeqDrop [ks: KeySeq, key: Value] ! collections: KeySeq
+prim keySeqMoveBefore [ks: KeySeq, anchor: Value, key: Value] ! collections: KeySeq
+prim keySeqKeys [ks: KeySeq] ! collections: Values
+prim keySeqPairs [ks: KeySeq] ! collections: Pairs
+
+; ------------------------------------------------------------ the reference
+;
+; The cons-list model the host must agree with. Everything here is the plain
+; structural recursion the layers below have always written; the laws at the
+; bottom hold the two sides together, and the checks in the foundation run
+; them. A host that answers faster is welcome. A host that answers otherwise
+; is wrong.
+
+def sameValue [a: Value, b: Value] ! text arith: Bool = match compareValue a b of case Same -> True case _ -> False end
+def samePairs [a: Pairs, b: Pairs] ! text arith: Bool = match comparePairs a b of case Same -> True case _ -> False end
+def sameValues [a: Values, b: Values] ! text arith: Bool = match compareValues a b of case Same -> True case _ -> False end
+def sameLookup [a: Lookup, b: Lookup] ! text arith: Bool = match a of case Missing -> match b of case Missing -> True case Present y -> False end case Present x -> match b of case Missing -> False case Present y -> sameValue x y end end
+
+def referenceFind [ps: Pairs, key: Value] ! text arith: Lookup = match ps of case NoPair -> Missing case MorePair k v tail -> match compareValue key k of case Same -> Present v case _ -> referenceFind tail key end end
+def referencePut [ps: Pairs, key: Value, value: Value] ! text arith: Pairs = match ps of case NoPair -> MorePair key value NoPair case MorePair k v tail -> match compareValue key k of case Below -> MorePair key value (MorePair k v tail) case Same -> MorePair key value tail case Above -> MorePair k v (referencePut tail key value) end end
+def referenceDrop [ps: Pairs, key: Value] ! text arith: Pairs = match ps of case NoPair -> NoPair case MorePair k v tail -> match compareValue key k of case Same -> tail case _ -> MorePair k v (referenceDrop tail key) end end
+
+; ---------------------------------------------------------------- the laws
+;
+; Concrete workloads, exercised by the foundation's checks. Each law is a
+; closed definition that must come back `True`, so a failing host names the
+; law it broke rather than a byte it changed.
+
+def sampleMap [] ! collections arith text: Map = mapPut (mapPut (mapPut mapEmpty (VName "beta") (VNat c2)) (VName "alpha") (VNat c1)) (VName "gamma") (VNat c3)
+def sampleMapOtherOrder [] ! collections arith text: Map = mapPut (mapPut (mapPut mapEmpty (VName "gamma") (VNat c3)) (VName "beta") (VNat c2)) (VName "alpha") (VNat c1)
+def sampleReference [] ! text arith: Pairs = referencePut (referencePut (referencePut NoPair (VName "beta") (VNat c2)) (VName "alpha") (VNat c1)) (VName "gamma") (VNat c3)
+
+def mapPairsAreCanonical [] ! collections text arith: Bool = ascendingKeys (mapPairs sampleMap)
+def mapBuildIsOrderIndependent [] ! collections text arith: Bool = samePairs (mapPairs sampleMap) (mapPairs sampleMapOtherOrder)
+def mapAgreesWithReference [] ! collections text arith: Bool = samePairs (mapPairs sampleMap) sampleReference
+def mapFindsWhatWasPut [] ! collections text arith: Bool = sameLookup (mapFind sampleMap (VName "alpha")) (Present (VNat c1))
+def mapMissesWhatWasDropped [] ! collections text arith: Bool = sameLookup (mapFind (mapDrop sampleMap (VName "beta")) (VName "beta")) Missing
+def mapDropAgreesWithReference [] ! collections text arith: Bool = samePairs (mapPairs (mapDrop sampleMap (VName "beta"))) (referenceDrop sampleReference (VName "beta"))
+def mapReplacesInPlace [] ! collections text arith: Bool = sameLookup (mapFind (mapPut sampleMap (VName "alpha") (VNat c4)) (VName "alpha")) (Present (VNat c4))
+def mapCountsItsEntries [] ! collections text arith: Bool = numberEq (mapCount sampleMap) c3
+def mapRoundTripsItsPairs [] ! collections text arith: Bool = samePairs (mapPairs (mapOfPairs sampleReference)) sampleReference
+def mapLaws [] ! collections text arith: Bool = and (and (and mapPairsAreCanonical mapBuildIsOrderIndependent) (and mapAgreesWithReference mapFindsWhatWasPut)) (and (and mapMissesWhatWasDropped mapDropAgreesWithReference) (and (and mapReplacesInPlace mapCountsItsEntries) mapRoundTripsItsPairs))
+
+def sampleSet [] ! collections arith text: Set = setPut (setPut (setPut setEmpty (VName "beta")) (VName "alpha")) (VName "beta")
+def setKeepsOneOfEach [] ! collections text arith: Bool = numberEq (setCount sampleSet) c2
+def setHasWhatWasPut [] ! collections text arith: Bool = and (setHas sampleSet (VName "alpha")) (setHas sampleSet (VName "beta"))
+def setMissesWhatWasDropped [] ! collections text arith: Bool = not (setHas (setDrop sampleSet (VName "alpha")) (VName "alpha"))
+def setMembersAscend [] ! collections text arith: Bool = sameValues (setMembers sampleSet) (MoreValue (VName "alpha") (MoreValue (VName "beta") NoValue))
+def setRoundTripsItsMembers [] ! collections text arith: Bool = sameValues (setMembers (setOfValues (setMembers sampleSet))) (setMembers sampleSet)
+def setLaws [] ! collections text arith: Bool = and (and setKeepsOneOfEach setHasWhatWasPut) (and (and setMissesWhatWasDropped setMembersAscend) setRoundTripsItsMembers)
+
+def sampleSeq [] ! collections arith text: Seq = seqPushBack (seqPushBack (seqPushBack seqEmpty (VNat c1)) (VNat c3)) (VNat c2)
+def seqKeepsItsOrder [] ! collections text arith: Bool = sameValues (seqItems sampleSeq) (MoreValue (VNat c1) (MoreValue (VNat c3) (MoreValue (VNat c2) NoValue)))
+def seqFrontIsTheOldest [] ! collections text arith: Bool = sameLookup (seqFront sampleSeq) (Present (VNat c1))
+def seqPopsFromTheFront [] ! collections text arith: Bool = sameValues (seqItems (seqPopFront sampleSeq)) (MoreValue (VNat c3) (MoreValue (VNat c2) NoValue))
+def seqCountsItsItems [] ! collections text arith: Bool = numberEq (seqCount sampleSeq) c3
+def seqRoundTripsItsItems [] ! collections text arith: Bool = sameValues (seqItems (seqOfValues (seqItems sampleSeq))) (seqItems sampleSeq)
+def seqLaws [] ! collections text arith: Bool = and (and seqKeepsItsOrder seqFrontIsTheOldest) (and (and seqPopsFromTheFront seqCountsItsItems) seqRoundTripsItsItems)
+
+def sampleKeySeq [] ! collections arith text: KeySeq = keySeqPutBack (keySeqPutBack (keySeqPutBack keySeqEmpty (VName "beta") (VNat c2)) (VName "alpha") (VNat c1)) (VName "gamma") (VNat c3)
+def keySeqKeepsInsertionOrder [] ! collections text arith: Bool = sameValues (keySeqKeys sampleKeySeq) (MoreValue (VName "beta") (MoreValue (VName "alpha") (MoreValue (VName "gamma") NoValue)))
+def keySeqFindsByKey [] ! collections text arith: Bool = sameLookup (keySeqFind sampleKeySeq (VName "alpha")) (Present (VNat c1))
+def keySeqReplacesInPlace [] ! collections text arith: Bool = sameValues (keySeqKeys (keySeqPutBack sampleKeySeq (VName "alpha") (VNat c4))) (keySeqKeys sampleKeySeq)
+def keySeqInsertsBeforeItsAnchor [] ! collections text arith: Bool = sameValues (keySeqKeys (keySeqPutBefore sampleKeySeq (VName "alpha") (VName "delta") (VNat c4))) (MoreValue (VName "beta") (MoreValue (VName "delta") (MoreValue (VName "alpha") (MoreValue (VName "gamma") NoValue))))
+def keySeqDropsByKey [] ! collections text arith: Bool = sameValues (keySeqKeys (keySeqDrop sampleKeySeq (VName "alpha"))) (MoreValue (VName "beta") (MoreValue (VName "gamma") NoValue))
+def keySeqMovesBeforeItsAnchor [] ! collections text arith: Bool = sameValues (keySeqKeys (keySeqMoveBefore sampleKeySeq (VName "beta") (VName "gamma"))) (MoreValue (VName "gamma") (MoreValue (VName "beta") (MoreValue (VName "alpha") NoValue)))
+def keySeqCountsItsKeys [] ! collections text arith: Bool = numberEq (keySeqCount sampleKeySeq) c3
+def keySeqPairsFollowItsOrder [] ! collections text arith: Bool = samePairs (keySeqPairs sampleKeySeq) (MorePair (VName "beta") (VNat c2) (MorePair (VName "alpha") (VNat c1) (MorePair (VName "gamma") (VNat c3) NoPair)))
+def keySeqLaws [] ! collections text arith: Bool = and (and (and keySeqKeepsInsertionOrder keySeqFindsByKey) (and keySeqReplacesInPlace keySeqInsertsBeforeItsAnchor)) (and (and keySeqDropsByKey keySeqMovesBeforeItsAnchor) (and keySeqCountsItsKeys keySeqPairsFollowItsOrder))
+
+def collectionLaws [] ! collections text arith: Bool = and (and mapLaws setLaws) (and seqLaws keySeqLaws)

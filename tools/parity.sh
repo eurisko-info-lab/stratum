@@ -35,6 +35,7 @@ workers=${STRATUM_PARITY_WORKERS:-2}
 worlds() {
   ls -d foundations/F* | sort -V
   ls -d foundations/S* 2>/dev/null | sort -V
+  ls -d foundations/R* 2>/dev/null | sort -V
   ls -d applications/*/ 2>/dev/null | sed 's|/$||'
 }
 

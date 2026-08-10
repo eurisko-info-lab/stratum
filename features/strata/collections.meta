@@ -1,0 +1,327 @@
+module stratacollections
+
+; The collections boundary.
+;
+; `strata/system/collections.strata` declares what a collection means; this
+; module is the host side of that declaration. It widens the native boundary
+; the way S7 made possible and S10 exercised: a larger `HostNames`, a larger
+; `ArityOfHost` and a larger `NativePrimitive`, merged ahead of the modules
+; they widen, so S7 and S10 keep exactly the sets they were checked against.
+;
+; The representations are Meta's own values, and that is the point. A `Map`
+; crosses as a Meta map, whose keys the host already keeps in the one
+; canonical order, so `mapPairs` enumerates canonically because the value
+; cannot do otherwise. A `Set` is a Meta map to `true`. A `Seq` is a Meta
+; list. A `KeySeq` is a node carrying its explicit order beside its entries.
+; No balancing choice, no hashing choice and no chunk shape crosses the
+; boundary; a host that keeps a faster structure behind these answers is
+; welcome to, provided the laws in the Strata module still hold.
+
+; --------------------------------------------------------------- the host set
+
+judgment HostNames [] =
+  list [
+    #numberOfNat #natOfNumber #numberAdd #numberEq #numberLess
+    #numberMonus #numberQuotient #numberRemainder
+    #textBytes #bytesText #bytesEq #digest
+    #textCharacters #textConcat #textEq
+    #textOctets #octetsOfBytes #bytesOfOctets #bytesDigest
+    #mapEmpty #mapCount #mapHas #mapFind #mapPut #mapDrop #mapPairs #mapOfPairs
+    #setEmpty #setCount #setHas #setPut #setDrop #setMembers #setOfValues
+    #seqEmpty #seqCount #seqPushBack #seqFront #seqPopFront #seqItems #seqOfValues
+    #keySeqEmpty #keySeqCount #keySeqFind #keySeqPutBack #keySeqPutBefore
+    #keySeqDrop #keySeqMoveBefore #keySeqKeys #keySeqPairs
+  ]
+
+judgment ArityOfHost [name] =
+  if prim #eq [name #keySeqPutBefore] then 4
+  else if prim #eq [name #mapPut] then 3
+  else if prim #eq [name #keySeqPutBack] then 3
+  else if prim #eq [name #keySeqMoveBefore] then 3
+  else if prim #eq [name #mapHas] then 2
+  else if prim #eq [name #mapFind] then 2
+  else if prim #eq [name #mapDrop] then 2
+  else if prim #eq [name #setHas] then 2
+  else if prim #eq [name #setPut] then 2
+  else if prim #eq [name #setDrop] then 2
+  else if prim #eq [name #seqPushBack] then 2
+  else if prim #eq [name #keySeqFind] then 2
+  else if prim #eq [name #keySeqDrop] then 2
+  else if prim #eq [name #mapEmpty] then 0
+  else if prim #eq [name #setEmpty] then 0
+  else if prim #eq [name #seqEmpty] then 0
+  else if prim #eq [name #keySeqEmpty] then 0
+  else if prim #eq [name #numberAdd] then 2
+  else if prim #eq [name #numberEq] then 2
+  else if prim #eq [name #numberLess] then 2
+  else if prim #eq [name #numberMonus] then 2
+  else if prim #eq [name #numberQuotient] then 2
+  else if prim #eq [name #numberRemainder] then 2
+  else if prim #eq [name #bytesEq] then 2
+  else if prim #eq [name #textConcat] then 2
+  else if prim #eq [name #textEq] then 2
+  else 1
+
+judgment NativePrimitive [name args] =
+  if prim #ne [prim #len [args] call HostArity [name]]
+  then
+    fail #native-error prim #scat [
+      prim #scat ["the primitive " prim #sym->str [name]]
+      " was given the wrong number of arguments"
+    ]
+  else if prim #eq [name #mapEmpty]
+  then prim #mnew []
+  else if prim #eq [name #mapCount]
+  then prim #msize [prim #nth [args 0]]
+  else if prim #eq [name #mapHas]
+  then call HostToBool [prim #mhas [prim #nth [args 0] call CollectionValueOut [prim #nth [args 1]]]]
+  else if prim #eq [name #mapFind]
+  then call CollectionFound [prim #nth [args 0] call CollectionValueOut [prim #nth [args 1]]]
+  else if prim #eq [name #mapPut]
+  then
+    prim #mput [
+      prim #nth [args 0]
+      call CollectionValueOut [prim #nth [args 1]]
+      call CollectionValueOut [prim #nth [args 2]]
+    ]
+  else if prim #eq [name #mapDrop]
+  then prim #mdel [prim #nth [args 0] call CollectionValueOut [prim #nth [args 1]]]
+  else if prim #eq [name #mapPairs]
+  then call ReadCanonPairs [prim #mentries [prim #nth [args 0]]]
+  else if prim #eq [name #mapOfPairs]
+  then prim #mfrom [call CollectionPairsOut [prim #nth [args 0]]]
+  else if prim #eq [name #setEmpty]
+  then prim #mnew []
+  else if prim #eq [name #setCount]
+  then prim #msize [prim #nth [args 0]]
+  else if prim #eq [name #setHas]
+  then call HostToBool [prim #mhas [prim #nth [args 0] call CollectionValueOut [prim #nth [args 1]]]]
+  else if prim #eq [name #setPut]
+  then prim #mput [prim #nth [args 0] call CollectionValueOut [prim #nth [args 1]] true]
+  else if prim #eq [name #setDrop]
+  then prim #mdel [prim #nth [args 0] call CollectionValueOut [prim #nth [args 1]]]
+  else if prim #eq [name #setMembers]
+  then call CollectionValuesIn [prim #mkeys [prim #nth [args 0]]]
+  else if prim #eq [name #setOfValues]
+  then call CollectionSetIn [prim #mnew [] prim #nth [args 0]]
+  else if prim #eq [name #seqEmpty]
+  then list []
+  else if prim #eq [name #seqCount]
+  then prim #len [prim #nth [args 0]]
+  else if prim #eq [name #seqPushBack]
+  then prim #snoc [prim #nth [args 0] call CollectionValueOut [prim #nth [args 1]]]
+  else if prim #eq [name #seqFront]
+  then call CollectionSeqFront [prim #nth [args 0]]
+  else if prim #eq [name #seqPopFront]
+  then call CollectionSeqRest [prim #nth [args 0]]
+  else if prim #eq [name #seqItems]
+  then call CollectionValuesIn [prim #nth [args 0]]
+  else if prim #eq [name #seqOfValues]
+  then call CollectionValuesOut [prim #nth [args 0]]
+  else if prim #eq [name #keySeqEmpty]
+  then prim #node [#keyseq list [list [] prim #mnew []]]
+  else if prim #eq [name #keySeqCount]
+  then prim #len [call KeySeqOrder [prim #nth [args 0]]]
+  else if prim #eq [name #keySeqFind]
+  then call CollectionFound [call KeySeqEntries [prim #nth [args 0]] call CollectionValueOut [prim #nth [args 1]]]
+  else if prim #eq [name #keySeqPutBack]
+  then
+    call KeySeqPut [
+      prim #nth [args 0]
+      call CollectionValueOut [prim #nth [args 1]]
+      call CollectionValueOut [prim #nth [args 2]]
+    ]
+  else if prim #eq [name #keySeqPutBefore]
+  then
+    call KeySeqPutBefore [
+      prim #nth [args 0]
+      call CollectionValueOut [prim #nth [args 1]]
+      call CollectionValueOut [prim #nth [args 2]]
+      call CollectionValueOut [prim #nth [args 3]]
+    ]
+  else if prim #eq [name #keySeqDrop]
+  then call KeySeqDrop [prim #nth [args 0] call CollectionValueOut [prim #nth [args 1]]]
+  else if prim #eq [name #keySeqMoveBefore]
+  then
+    call KeySeqMoveBefore [
+      prim #nth [args 0]
+      call CollectionValueOut [prim #nth [args 1]]
+      call CollectionValueOut [prim #nth [args 2]]
+    ]
+  else if prim #eq [name #keySeqKeys]
+  then call CollectionValuesIn [call KeySeqOrder [prim #nth [args 0]]]
+  else if prim #eq [name #keySeqPairs]
+  then call KeySeqPairsIn [call KeySeqOrder [prim #nth [args 0]] call KeySeqEntries [prim #nth [args 0]]]
+  else if prim #eq [name #textOctets]
+  then call HostToOctets [call OctetsOfText [prim #nth [args 0]]]
+  else if prim #eq [name #octetsOfBytes]
+  then call HostToOctets [call OctetsOfBytes [prim #nth [args 0]]]
+  else if prim #eq [name #bytesOfOctets]
+  then call BytesOfOctets [call OctetsToHost [prim #nth [args 0]]]
+  else if prim #eq [name #bytesDigest]
+  then call DigestOfBytes [prim #nth [args 0]]
+  else if prim #eq [name #numberMonus]
+  then call TakenAway [prim #nth [args 0] prim #nth [args 1]]
+  else if prim #eq [name #numberQuotient]
+  then call Quotient [prim #nth [args 0] prim #nth [args 1]]
+  else if prim #eq [name #numberRemainder]
+  then call Remainder [prim #nth [args 0] prim #nth [args 1]]
+  else call PerformPrimitive [name args]
+
+; ------------------------------------------------------------- the crossings
+;
+; A collection element crosses the boundary as the canonical Meta value it
+; denotes, in both directions. The writer here covers the shapes the store's
+; writer covers plus the signed integer -- a digest crosses as the
+; hexadecimal text that names it, the way every layer below already crosses
+; one -- and the reader is the store's own.
+
+judgment CollectionValueOut [value] =
+  match value {
+    case (#VInt magnitude negative) -> call CollectionIntOut [magnitude negative]
+    case (#VList items) -> call CollectionValuesOut [items]
+    case (#VMap pairs) -> prim #mfrom [call CollectionPairsOut [pairs]]
+    case (#VNode tag arguments) ->
+      prim #node [prim #str->sym [tag] call CollectionValuesOut [arguments]]
+    case _ -> call WriteCanonValue [value]
+  }
+
+judgment CollectionIntOut [magnitude negative] =
+  match negative {
+    case (#True) -> prim #sub [0 magnitude]
+    case _ -> magnitude
+  }
+
+judgment CollectionValuesOut [values] =
+  match values {
+    case (#MoreValue head tail) ->
+      prim #cons [call CollectionValueOut [head] call CollectionValuesOut [tail]]
+    case _ -> list []
+  }
+
+judgment CollectionPairsOut [pairs] =
+  match pairs {
+    case (#MorePair key value tail) ->
+      prim #cons [
+        mk #entry [call CollectionValueOut [key] call CollectionValueOut [value]]
+        call CollectionPairsOut [tail]
+      ]
+    case _ -> list []
+  }
+
+judgment CollectionValuesIn [items] =
+  match items {
+    case [] -> prim #node [#NoValue list []]
+    case head :: rest ->
+      mk #MoreValue [call ReadCanonValue [head] call CollectionValuesIn [rest]]
+  }
+
+judgment CollectionFound [entries key] =
+  if prim #mhas [entries key]
+  then mk #Present [call ReadCanonValue [prim #mget [entries key unit]]]
+  else prim #node [#Missing list []]
+
+judgment CollectionSetIn [entries values] =
+  match values {
+    case (#MoreValue head tail) ->
+      call CollectionSetIn [prim #mput [entries call CollectionValueOut [head] true] tail]
+    case _ -> entries
+  }
+
+judgment CollectionSeqFront [items] =
+  match items {
+    case [] -> prim #node [#Missing list []]
+    case head :: rest -> mk #Present [call ReadCanonValue [head]]
+  }
+
+judgment CollectionSeqRest [items] =
+  match items {
+    case [] -> list []
+    case head :: rest -> rest
+  }
+
+; ------------------------------------------------------------ keyed sequences
+;
+; A keyed sequence carries its explicit order beside its entries, because the
+; order is semantic and the map is how an element is reached. Both halves
+; live in one node the Strata side cannot open.
+
+judgment KeySeqOrder [value] =
+  match value {
+    case (#keyseq order entries) -> order
+    case _ -> fail #collections-error "a value crossing as a keyed sequence is not one"
+  }
+
+judgment KeySeqEntries [value] =
+  match value {
+    case (#keyseq order entries) -> entries
+    case _ -> fail #collections-error "a value crossing as a keyed sequence is not one"
+  }
+
+judgment KeySeqPut [value key item] =
+  prim #node [#keyseq list [
+    call KeySeqOrderWith [call KeySeqOrder [value] key]
+    prim #mput [call KeySeqEntries [value] key item]
+  ]]
+
+judgment KeySeqOrderWith [order key] =
+  if prim #contains [order key]
+  then order
+  else prim #snoc [order key]
+
+judgment KeySeqPutBefore [value anchor key item] =
+  prim #node [#keyseq list [
+    call KeySeqInsertBefore [call KeySeqWithout [call KeySeqOrder [value] key] anchor key]
+    prim #mput [call KeySeqEntries [value] key item]
+  ]]
+
+judgment KeySeqDrop [value key] =
+  prim #node [#keyseq list [
+    call KeySeqWithout [call KeySeqOrder [value] key]
+    prim #mdel [call KeySeqEntries [value] key]
+  ]]
+
+judgment KeySeqMoveBefore [value anchor key] =
+  if prim #mhas [call KeySeqEntries [value] key]
+  then
+    prim #node [#keyseq list [
+      call KeySeqInsertBefore [call KeySeqWithout [call KeySeqOrder [value] key] anchor key]
+      call KeySeqEntries [value]
+    ]]
+  else value
+
+judgment KeySeqWithout [order key] =
+  match order {
+    case [] -> list []
+    case head :: rest ->
+      if prim #eq [head key]
+      then rest
+      else prim #cons [head call KeySeqWithout [rest key]]
+  }
+
+; A missing anchor is total, not an error: the key lands at the back, which
+; is what "before nothing in particular" has to mean.
+judgment KeySeqInsertBefore [order anchor key] =
+  match order {
+    case [] -> list [key]
+    case head :: rest ->
+      if prim #eq [head anchor]
+      then prim #cons [key prim #cons [head rest]]
+      else prim #cons [head call KeySeqInsertBefore [rest anchor key]]
+  }
+
+judgment KeySeqPairsIn [order entries] =
+  match order {
+    case [] -> prim #node [#NoPair list []]
+    case head :: rest ->
+      mk #MorePair [
+        call ReadCanonValue [head]
+        call ReadCanonValue [prim #mget [entries head unit]]
+        call KeySeqPairsIn [rest entries]
+      ]
+  }
+
+; ----------------------------------------------------------------- the round
+
+judgment StrataCollectionsSystem [prelude native octets artifact collections] =
+  list [prelude native octets artifact collections]

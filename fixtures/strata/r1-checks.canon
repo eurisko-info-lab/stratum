@@ -1,0 +1,134 @@
+; Executable acceptance checks for R1, extensional collections.
+;
+; The claim has two halves. The first is structural: the collections module
+; parses, prints byte for byte, checks, is total, declares its capabilities
+; and agrees with the host about the widened primitive set. The second is
+; semantic: every law the Strata module states about the four collection
+; shapes -- canonical enumeration, order-independent construction, agreement
+; with the cons-list reference model, keyed-sequence identity under reorder --
+; comes back `True` when the host performs the primitives.
+[
+  (check strata-the-collections-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/collections.strata"))))
+    (value #t))
+
+  (check strata-the-collections-module-checks
+    (call CheckLinkedNative
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections"))
+    (value (checked ok)))
+
+  (check strata-the-collections-module-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections"))
+    (value (total ok)))
+
+  (check strata-the-collections-module-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections"))
+    (value (permitted ok)))
+
+  (check strata-the-collections-module-agrees-with-the-host-set
+    (call CheckLinkedBoundary
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections"))
+    (value (bounded ok)))
+
+  (check strata-the-map-laws-hold
+    (call RunStrataWith
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections")
+      (q mapLaws)
+      (q []))
+    (value (True)))
+
+  (check strata-the-set-laws-hold
+    (call RunStrataWith
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections")
+      (q setLaws)
+      (q []))
+    (value (True)))
+
+  (check strata-the-seq-laws-hold
+    (call RunStrataWith
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections")
+      (q seqLaws)
+      (q []))
+    (value (True)))
+
+  (check strata-the-keyseq-laws-hold
+    (call RunStrataWith
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections")
+      (q keySeqLaws)
+      (q []))
+    (value (True)))
+
+  (check strata-the-collection-laws-hold-together
+    (call RunStrataWith
+      (q (file "foundations/R1/surface/strata.generated.grammar"))
+      (call StrataCollectionsSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata"))))
+      (q "strata.collections")
+      (q collectionLaws)
+      (q []))
+    (value (True)))
+]

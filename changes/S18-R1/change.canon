@@ -1,0 +1,19 @@
+; The canonical change from S18 to R1.
+;
+; S18 |- R1. Collections become extensional.
+(change
+  (kind foundation)
+  (name "S18->R1")
+  (predecessor (foundation-of "foundations/S18"))
+  (delta-meta (file "changes/S18-R1/delta-meta.canon"))
+  (delta-grammar (file "changes/S18-R1/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "extensional collections")
+      (programs [
+        (file "features/strata/collections.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/collections.meta")
+        (text-file "strata/system/collections.strata")
+      ]))))

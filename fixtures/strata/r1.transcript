@@ -1,0 +1,33 @@
+# R1 acceptance transcript: extensional collections.
+#
+# S18 |- R1. Collections become extensional.
+#
+# `strata/system/collections.strata` declares what a `Map`, a `Set`, a `Seq`
+# and a `KeySeq` mean -- unique keys, canonical enumeration in the one
+# canonical order, persistent update, membership, explicit sequence order,
+# keyed identity under reorder -- and no constructors, so nothing on the
+# Strata side can observe which structure the host keeps. The host performs
+# the primitives; the laws in the module say what its answers must be; the
+# checks run the laws.
+
+$ foundation verify --dir foundations/R1
+> foundation R1
+> digest f2b5f42f400d6e4d8036d4218a7058de627d205a7e9f4162edb70371658b6984
+> closure 332 artifacts
+> check strata-the-collections-module-prints-exactly ok
+> check strata-the-collections-module-checks ok
+> check strata-the-collections-module-is-total ok
+> check strata-the-collections-module-declares-its-capabilities ok
+> check strata-the-collections-module-agrees-with-the-host-set ok
+> check strata-the-map-laws-hold ok
+> check strata-the-set-laws-hold ok
+> check strata-the-seq-laws-hold ok
+> check strata-the-keyseq-laws-hold ok
+> check strata-the-collection-laws-hold-together ok
+> verdict ok
+
+$ derive --foundation foundations/R1 --goal '(call RunStrataWith (grammar strata) (call StrataCollectionsSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata"))) (q "strata.collections") (q collectionLaws) (q []))'
+> (True)
+
+$ derive --foundation foundations/R1 --goal '(call RunStrataWith (grammar strata) (call StrataCollectionsSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata"))) (q "strata.collections") (q mapBuildIsOrderIndependent) (q []))'
+> (True)

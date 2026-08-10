@@ -1,0 +1,11 @@
+; delta-meta for S18 -> R1: Meta gains the collections crossing, and a wider
+; host set for the module that needs one. What a collection means is Strata's;
+; how an element is reached quickly is the host's.
+(change
+  (kind delta-meta)
+  (name "S18->R1 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (editing strata)
+      (collecting strata))))

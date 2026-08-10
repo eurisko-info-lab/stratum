@@ -34,7 +34,7 @@ workers=${STRATUM_STAIRCASE_WORKERS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-mapfile -t all_foundations < <(ls -d foundations/F* | sort -V; ls -d foundations/S* 2>/dev/null | sort -V)
+mapfile -t all_foundations < <(ls -d foundations/F* | sort -V; ls -d foundations/S* 2>/dev/null | sort -V; ls -d foundations/R* 2>/dev/null | sort -V)
 foundations=("${all_foundations[@]}")
 
 build_world() {

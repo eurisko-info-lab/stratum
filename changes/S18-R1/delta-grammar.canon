@@ -1,0 +1,10 @@
+; R1 adds no Strata surface. The S18 grammar is inherited exactly: an
+; extensional collection is `type` and `prim`, and both were drawn at S7.
+(change
+  (kind delta-grammar)
+  (name "S18->R1 delta-grammar")
+  (replace
+    (ReplaceChange
+      second-floor-grammar
+      (editing strata)
+      (collecting strata))))
