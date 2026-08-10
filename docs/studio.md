@@ -1,9 +1,10 @@
 # Stratum Studio
 
 ```text
-host-scala/lsp      the protocol adapter
-languages/service   the generic language service
-languages/pdf       the pdf projection
+host-scala/lsp      the protocol adapter          (main)
+languages/service   the generic language service  (main)
+languages/pdf       the pdf projection            (main)
+studio/vscode       the generated client          (featured/vscode)
 ```
 
 A client for a particular editor, and the manifest generator that binds it to a
@@ -50,14 +51,14 @@ strings.
 
 | Feature | Where it comes from |
 | --- | --- |
-| syntax errors | the grammar machine, positioned by the service |
-| highlighting | semantic tokens over the grammar's own `token` classes, on every keystroke |
-| comments and brackets | the descriptor, applied with `setLanguageConfiguration` at activation |
-| completion | every keyword read out of the grammar artifact |
-| formatting | the round trip the platform already guarantees: parse, then print |
-| outline and hover | the deployment's `ServiceSymbols` |
-| views | the deployed Studio profile's panels, rendered by F11's runtime |
-| commands | the profile's commands, answered by the foundation |
+syntax errors | the grammar machine, positioned by the service |
+highlighting | semantic tokens over the grammar's own `token` classes, on every keystroke |
+comments and brackets | the descriptor, applied with `setLanguageConfiguration` at activation |
+completion | every keyword read out of the grammar artifact |
+formatting | the round trip the platform already guarantees: parse, then print |
+outline and hover | the deployment's `ServiceSymbols` |
+views | the deployed Studio profile's panels, rendered by F11's runtime |
+commands | the profile's commands, answered by the foundation |
 
 The first five need no code at all: a grammar is enough.
 
@@ -74,8 +75,8 @@ live instead:
 
 | Usually a generated file | Here |
 | --- | --- |
-| a syntax highlighting grammar | `textDocument/semanticTokens/full` |
-| a language configuration file | `stratum/languages`, applied at activation |
+a syntax highlighting grammar | `textDocument/semanticTokens/full` |
+a language configuration file | `stratum/languages`, applied at activation |
 
 That is not only tidier, it is the difference between colours that agree with
 the parser and colours that are a copy of a grammar and can fall behind it.
@@ -87,8 +88,8 @@ this legal without touching the core's identity.
 ## Binding a language
 
 A world publishes a descriptor - a map, so the host dispatches on nothing - and
-defines the fixed entry points. A branch that carries an application carries
-its descriptor with it, in `applications/<name>/service.canon`.
+defines the fixed entry points. This branch carries one in
+[applications/sds/service.canon](../applications/sds/service.canon).
 
 ```text
 ServiceDiagnostics [grammar text]        ServiceFormat [grammar text]
@@ -108,6 +109,7 @@ cleanly rather than fail.
 
 ```bash
 sbt "runMain stratum.cli.Stratum lsp languages --world <world>"
+sbt "runMain stratum.cli.Stratum lsp package   --world <world> --out studio/vscode"
 sbt "runMain stratum.cli.Stratum lsp replay    --world <world> --script <script>"
 ```
 
@@ -121,3 +123,18 @@ An editing session is a transcript like any other derivation. A branch that
 carries an application carries one in `fixtures/lsp`: it opens buffers that
 exist on no disk, including one of the platform's own Meta sources with a
 syntax error, and records every byte the server sent back.
+
+The VS Code replay harness now uses the `studio` language as well, so a replay
+script is readable source rather than ad hoc JSON. That means the same file can
+serve as both a regression test and a worked tutorial. On this branch,
+[docs/sds-browser.studio](../docs/sds-browser.studio)
+writes a draft SDS, shows the invalid-unit diagnostic and finding it produces,
+then fixes the unit and watches those derived views clear.
+
+Replay a specific tutorial script with:
+
+```bash
+cd studio/vscode
+npm run compile
+node ./test/run.cjs ../../docs/sds-browser.studio
+```
