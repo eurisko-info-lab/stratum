@@ -1,0 +1,10 @@
+module "app.smalltalk.dispatch"
+version 1
+import "strata.prelude" 1
+
+; Method dictionaries and heap objects remain at the Meta protocol boundary.
+; Strata owns the Squeak-like dispatch decision at each class in the chain.
+data LookupEvidence = | LookupEvidence [definesSelector #1: Bool, hasSuperclass #2: Bool]
+data LookupDecision = | InvokeOwnedMethod [] | SearchSuperclass [] | TryPrimitive []
+
+def dispatchDecision [evidence: LookupEvidence]: LookupDecision = match evidence of case LookupEvidence defines inherited -> match defines of case True -> InvokeOwnedMethod case False -> match inherited of case True -> SearchSuperclass case False -> TryPrimitive end end end

@@ -50,6 +50,24 @@
     (call EvalSource (grammar smalltalk) (q "Object subclass: #Animal instanceVariableNames: ''. Animal >> speak [ ^'...' ] Animal subclass: #Dog instanceVariableNames: ''. Dog >> speak [ ^'woof' ] ^Dog new speak , ' and ' , Animal new speak."))
     (value (value "woof and ...")))
 
+  (check an-owned-method-is-selected-by-compiled-strata-dispatch
+    (call SmalltalkDispatchDecision
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata")))
+      (call SourceText (q (text-file "strata/compiler/compile.strata")))
+      (call SourceText (q (text-file "applications/smalltalk/dispatch.strata")))
+      (q #t) (q #t))
+    (value (InvokeOwnedMethod)))
+
+  (check compiled-smalltalk-dispatch-preserves-interpreted-strata-meaning
+    (call SmalltalkPolicyPreservesMeaning
+      (q (file "foundations/S18/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/lib/prelude.strata")))
+      (call SourceText (q (text-file "strata/compiler/compile.strata")))
+      (call SourceText (q (text-file "applications/smalltalk/dispatch.strata")))
+      (q #f) (q #t))
+    (value #t))
+
   (check a-conditional-runs-one-branch-only
     (call EvalSource (grammar smalltalk) (q "Object subclass: #Trace instanceVariableNames: 'log'. Trace >> run [ log := 0. false ifTrue: [ log := 1 ] ifFalse: [ log := 2 ]. ^log ] ^Trace new run."))
     (value (value "2")))

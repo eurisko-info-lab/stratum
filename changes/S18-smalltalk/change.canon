@@ -1,0 +1,28 @@
+(change
+  (kind application)
+  (name "S18->Smalltalk")
+  (predecessor (foundation-of "foundations/S18"))
+  (feature
+    (feature
+      (name "Squeak-like Smalltalk with Strata dispatch policy")
+      (languages [(file "applications/smalltalk/smalltalk.generated.grammar")])
+      (programs [
+        (file "features/strata/application.generated.meta")
+        (file "features/strata/application-resolve.generated.meta")
+        (file "applications/smalltalk/evaluator.generated.meta")
+        (file "applications/smalltalk/image.generated.meta")
+        (file "applications/smalltalk/smalltalk.generated.meta")
+        (file "applications/smalltalk/service.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/application.meta")
+        (text-file "features/strata/application-resolve.meta")
+        (text-file "applications/smalltalk/dispatch.strata")
+        (text-file "applications/smalltalk/evaluator.meta")
+        (text-file "applications/smalltalk/image.meta")
+        (text-file "applications/smalltalk/smalltalk.meta")
+        (text-file "applications/smalltalk/service.meta")
+      ])
+      (profiles [(file "applications/smalltalk/profile.canon")])
+      (services [(file "applications/smalltalk/service.canon")])
+      (documents [(text-file "applications/smalltalk/documents/counter.st")]))))

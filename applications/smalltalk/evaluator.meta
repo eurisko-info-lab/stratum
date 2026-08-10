@@ -168,6 +168,37 @@ judgment LookupMethod [image class selector] =
     case _ -> mk #missing []
   }
 
+judgment SmalltalkBool [value] =
+  if prim #eq [value true]
+  then mk #True []
+  else mk #False []
+
+judgment SmalltalkLookupEvidence [definesSelector hasSuperclass] =
+  mk #LookupEvidence [call SmalltalkBool [definesSelector] call SmalltalkBool [hasSuperclass]]
+
+judgment SmalltalkCompilerSources [prelude compiler] = list [prelude compiler]
+judgment SmalltalkPolicySources [prelude policy] = list [prelude policy]
+
+judgment SmalltalkDispatchDecision [grammar prelude compiler policy definesSelector hasSuperclass] =
+  call RunApplicationStrataWith [
+    grammar
+    call SmalltalkCompilerSources [prelude compiler]
+    call SmalltalkPolicySources [prelude policy]
+    "app.smalltalk.dispatch"
+    #dispatchDecision
+    list [call SmalltalkLookupEvidence [definesSelector hasSuperclass]]
+  ]
+
+judgment SmalltalkPolicyPreservesMeaning [grammar prelude compiler policy definesSelector hasSuperclass] =
+  call ApplicationStrataPreservesMeaning [
+    grammar
+    call SmalltalkCompilerSources [prelude compiler]
+    call SmalltalkPolicySources [prelude policy]
+    "app.smalltalk.dispatch"
+    #dispatchDecision
+    list [call SmalltalkLookupEvidence [definesSelector hasSuperclass]]
+  ]
+
 judgment AllSlots [image class] =
   match call ClassNamed [image class] {
     case (#class name superclass slots methods) ->
@@ -337,7 +368,7 @@ judgment EvalExpression [image heap frame expression] =
       mk #done [
         mk #block [
           prim #append [
-            call ParameterNames [call FlattenParameters [parameters]]
+            call SmalltalkParameterNames [call FlattenParameters [parameters]]
             call TemporaryNames [temporaries]
           ]
           body frame
@@ -346,7 +377,7 @@ judgment EvalExpression [image heap frame expression] =
       ]
     case (#BlockWith parameters body) ->
       mk #done [
-        mk #block [call ParameterNames [call FlattenParameters [parameters]] body frame]
+        mk #block [call SmalltalkParameterNames [call FlattenParameters [parameters]] body frame]
         heap
       ]
     case (#Assign target value) ->
@@ -377,14 +408,14 @@ judgment EvalExpression [image heap frame expression] =
 judgment SelectorOf [node] =
   match node { case (#Variable name) -> name case _ -> #yourself }
 
-judgment ParameterNames [parameters] =
+judgment SmalltalkParameterNames [parameters] =
   match parameters {
     case [] -> list []
     case _ ->
       match prim #head [parameters] {
         case (#BlockParameter name) ->
-          prim #cons [name call ParameterNames [prim #tail [parameters]]]
-        case _ -> call ParameterNames [prim #tail [parameters]]
+          prim #cons [name call SmalltalkParameterNames [prim #tail [parameters]]]
+        case _ -> call SmalltalkParameterNames [prim #tail [parameters]]
       }
   }
 
@@ -487,7 +518,7 @@ judgment EvalBranch [image heap frame expression] =
   }
 
 judgment RunBlockValue [image heap value] =
-  match call RunBlock [image heap value list []] {
+  match call SmalltalkRunBlock [image heap value list []] {
     case (#sent answer finalHeap) -> mk #done [answer finalHeap]
   }
 
@@ -554,11 +585,11 @@ judgment SendMessage [image heap receiver selector arguments] =
     case _ -> call PrimitiveSend [image heap receiver selector arguments]
   }
 
-judgment BindParameters [bindings names values] =
+judgment SmalltalkBindParameters [bindings names values] =
   match names {
     case [] -> bindings
     case _ ->
-      call BindParameters [
+      call SmalltalkBindParameters [
         prim #mput [
           bindings prim #head [names]
           if prim #eq [prim #len [values] 0] then call Nil [] else prim #head [values]
@@ -572,7 +603,7 @@ judgment InvokeMethod [image heap receiver method arguments] =
   match method {
     case (#method parameters body chunk) ->
       let bindings =
-        call BindParameters [prim #mput [prim #mnew [] #self receiver] parameters arguments]
+        call SmalltalkBindParameters [prim #mput [prim #mnew [] #self receiver] parameters arguments]
       in
       match call NewFrame [heap bindings call Nil []] {
         case (#framed frame nextHeap) ->
@@ -597,10 +628,10 @@ judgment NonLocalValue [value] =
 ; A block is a method whose frame's parent is where it was written, which is
 ; the whole reason a block is worth having.
 
-judgment RunBlock [image heap block arguments] =
+judgment SmalltalkRunBlock [image heap block arguments] =
   match block {
     case (#block parameters body environment) ->
-      match call NewFrame [heap call BindParameters [prim #mnew [] parameters arguments] environment] {
+      match call NewFrame [heap call SmalltalkBindParameters [prim #mnew [] parameters arguments] environment] {
         case (#framed frame nextHeap) ->
           match call EvalStatements [image nextHeap frame call FlattenStatements [body]] {
             case (#returned value finalHeap) ->
@@ -694,7 +725,7 @@ judgment TimesRepeat [image heap count block] =
   if prim #eq [count 0]
   then mk #sent [count heap]
   else
-    match call RunBlock [image heap block list []] {
+    match call SmalltalkRunBlock [image heap block list []] {
       case (#sent value nextHeap) ->
         call TimesRepeat [image nextHeap prim #sub [count 1] block]
     }
@@ -703,7 +734,7 @@ judgment ToDo [image heap from to block] =
   if prim #gt [from to]
   then mk #sent [from heap]
   else
-    match call RunBlock [image heap block list [from]] {
+    match call SmalltalkRunBlock [image heap block list [from]] {
       case (#sent value nextHeap) ->
         call ToDo [image nextHeap prim #add [from 1] to block]
     }
@@ -720,20 +751,20 @@ judgment ObjectPrimitive [image heap receiver name argument arguments] =
       if prim #eq [name "new"] then call NewInstance [image heap class]
       else mk #sent [call DoesNotUnderstand [receiver name] heap]
     case (#block parameters body environment) ->
-      if prim #eq [name "value"] then call RunBlock [image heap receiver list []]
-      else if prim #eq [name "value:"] then call RunBlock [image heap receiver list [argument]]
-      else if prim #eq [name "value:value:"] then call RunBlock [image heap receiver arguments]
+      if prim #eq [name "value"] then call SmalltalkRunBlock [image heap receiver list []]
+      else if prim #eq [name "value:"] then call SmalltalkRunBlock [image heap receiver list [argument]]
+      else if prim #eq [name "value:value:"] then call SmalltalkRunBlock [image heap receiver arguments]
       else if prim #eq [name "whileTrue:"] then call WhileTrue [image heap receiver argument]
       else mk #sent [call DoesNotUnderstand [receiver name] heap]
     case _ -> mk #sent [call DoesNotUnderstand [receiver name] heap]
   }
 
 judgment WhileTrue [image heap condition body] =
-  match call RunBlock [image heap condition list []] {
+  match call SmalltalkRunBlock [image heap condition list []] {
     case (#sent flag nextHeap) ->
       if flag
       then
-        match call RunBlock [image nextHeap body list []] {
+        match call SmalltalkRunBlock [image nextHeap body list []] {
           case (#sent value finalHeap) -> call WhileTrue [image finalHeap condition body]
         }
       else mk #sent [call Nil [] nextHeap]
