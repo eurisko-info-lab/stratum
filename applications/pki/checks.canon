@@ -1,0 +1,17 @@
+[
+  (check regulator-has-a-trusted-encryption-certificate
+    (call CertificateTrusted (call RootAuthority) (call RegulatorCertificate))
+    (value #t))
+
+  (check regulator-certificate-is-for-encryption
+    (call Certificate'purpose (call RegulatorCertificate))
+    (value encryption))
+
+  (check a-signing-certificate-cannot-authorize-disclosure
+    (call PkiCertificateFor
+      (call RootAuthority)
+      (call TrustedCertificates)
+      (q regulatory-publisher)
+      (q encryption))
+    (value (none)))
+]
