@@ -1,0 +1,49 @@
+module pki
+
+record CertificateAuthority [name key]
+record Certificate [identity purpose key issuer signature]
+
+judgment CertificateSubject [identity purpose key issuer] =
+  mk #certificate-subject [identity purpose key issuer]
+
+judgment IssueCertificate [issuerSecret identity purpose subjectSecret] =
+  let issuer = call PublicKey [issuerSecret] in
+  let key = call PublicKey [subjectSecret] in
+  let subject = call CertificateSubject [identity purpose key issuer] in
+  call Certificate [identity purpose key issuer call SignSubject [issuerSecret subject]]
+
+judgment CertificateTrusted [authority certificate] =
+  let subject = call CertificateSubject [
+    call Certificate'identity [certificate]
+    call Certificate'purpose [certificate]
+    call Certificate'key [certificate]
+    call Certificate'issuer [certificate]
+  ] in
+  if prim #eq [call Certificate'issuer [certificate] call CertificateAuthority'key [authority]]
+  then call VerifySubject [call CertificateAuthority'key [authority] subject call Certificate'signature [certificate]]
+  else false
+
+judgment PkiCertificateFor [authority certificates identity purpose] =
+  match certificates {
+    case [] -> mk #none []
+    case head :: rest ->
+      if prim #eq [call Certificate'identity [head] identity]
+      then
+        if prim #eq [call Certificate'purpose [head] purpose]
+        then
+          if call CertificateTrusted [authority head]
+          then mk #some [head]
+          else mk #none []
+        else call PkiCertificateFor [authority rest identity purpose]
+      else call PkiCertificateFor [authority rest identity purpose]
+  }
+
+judgment RootSecret [] = "stratum-pki-root"
+judgment RootAuthority [] = call CertificateAuthority [#stratum-pki call PublicKey [call RootSecret []]]
+judgment RegulatorSecret [] = "regulator-disclosure"
+judgment RegulatorCertificate [] =
+  call IssueCertificate [call RootSecret [] #regulator #encryption call RegulatorSecret []]
+judgment RegulatoryPublisherCertificate [] =
+  call IssueCertificate [call RootSecret [] #regulatory-publisher #signing "regulatory-publisher"]
+judgment TrustedCertificates [] =
+  list [call RegulatorCertificate [] call RegulatoryPublisherCertificate []]

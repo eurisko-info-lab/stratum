@@ -1,0 +1,9 @@
+(change
+  (kind application)
+  (name "F11->PKI")
+  (predecessor (foundation-of "foundations/F11"))
+  (feature
+    (feature
+      (name "purpose-specific certificate registry")
+      (programs [(file "applications/pki/pki.generated.meta")])
+      (sources [(text-file "applications/pki/pki.meta")]))))
