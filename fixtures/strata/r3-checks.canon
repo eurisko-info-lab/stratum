@@ -1,0 +1,121 @@
+; Executable acceptance checks for R3, the tree with identity separated from
+; address.
+;
+; The property under test is one sentence long: what an entry is does not
+; depend on where it is. A rename rebinds a path and preserves the entry, its
+; identity and everyone else's; a revision changes what an identity means and
+; touches no path; and the rename is expressible in the R2 calculus as a
+; names-only keyed change.
+[
+  (check strata-the-tree-module-prints-exactly
+    (call PrintsExactly
+      (q (file "foundations/R3/surface/strata.generated.grammar"))
+      (call SourceText (q (text-file "strata/system/tree.strata"))))
+    (value #t))
+
+  (check strata-the-tree-module-checks
+    (call CheckLinkedNative
+      (q (file "foundations/R3/surface/strata.generated.grammar"))
+      (call StrataTreeSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata")))
+        (call SourceText (q (text-file "strata/system/tree.strata"))))
+      (q "strata.tree"))
+    (value (checked ok)))
+
+  (check strata-the-tree-module-is-total
+    (call TotalLinkedModule
+      (q (file "foundations/R3/surface/strata.generated.grammar"))
+      (call StrataTreeSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata")))
+        (call SourceText (q (text-file "strata/system/tree.strata"))))
+      (q "strata.tree"))
+    (value (total ok)))
+
+  (check strata-the-tree-module-declares-its-capabilities
+    (call CheckLinkedCapabilities
+      (q (file "foundations/R3/surface/strata.generated.grammar"))
+      (call StrataTreeSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata")))
+        (call SourceText (q (text-file "strata/system/tree.strata"))))
+      (q "strata.tree"))
+    (value (permitted ok)))
+
+  (check strata-a-rename-preserves-identity
+    (call RunStrataWith
+      (q (file "foundations/R3/surface/strata.generated.grammar"))
+      (call StrataTreeSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata")))
+        (call SourceText (q (text-file "strata/system/tree.strata"))))
+      (q "strata.tree")
+      (q renamePreservesIdentity)
+      (q []))
+    (value (True)))
+
+  (check strata-a-rename-is-a-names-only-change
+    (call RunStrataWith
+      (q (file "foundations/R3/surface/strata.generated.grammar"))
+      (call StrataTreeSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata")))
+        (call SourceText (q (text-file "strata/system/tree.strata"))))
+      (q "strata.tree")
+      (q renameIsANamesOnlyChange)
+      (q []))
+    (value (True)))
+
+  (check strata-a-rename-applies-through-the-calculus
+    (call RunStrataWith
+      (q (file "foundations/R3/surface/strata.generated.grammar"))
+      (call StrataTreeSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata")))
+        (call SourceText (q (text-file "strata/system/tree.strata"))))
+      (q "strata.tree")
+      (q renameAppliesThroughTheCalculus)
+      (q []))
+    (value (True)))
+
+  (check strata-the-tree-laws-hold-together
+    (call RunStrataWith
+      (q (file "foundations/R3/surface/strata.generated.grammar"))
+      (call StrataTreeSystem
+        (call SourceText (q (text-file "strata/lib/prelude.strata")))
+        (call SourceText (q (text-file "strata/system/native.strata")))
+        (call SourceText (q (text-file "strata/system/octets.strata")))
+        (call SourceText (q (text-file "strata/system/artifact.strata")))
+        (call SourceText (q (text-file "strata/system/collections.strata")))
+        (call SourceText (q (text-file "strata/system/changeset.strata")))
+        (call SourceText (q (text-file "strata/system/tree.strata"))))
+      (q "strata.tree")
+      (q treeLaws)
+      (q []))
+    (value (True)))
+]

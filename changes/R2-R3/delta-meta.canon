@@ -1,0 +1,10 @@
+; delta-meta for R2 -> R3: Meta gains only a source list. The identity split
+; is Strata's own.
+(change
+  (kind delta-meta)
+  (name "R2->R3 delta-meta")
+  (replace
+    (ReplaceChange
+      second-floor-language
+      (indexing strata)
+      (addressing strata))))

@@ -1,0 +1,10 @@
+module stratatree
+
+; The tree, with identity separated from address.
+;
+; This layer adds no primitive and widens nothing. The identity split is
+; Strata's own -- `strata/system/tree.strata` -- and the only thing Meta
+; contributes is the source list the checks link.
+
+judgment StrataTreeSystem [prelude native octets artifact collections changeset tree] =
+  list [prelude native octets artifact collections changeset tree]

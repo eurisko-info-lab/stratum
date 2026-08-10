@@ -1,0 +1,30 @@
+# R3 acceptance transcript: the tree, with identity separated from address.
+#
+# R2 |- R3. A path stops being an identity.
+#
+# An entry is a semantic object with an identity of its own; a path is where
+# that object currently happens to be materialized; the tree is two maps.
+# A rename rebinds a path in `names` and touches nothing in `entries`, so
+# references, annotations and histories survive it -- and the rename is
+# itself an R2 keyed change over the `names` map, applied through the
+# calculus rather than through a bespoke edit.
+
+$ foundation verify --dir foundations/R3
+> foundation R3
+> digest e854cf63be90311523620c26851e838c651b241aeebf5cfb21ea25141cf9dfff
+> closure 344 artifacts
+> check strata-the-tree-module-prints-exactly ok
+> check strata-the-tree-module-checks ok
+> check strata-the-tree-module-is-total ok
+> check strata-the-tree-module-declares-its-capabilities ok
+> check strata-a-rename-preserves-identity ok
+> check strata-a-rename-is-a-names-only-change ok
+> check strata-a-rename-applies-through-the-calculus ok
+> check strata-the-tree-laws-hold-together ok
+> verdict ok
+
+$ derive --foundation foundations/R3 --goal '(call RunStrataWith (grammar strata) (call StrataTreeSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/changeset.strata")) (call SourceText (source "strata/system/tree.strata"))) (q "strata.tree") (q treeLaws) (q []))'
+> (True)
+
+$ derive --foundation foundations/R3 --goal '(call RunStrataWith (grammar strata) (call StrataTreeSystem (call SourceText (source "strata/lib/prelude.strata")) (call SourceText (source "strata/system/native.strata")) (call SourceText (source "strata/system/octets.strata")) (call SourceText (source "strata/system/artifact.strata")) (call SourceText (source "strata/system/collections.strata")) (call SourceText (source "strata/system/changeset.strata")) (call SourceText (source "strata/system/tree.strata"))) (q "strata.tree") (q renameAppliesThroughTheCalculus) (q []))'
+> (True)

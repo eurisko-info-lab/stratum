@@ -1,0 +1,19 @@
+; The canonical change from R2 to R3.
+;
+; R2 |- R3. A path stops being an identity.
+(change
+  (kind foundation)
+  (name "R2->R3")
+  (predecessor (foundation-of "foundations/R2"))
+  (delta-meta (file "changes/R2-R3/delta-meta.canon"))
+  (delta-grammar (file "changes/R2-R3/delta-grammar.canon"))
+  (feature
+    (feature
+      (name "the tree with identity separated from address")
+      (programs [
+        (file "features/strata/tree.generated.meta")
+      ])
+      (sources [
+        (text-file "features/strata/tree.meta")
+        (text-file "strata/system/tree.strata")
+      ]))))

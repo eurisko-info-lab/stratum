@@ -1,0 +1,10 @@
+; R3 adds no Strata surface. The R2 grammar is inherited exactly: a tree is
+; data over maps, and both were already here.
+(change
+  (kind delta-grammar)
+  (name "R2->R3 delta-grammar")
+  (replace
+    (ReplaceChange
+      second-floor-grammar
+      (indexing strata)
+      (addressing strata))))

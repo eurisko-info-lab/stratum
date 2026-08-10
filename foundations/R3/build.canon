@@ -1,0 +1,77 @@
+; R3: the tree, with identity separated from address.
+;
+; The repository below reduces a tree to a path-to-content list, so a rename
+; manufactures a new object and orphans everything that pointed at the old
+; path. This layer separates the two coordinates for good: an entry is a
+; semantic object with an identity of its own, a path is where that object
+; currently happens to be materialized, and the tree is two R1 maps --
+; `names` from path to identity, `entries` from identity to entry. A rename
+; edits `names` and nothing else, so references, annotations and histories
+; survive it; and because a tree is a canonical value, the rename is itself
+; an R2 keyed change over the `names` map, applied through the calculus
+; rather than through a bespoke edit. No primitive is added and no
+; capability is widened.
+(build
+  (name "R3")
+  (bootstrap "StratumHost0/1")
+  (predecessor (dir "foundations/R2"))
+  (change (file "changes/R2-R3/change.canon"))
+  (application
+    (application
+      (name "strata-r3")
+      (host (file "host/core.canon"))
+      (meta (program-of [
+        ; Ahead of everything they speak for. Where two modules define a
+        ; judgment the first one merged is the one that answers, so the
+        ; collections boundary stands ahead of the store's, and the layers
+        ; below keep what they were built with, and keep their digests.
+        (file "features/strata/index.generated.meta")
+        (file "features/strata/collections.generated.meta")
+        (file "features/strata/changeset.generated.meta")
+        (file "features/strata/tree.generated.meta")
+        (file "features/strata/store.generated.meta")
+        (file "features/strata/repository.generated.meta")
+        (file "features/strata/studio.generated.meta")
+        (file "features/strata/foundation.generated.meta")
+        (file "features/strata/governance.generated.meta")
+        (file "features/strata/ledger.generated.meta")
+        (file "features/strata/sync.generated.meta")
+        (file "features/strata/federation.generated.meta")
+        (file "features/strata/retention.generated.meta")
+        (file "features/strata/agent.generated.meta")
+        (file "features/strata/performance.generated.meta")
+        (file "features/strata/optimization.generated.meta")
+        (file "languages/meta/prelude.meta")
+        (file "languages/meta/source.meta")
+        (file "languages/meta/elaborate.meta")
+        (file "languages/grammar/elaborate.meta")
+        (file "languages/foundation/foundation.meta")
+        (file "languages/foundation/derive.meta")
+        (file "languages/foundation/delta.meta")
+        (file "foundations/R3/surface/strata.generated.meta")
+        (file "features/strata/check.generated.meta")
+        (file "features/strata/total.generated.meta")
+        (file "features/strata/schema.generated.meta")
+        (file "features/strata/depend.generated.meta")
+        (file "features/strata/change.generated.meta")
+        (file "features/strata/law.generated.meta")
+        (file "features/strata/resolve.generated.meta")
+        (file "features/strata/compile.generated.meta")
+        (file "features/strata/effect.generated.meta")
+        (file "features/strata/native.generated.meta")
+        (file "features/strata/language.generated.meta")
+        (file "features/strata/metasource.generated.meta")
+        (file "languages/service/service.generated.meta")
+      ]))
+      (grammars {
+        strata (file "foundations/R3/surface/strata.generated.grammar")
+        meta (file "languages/meta/meta.generated.grammar")
+        grammar (file "languages/grammar/grammar.generated.grammar")
+      })
+      (entries {})
+      (service (file "fixtures/strata/s12-service.canon"))
+      (checks (include "fixtures/strata/r3-checks.canon"))
+      (kernel (kernel (allow
+        cas-get cas-has hash grammar-parse grammar-print grammar-lex
+        text-octets octets-of-bytes bytes-of-octets digest-of-bytes)))
+      (resources (budget (steps 1000000000) (depth 240000))))))

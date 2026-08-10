@@ -1,0 +1,90 @@
+module "strata.tree"
+version 1
+; The tree, with identity separated from address.
+;
+; The repository below reduces a tree to a path-to-content list, so a rename
+; manufactures a new object out of an old one and everything that pointed at
+; the old path points at nothing. This module says what the final repository
+; tree means instead: an entry is a semantic object with an identity of its
+; own, a path is where that object currently happens to be materialized, and
+; the tree is two maps -- `names` from path to entry identity, `entries`
+; from identity to entry. A rename edits the `names` map and nothing else,
+; so references, annotations and histories survive it, which is the property
+; a semantic forge actually wants from the word "rename". A content digest
+; is carried as the hexadecimal text that names it, the way every layer
+; below already carries one across the boundary.
+;
+; Both maps are R1 collections and every tree edit is expressed through the
+; R2 change calculus over the tree's canonical value, so the laws here are
+; short: what an entry is does not depend on where it is.
+import "strata.prelude" 1
+import "strata.native" 1
+import "strata.octets" 1
+import "strata.artifact" 1
+import "strata.collections" 1
+import "strata.changeset" 1
+
+data Entry = | Entry [entryContent #1: Text, entryLanguage #2: Text, entryMaterializer #3: Text]
+data FoundEntry = | NoFoundEntry [] | FoundEntry [foundEntry #1: Entry]
+data Tree = | Tree [treeNames #1: Map, treeEntries #2: Map]
+
+; ------------------------------------------------------------ construction
+
+def emptyTree [] ! collections: Tree = Tree mapEmpty mapEmpty
+def entryValue [e: Entry] ! text arith: Value = match e of case Entry content language materializer -> VMap (MorePair (VName "content") (VText content) (MorePair (VName "language") (VText language) (MorePair (VName "materializer") (VText materializer) NoPair))) end
+def readEntry [v: Value] ! text arith: FoundEntry = match v of case VMap pairs -> readEntryPairs (referenceFind pairs (VName "content")) (referenceFind pairs (VName "language")) (referenceFind pairs (VName "materializer")) case _ -> NoFoundEntry end
+def readEntryPairs [content: Lookup, language: Lookup, materializer: Lookup] ! text arith: FoundEntry = match content of case Missing -> NoFoundEntry case Present contentValue -> match language of case Missing -> NoFoundEntry case Present languageValue -> match materializer of case Missing -> NoFoundEntry case Present materializerValue -> readEntryParts contentValue languageValue materializerValue end end end
+def readEntryParts [content: Value, language: Value, materializer: Value]: FoundEntry = match content of case VText pointing -> match language of case VText languageName -> match materializer of case VText materializerName -> FoundEntry (Entry pointing languageName materializerName) case _ -> NoFoundEntry end case _ -> NoFoundEntry end case _ -> NoFoundEntry end
+
+; --------------------------------------------------------------- the reads
+;
+; A path answers an identity; an identity answers an entry. The two lookups
+; compose, and only the first one mentions a path.
+
+def identityAt [t: Tree, path: Value] ! collections: Lookup = match t of case Tree names entries -> mapFind names path end
+def entryOf [t: Tree, identity: Value] ! collections text arith: FoundEntry = match t of case Tree names entries -> match mapFind entries identity of case Missing -> NoFoundEntry case Present stored -> readEntry stored end end
+def entryAt [t: Tree, path: Value] ! collections text arith: FoundEntry = match identityAt t path of case Missing -> NoFoundEntry case Present identity -> entryOf t identity end
+
+; --------------------------------------------------------------- the edits
+;
+; Placing binds a path to an identity and records what the identity means.
+; Renaming rebinds the path and touches nothing else. Editing the object
+; replaces what the identity means and touches no path. The three edits
+; commute exactly as far as their paths and identities are disjoint, and
+; that is the R2 calculus's question rather than a new one.
+
+def placeEntry [t: Tree, path: Value, identity: Value, e: Entry] ! collections text arith: Tree = match t of case Tree names entries -> Tree (mapPut names path identity) (mapPut entries identity (entryValue e)) end
+def renameEntry [t: Tree, from: Value, to: Value] ! collections text arith: Tree = match t of case Tree names entries -> match mapFind names from of case Missing -> Tree names entries case Present identity -> Tree (mapPut (mapDrop names from) to identity) entries end end
+def reviseEntry [t: Tree, identity: Value, e: Entry] ! collections text arith: Tree = match t of case Tree names entries -> Tree names (mapPut entries identity (entryValue e)) end
+def removePath [t: Tree, path: Value] ! collections: Tree = match t of case Tree names entries -> Tree (mapDrop names path) entries end
+
+; -------------------------------------------------------- the canonical form
+;
+; A tree is a canonical value -- two keyed maps under two names -- so a tree
+; can be stored, named, shipped and edited through the R2 calculus without a
+; single new mechanism.
+
+def treeValue [t: Tree] ! collections text arith: Value = match t of case Tree names entries -> VMap (MorePair (VName "entries") (VMap (mapPairs entries)) (MorePair (VName "names") (VMap (mapPairs names)) NoPair)) end
+
+; ---------------------------------------------------------------- the laws
+
+def sameFoundEntry [a: FoundEntry, b: FoundEntry] ! text arith: Bool = match a of case NoFoundEntry -> match b of case NoFoundEntry -> True case FoundEntry y -> False end case FoundEntry x -> match b of case NoFoundEntry -> False case FoundEntry y -> sameValue (entryValue x) (entryValue y) end end
+
+def docEntry [] ! text arith: Entry = Entry "aa5cff08d3ff9b5cec8c36d0a5c19e05b81b7a10063fa9622d97a5cff32b1bfa" "markdown" "text"
+def lawEntry [] ! text arith: Entry = Entry "1e6454be564a5405ae3e117184923b5d25ded1c412888605eddfa704b437f148" "strata" "text"
+def docIdentity [] ! text arith: Value = VName "doc-1"
+def lawIdentity [] ! text arith: Value = VName "law-1"
+def docPath [] ! text arith: Value = VText "docs/readme.md"
+def movedPath [] ! text arith: Value = VText "guide/readme.md"
+def lawPath [] ! text arith: Value = VText "laws/publication.strata"
+def sampleTree [] ! collections text arith: Tree = placeEntry (placeEntry emptyTree docPath docIdentity docEntry) lawPath lawIdentity lawEntry
+
+def renamePreservesIdentity [] ! collections text arith: Bool = match identityAt (renameEntry sampleTree docPath movedPath) movedPath of case Missing -> False case Present identity -> sameValue identity docIdentity end
+def renamePreservesTheEntry [] ! collections text arith: Bool = sameFoundEntry (entryOf (renameEntry sampleTree docPath movedPath) docIdentity) (FoundEntry docEntry)
+def renameFreesTheOldPath [] ! collections text arith: Bool = match identityAt (renameEntry sampleTree docPath movedPath) docPath of case Missing -> True case Present identity -> False end
+def renameLeavesOthersAlone [] ! collections text arith: Bool = sameFoundEntry (entryAt (renameEntry sampleTree docPath movedPath) lawPath) (FoundEntry lawEntry)
+def revisionNeedsNoPath [] ! collections text arith: Bool = sameFoundEntry (entryAt (reviseEntry (renameEntry sampleTree docPath movedPath) docIdentity lawEntry) movedPath) (FoundEntry lawEntry)
+def treeValueSeparatesTheMaps [] ! collections text arith: Bool = match treeValue sampleTree of case VMap pairs -> match referenceFind pairs (VName "names") of case Missing -> False case Present names -> match referenceFind pairs (VName "entries") of case Missing -> False case Present entries -> True end end case _ -> False end
+def renameIsANamesOnlyChange [] ! collections text arith: Bool = match treeValue sampleTree of case VMap pairs -> match referenceFind pairs (VName "entries") of case Missing -> False case Present entriesBefore -> match treeValue (renameEntry sampleTree docPath movedPath) of case VMap renamedPairs -> match referenceFind renamedPairs (VName "entries") of case Missing -> False case Present entriesAfter -> sameValue entriesBefore entriesAfter end case _ -> False end end case _ -> False end
+def renameAppliesThroughTheCalculus [] ! collections text arith: Bool = match applyChange (treeValue sampleTree) (AtKey (VName "names") (RenameKey docPath movedPath)) of case Conflict reason -> False case Applied after -> sameValue after (treeValue (renameEntry sampleTree docPath movedPath)) end
+def treeLaws [] ! collections text arith: Bool = and (and (and renamePreservesIdentity renamePreservesTheEntry) (and renameFreesTheOldPath renameLeavesOthersAlone)) (and (and revisionNeedsNoPath treeValueSeparatesTheMaps) (and renameIsANamesOnlyChange renameAppliesThroughTheCalculus))
