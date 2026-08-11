@@ -3,6 +3,7 @@ package stratum.repo
 import stratum.artifact.{Artifact, DirectoryCas}
 import stratum.canon.{Canon, Digest}
 import stratum.cli.CommandResult
+import stratum.lsp.Json
 
 import java.nio.file.{Files, Path, Paths}
 
@@ -55,6 +56,200 @@ class StratumRepoSuite extends munit.FunSuite:
     assert(second.lines.contains("height 2"))
     assertEquals(run("verify", repository, source).output.linesIterator.next(), "valid branch main")
     assertEquals(run("log", repository, source).lines.map(_.split(" ", 3).last), Vector("second", "genesis"))
+  }
+
+  test("strict create and inspect define repository session entry") {
+    val temp = Files.createTempDirectory("stratum-repository-session-test-")
+    val source = temp.resolve("source")
+    val repository = temp.resolve("chain")
+    val missing = temp.resolve("missing")
+    Files.createDirectories(source)
+
+    assertEquals(run("inspect", missing, source).code, 1)
+    val created = run("create", repository, source)
+    assertEquals(created.code, 0, created.output)
+    assertEquals(run("inspect", repository, source).output.linesIterator.next(), s"repository $repository")
+    assertEquals(run("create", repository, source).output, s"error: repository already exists: $repository")
+
+    val empty = temp.resolve("empty")
+    Files.createDirectories(empty)
+    assertEquals(run("create", empty, source).output, s"error: repository already exists: $empty")
+  }
+
+  test("a built-in language is added only through the repository command") {
+    val temp = Files.createTempDirectory("stratum-repository-language-test-")
+    val project = temp.resolve("project")
+    val repository = project.resolve(".stratum")
+    Files.createDirectories(project)
+    assertEquals(
+      StratumRepo.run(
+        projectRoot,
+        Vector("add-language", "--dir", repository.toString, "--project", project.toString, "--name", "lambda")
+      ).output,
+      s"error: not a Stratum repository: $repository"
+    )
+    assertEquals(run("init", repository, project).code, 0)
+
+    val added = StratumRepo.run(
+      projectRoot,
+      Vector("add-language", "--dir", repository.toString, "--project", project.toString, "--name", "lambda")
+    )
+    assertEquals(added.code, 0, added.output)
+    val expected = Vector(
+      "fibonacci.lambda",
+      "lambda.agent.md",
+      "lambda.bootstrap.grammar",
+      "lambda.bootstrap.meta",
+      "lambda.generated.grammar",
+      "lambda.generated.meta",
+      "lambda.grammar",
+      "lambda.meta"
+    )
+    assertEquals(added.lines.drop(1), expected.map(name => s"languages/lambda/$name"))
+    assertEquals(
+      expected.map(name => Files.readString(project.resolve("languages/lambda").resolve(name))),
+      expected.map(name => Files.readString(projectRoot.resolve("languages/lambda").resolve(name)))
+    )
+    assertEquals(
+      StratumRepo.run(
+        projectRoot,
+        Vector("add-language", "--dir", repository.toString, "--project", project.toString, "--name", "lambda")
+      ).output,
+      "error: language already exists in project: lambda"
+    )
+    assertEquals(
+      StratumRepo.run(
+        projectRoot,
+        Vector("add-language", "--dir", repository.toString, "--project", project.toString, "--name", "missing")
+      ).output,
+      "error: unknown built-in language: missing"
+    )
+  }
+
+  test("source commands validate, modify, remove, and search repository artifacts") {
+    val temp = Files.createTempDirectory("stratum-repository-source-test-")
+    val project = temp.resolve("project")
+    val repository = project.resolve(".stratum")
+    Files.createDirectories(project)
+    assertEquals(run("init", repository, project).code, 0)
+
+    def source(command: String, path: String, text: Option[String] = None): CommandResult =
+      val args = Vector(
+        command,
+        "--dir", repository.toString,
+        "--source", project.toString,
+        "--declaration-root", projectRoot.toString,
+        "--path", path
+      ) ++ text.toVector.flatMap(value => Vector("--text", value))
+      StratumRepo.run(root, args)
+
+    val added = source("put-source", "Example.scala", Some("object Example { def value = 1 }\n"))
+    assertEquals(added.lines.take(2), Vector("added Example.scala", "language scala"))
+    assertEquals(source("check-source", "Example.scala").lines.take(2), Vector("valid Example.scala", "language scala"))
+    assertEquals(source("put-source", "Example.scala", Some("object Example { def value = 2 }\n")).lines.head, "modified Example.scala")
+    assertEquals(run("record", repository, project, "--message", "searchable source").code, 0)
+
+    val search = StratumRepo.run(root, Vector("search-artifacts", "--dir", repository.toString, "--query", "searchable source"))
+    assertEquals(search.code, 0, search.output)
+    assert(search.output.contains("searchable source"))
+    assertEquals(source("remove-source", "Example.scala").output, "removed Example.scala")
+    assert(!Files.exists(project.resolve("Example.scala")))
+  }
+
+  test("a declared Meta evaluator runs source without language-specific host code") {
+    val temp = Files.createTempDirectory("stratum-repository-run-source-test-")
+    val project = temp.resolve("project")
+    val repository = project.resolve(".stratum")
+    Files.createDirectories(project)
+    Files.writeString(project.resolve("identity.lambda"), "(\\x. x) a\n")
+    assertEquals(run("init", repository, project).code, 0)
+
+    val result = StratumRepo.run(
+      root,
+      Vector(
+        "run-source",
+        "--dir", repository.toString,
+        "--source", project.toString,
+        "--declaration-root", projectRoot.toString,
+        "--path", "identity.lambda"
+      )
+    )
+    assertEquals(result.code, 0, result.output)
+    assertEquals(result.lines, Vector("result a", "language lambda", "evaluator NormalizeToText"))
+  }
+
+  test("transcript mismatch rolls back effects and does not advance session state") {
+    val temp = Files.createTempDirectory("stratum-transcript-runtime-test-")
+    Files.createSymbolicLink(temp.resolve("languages"), projectRoot.resolve("languages"))
+    val project = temp.resolve("project")
+    Files.createDirectories(project)
+    val runtime = StratumRepoDaemon.TranscriptRuntime(temp)
+
+    def step(command: String, expected: Vector[String], input: Option[String] = None): Json =
+      val fields = Vector(
+        "command" -> Json.Str(command),
+        "expected" -> Json.arr(expected.map(Json.Str.apply))
+      ) ++ input.toVector.map(value => "input" -> Json.Str(value))
+      runtime.step(Json.obj(fields*))
+
+    val rejectedCreate = step("repo create test project", Vector("impossible output"))
+    assertEquals((rejectedCreate / "code").num, Some(BigDecimal(1)))
+    assert(!Files.exists(project.resolve(".stratum")))
+
+    val created = step(
+      "repo create test project",
+      Vector("session test project project repository project/.stratum")
+    )
+    assertEquals((created / "code").num, Some(BigDecimal(0)))
+
+    val rejectedSource = step("source add Probe.scala", Vector("impossible output"), Some("object Probe\n"))
+    assertEquals((rejectedSource / "code").num, Some(BigDecimal(1)))
+    assert(!Files.exists(project.resolve("Probe.scala")))
+    assertEquals((step("status", Vector.empty) / "code").num, Some(BigDecimal(0)))
+
+    assertEquals((step("language add lambda", Vector("added language lambda")) / "code").num, Some(BigDecimal(0)))
+    val languages = step("language list", Vector.empty)
+    assertEquals((languages / "code").num, Some(BigDecimal(0)), clues(languages))
+    assert((languages / "lines").items.flatMap(_.str).contains("language lambda"))
+    val guide = step("language guide lambda", Vector.empty)
+    assertEquals((guide / "code").num, Some(BigDecimal(0)))
+    assert((guide / "lines").items.flatMap(_.str).exists(_.contains("pure untyped lambda calculus")))
+    val copied = step(
+      "source copy languages/lambda/fibonacci.lambda fibonacci.lambda",
+      Vector("copied languages/lambda/fibonacci.lambda fibonacci.lambda")
+    )
+    assertEquals((copied / "code").num, Some(BigDecimal(0)), clues(copied))
+    assertEquals(
+      Files.readString(project.resolve("fibonacci.lambda")),
+      Files.readString(project.resolve("languages/lambda/fibonacci.lambda"))
+    )
+    val fibonacci = Files.readString(project.resolve("fibonacci.lambda")).trim
+    def churchNumeral(value: Int): String = "\\f. \\x. " + "f (" * value + "x" + ")" * value
+    def expectedResult(value: Int): String =
+      val body = if value == 0 then "v1" else "v0 (" * (value - 1) + "v0 v1" + ")" * (value - 1)
+      s"result \\ v0. \\ v1. $body"
+
+    Vector(0 -> 0, 1 -> 1, 10 -> 55).foreach { case (argument, result) =>
+      val path = s"fibonacci-$argument.lambda"
+      val application = s"($fibonacci) (${churchNumeral(argument)})\n"
+      val addedApplication = step(s"source add $path", Vector(s"added $path"), Some(application))
+      assertEquals((addedApplication / "code").num, Some(BigDecimal(0)), clues(addedApplication))
+      assertEquals((step(s"source check $path", Vector(s"valid $path")) / "code").num, Some(BigDecimal(0)))
+      val fibonacciResult = step(s"run $path", Vector.empty)
+      assertEquals((fibonacciResult / "code").num, Some(BigDecimal(0)), clues(fibonacciResult))
+      assertEquals((fibonacciResult / "lines").items.flatMap(_.str).headOption, Some(expectedResult(result)))
+    }
+
+    assertEquals((step("source add identity.lambda", Vector("added identity.lambda"), Some("(\\x. x) a\n")) / "code").num, Some(BigDecimal(0)))
+    val sources = step("source list", Vector.empty)
+    assertEquals((sources / "code").num, Some(BigDecimal(0)))
+    assert((sources / "lines").items.flatMap(_.str).contains("source identity.lambda"))
+    val shown = step("source show identity.lambda", Vector.empty)
+    assertEquals((shown / "code").num, Some(BigDecimal(0)))
+    assertEquals((shown / "lines").items.flatMap(_.str), Vector("source identity.lambda", "(\\x. x) a\n"))
+    val evaluated = step("run identity.lambda", Vector("result a"))
+    assertEquals((evaluated / "code").num, Some(BigDecimal(0)))
+    assert((evaluated / "lines").items.flatMap(_.str).contains("evaluator NormalizeToText"))
   }
 
   test("named branches share history and then advance independently") {

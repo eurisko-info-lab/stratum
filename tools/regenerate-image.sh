@@ -31,6 +31,7 @@ matches() {
 
 META="--program languages/meta/prelude.meta --program languages/meta/elaborate.meta --program languages/grammar/elaborate.meta"
 
+cat generated.sha256 |
 while read -r expected target; do
   [[ "$target" == *.generated.grammar ]] || continue
   if matches "$expected" "$target"; then
@@ -52,8 +53,9 @@ while read -r expected target; do
         --out "$target"
       ;;
   esac
-done < generated.sha256
+done
 
+cat generated.sha256 |
 while read -r expected target; do
   [[ "$target" == *.generated.meta ]] || continue
   if matches "$expected" "$target"; then
@@ -64,7 +66,7 @@ while read -r expected target; do
   run meta elaborate --grammar languages/meta/meta.generated.grammar $META \
     --source "$source" \
     --out "$target"
-done < generated.sha256
+done
 
 expected=$(awk '$2 == "host/core.canon" { print $1 }' generated.sha256)
 if [[ -n "$expected" ]] && ! matches "$expected" host/core.canon; then

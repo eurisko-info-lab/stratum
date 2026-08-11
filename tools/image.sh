@@ -40,9 +40,10 @@ materialized_paths() {
 
 clear_materialized() {
   local path
+  materialized_paths |
   while IFS= read -r path; do
     rm -f "$path"
-  done < <(materialized_paths)
+  done
 }
 
 capture() {
@@ -56,13 +57,14 @@ capture() {
   mkdir -p "$objects"
   : > "$index"
 
+  materialized_paths |
   while IFS= read -r path; do
     digest=$(sha256sum "$path" | cut -d' ' -f1)
     printf '%s  %s\n' "$digest" "$path" >> "$index"
     if [[ ! -f "$objects/$digest" && ! -f "$parent/objects/$digest" ]]; then
       cp "$path" "$objects/$digest"
     fi
-  done < <(materialized_paths)
+  done
 
   {
     echo 'format 1'
@@ -83,6 +85,7 @@ materialize() {
   [[ -f "$index" ]] || { echo "image has no path index" >&2; exit 1; }
   clear_materialized
 
+  cat "$index" |
   while read -r digest path; do
     case "$path" in
       /* | ../* | */../* | */..) echo "unsafe image path: $path" >&2; exit 1 ;;
@@ -93,7 +96,7 @@ materialize() {
     [[ "$actual" == "$digest" ]] || { echo "image object $digest is corrupt" >&2; exit 1; }
     mkdir -p "$(dirname "$path")"
     cp "$object" "$path"
-  done < "$index"
+  done
 }
 
 extract_image() {

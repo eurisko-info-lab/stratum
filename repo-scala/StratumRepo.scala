@@ -1,10 +1,12 @@
 package stratum.repo
 
-import stratum.artifact.{Artifact, Closure, DirectoryCas}
+import stratum.artifact.{Artifact, Closure, DirectoryCas, MemoryCas}
+import stratum.cap.Capabilities
 import stratum.canon.{Canon, CanonText, Digest}
 import stratum.journal.Journal
 import stratum.cli.{Cli, CommandResult}
 import stratum.grammar.GrammarMachine0
+import stratum.meta.{Budget, Kernel, MetaMachine0, Program}
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Files, Path}
@@ -74,11 +76,52 @@ object StratumRepo:
       case Some(name) =>
         val dir = resolve(root, name)
         sub match
+          case "create" => create(dir)
           case "init"   => init(dir)
+          case "inspect" => inspect(dir)
           case "branch" => createBranch(dir, opts.getOrElse("name", ""), opts.getOrElse("from", "main"))
           case "branches" => branches(dir)
           case "profiles" => profiles()
           case "checkout" => checkout(dir, opts.getOrElse("branch", "main"), resolve(root, opts.getOrElse("out", "")))
+          case "add-language" =>
+            addLanguage(root, dir, resolve(root, opts.getOrElse("project", ".")), opts.getOrElse("name", ""))
+          case "put-source" =>
+            putSource(
+              dir,
+              resolve(root, opts.getOrElse("source", ".")),
+              opts.get("declaration-root").map(resolve(root, _)).getOrElse(root),
+              opts.getOrElse("path", ""),
+              opts.getOrElse("text", "")
+            )
+          case "copy-source" =>
+            copySource(
+              dir,
+              resolve(root, opts.getOrElse("source", ".")),
+              opts.get("declaration-root").map(resolve(root, _)).getOrElse(root),
+              opts.getOrElse("from", ""),
+              opts.getOrElse("path", "")
+            )
+          case "remove-source" =>
+            removeSource(dir, resolve(root, opts.getOrElse("source", ".")), opts.getOrElse("path", ""))
+          case "check-source" =>
+            checkSource(
+              dir,
+              resolve(root, opts.getOrElse("source", ".")),
+              opts.get("declaration-root").map(resolve(root, _)).getOrElse(root),
+              opts.getOrElse("path", "")
+            )
+          case "run-source" =>
+            runSource(
+              dir,
+              resolve(root, opts.getOrElse("source", ".")),
+              opts.get("declaration-root").map(resolve(root, _)).getOrElse(root),
+              opts.getOrElse("path", "")
+            )
+          case "list-languages" => listLanguages(dir, resolve(root, opts.getOrElse("source", ".")))
+          case "list-sources" => listSources(dir, resolve(root, opts.getOrElse("source", ".")))
+          case "show-source" =>
+            showSource(dir, resolve(root, opts.getOrElse("source", ".")), opts.getOrElse("path", ""))
+          case "search-artifacts" => searchArtifacts(dir, opts.getOrElse("query", ""))
           case "record" =>
             val source = resolve(root, opts.getOrElse("source", "."))
             record(
@@ -115,6 +158,10 @@ object StratumRepo:
   private def resolve(root: Path, value: String): Path =
     root.resolve(value).toAbsolutePath.normalize()
 
+  private def create(dir: Path): CommandResult =
+    if Files.exists(dir) then CommandResult.fail(s"repository already exists: $dir")
+    else init(dir)
+
   private def init(dir: Path): CommandResult =
     if Files.exists(dir) && (!Files.isDirectory(dir) || list(dir).nonEmpty) then
       CommandResult.fail(s"repository directory is not empty: $dir")
@@ -130,6 +177,232 @@ object StratumRepo:
     if !Files.isRegularFile(format) then Left(s"not a Stratum repository: $dir")
     else if Files.readString(format).trim != Format then Left(s"unsupported repository format in $dir")
     else Right(DirectoryCas(dir.resolve("objects")))
+
+  private def inspect(dir: Path): CommandResult =
+    open(dir).fold(CommandResult.fail, _ => CommandResult.ok(s"repository $dir", s"format $Format"))
+
+  private def addLanguage(root: Path, dir: Path, project: Path, name: String): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(_) if !name.matches("[A-Za-z][A-Za-z0-9_-]*") => CommandResult.fail(s"invalid language name: $name")
+      case Right(_) =>
+        val source = root.resolve("languages").resolve(name)
+        val target = project.resolve("languages").resolve(name)
+        if !Files.isDirectory(source) then CommandResult.fail(s"unknown built-in language: $name")
+        else if Files.exists(target) then CommandResult.fail(s"language already exists in project: $name")
+        else
+          val stream = Files.list(source)
+          try
+            val files = stream.iterator().asScala.filter(Files.isRegularFile(_)).toVector.sortBy(_.getFileName.toString)
+            if files.isEmpty then CommandResult.fail(s"built-in language has no files: $name")
+            else
+              Journal.createDirectories(target)
+              files.foreach(file => Journal.copy(file, target.resolve(file.getFileName)))
+              CommandResult.okLines(Vector(s"added language $name") ++ files.map(file => s"languages/$name/${file.getFileName}"))
+          finally stream.close()
+
+  private def sourcePath(source: Path, relative: String): Either[String, Path] =
+    val normalized = source.resolve(relative).normalize()
+    if relative.isEmpty then Left("source path is required")
+    else if normalized == source || !normalized.startsWith(source) then Left(s"source path escapes project: $relative")
+    else if normalized.startsWith(source.resolve(".stratum")) then Left(s"source path enters repository storage: $relative")
+    else Right(normalized)
+
+  private def listLanguages(dir: Path, source: Path): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(_) =>
+        val languages = sourceFiles(source.resolve("languages"), dir)
+          .flatMap(path => Option(source.resolve("languages").relativize(path).getName(0)).map(_.toString))
+          .distinct
+          .sorted
+        CommandResult.okLines(if languages.isEmpty then Vector("no languages") else languages.map(name => s"language $name"))
+
+  private def listSources(dir: Path, source: Path): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(_) =>
+        val paths = sourceFiles(source, dir).map(path => unix(source.relativize(path)))
+        CommandResult.okLines(if paths.isEmpty then Vector("no sources") else paths.map(path => s"source $path"))
+
+  private def showSource(dir: Path, source: Path, relative: String): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(_) =>
+        sourcePath(source, relative) match
+          case Left(error) => CommandResult.fail(error)
+          case Right(path) if !Files.isRegularFile(path) => CommandResult.fail(s"source file does not exist: $relative")
+          case Right(path) => CommandResult.okLines(Vector(s"source $relative", Files.readString(path, UTF_8)))
+
+  private def putSource(
+      dir: Path,
+      source: Path,
+      declarationRoot: Path,
+      relative: String,
+      text: String
+  ): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(cas) =>
+        sourcePath(source, relative) match
+          case Left(error) => CommandResult.fail(error)
+          case Right(path) =>
+            val declarations = LanguageDeclarations.load(declarationRoot) match
+              case Left(error) => return CommandResult.fail(error)
+              case Right(value) => value
+            val language = LanguageDeclarations.select(relative, declarations) match
+              case Left(error) => return CommandResult.fail(error)
+              case Right(value) => value
+            LanguageDeclarations.structure(declarationRoot, relative, text.getBytes(UTF_8), declarations, cas) match
+              case Left(error) => CommandResult.fail(s"$relative: $error")
+              case Right(structured) =>
+                val operation = if Files.exists(path) then "modified" else "added"
+                Option(path.getParent).foreach(Journal.createDirectories(_))
+                Journal.write(path, text.getBytes(UTF_8))
+                CommandResult.ok(
+                  s"$operation $relative",
+                  s"language ${language.name}",
+                  s"content ${structured.content.hex}"
+                )
+
+  private def removeSource(dir: Path, source: Path, relative: String): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(_) =>
+        sourcePath(source, relative) match
+          case Left(error) => CommandResult.fail(error)
+          case Right(path) if !Files.isRegularFile(path) => CommandResult.fail(s"source file does not exist: $relative")
+          case Right(path) =>
+            Journal.delete(path)
+            CommandResult.ok(s"removed $relative")
+
+  private def copySource(
+      dir: Path,
+      source: Path,
+      declarationRoot: Path,
+      from: String,
+      to: String
+  ): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(_) =>
+        sourcePath(source, from) match
+          case Left(error) => CommandResult.fail(error)
+          case Right(path) if !Files.isRegularFile(path) => CommandResult.fail(s"source file does not exist: $from")
+          case Right(path) if from == to => CommandResult.fail("source copy paths must differ")
+          case Right(path) =>
+            val copied = putSource(dir, source, declarationRoot, to, Files.readString(path, UTF_8))
+            if copied.code != 0 then copied
+            else CommandResult.okLines(Vector(s"copied $from $to") ++ copied.lines.drop(1))
+
+  private def checkSource(dir: Path, source: Path, declarationRoot: Path, relative: String): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(cas) =>
+        sourcePath(source, relative) match
+          case Left(error) => CommandResult.fail(error)
+          case Right(path) if !Files.isRegularFile(path) => CommandResult.fail(s"source file does not exist: $relative")
+          case Right(path) =>
+            val declarations = LanguageDeclarations.load(declarationRoot) match
+              case Left(error) => return CommandResult.fail(error)
+              case Right(value) => value
+            val language = LanguageDeclarations.select(relative, declarations) match
+              case Left(error) => return CommandResult.fail(error)
+              case Right(value) => value
+            LanguageDeclarations.structure(declarationRoot, relative, Files.readAllBytes(path), declarations, cas) match
+              case Left(error) => CommandResult.fail(s"$relative: $error")
+              case Right(structured) => CommandResult.ok(
+                s"valid $relative",
+                s"language ${language.name}",
+                s"content ${structured.content.hex}"
+              )
+
+  private def runSource(dir: Path, source: Path, declarationRoot: Path, relative: String): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(_) =>
+        sourcePath(source, relative) match
+          case Left(error) => CommandResult.fail(error)
+          case Right(path) if !Files.isRegularFile(path) => CommandResult.fail(s"source file does not exist: $relative")
+          case Right(path) =>
+            val declarations = LanguageDeclarations.load(declarationRoot) match
+              case Left(error) => return CommandResult.fail(error)
+              case Right(value) => value
+            val language = LanguageDeclarations.select(relative, declarations) match
+              case Left(error) => return CommandResult.fail(error)
+              case Right(value) => value
+            (language.grammarPath, language.metaPath) match
+              case (None, _) => CommandResult.fail(s"${language.name} has no grammar")
+              case (_, None) => CommandResult.fail(s"${language.name} has no Meta program")
+              case (Some(grammarPath), Some(metaPath)) =>
+                val preludePath = declarationRoot.resolve("languages/meta/prelude.meta")
+                val grammarFile = declarationRoot.resolve(grammarPath)
+                val metaFile = declarationRoot.resolve(metaPath)
+                if !Files.isRegularFile(preludePath) then CommandResult.fail("missing generic Meta prelude")
+                else if !Files.isRegularFile(grammarFile) then CommandResult.fail(s"missing grammar $grammarPath")
+                else if !Files.isRegularFile(metaFile) then CommandResult.fail(s"missing Meta program $metaPath")
+                else
+                  val loaded = for
+                    prelude <- CanonText.read(Files.readString(preludePath)).left.map(error => s"languages/meta/prelude.meta: $error")
+                    grammar <- CanonText.read(Files.readString(grammarFile)).left.map(error => s"$grammarPath: $error")
+                    meta <- CanonText.read(Files.readString(metaFile)).left.map(error => s"$metaPath: $error")
+                  yield (prelude, grammar, meta)
+                  loaded match
+                    case Left(error) => CommandResult.fail(error)
+                    case Right((prelude, grammar, meta)) =>
+                      val cas = MemoryCas()
+                      val preludeRef = cas.put(Artifact("meta-program", prelude))
+                      val metaRef = cas.put(Artifact("meta-program", meta))
+                      val grammarRef = cas.put(Artifact("grammar", grammar))
+                      val rootProgram = Canon.node(
+                        "program",
+                        Canon.node("use", Canon.R(preludeRef)),
+                        Canon.node("use", Canon.R(metaRef))
+                      )
+                      Program.load(rootProgram, cas) match
+                        case Left(error) => CommandResult.fail(error)
+                        case Right(program) =>
+                          Vector("EvaluateSource", "NormalizeToText", "RunSource")
+                            .find(name => program.judgments.get(name).exists(_.params.length == 2)) match
+                            case None => CommandResult.fail(s"language ${language.name} declares no source evaluator")
+                            case Some(evaluator) =>
+                              val goal = Canon.node(
+                                "call",
+                                Canon.Sym(evaluator),
+                                Canon.node("q", Canon.R(grammarRef)),
+                                Canon.node("q", Canon.S(Files.readString(path)))
+                              )
+                              val verdict = MetaMachine0.derive(
+                                program,
+                                cas,
+                                Kernel(Set("grammar-parse", "grammar-print")),
+                                Budget(200000000L, 20000),
+                                goal,
+                                Capabilities.standard(cas, declarationRoot, s"run:$relative")
+                              )
+                              MetaMachine0.result(verdict) match
+                                case Some(Canon.S(result)) => CommandResult.ok(s"result $result", s"language ${language.name}", s"evaluator $evaluator")
+                                case Some(result) => CommandResult.ok(s"result ${CanonText.write(result)}", s"language ${language.name}", s"evaluator $evaluator")
+                                case None =>
+                                  MetaMachine0.failure(verdict) match
+                                    case Some((kind, message)) => CommandResult.fail(s"$kind: $message")
+                                    case None => CommandResult.fail(CanonText.write(verdict))
+
+  private def searchArtifacts(dir: Path, query: String): CommandResult =
+    open(dir) match
+      case Left(error) => CommandResult.fail(error)
+      case Right(cas) if query.trim.isEmpty => CommandResult.fail("artifact search query is required")
+      case Right(cas) =>
+        val wanted = query.toLowerCase
+        val matches = cas.digests.flatMap { digest =>
+          cas.get(digest).flatMap { artifact =>
+            val body = CanonText.write(artifact.body)
+            val searchable = s"${digest.hex} ${artifact.kind} $body".toLowerCase
+            Option.when(searchable.contains(wanted))(s"${digest.hex} ${artifact.kind} $body")
+          }
+        }.sortBy(identity).take(50)
+        if matches.isEmpty then CommandResult.ok(s"no artifacts matching $query")
+        else CommandResult.okLines(matches)
 
   private def createBranch(dir: Path, name: String, from: String): CommandResult =
     open(dir) match
@@ -1057,6 +1330,7 @@ object StratumRepo:
     case scalar              => scalar
 
   private def sourceFiles(source: Path, repository: Path): Vector[Path] =
+    if !Files.isDirectory(source) then return Vector.empty
     val stream = Files.walk(source)
     try
       stream.iterator().asScala

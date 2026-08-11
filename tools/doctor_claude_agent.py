@@ -126,16 +126,33 @@ def check_client(client: str, path: Path) -> ClientReport:
         tools = listed.get("result", {}).get("tools", [])
         names = {tool.get("name") for tool in tools if isinstance(tool, dict)}
         expected = {
-            "stratum_foundation_verify",
-            "stratum_foundation_reconstruct",
-            "stratum_run_staircase",
-            "stratum_run_cleanroom",
+            "stratum_transcript_step",
         }
-        if not expected.issubset(names):
+        if names != expected:
             missing = sorted(expected - names)
-            return ClientReport(client, str(path), "ok", "ok", "ok", "failed", f"missing tools: {', '.join(missing)}")
+            extra = sorted(names - expected)
+            details = []
+            if missing:
+                details.append(f"missing tools: {', '.join(missing)}")
+            if extra:
+                details.append(f"unexpected tools: {', '.join(extra)}")
+            return ClientReport(client, str(path), "ok", "ok", "ok", "failed", "; ".join(details))
 
-        return ClientReport(client, str(path), "ok", "ok", "ok", "ok", "handshake and catalog verified")
+        transcript_tool = next(tool for tool in tools if tool.get("name") == "stratum_transcript_step")
+        description = transcript_tool.get("description", "")
+        properties = transcript_tool.get("inputSchema", {}).get("properties", {})
+        if "language add" not in description or set(properties) != {"command", "input", "expected"}:
+            return ClientReport(
+                client,
+                str(path),
+                "ok",
+                "ok",
+                "ok",
+                "failed",
+                "daemon-published transcript API is incomplete",
+            )
+
+        return ClientReport(client, str(path), "ok", "ok", "ok", "ok", "handshake and daemon-published transcript API verified")
     except Exception as exc:
         return ClientReport(client, str(path), "ok", "ok", "failed", "failed", str(exc))
     finally:

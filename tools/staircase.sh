@@ -92,11 +92,13 @@ printf '%s\n' "${foundations[@]}" | xargs -r -n 1 -P "$workers" bash -c 'verify_
 
 transitions=()
 for dir in "${foundations[@]}"; do
-  for ((i = 1; i < ${#all_foundations[@]}; i++)); do
+  i=1
+  while [[ "$i" -lt "${#all_foundations[@]}" ]]; do
     if [[ "${all_foundations[i]}" == "$dir" ]]; then
       transitions+=("${all_foundations[i - 1]}|$dir")
       break
     fi
+    i=$((i + 1))
   done
 done
 if ((${#transitions[@]} > 0)); then

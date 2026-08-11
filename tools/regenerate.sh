@@ -17,7 +17,8 @@ cp languages/grammar/grammar.bootstrap.grammar languages/grammar/grammar.generat
 cp languages/meta/meta.bootstrap.grammar languages/meta/meta.generated.grammar
 
 echo "regenerating grammars"
-awk '$2 ~ /\.generated\.grammar$/ { print $2 }' generated.sha256 | while IFS= read -r target; do
+awk '$2 ~ /\.generated\.grammar$/ { print $2 }' generated.sha256 |
+while IFS= read -r target; do
   case "$target" in
     languages/grammar/grammar.generated.grammar | languages/meta/meta.generated.grammar)
       continue
@@ -32,7 +33,8 @@ awk '$2 ~ /\.generated\.grammar$/ { print $2 }' generated.sha256 | while IFS= re
 done
 
 echo "regenerating meta programs"
-awk '$2 ~ /\.generated\.meta$/ { print $2 }' generated.sha256 | while IFS= read -r target; do
+awk '$2 ~ /\.generated\.meta$/ { print $2 }' generated.sha256 |
+while IFS= read -r target; do
   source=${target%.generated.meta}.meta
   echo "  $source"
   run meta elaborate --grammar languages/meta/meta.generated.grammar $META \

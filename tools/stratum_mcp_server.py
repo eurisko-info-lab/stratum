@@ -14,7 +14,7 @@ from typing import Any
 
 PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "stratum"
-SERVER_VERSION = "0.1.0"
+SERVER_VERSION = "0.2.0"
 
 
 @dataclass
@@ -23,181 +23,186 @@ class ToolResult:
     is_error: bool = False
 
 
+class RepoDaemon:
+    def __init__(self, repo_root: Path) -> None:
+        self.repo_root = repo_root
+        self.process: subprocess.Popen[str] | None = None
+
+    def transcript_api(self) -> str:
+        response = self._request({"method": "transcript-api"})
+        if int(response.get("code", 1)) != 0:
+            raise RuntimeError("Stratum daemon rejected transcript API discovery")
+        return str(response.get("description", ""))
+
+    def transcript_step(
+        self,
+        command: str,
+        input_text: str | None,
+        expected: list[str],
+    ) -> ToolResult:
+        payload: dict[str, Any] = {
+            "method": "transcript-step",
+            "command": command,
+            "expected": expected,
+        }
+        if input_text is not None:
+            payload["input"] = input_text
+        return self._result(self._request(payload))
+
+    def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if self.process is None or self.process.poll() is not None:
+            self._start()
+        assert self.process is not None and self.process.stdin is not None and self.process.stdout is not None
+        self.process.stdin.write(json.dumps(payload, separators=(",", ":")) + "\n")
+        self.process.stdin.flush()
+        line = self.process.stdout.readline()
+        if not line:
+            self.close()
+            raise RuntimeError("Stratum repository daemon stopped unexpectedly")
+        return json.loads(line)
+
+    @staticmethod
+    def _result(response: dict[str, Any]) -> ToolResult:
+        code = int(response.get("code", 1))
+        lines = response.get("lines", [])
+        text = "\n".join(str(item) for item in lines) or "(no output)"
+        return ToolResult(text, is_error=code != 0)
+
+    def close(self) -> None:
+        if self.process is not None and self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+        self.process = None
+
+    def _start(self) -> None:
+        self.process = subprocess.Popen(
+            ["bash", str(self.repo_root / "tools" / "stratum_repo_daemon.sh")],
+            cwd=self.repo_root,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+
+
 class McpServer:
     def __init__(self, repo_root: Path) -> None:
         self.repo_root = repo_root
+        self.repo_daemon = RepoDaemon(repo_root)
+        self.message_framing: str | None = None
+        self.transcript_api = self.repo_daemon.transcript_api()
 
     def serve(self) -> None:
-        while True:
-            message = self._read_message()
-            if message is None:
-                return
-            if "method" not in message:
-                continue
-            method = message["method"]
-            params = message.get("params", {})
-            msg_id = message.get("id")
+        try:
+            while True:
+                message = self._read_message()
+                if message is None:
+                    return
+                if "method" not in message:
+                    continue
+                method = message["method"]
+                params = message.get("params", {})
+                msg_id = message.get("id")
 
-            if method == "initialize":
-                result = {
-                    "protocolVersion": PROTOCOL_VERSION,
-                    "capabilities": {"tools": {}},
-                    "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
-                    "instructions": (
-                        "Stratum MCP server. Tools run foundation verification and "
-                        "staircase/cleanroom checks in the configured repository."
-                    ),
-                }
-                self._write_response(msg_id, result)
-            elif method == "notifications/initialized":
-                continue
-            elif method == "ping":
-                self._write_response(msg_id, {})
-            elif method == "tools/list":
-                self._write_response(msg_id, {"tools": self._tools_schema()})
-            elif method == "tools/call":
-                name = params.get("name", "")
-                arguments = params.get("arguments", {})
-                result = self._call_tool(name, arguments)
-                payload = {
-                    "content": [{"type": "text", "text": result.text}],
-                    "isError": result.is_error,
-                }
-                self._write_response(msg_id, payload)
-            else:
-                if msg_id is not None:
-                    self._write_error(msg_id, -32601, f"Method not found: {method}")
+                if method == "initialize":
+                    result = {
+                        "protocolVersion": PROTOCOL_VERSION,
+                        "capabilities": {"tools": {}},
+                        "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+                        "instructions": (
+                            "Execute an ordered adaptive transcript one command at a time. Start by "
+                            "creating or opening a tagged repository session. Failed commands or "
+                            "expectation mismatches are rolled back by Stratum."
+                        ),
+                    }
+                    self._write_response(msg_id, result)
+                elif method == "notifications/initialized":
+                    continue
+                elif method == "ping":
+                    self._write_response(msg_id, {})
+                elif method == "tools/list":
+                    self._write_response(msg_id, {"tools": self._tools_schema()})
+                elif method == "tools/call":
+                    name = params.get("name", "")
+                    arguments = params.get("arguments", {})
+                    result = self._call_tool(name, arguments)
+                    payload = {
+                        "content": [{"type": "text", "text": result.text}],
+                        "isError": result.is_error,
+                    }
+                    self._write_response(msg_id, payload)
+                else:
+                    if msg_id is not None:
+                        self._write_error(msg_id, -32601, f"Method not found: {method}")
+        finally:
+            self.repo_daemon.close()
 
     def _tools_schema(self) -> list[dict[str, Any]]:
         return [
             {
-                "name": "stratum_foundation_verify",
-                "description": "Run 'foundation verify' for a foundation directory.",
+                "name": "stratum_transcript_step",
+                "description": self.transcript_api,
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "dir": {
-                            "type": "string",
-                            "description": "Foundation directory path, e.g. foundations/F11",
-                        }
+                        "command": {"type": "string", "description": "One transcript command to execute"},
+                        "input": {"type": "string", "description": "Optional source payload for add or modify commands"},
+                        "expected": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Output lines that must occur in order for this step to commit",
+                        },
                     },
-                    "required": ["dir"],
+                    "required": ["command", "expected"],
                     "additionalProperties": False,
                 },
-            },
-            {
-                "name": "stratum_foundation_reconstruct",
-                "description": "Run 'foundation reconstruct' for a foundation directory.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "dir": {
-                            "type": "string",
-                            "description": "Foundation directory path, e.g. foundations/F11",
-                        }
-                    },
-                    "required": ["dir"],
-                    "additionalProperties": False,
-                },
-            },
-            {
-                "name": "stratum_run_staircase",
-                "description": "Run the full staircase verification script.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "workers": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "description": "Optional parallel worker count.",
-                        }
-                    },
-                    "additionalProperties": False,
-                },
-            },
-            {
-                "name": "stratum_run_cleanroom",
-                "description": "Run clean-room reconstruction verification.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": False,
-                },
-            },
+            }
         ]
 
     def _call_tool(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         try:
-            if name == "stratum_foundation_verify":
-                directory = str(arguments["dir"])
-                return self._run_stratum_cli(["foundation", "verify", "--dir", directory])
-            if name == "stratum_foundation_reconstruct":
-                directory = str(arguments["dir"])
-                return self._run_stratum_cli(["foundation", "reconstruct", "--dir", directory])
-            if name == "stratum_run_staircase":
-                workers = arguments.get("workers")
-                cmd = ["./tools/staircase.sh"]
-                if workers is not None:
-                    cmd.append(str(int(workers)))
-                return self._run(cmd, timeout_seconds=1800)
-            if name == "stratum_run_cleanroom":
-                return self._run(["./tools/cleanroom.sh"], timeout_seconds=1800)
+            if name == "stratum_transcript_step":
+                command = str(arguments["command"])
+                input_text = str(arguments["input"]) if "input" in arguments else None
+                expected = arguments["expected"]
+                if not isinstance(expected, list) or not all(isinstance(line, str) for line in expected):
+                    return ToolResult("expected must be an array of strings", is_error=True)
+                return self.repo_daemon.transcript_step(command, input_text, expected)
             return ToolResult(f"Unknown tool: {name}", is_error=True)
         except KeyError as exc:
             return ToolResult(f"Missing required argument: {exc}", is_error=True)
         except Exception as exc:  # defensive path for MCP callers
             return ToolResult(f"Tool execution failed: {exc}", is_error=True)
 
-    def _run_stratum_cli(self, args: list[str]) -> ToolResult:
-        cmd = [
-            "sbt",
-            "-batch",
-            "--error",
-            f"runMain stratum.cli.Stratum {' '.join(args)}",
-        ]
-        return self._run(cmd, timeout_seconds=1800)
-
-    def _run(self, cmd: list[str], timeout_seconds: int) -> ToolResult:
-        completed = subprocess.run(
-            cmd,
-            cwd=self.repo_root,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout_seconds,
-            check=False,
-        )
-        stdout = completed.stdout.strip()
-        stderr = completed.stderr.strip()
-        text_parts = [f"$ {' '.join(cmd)}", ""]
-        if stdout:
-            text_parts.append(stdout)
-        if stderr:
-            if stdout:
-                text_parts.append("")
-            text_parts.append("[stderr]")
-            text_parts.append(stderr)
-        if not stdout and not stderr:
-            text_parts.append("(no output)")
-        is_error = completed.returncode != 0
-        if is_error:
-            text_parts.append("")
-            text_parts.append(f"exit code: {completed.returncode}")
-        return ToolResult("\n".join(text_parts), is_error=is_error)
-
     def _read_message(self) -> dict[str, Any] | None:
+        first_line = sys.stdin.buffer.readline()
+        while first_line in (b"\r\n", b"\n"):
+            first_line = sys.stdin.buffer.readline()
+        if not first_line:
+            return None
+
+        if first_line.lstrip().startswith(b"{"):
+            self.message_framing = "newline"
+            return json.loads(first_line.decode("utf-8"))
+
+        self.message_framing = "content-length"
         headers: dict[str, str] = {}
+        line = first_line
         while True:
-            line = sys.stdin.buffer.readline()
-            if not line:
-                return None
             if line in (b"\r\n", b"\n"):
                 break
             try:
                 key, value = line.decode("utf-8").split(":", 1)
             except ValueError:
-                continue
-            headers[key.strip().lower()] = value.strip()
+                pass
+            else:
+                headers[key.strip().lower()] = value.strip()
+            line = sys.stdin.buffer.readline()
+            if not line:
+                return None
         length_text = headers.get("content-length")
         if length_text is None:
             return None
@@ -221,9 +226,12 @@ class McpServer:
 
     def _write_message(self, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        header = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii")
-        sys.stdout.buffer.write(header)
-        sys.stdout.buffer.write(body)
+        if self.message_framing == "newline":
+            sys.stdout.buffer.write(body + b"\n")
+        else:
+            header = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii")
+            sys.stdout.buffer.write(header)
+            sys.stdout.buffer.write(body)
         sys.stdout.buffer.flush()
 
 

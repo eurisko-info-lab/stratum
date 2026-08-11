@@ -1,0 +1,1 @@
+\n. (\p. p (\a. \b. a)) (n (\p. (\a. \b. \s. s a b) ((\p. p (\a. \b. b)) p) ((\m. \k. \f. \x. m f (k f x)) ((\p. p (\a. \b. a)) p) ((\p. p (\a. \b. b)) p))) ((\a. \b. \s. s a b) (\f. \x. x) (\f. \x. f (x))))

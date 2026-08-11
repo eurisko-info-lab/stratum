@@ -102,8 +102,10 @@ if [[ -n "${STRATUM_PARITY_SHARD:-}" ]]; then
     exit 1
   fi
   sharded_worlds=()
-  for ((i = shard_index; i < ${#world_list[@]}; i += shard_count)); do
+  i=$shard_index
+  while [[ "$i" -lt "${#world_list[@]}" ]]; do
     sharded_worlds+=("${world_list[i]}")
+    i=$((i + shard_count))
   done
   world_list=("${sharded_worlds[@]}")
 fi
