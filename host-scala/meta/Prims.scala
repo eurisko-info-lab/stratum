@@ -100,7 +100,7 @@ object Prims:
         val bit = bitpos(mask(hash, shift))
         val idx = index(bitmap, bit)
         if (bitmap & bit) == 0 then
-          val nextChildren = children.patch(idx, Vector(Leaf(hash, key, value)), 0)
+          val nextChildren = children.take(idx) ++ Vector(Leaf(hash, key, value)) ++ children.drop(idx)
           (BitmapIndexed(bitmap | bit, nextChildren), true)
         else
           val child = children(idx)
@@ -118,7 +118,7 @@ object Prims:
           val idx = entries.indexWhere(_._1 == key)
           if idx < 0 then (Some(collision), false)
           else
-            val next = entries.patch(idx, Vector.empty, 1)
+            val next = entries.take(idx) ++ entries.drop(idx + 1)
             next.length match
               case 0 => (None, true)
               case 1 =>
@@ -140,7 +140,7 @@ object Prims:
                 else (Some(BitmapIndexed(bitmap, children.updated(idx, nextChild))), true)
               case None =>
                 val nextBitmap = bitmap & ~bit
-                val nextChildren = children.patch(idx, Vector.empty, 1)
+                val nextChildren = children.take(idx) ++ children.drop(idx + 1)
                 if nextChildren.isEmpty then (None, true)
                 else if nextChildren.length == 1 then (Some(nextChildren.head), true)
                 else (Some(BitmapIndexed(nextBitmap, nextChildren)), true)
