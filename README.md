@@ -279,6 +279,7 @@ the repository as the same files:
 - [docs/invariants.md](docs/invariants.md) — the properties every layer must hold
 - [docs/native-boundary.md](docs/native-boundary.md) — what the host is allowed to know
 - [docs/studio.md](docs/studio.md) — how an editor is derived from a profile
+- [docs/claude-agent.md](docs/claude-agent.md) — configure Stratum as a Claude MCP agent
 - [docs/publication-workflow.md](docs/publication-workflow.md) — how a release is produced
 - [docs/foundations](docs/foundations) — one page per layer
 

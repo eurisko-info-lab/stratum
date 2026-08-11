@@ -2,6 +2,8 @@ package stratum.meta
 
 import stratum.canon.{Canon, CanonText}
 
+import java.util.{WeakHashMap => JWeakHashMap}
+
 /**
  * The fixed primitive set of MetaMachine0.
  *
@@ -23,9 +25,161 @@ object Prims:
     case Canon.L(items) => items
     case other          => fail("type-error", s"expected a list, found ${CanonText.write(other)}")
 
-  private def entries(c: Canon, fail: Fail): Vector[(Canon, Canon)] = c match
-    case Canon.M(es) => es
-    case other       => fail("type-error", s"expected a map, found ${CanonText.write(other)}")
+  private object HamtMap:
+    private val BitsPerLevel = 5
+    private val Mask = (1 << BitsPerLevel) - 1
+    private val MaxShift = 32
+
+    sealed trait Node
+    case object Empty extends Node
+    final case class BitmapIndexed(bitmap: Int, children: Vector[Node]) extends Node
+    final case class Leaf(hash: Int, key: Canon, value: Canon) extends Node
+    final case class Collision(hash: Int, entries: Vector[(Canon, Canon)]) extends Node
+
+    final case class Map(root: Node, size: Int):
+      def contains(key: Canon): Boolean = get(key).nonEmpty
+      def get(key: Canon): Option[Canon] = lookup(root, key.hashCode, key, 0)
+
+      def put(key: Canon, value: Canon): Map =
+        val (nextRoot, inserted) = insert(root, key.hashCode, key, value, 0)
+        if nextRoot eq root then this else Map(nextRoot, if inserted then size + 1 else size)
+
+      def delete(key: Canon): Map =
+        val (nextRootOpt, removed) = remove(root, key.hashCode, key, 0)
+        if !removed then this
+        else Map(nextRootOpt.getOrElse(Empty), size - 1)
+
+      def canonicalEntries: Vector[(Canon, Canon)] =
+        collect(root).sortWith((a, b) => Canon.compare(a._1, b._1) < 0)
+
+    val empty: Map = Map(Empty, 0)
+
+    def fromEntries(entries: Vector[(Canon, Canon)]): Map =
+      entries.foldLeft(empty) { case (acc, (k, v)) =>
+        // Preserve the historical mfrom rule: first key occurrence wins.
+        if acc.contains(k) then acc else acc.put(k, v)
+      }
+
+    private def mask(hash: Int, shift: Int): Int = (hash >>> shift) & Mask
+    private def bitpos(maskValue: Int): Int = 1 << maskValue
+    private def index(bitmap: Int, bit: Int): Int = Integer.bitCount(bitmap & (bit - 1))
+
+    private def collect(node: Node): Vector[(Canon, Canon)] = node match
+      case Empty => Vector.empty
+      case Leaf(_, key, value) => Vector(key -> value)
+      case Collision(_, entries) => entries
+      case BitmapIndexed(_, children) => children.flatMap(collect)
+
+    private def lookup(node: Node, hash: Int, key: Canon, shift: Int): Option[Canon] = node match
+      case Empty => None
+      case Leaf(_, k, v) => if k == key then Some(v) else None
+      case Collision(_, entries) => entries.find(_._1 == key).map(_._2)
+      case BitmapIndexed(bitmap, children) =>
+        val bit = bitpos(mask(hash, shift))
+        if (bitmap & bit) == 0 then None
+        else lookup(children(index(bitmap, bit)), hash, key, shift + BitsPerLevel)
+
+    private def insert(node: Node, hash: Int, key: Canon, value: Canon, shift: Int): (Node, Boolean) = node match
+      case Empty => (Leaf(hash, key, value), true)
+      case leaf @ Leaf(leafHash, leafKey, leafValue) =>
+        if leafKey == key then
+          if leafValue == value then (leaf, false) else (Leaf(leafHash, leafKey, value), false)
+        else if leafHash == hash then
+          (Collision(hash, Vector((leafKey, leafValue), (key, value))), true)
+        else
+          (mergeDifferentHashes(leafHash, leaf, hash, Leaf(hash, key, value), shift), true)
+      case collision @ Collision(collisionHash, entries) =>
+        if collisionHash == hash then
+          val idx = entries.indexWhere(_._1 == key)
+          if idx < 0 then (Collision(hash, entries :+ (key -> value)), true)
+          else if entries(idx)._2 == value then (collision, false)
+          else (Collision(hash, entries.updated(idx, key -> value)), false)
+        else
+          (mergeDifferentHashes(collisionHash, collision, hash, Leaf(hash, key, value), shift), true)
+      case bitmapNode @ BitmapIndexed(bitmap, children) =>
+        val bit = bitpos(mask(hash, shift))
+        val idx = index(bitmap, bit)
+        if (bitmap & bit) == 0 then
+          val nextChildren = children.patch(idx, Vector(Leaf(hash, key, value)), 0)
+          (BitmapIndexed(bitmap | bit, nextChildren), true)
+        else
+          val child = children(idx)
+          val (nextChild, inserted) = insert(child, hash, key, value, shift + BitsPerLevel)
+          if nextChild eq child then (bitmapNode, inserted)
+          else (BitmapIndexed(bitmap, children.updated(idx, nextChild)), inserted)
+
+    private def remove(node: Node, hash: Int, key: Canon, shift: Int): (Option[Node], Boolean) = node match
+      case Empty => (Some(Empty), false)
+      case leaf @ Leaf(_, leafKey, _) =>
+        if leafKey == key then (None, true) else (Some(leaf), false)
+      case collision @ Collision(collisionHash, entries) =>
+        if collisionHash != hash then (Some(collision), false)
+        else
+          val idx = entries.indexWhere(_._1 == key)
+          if idx < 0 then (Some(collision), false)
+          else
+            val next = entries.patch(idx, Vector.empty, 1)
+            next.length match
+              case 0 => (None, true)
+              case 1 =>
+                val (k, v) = next.head
+                (Some(Leaf(hash, k, v)), true)
+              case _ => (Some(Collision(hash, next)), true)
+      case bitmapNode @ BitmapIndexed(bitmap, children) =>
+        val bit = bitpos(mask(hash, shift))
+        if (bitmap & bit) == 0 then (Some(bitmapNode), false)
+        else
+          val idx = index(bitmap, bit)
+          val child = children(idx)
+          val (nextChildOpt, removed) = remove(child, hash, key, shift + BitsPerLevel)
+          if !removed then (Some(bitmapNode), false)
+          else
+            nextChildOpt match
+              case Some(nextChild) =>
+                if nextChild eq child then (Some(bitmapNode), true)
+                else (Some(BitmapIndexed(bitmap, children.updated(idx, nextChild))), true)
+              case None =>
+                val nextBitmap = bitmap & ~bit
+                val nextChildren = children.patch(idx, Vector.empty, 1)
+                if nextChildren.isEmpty then (None, true)
+                else if nextChildren.length == 1 then (Some(nextChildren.head), true)
+                else (Some(BitmapIndexed(nextBitmap, nextChildren)), true)
+
+    private def mergeDifferentHashes(hashA: Int, nodeA: Node, hashB: Int, nodeB: Node, shift: Int): Node =
+      if shift >= MaxShift then
+        val merged = collect(nodeA) ++ collect(nodeB)
+        Collision(hashA, merged)
+      else
+        val maskA = mask(hashA, shift)
+        val maskB = mask(hashB, shift)
+        val bitA = bitpos(maskA)
+        val bitB = bitpos(maskB)
+        if maskA != maskB then
+          if maskA < maskB then BitmapIndexed(bitA | bitB, Vector(nodeA, nodeB))
+          else BitmapIndexed(bitA | bitB, Vector(nodeB, nodeA))
+        else
+          BitmapIndexed(bitA, Vector(mergeDifferentHashes(hashA, nodeA, hashB, nodeB, shift + BitsPerLevel)))
+
+  private val mapCache = new JWeakHashMap[Canon, HamtMap.Map]()
+
+  private def mapValue(c: Canon, fail: Fail): HamtMap.Map = c match
+    case m @ Canon.M(entries) =>
+      mapCache.synchronized {
+        Option(mapCache.get(m)).getOrElse {
+          val built = HamtMap.fromEntries(entries)
+          mapCache.put(m, built)
+          built
+        }
+      }
+    case other => fail("type-error", s"expected a map, found ${CanonText.write(other)}")
+
+  private def canonMap(map: HamtMap.Map): Canon =
+    val canon = Canon.M(map.canonicalEntries)
+    mapCache.synchronized { mapCache.put(canon, map) }
+    canon
+
+  private def entries(c: Canon, fail: Fail): Vector[(Canon, Canon)] =
+    mapValue(c, fail).canonicalEntries
 
   private def string(c: Canon, fail: Fail): String = c match
     case Canon.S(v) => v
@@ -36,7 +190,7 @@ object Prims:
     case other      => fail("type-error", s"expected bytes, found ${CanonText.write(other)}")
 
   private def mkMap(es: Vector[(Canon, Canon)]): Canon =
-    Canon.M(es.distinctBy(_._1).sortWith((a, b) => Canon.compare(a._1, b._1) < 0))
+    canonMap(HamtMap.fromEntries(es))
 
   def apply(name: String, args: Vector[Canon], fail: Fail): Canon =
     def arity(n: Int): Unit =
@@ -170,14 +324,18 @@ object Prims:
         else Canon.L(l.take(i.toInt) ++ l.drop(i.toInt + 1))
 
       // -------------------------------------------------------------- maps
-      case "mnew"  => arity(0); Canon.M(Vector.empty)
-      case "msize" => arity(1); Canon.N(BigInt(entries(args(0), fail).length))
-      case "mhas"  => arity(2); Canon.B(entries(args(0), fail).exists(_._1 == args(1)))
+      case "mnew"  => arity(0); canonMap(HamtMap.empty)
+      case "msize" => arity(1); Canon.N(BigInt(mapValue(args(0), fail).size))
+      case "mhas"  => arity(2); Canon.B(mapValue(args(0), fail).contains(args(1)))
       case "mget" =>
         arity(3)
-        entries(args(0), fail).find(_._1 == args(1)).map(_._2).getOrElse(args(2))
-      case "mput" => arity(3); mkMap(entries(args(0), fail).filterNot(_._1 == args(1)) :+ (args(1) -> args(2)))
-      case "mdel" => arity(2); mkMap(entries(args(0), fail).filterNot(_._1 == args(1)))
+        mapValue(args(0), fail).get(args(1)).getOrElse(args(2))
+      case "mput" =>
+        arity(3)
+        canonMap(mapValue(args(0), fail).put(args(1), args(2)))
+      case "mdel" =>
+        arity(2)
+        canonMap(mapValue(args(0), fail).delete(args(1)))
       case "mkeys" =>
         arity(1); Canon.L(entries(args(0), fail).map(_._1))
       case "mvals" =>
@@ -186,10 +344,11 @@ object Prims:
         arity(1); Canon.L(entries(args(0), fail).map((k, v) => Canon.node("entry", k, v)))
       case "mfrom" =>
         arity(1)
-        mkMap(list(args(0), fail).map {
+        val loaded = list(args(0), fail).map {
           case Canon.Node("entry", Vector(k, v)) => k -> v
           case other => fail("type-error", s"mfrom expects entry nodes, found ${CanonText.write(other)}")
-        })
+        }
+        mkMap(loaded)
 
       // ----------------------------------------------------------- strings
       //
