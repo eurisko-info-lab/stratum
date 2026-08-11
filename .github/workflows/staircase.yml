@@ -57,11 +57,15 @@ jobs:
 
           if parent=$(git rev-parse HEAD^ 2>/dev/null); then
             parent_image="$repository:git-$parent"
-            if ! docker pull "$parent_image"; then
-              echo "required parent image is unavailable: $parent_image" >&2
-              exit 1
+            if docker pull "$parent_image"; then
+              ./tools/advance-image.sh "$child_image" "$parent_image"
+            else
+              echo "parent image is unavailable; rebuilding a self-contained image"
+              ./tools/image.sh clear
+              ./tools/regenerate.sh
+              ./tools/staircase.sh
+              ./tools/image.sh build "$child_image"
             fi
-            ./tools/advance-image.sh "$child_image" "$parent_image"
           else
             ./tools/advance-image.sh "$child_image"
           fi
