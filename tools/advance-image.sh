@@ -1,26 +1,34 @@
 #!/usr/bin/env bash
-# Advances exactly one Git commit from its immutable parent materialization image.
+# Advances from an immutable ancestor materialization image to the current commit.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if (($# < 1 || $# > 2)); then
-  echo "usage: tools/advance-image.sh <child-image> [parent-image]" >&2
+if (($# < 1 || $# > 3)); then
+  echo "usage: tools/advance-image.sh <child-image> [ancestor-image [ancestor-commit]]" >&2
   exit 2
 fi
 
 child_image=$1
-parent_image=${2:-}
+ancestor_image=${2:-}
+ancestor_commit=${3:-}
 
 if git rev-parse HEAD^ >/dev/null 2>&1; then
-  [[ -n "$parent_image" ]] || {
-    echo "a non-root commit requires its parent image" >&2
+  [[ -n "$ancestor_image" ]] || {
+    echo "a non-root commit requires an ancestor image" >&2
     exit 1
   }
-  ./tools/image.sh restore "$parent_image" "$(git rev-parse HEAD^)"
+  if [[ -z "$ancestor_commit" ]]; then
+    ancestor_commit=$(git rev-parse HEAD^)
+  fi
+  git merge-base --is-ancestor "$ancestor_commit" HEAD || {
+    echo "image commit is not an ancestor of HEAD: $ancestor_commit" >&2
+    exit 1
+  }
+  ./tools/image.sh restore "$ancestor_image" "$ancestor_commit"
 else
-  [[ -z "$parent_image" ]] || {
-    echo "the root commit cannot have a parent image" >&2
+  [[ -z "$ancestor_image" && -z "$ancestor_commit" ]] || {
+    echo "the root commit cannot have an ancestor image" >&2
     exit 1
   }
   ./tools/image.sh clear
@@ -30,7 +38,7 @@ fi
 
 if git rev-parse HEAD^ >/dev/null 2>&1; then
   mapfile -t worlds < <(
-    git diff --name-only HEAD^ HEAD |
+    git diff --name-only "$ancestor_commit" HEAD |
       grep -E '^(foundations|applications)/[^/]+/digest\.txt$' |
       sed 's|/digest\.txt$||' |
       sort -Vu || true
@@ -84,5 +92,5 @@ if ((${#worlds[@]} > 0)); then
   done
 fi
 
-./tools/image.sh build "$child_image" "$parent_image"
+./tools/image.sh build "$child_image" "$ancestor_image"
 echo "image advanced to $(git rev-parse --short HEAD)"
