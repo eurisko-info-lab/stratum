@@ -1,0 +1,193 @@
+module rustvm
+
+; RustVM: a register-numbered bytecode target with no concrete surface syntax
+; of its own (grammar = mk #none [], the StackSchema pattern from
+; features/tooling/tooling.meta), designed so a native interpreter can mirror
+; its layout as flat contiguous memory:
+;
+;  - each Function declares a fixed registerCount, so a native caller can
+;    allocate one fixed-size frame per call with no growth in the hot path;
+;  - struct/array values are built and read by integer field/element index,
+;    never by name lookup at run time, mirroring "pre-decode the shape once,
+;    not per access" (the same idiom features/strata/optimization.meta uses
+;    for its fast machine's FCon/FMatch).
+;
+; Deliberately out of scope for Phase 1 (see features/rustvm/compile.meta and
+; the project plan for what replaces these later): real references/mutation
+; (structs and arrays are immutable once built -- Meta0 has no aliasing
+; primitive, and modelling a mutable place is deferred), floats (no float
+; primitive exists in either host's Meta0 implementation), and dynamic/trait
+; dispatch (Call is always to a statically known function).
+
+data Instruction =
+  | #LoadConst [dst value]
+  | #Move [dst src]
+  | #IntBinOp [dst op left right]
+  | #IntCmp [dst op left right]
+  | #BoolNot [dst src]
+  | #Jump [target]
+  | #JumpIfFalse [cond target]
+  | #Call [dst function args]
+  | #Return [src]
+  | #NewStruct [dst fields]
+  | #GetField [dst base fieldIndex]
+  | #NewEnum [dst tag fields]
+  | #TagEq [dst value tag]
+  | #EnumField [dst value fieldIndex]
+  | #MakeArray [dst items]
+  | #ArrayGet [dst array index]
+  | #ArrayLen [dst array]
+
+record Program [functions entry]
+record Function [name arity registerCount code]
+
+; ------------------------------------------------------------------- frames
+;
+; A frame is a plain Meta list of registers, addressed by index through the
+; existing `nth`/`set-nth` primitives -- pure and functional (Meta0 has no
+; mutable state), which is the store-passing analogue of the native
+; interpreter's real, in-place `Vec<Value>` register file.
+
+judgment MakeFrame [registerCount] =
+  if prim #eq [registerCount 0]
+  then list []
+  else prim #cons [mk #unit [] call MakeFrame [prim #sub [registerCount 1]]]
+
+judgment InitFrame [function args] =
+  call FillArgs [call MakeFrame [call Function'registerCount [function]] args 0]
+
+judgment FillArgs [frame args index] =
+  match args {
+    case [] -> frame
+    case value :: rest -> call FillArgs [prim #set-nth [frame index value] rest prim #add [index 1]]
+  }
+
+judgment FrameGet [frame index] = prim #nth [frame index]
+judgment FrameSet [frame index value] = prim #set-nth [frame index value]
+
+judgment ReadRegs [frame indexes] =
+  match indexes {
+    case [] -> list []
+    case index :: rest -> prim #cons [call FrameGet [frame index] call ReadRegs [frame rest]]
+  }
+
+; ------------------------------------------------------------------ program
+
+judgment FindFunction [functions name] =
+  match functions {
+    case [] -> fail #unknown-function name
+    case function :: rest ->
+      if prim #eq [call Function'name [function] name]
+      then function
+      else call FindFunction [rest name]
+  }
+
+judgment FetchInstruction [function pc] =
+  prim #nth [call Function'code [function] pc]
+
+judgment CodeLength [function] = prim #len [call Function'code [function]]
+
+; --------------------------------------------------------------- the engine
+;
+; Explicit threaded fuel: Meta0 has no built-in loop, and the host's own
+; step/depth budget is a second, independent ceiling on top of this one (see
+; languages/lambda/lambda.meta's Normalize for the same pattern).
+
+judgment RunProgram [program args fuel] =
+  call CallFunction [program call FindFunction [call Program'functions [program] call Program'entry [program]] args fuel]
+
+judgment CallFunction [program function args fuel] =
+  call RunFunction [program function call InitFrame [function args] 0 fuel]
+
+judgment RunFunction [program function frame pc fuel] =
+  if prim #eq [fuel 0]
+  then fail #resource-exhausted "rustvm fuel exhausted"
+  else
+    match call FetchInstruction [function pc] {
+      case (#Return src) -> call FrameGet [frame src]
+      case instr ->
+        match call StepInstruction [program function frame pc instr] {
+          case (#next frame2 pc2) -> call RunFunction [program function frame2 pc2 prim #sub [fuel 1]]
+        }
+    }
+
+judgment StepInstruction [program function frame pc instr] =
+  match instr {
+    case (#LoadConst dst value) ->
+      mk #next [call FrameSet [frame dst value] prim #add [pc 1]]
+    case (#Move dst src) ->
+      mk #next [call FrameSet [frame dst call FrameGet [frame src]] prim #add [pc 1]]
+    case (#IntBinOp dst op left right) ->
+      mk #next [
+        call FrameSet [frame dst call ApplyIntBinOp [op call FrameGet [frame left] call FrameGet [frame right]]]
+        prim #add [pc 1]
+      ]
+    case (#IntCmp dst op left right) ->
+      mk #next [
+        call FrameSet [frame dst call ApplyIntCmp [op call FrameGet [frame left] call FrameGet [frame right]]]
+        prim #add [pc 1]
+      ]
+    case (#BoolNot dst src) ->
+      mk #next [call FrameSet [frame dst prim #not [call FrameGet [frame src]]] prim #add [pc 1]]
+    case (#Jump target) -> mk #next [frame target]
+    case (#JumpIfFalse cond target) ->
+      if call FrameGet [frame cond]
+      then mk #next [frame prim #add [pc 1]]
+      else mk #next [frame target]
+    case (#Call dst functionName args) ->
+      let callee = call FindFunction [call Program'functions [program] functionName] in
+      let result = call CallFunction [program callee call ReadRegs [frame args] 1000000] in
+      mk #next [call FrameSet [frame dst result] prim #add [pc 1]]
+    case (#NewStruct dst fields) ->
+      mk #next [call FrameSet [frame dst mk #struct [call ReadRegs [frame fields]]] prim #add [pc 1]]
+    case (#GetField dst base fieldIndex) ->
+      mk #next [
+        call FrameSet [frame dst prim #nth [call StructFields [call FrameGet [frame base]] fieldIndex]]
+        prim #add [pc 1]
+      ]
+    case (#NewEnum dst tag fields) ->
+      mk #next [call FrameSet [frame dst mk #enum [tag call ReadRegs [frame fields]]] prim #add [pc 1]]
+    case (#TagEq dst value tag) ->
+      mk #next [
+        call FrameSet [frame dst prim #eq [call EnumTag [call FrameGet [frame value]] tag]]
+        prim #add [pc 1]
+      ]
+    case (#EnumField dst value fieldIndex) ->
+      mk #next [
+        call FrameSet [frame dst prim #nth [call EnumFields [call FrameGet [frame value]] fieldIndex]]
+        prim #add [pc 1]
+      ]
+    case (#MakeArray dst items) ->
+      mk #next [call FrameSet [frame dst mk #array [call ReadRegs [frame items]]] prim #add [pc 1]]
+    case (#ArrayGet dst array index) ->
+      mk #next [
+        call FrameSet [frame dst prim #nth [call ArrayItems [call FrameGet [frame array]] call FrameGet [frame index]]]
+        prim #add [pc 1]
+      ]
+    case (#ArrayLen dst array) ->
+      mk #next [call FrameSet [frame dst prim #len [call ArrayItems [call FrameGet [frame array]]]] prim #add [pc 1]]
+  }
+
+judgment StructFields [value] = match value { case (#struct fields) -> fields }
+judgment EnumTag [value] = match value { case (#enum tag fields) -> tag }
+judgment EnumFields [value] = match value { case (#enum tag fields) -> fields }
+judgment ArrayItems [value] = match value { case (#array items) -> items }
+
+judgment ApplyIntBinOp [op left right] =
+  match op {
+    case #add -> prim #add [left right]
+    case #sub -> prim #sub [left right]
+    case #mul -> prim #mul [left right]
+    case #div -> prim #div [left right]
+    case #mod -> prim #mod [left right]
+  }
+
+judgment ApplyIntCmp [op left right] =
+  match op {
+    case #eq -> prim #eq [left right]
+    case #ne -> prim #ne [left right]
+    case #lt -> prim #lt [left right]
+    case #le -> prim #le [left right]
+    case #gt -> prim #gt [left right]
+    case #ge -> prim #ge [left right]
+  }

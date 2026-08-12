@@ -8,6 +8,7 @@ project/target/
 project/project/
 target/
 host-rust/target/
+rust-vm/target/
 verifier-lean/.lake/
 .stratum/
 tmp/

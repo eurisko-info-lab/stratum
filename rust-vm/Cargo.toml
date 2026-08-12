@@ -1,0 +1,19 @@
+[package]
+name = "stratum-rust-vm"
+version = "0.1.0"
+edition = "2021"
+
+# This VM has no dependencies by design, matching host-rust's own convention:
+# every primitive it needs (the canon-text decoder, the interpreter loop) is
+# written locally rather than pulled in.
+[dependencies]
+
+[[bin]]
+name = "stratum-rust-vm"
+path = "src/main.rs"
+
+# opt-level 3, not host-rust's opt-level 2: this crate's whole point is
+# measured execution performance, unlike host-rust's opt-level 2 which
+# prioritizes correctness-checking turnaround over runtime speed.
+[profile.release]
+opt-level = 3

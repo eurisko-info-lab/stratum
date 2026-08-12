@@ -26,19 +26,42 @@ category item
   prod EmptyMacroRulesBracket "macro_rules" "!" name : word "[" "]"
   prod MacroRulesParen "macro_rules" "!" name : word "(" body : document ")" ";"
   prod EmptyMacroRulesParen "macro_rules" "!" name : word "(" ")" ";"
-  prod FunctionDecl "fn" name : word header : headerDocument "{" body : document "}"
+  prod FunctionDecl "fn" name : word header : headerDocument body : block
+  prod EmptyFunctionDecl "fn" name : word header : headerDocument
+  prod StructDeclGeneric "struct" name : word generics : genericParams "{" body : document "}"
   prod StructDecl "struct" name : word "{" body : document "}"
   prod EmptyStructDecl "struct" name : word "{" "}"
   prod TupleStructDecl "struct" name : word "(" body : document ")" ";"
   prod UnitStructDecl "struct" name : word ";"
+  prod EnumDeclGeneric "enum" name : word generics : genericParams "{" body : document "}"
   prod EnumDecl "enum" name : word "{" body : document "}"
+  prod EmptyEnumDecl "enum" name : word "{" "}"
   prod ImplDecl "impl" heritage : headerDocument "{" body : document "}"
   prod EmptyImplDecl "impl" heritage : headerDocument "{" "}"
+  prod TraitDeclGeneric "trait" name : word generics : genericParams "{" body : document "}"
   prod TraitDecl "trait" name : word "{" body : document "}"
+  prod EmptyTraitDecl "trait" name : word "{" "}"
   prod TraitDeclHeritage "trait" name : word heritage : headerDocument "{" body : document "}"
   prod ModDecl "mod" name : word ";"
   prod ModDeclBraced "mod" name : word "{" body : document "}"
+  prod EmptyModDeclBraced "mod" name : word "{" "}"
   pass itemCore
+
+category genericParams
+  prod GenericParams "<" params : genericParamList ">"
+
+category genericParamList
+  fold GenericParamListSeq genericParamListItem
+
+category genericParamListItem
+  prod GenericParamItem value : genericParam ","
+  pass genericParam
+
+category genericParam
+  prod LifetimeParam value : lifetime
+  prod ConstParam "const" name : word ":" boundName : word
+  prod BoundedTypeParam name : word ":" boundName : word
+  prod TypeParam name : word
 
 category itemCore
   prod Paren "(" body : document ")"
@@ -101,7 +124,6 @@ category itemCore
   prod Le "<="
   prod Ge ">="
   prod Shl "<<"
-  prod Shr ">>"
   prod PlusEq "+="
   prod MinusEq "-="
   prod StarEq "*="
@@ -138,3 +160,203 @@ category headerDocument
 
 category headerItem
   pass itemCore
+
+category expr
+  pass assignExpr
+
+category assignExpr
+  prod AssignExpr target : orExpr "=" value : assignExpr
+  pass orExpr
+
+category orExpr
+  prod OrExpr left : andExpr "||" right : orExpr
+  pass andExpr
+
+category andExpr
+  prod AndExpr left : cmpExpr "&&" right : andExpr
+  pass cmpExpr
+
+category cmpExpr
+  prod EqExpr left : bitOrExpr "==" right : cmpExpr
+  prod NeExpr left : bitOrExpr "!=" right : cmpExpr
+  prod LeExpr left : bitOrExpr "<=" right : cmpExpr
+  prod GeExpr left : bitOrExpr ">=" right : cmpExpr
+  prod LtExpr left : bitOrExpr "<" right : cmpExpr
+  prod GtExpr left : bitOrExpr ">" right : cmpExpr
+  pass bitOrExpr
+
+category bitOrExpr
+  prod BitOrExpr left : bitXorExpr "|" right : bitOrExpr
+  pass bitXorExpr
+
+category bitXorExpr
+  prod BitXorExpr left : bitAndExpr "^" right : bitXorExpr
+  pass bitAndExpr
+
+category bitAndExpr
+  prod BitAndExpr left : shiftExpr "&" right : bitAndExpr
+  pass shiftExpr
+
+category shiftExpr
+  prod ShlExpr left : addExpr "<<" right : shiftExpr
+  prod ShrExpr left : addExpr ">" ">" right : shiftExpr
+  pass addExpr
+
+category addExpr
+  prod AddExpr left : mulExpr "+" right : addExpr
+  prod SubExpr left : mulExpr "-" right : addExpr
+  pass mulExpr
+
+category mulExpr
+  prod MulExpr left : unaryExpr "*" right : mulExpr
+  prod DivExpr left : unaryExpr "/" right : mulExpr
+  prod RemExpr left : unaryExpr "%" right : mulExpr
+  pass unaryExpr
+
+category unaryExpr
+  prod NegExpr "-" operand : unaryExpr
+  prod NotExpr "!" operand : unaryExpr
+  prod RefMutExpr "&" "mut" operand : unaryExpr
+  prod RefExpr "&" operand : unaryExpr
+  prod DerefExpr "*" operand : unaryExpr
+  pass postfixExpr
+
+category postfixExpr
+  prod PostfixApply base : primaryExpr suffixes : postfixSuffixSeq
+  pass primaryExpr
+
+category postfixSuffixSeq
+  fold PostfixSuffixSeq postfixSuffixOnly
+
+category postfixSuffixOnly
+  prod CallSuffix "(" args : exprList ")"
+  prod EmptyCallSuffix "(" ")"
+  prod MethodCallSuffix "." name : word "(" args : exprList ")"
+  prod EmptyMethodCallSuffix "." name : word "(" ")"
+  prod TupleFieldSuffix "." index : number
+  prod FieldSuffix "." name : word
+  prod IndexSuffix "[" index : expr "]"
+  prod TrySuffix "?"
+  prod PathSuffix "::" name : word
+
+category primaryExpr
+  prod NumberLit value : number
+  prod StringLit value : dquoted
+  prod CharLitExpr value : charlit
+  prod ByteCharExpr value : bytechar
+  prod TrueLit "true"
+  prod FalseLit "false"
+  prod StructLit name : word "{" fields : fieldInitSeq "}"
+  prod EmptyStructLit name : word "{" "}"
+  prod ParenExpr "(" value : expr ")"
+  prod ArrayLit "[" items : exprList "]"
+  prod EmptyArrayLit "[" "]"
+  prod MatchExpr "match" scrutinee : expr "{" arms : matchArmSeq "}"
+  prod EmptyMatchExpr "match" scrutinee : expr "{" "}"
+  prod LoopExpr "loop" body : block
+  prod WhileExpr "while" cond : expr body : block
+  prod ForExpr "for" pattern : pattern "in" iter : expr body : block
+  prod BreakValueExpr "break" value : expr
+  prod BreakExpr "break"
+  prod ContinueExpr "continue"
+  prod ReturnValueExpr "return" value : expr
+  prod ReturnExpr "return"
+  prod NameExpr name : word
+  pass ifExpr
+  pass block
+
+category ifExpr
+  prod IfExpr "if" cond : expr thenBranch : block elseBranch : elseTail
+  prod IfExprNoElse "if" cond : expr thenBranch : block
+
+category elseTail
+  prod ElseIf "else" value : ifExpr
+  prod ElseBlock "else" value : block
+
+category matchArmSeq
+  fold MatchArmSeq matchArm
+
+category matchArm
+  prod MatchArmComma pattern : pattern "=>" body : expr ","
+  prod MatchArmBlock pattern : pattern "=>" body : block
+  prod MatchArmLast pattern : pattern "=>" body : expr
+
+category fieldInitSeq
+  fold FieldInitSeq fieldInitItem
+
+category fieldInitItem
+  prod FieldInitComma name : word ":" value : expr ","
+  prod FieldInitLast name : word ":" value : expr
+
+category exprList
+  fold ExprListSeq exprListItem
+
+category exprListItem
+  prod ExprListItem value : expr ","
+  pass expr
+
+category pattern
+  prod PatOrPattern left : patternAtom "|" right : pattern
+  pass patternAtom
+
+category patternAtom
+  prod PatWild "_"
+  prod PatRefMut "&" "mut" inner : patternAtom
+  prod PatRef "&" inner : patternAtom
+  prod PatTuple "(" items : patternList ")"
+  prod PatEmptyTuple "(" ")"
+  prod PatStruct name : word "{" fields : patFieldList "}"
+  prod PatEmptyStruct name : word "{" "}"
+  prod PatEnumVariant name : word "(" items : patternList ")"
+  prod PatEmptyEnumVariant name : word "(" ")"
+  prod PatLitNumber value : number
+  prod PatLitString value : dquoted
+  prod PatLitTrue "true"
+  prod PatLitFalse "false"
+  prod PatMutVar "mut" name : word
+  prod PatVar name : word
+
+category patternList
+  fold PatternListSeq patternListItem
+
+category patternListItem
+  prod PatternListItem value : pattern ","
+  pass pattern
+
+category patFieldList
+  fold PatFieldListSeq patFieldListItem
+
+category patFieldListItem
+  prod PatFieldItem name : word ":" value : pattern ","
+  prod PatFieldItemLast name : word ":" value : pattern
+
+category block
+  prod Block "{" body : blockBody "}"
+  prod EmptyBlock "{" "}"
+
+category blockBody
+  fold BlockBody blockItem
+
+category blockItem
+  prod LetStmtTyped "let" pattern : pattern ":" ty : rawType "=" value : expr ";"
+  prod LetStmt "let" pattern : pattern "=" value : expr ";"
+  prod ExprStmt value : expr ";"
+  pass expr
+
+category rawType
+  fold RawType rawTypeToken
+
+category rawTypeToken
+  prod RawTypeParen "(" body : document ")"
+  prod RawTypeEmptyParen "(" ")"
+  prod RawTypeBracket "[" body : document "]"
+  prod RawTypeEmptyBracket "[" "]"
+  prod RawTypeWord value : word
+  prod RawTypeAmp "&"
+  prod RawTypeStar "*"
+  prod RawTypeLess "<"
+  prod RawTypeGreater ">"
+  prod RawTypePathSep "::"
+  prod RawTypeComma ","
+  prod RawTypeMut "mut"
+  prod RawTypeLifetime value : lifetime

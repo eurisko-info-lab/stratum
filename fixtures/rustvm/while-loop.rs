@@ -1,0 +1,8 @@
+// expect: 5
+fn main() -> i32 {
+    let mut i = 0;
+    while i < 5 {
+        i = i + 1;
+    }
+    i
+}

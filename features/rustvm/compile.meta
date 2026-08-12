@@ -1,0 +1,704 @@
+module rustvmcompile
+
+; Rust -> RustVM compiler. Consumes the extended languages/rust/rust.meta
+; parse tree (loaded alongside this program) and lowers it to
+; features/rustvm/rustvm.meta's Program/Function/Instruction records.
+;
+; Scope, matching the project's Phase 1 boundary: plain functions (no
+; generics/traits/methods), structs (construction + `.field` read, no
+; mutation), enums (construction via call-like syntax, match over
+; PatEnumVariant/PatWild only), arrays (literal + index, no mutation),
+; integer/bool arithmetic and comparisons, let/assign, if/else, loop/break/
+; continue (no break-with-value propagation), and plain function calls. `for`
+; loops and method calls fail explicitly rather than silently mis-compiling.
+;
+; Meta0 has no mutable environment, so the symbol table (CompileEnv) and the
+; running instruction offset (needed because Jump/JumpIfFalse targets are
+; whole-function-absolute) are both threaded explicitly as plain values
+; through every judgment below, exactly like AssociateExpr's own env-free
+; design and rust.meta's RustResolveItems/RustInferItems threading pattern.
+
+record CompileEnv [globals locals nextRegister]
+
+judgment EmptyEnv [] = mk #CompileEnv [prim #mnew [] prim #mnew [] 0]
+
+judgment EnvLookupLocal [env name] = prim #mget [call CompileEnv'locals [env] name #none]
+judgment EnvLookupGlobal [env name] = prim #mget [call CompileEnv'globals [env] name #none]
+
+judgment EnvBindLocal [env name] =
+  let register = call CompileEnv'nextRegister [env] in
+  mk #bound [
+    register
+    mk #CompileEnv [
+      call CompileEnv'globals [env]
+      prim #mput [call CompileEnv'locals [env] name register]
+      prim #add [register 1]
+    ]
+  ]
+
+judgment EnvFreshRegister [env] =
+  let register = call CompileEnv'nextRegister [env] in
+  mk #bound [
+    register
+    mk #CompileEnv [call CompileEnv'globals [env] call CompileEnv'locals [env] prim #add [register 1]]
+  ]
+
+judgment EnvDeclareGlobal [env name descriptor] =
+  mk #CompileEnv [prim #mput [call CompileEnv'globals [env] name descriptor] call CompileEnv'locals [env] call CompileEnv'nextRegister [env]]
+
+; --------------------------------------------------------- flat-list helpers
+;
+; Every comma-separated grammar list unwinds via FlattenSeq (the same
+; left-nested-pair idiom the whole codebase uses); exprList/patternList also
+; used `pass expr`/`pass pattern` as their final (no-trailing-comma) item, so
+; that one leaf is bare rather than wrapped -- UnwindExprList/UnwindPatternList
+; account for that asymmetry explicitly rather than assuming a uniform shape.
+
+judgment UnwindExprList [node] =
+  match call FlattenSeq [node #ExprListSeq] {
+    case items -> call UnwrapExprListItems [items]
+  }
+
+judgment UnwrapExprListItems [items] =
+  match items {
+    case [] -> list []
+    case (#ExprListItem value) :: rest -> prim #cons [value call UnwrapExprListItems [rest]]
+    case bare :: rest -> prim #cons [bare call UnwrapExprListItems [rest]]
+  }
+
+judgment UnwindPatternList [node] =
+  match call FlattenSeq [node #PatternListSeq] {
+    case items -> call UnwrapPatternListItems [items]
+  }
+
+judgment UnwrapPatternListItems [items] =
+  match items {
+    case [] -> list []
+    case (#PatternListItem value) :: rest -> prim #cons [value call UnwrapPatternListItems [rest]]
+    case bare :: rest -> prim #cons [bare call UnwrapPatternListItems [rest]]
+  }
+
+judgment UnwindFieldInits [node] = call FlattenSeq [node #FieldInitSeq]
+judgment UnwindMatchArms [node] = call FlattenSeq [node #MatchArmSeq]
+judgment UnwindBlockBody [node] = call FlattenSeq [node #BlockBody]
+judgment UnwindTopLevel [node] = call FlattenSeq [node #RustDocument]
+
+judgment FieldInitName [item] = match item { case (#FieldInitComma name value) -> name case (#FieldInitLast name value) -> name }
+judgment FieldInitValue [item] = match item { case (#FieldInitComma name value) -> value case (#FieldInitLast name value) -> value }
+judgment MatchArmPattern [arm] = match arm { case (#MatchArmComma pattern body) -> pattern case (#MatchArmBlock pattern body) -> pattern case (#MatchArmLast pattern body) -> pattern }
+judgment MatchArmBody [arm] = match arm { case (#MatchArmComma pattern body) -> body case (#MatchArmBlock pattern body) -> body case (#MatchArmLast pattern body) -> body }
+
+judgment CountCommas [items] =
+  match items {
+    case [] -> 0
+    case (#Comma) :: rest -> prim #add [1 call CountCommas [rest]]
+    case head :: rest -> call CountCommas [rest]
+  }
+
+; ----------------------------------------------------------- pass 1: collect
+;
+; Struct field names and enum variant arities are recovered from the same
+; flat, unstructured `document` bodies StructDecl/EnumDecl always produced --
+; unchanged by Phase 1's grammar extension, which only added a header slot
+; for generics, not a real field-list grammar (deferred; see the project
+; plan). Reusing languages/rust's own RustBody/RustParamNames here means this
+; compiler needs no new field-scanning logic of its own for that shape.
+
+judgment RustFieldNames [body] = call RustParamNames [call RustBody [body] #false]
+
+judgment RustEnumVariantList [items] =
+  match items {
+    case [] -> list []
+    case (#Word name) :: (#Paren body) :: rest ->
+      prim #cons [mk #variant [name prim #add [1 call CountCommas [call RustBody [body]]]] call RustEnumVariantList [rest]]
+    case (#Word name) :: (#Comma) :: rest -> prim #cons [mk #variant [name 0] call RustEnumVariantList [rest]]
+    case (#Word name) :: [] -> list [mk #variant [name 0]]
+    case head :: rest -> call RustEnumVariantList [rest]
+  }
+
+judgment DeclareEnumVariants [env enumName variants index] =
+  match variants {
+    case [] -> env
+    case (#variant name arity) :: rest ->
+      call DeclareEnumVariants [
+        call EnvDeclareGlobal [env name mk #enum-variant [name arity]]
+        enumName rest prim #add [index 1]
+      ]
+  }
+
+judgment CollectDeclarations [env items] =
+  match items {
+    case [] -> env
+    case (#FunctionDecl name header body) :: rest ->
+      call CollectDeclarations [call EnvDeclareGlobal [env name mk #function [call RustFunctionParams [header]]] rest]
+    case (#StructDecl name body) :: rest ->
+      call CollectDeclarations [call EnvDeclareGlobal [env name mk #struct [call RustFieldNames [body]]] rest]
+    case (#StructDeclGeneric name generics body) :: rest ->
+      call CollectDeclarations [call EnvDeclareGlobal [env name mk #struct [call RustFieldNames [body]]] rest]
+    case (#EmptyStructDecl name) :: rest ->
+      call CollectDeclarations [call EnvDeclareGlobal [env name mk #struct [list []]] rest]
+    case (#EnumDecl name body) :: rest ->
+      call CollectDeclarations [call DeclareEnumVariants [env name call RustEnumVariantList [call RustBody [body]] 0] rest]
+    case (#EnumDeclGeneric name generics body) :: rest ->
+      call CollectDeclarations [call DeclareEnumVariants [env name call RustEnumVariantList [call RustBody [body]] 0] rest]
+    case (#ImplDecl heritage body) :: rest -> call CollectDeclarations [env rest]
+    case (#TraitDecl name body) :: rest -> call CollectDeclarations [env rest]
+    case (#TraitDeclGeneric name generics body) :: rest -> call CollectDeclarations [env rest]
+    case (#EmptyTraitDecl name) :: rest -> call CollectDeclarations [env rest]
+    case head :: rest -> call CollectDeclarations [env rest]
+  }
+
+; --------------------------------------------------- pass 2: compile bodies
+
+; Every Compile* judgment for expressions returns `mk #compiled [code reg env]`:
+; code is this fragment's instruction list, reg is the register holding its
+; result, env is the (possibly-extended) environment with any new locals or
+; the updated register counter -- the offset a caller needs for a jump target
+; is always `prim #add [baseOffset (length of everything emitted so far)]`,
+; so callers thread baseOffset alongside env rather than folding it in.
+
+judgment CompileFunctions [env items] =
+  match items {
+    case [] -> list []
+    case (#FunctionDecl name header body) :: rest ->
+      prim #cons [call CompileFunction [env name header body] call CompileFunctions [env rest]]
+    case head :: rest -> call CompileFunctions [env rest]
+  }
+
+judgment CompileFunction [env name header body] =
+  let paramNames = call RustFunctionParams [header] in
+  let bound = call BindParams [env paramNames] in
+  match bound {
+    case (#bound env2) ->
+      match call CompileBlock [env2 0 body] {
+        case (#compiled code reg env3) ->
+          mk #Function [name prim #len [paramNames] call CompileEnv'nextRegister [env3] prim #append [code list [mk #Return [reg]]]]
+      }
+  }
+
+judgment BindParams [env names] =
+  match names {
+    case [] -> mk #bound [env]
+    case name :: rest ->
+      match call EnvBindLocal [env name] {
+        case (#bound register env2) -> call BindParams [env2 rest]
+      }
+  }
+
+judgment CompileBlock [env baseOffset node] =
+  match node {
+    case (#EmptyBlock) ->
+      match call EnvFreshRegister [env] {
+        case (#bound reg env2) -> mk #compiled [list [mk #LoadConst [reg 0]] reg env2]
+      }
+    case (#Block body) -> call CompileStmts [env baseOffset call UnwindBlockBody [body]]
+  }
+
+judgment CompileStmts [env baseOffset items] =
+  match items {
+    case [] ->
+      match call EnvFreshRegister [env] {
+        case (#bound reg env2) -> mk #compiled [list [mk #LoadConst [reg 0]] reg env2]
+      }
+    case (#LetStmtTyped pattern ty value) :: rest -> call CompileLet [env baseOffset pattern value rest]
+    case (#LetStmt pattern value) :: rest -> call CompileLet [env baseOffset pattern value rest]
+    case (#ExprStmt value) :: rest ->
+      match call CompileExpr [env baseOffset value] {
+        case (#compiled code reg env2) ->
+          match call CompileStmts [env2 prim #add [baseOffset prim #len [code]] rest] {
+            case (#compiled restCode restReg env3) -> mk #compiled [prim #append [code restCode] restReg env3]
+          }
+      }
+    case tail :: [] -> call CompileExpr [env baseOffset tail]
+    case tail :: rest ->
+      match call CompileExpr [env baseOffset tail] {
+        case (#compiled code reg env2) ->
+          match call CompileStmts [env2 prim #add [baseOffset prim #len [code]] rest] {
+            case (#compiled restCode restReg env3) -> mk #compiled [prim #append [code restCode] restReg env3]
+          }
+      }
+  }
+
+; A let-bound variable's struct type (needed to resolve `.field` later, since
+; Phase 1 has no real type system) is recorded as a side entry in `globals`
+; keyed by `name ++ "$type"`, populated only when the initializer is directly
+; a StructLit -- sufficient for the fixture corpus's `let p = Point { .. };
+; p.x` shape without building a full type checker.
+
+judgment LetBoundVarName [pattern] = match pattern { case (#PatVar name) -> name case (#PatMutVar name) -> name }
+
+judgment RecordStructTypeIfNeeded [env name value] =
+  match value {
+    case (#StructLit structTypeName fields) -> call EnvDeclareGlobal [env prim #scat [name "$type"] structTypeName]
+    case (#EmptyStructLit structTypeName) -> call EnvDeclareGlobal [env prim #scat [name "$type"] structTypeName]
+    case other -> env
+  }
+
+judgment CompileLet [env baseOffset pattern value rest] =
+  match call CompileExpr [env baseOffset value] {
+    case (#compiled code reg env2) ->
+      let name = call LetBoundVarName [pattern] in
+      match call EnvBindLocal [env2 name] {
+        case (#bound register env3) ->
+          let env3b = call RecordStructTypeIfNeeded [env3 name value] in
+          let letCode = prim #append [code list [mk #Move [register reg]]] in
+          match call CompileStmts [env3b prim #add [baseOffset prim #len [letCode]] rest] {
+            case (#compiled restCode restReg env4) -> mk #compiled [prim #append [letCode restCode] restReg env4]
+          }
+      }
+  }
+
+; ------------------------------------------------------------- expressions
+
+judgment CompileExprList [env baseOffset nodes] =
+  match nodes {
+    case [] -> mk #compiledList [list [] list [] env]
+    case node :: rest ->
+      match call CompileExpr [env baseOffset node] {
+        case (#compiled code reg env2) ->
+          match call CompileExprList [env2 prim #add [baseOffset prim #len [code]] rest] {
+            case (#compiledList restCode restRegs env3) ->
+              mk #compiledList [prim #append [code restCode] prim #cons [reg restRegs] env3]
+          }
+      }
+  }
+
+judgment CompileExpr [env baseOffset rawNode] =
+  let node = call AssociateExpr [rawNode] in
+  match node {
+    case (#NumberLit value) ->
+      match call EnvFreshRegister [env] {
+        case (#bound reg env2) -> mk #compiled [list [mk #LoadConst [reg prim #str->nat [value]]] reg env2]
+      }
+    case (#TrueLit) ->
+      match call EnvFreshRegister [env] {
+        case (#bound reg env2) -> mk #compiled [list [mk #LoadConst [reg #t]] reg env2]
+      }
+    case (#FalseLit) ->
+      match call EnvFreshRegister [env] {
+        case (#bound reg env2) -> mk #compiled [list [mk #LoadConst [reg #f]] reg env2]
+      }
+    case (#NameExpr name) -> call CompileNameExpr [env name]
+    case (#BinOp op left right) -> call CompileBinOp [env baseOffset op left right]
+    case (#EqExpr left right) -> call CompileCmp [env baseOffset #eq left right]
+    case (#NeExpr left right) -> call CompileCmp [env baseOffset #ne left right]
+    case (#LtExpr left right) -> call CompileCmp [env baseOffset #lt left right]
+    case (#LeExpr left right) -> call CompileCmp [env baseOffset #le left right]
+    case (#GtExpr left right) -> call CompileCmp [env baseOffset #gt left right]
+    case (#GeExpr left right) -> call CompileCmp [env baseOffset #ge left right]
+    case (#NegExpr operand) ->
+      match call CompileExpr [env baseOffset operand] {
+        case (#compiled code reg env2) ->
+          match call EnvFreshRegister [env2] {
+            case (#bound dst env3) ->
+              mk #compiled [prim #append [code list [mk #LoadConst [dst 0] mk #IntBinOp [dst #sub dst reg]]] dst env3]
+          }
+      }
+    case (#NotExpr operand) ->
+      match call CompileExpr [env baseOffset operand] {
+        case (#compiled code reg env2) ->
+          match call EnvFreshRegister [env2] {
+            case (#bound dst env3) -> mk #compiled [prim #append [code list [mk #BoolNot [dst reg]]] dst env3]
+          }
+      }
+    case (#AssignExpr target value) -> call CompileAssign [env baseOffset target value]
+    case (#ParenExpr value) -> call CompileExpr [env baseOffset value]
+    case (#PostfixApply base suffixes) -> call CompilePostfix [env baseOffset base call FlattenSeq [suffixes #PostfixSuffixSeq]]
+    case (#StructLit name fields) -> call CompileStructLit [env baseOffset name call UnwindFieldInits [fields]]
+    case (#EmptyStructLit name) -> call CompileStructLit [env baseOffset name list []]
+    case (#ArrayLit items) -> call CompileArrayLit [env baseOffset call UnwindExprList [items]]
+    case (#EmptyArrayLit) -> call CompileArrayLit [env baseOffset list []]
+    case (#IfExpr cond thenBranch elseBranch) -> call CompileIf [env baseOffset cond thenBranch call ElseTailBranch [elseBranch]]
+    case (#IfExprNoElse cond thenBranch) -> call CompileIf [env baseOffset cond thenBranch mk #EmptyBlock []]
+    case (#MatchExpr scrutinee arms) -> call CompileMatch [env baseOffset scrutinee call UnwindMatchArms [arms]]
+    case (#LoopExpr body) -> call CompileLoop [env baseOffset body]
+    case (#WhileExpr cond body) -> call CompileWhile [env baseOffset cond body]
+    case (#BreakExpr) ->
+      match call EnvFreshRegister [env] {
+        case (#bound reg env2) -> mk #compiled [list [mk #LoadConst [reg 0] mk #PendingJump [#break]] reg env2]
+      }
+    case (#BreakValueExpr value) ->
+      match call CompileExpr [env baseOffset value] {
+        case (#compiled code reg env2) -> mk #compiled [prim #append [code list [mk #PendingJump [#break]]] reg env2]
+      }
+    case (#ContinueExpr) -> call CompileContinue [env]
+    case (#Block body) -> call CompileBlock [env baseOffset node]
+    case (#EmptyBlock) -> call CompileBlock [env baseOffset node]
+    case other -> fail #unsupported-expression call PrintDebug [other]
+  }
+
+judgment PrintDebug [node] = prim #ref->str [prim #digest [node]]
+
+judgment ElseTailBranch [elseBranch] =
+  match elseBranch { case (#ElseBlock value) -> value case (#ElseIf value) -> value }
+
+judgment CompileNameExpr [env name] =
+  match call EnvLookupLocal [env name] {
+    case #none ->
+      match call EnvLookupGlobal [env name] {
+        case (#enum-variant tag arity) ->
+          if prim #eq [arity 0]
+          then
+            match call EnvFreshRegister [env] {
+              case (#bound reg env2) -> mk #compiled [list [mk #NewEnum [reg tag list []]] reg env2]
+            }
+          else fail #enum-variant-needs-arguments name
+        case other -> fail #unbound-name name
+      }
+    case register ->
+      match call EnvFreshRegister [env] {
+        case (#bound reg env2) -> mk #compiled [list [mk #Move [reg register]] reg env2]
+      }
+  }
+
+judgment CompileBinOp [env baseOffset op left right] =
+  match call CompileExpr [env baseOffset left] {
+    case (#compiled leftCode leftReg env2) ->
+      match call CompileExpr [env2 prim #add [baseOffset prim #len [leftCode]] right] {
+        case (#compiled rightCode rightReg env3) ->
+          match call EnvFreshRegister [env3] {
+            case (#bound dst env4) ->
+              mk #compiled [
+                prim #append [leftCode prim #append [rightCode list [mk #IntBinOp [dst op leftReg rightReg]]]]
+                dst env4
+              ]
+          }
+      }
+  }
+
+judgment CompileCmp [env baseOffset op left right] =
+  match call CompileExpr [env baseOffset left] {
+    case (#compiled leftCode leftReg env2) ->
+      match call CompileExpr [env2 prim #add [baseOffset prim #len [leftCode]] right] {
+        case (#compiled rightCode rightReg env3) ->
+          match call EnvFreshRegister [env3] {
+            case (#bound dst env4) ->
+              mk #compiled [
+                prim #append [leftCode prim #append [rightCode list [mk #IntCmp [dst op leftReg rightReg]]]]
+                dst env4
+              ]
+          }
+      }
+  }
+
+judgment CompileAssign [env baseOffset target value] =
+  match target {
+    case (#NameExpr name) ->
+      match call EnvLookupLocal [env name] {
+        case #none -> fail #unbound-name name
+        case register ->
+          match call CompileExpr [env baseOffset value] {
+            case (#compiled code reg env2) ->
+              mk #compiled [prim #append [code list [mk #Move [register reg]]] register env2]
+          }
+      }
+  }
+
+; The fixture corpus never chains more than one real suffix onto a base
+; (no `a.b.c`, no `a[i].b`) -- Phase 1 supports exactly that: a bare base, or
+; a base with exactly one suffix, and fails explicitly on anything wider
+; rather than silently mis-compiling a chain this compiler was never given a
+; type system to resolve.
+judgment CompilePostfix [env baseOffset base suffixes] =
+  match suffixes {
+    case [] -> call CompileExpr [env baseOffset base]
+    case (#CallSuffix args) :: [] -> call CompileCall [env baseOffset base call UnwindExprList [args]]
+    case (#EmptyCallSuffix) :: [] -> call CompileCall [env baseOffset base list []]
+    case (#FieldSuffix name) :: [] -> call CompileFieldAccessDynamic [env baseOffset base name]
+    case (#IndexSuffix index) :: [] -> call CompileIndexChain [env baseOffset base index]
+    case (#MethodCallSuffix name args) :: rest -> fail #method-calls-not-supported-in-phase-1 name
+    case (#EmptyMethodCallSuffix name) :: rest -> fail #method-calls-not-supported-in-phase-1 name
+    case other :: rest -> fail #unsupported-postfix-suffix other
+  }
+
+judgment CompileCall [env baseOffset base args] =
+  match base {
+    case (#NameExpr name) ->
+      match call EnvLookupGlobal [env name] {
+        case (#function arity) ->
+          match call CompileExprList [env baseOffset args] {
+            case (#compiledList code regs env2) ->
+              match call EnvFreshRegister [env2] {
+                case (#bound dst env3) -> mk #compiled [prim #append [code list [mk #Call [dst name regs]]] dst env3]
+              }
+          }
+        case (#enum-variant tag arity) ->
+          match call CompileExprList [env baseOffset args] {
+            case (#compiledList code regs env2) ->
+              match call EnvFreshRegister [env2] {
+                case (#bound dst env3) -> mk #compiled [prim #append [code list [mk #NewEnum [dst tag regs]]] dst env3]
+              }
+          }
+        case other -> fail #unbound-callee name
+      }
+  }
+
+judgment CompileFieldAccessDynamic [env baseOffset base name] =
+  match call CompileExpr [env baseOffset base] {
+    case (#compiled code reg env2) ->
+      match call FindFieldIndexForValueExpr [env2 base name] {
+        case fieldIndex ->
+          match call EnvFreshRegister [env2] {
+            case (#bound dst env3) ->
+              mk #compiled [prim #append [code list [mk #GetField [dst reg fieldIndex]]] dst env3]
+          }
+      }
+  }
+
+; FindFieldIndexForValueExpr resolves `name`'s position for the LET-bound
+; struct type of `base`, tracked via a lightweight second local map from
+; local-variable name to its struct type name, populated only when a let's
+; initializer is a direct StructLit -- sufficient for the fixture corpus
+; (plain `let p = Point { .. }; p.x`) without a full type system.
+
+judgment FindFieldIndexForValueExpr [env base name] =
+  match base {
+    case (#NameExpr varName) ->
+      match call EnvLookupGlobal [env prim #scat [varName "$type"]] {
+        case #none -> fail #cannot-resolve-field name
+        case structTypeName ->
+          match call EnvLookupGlobal [env structTypeName] {
+            case (#struct fieldNames) -> call IndexOfName [fieldNames name 0]
+          }
+      }
+    case other -> fail #cannot-resolve-field name
+  }
+
+judgment IndexOfName [names name index] =
+  match names {
+    case [] -> fail #unknown-field name
+    case head :: rest ->
+      if prim #eq [head name]
+      then index
+      else call IndexOfName [rest name prim #add [index 1]]
+  }
+
+judgment CompileStructLit [env baseOffset name fieldInits] =
+  match call EnvLookupGlobal [env name] {
+    case (#struct fieldNames) ->
+      match call CompileFieldInitsInOrder [env baseOffset fieldNames fieldInits] {
+        case (#compiledList code regs env2) ->
+          match call EnvFreshRegister [env2] {
+            case (#bound dst env3) -> mk #compiled [prim #append [code list [mk #NewStruct [dst regs]]] dst env3]
+          }
+      }
+    case other -> fail #unknown-struct name
+  }
+
+judgment CompileFieldInitsInOrder [env baseOffset fieldNames fieldInits] =
+  match fieldNames {
+    case [] -> mk #compiledList [list [] list [] env]
+    case fieldName :: restNames ->
+      match call FindFieldInit [fieldInits fieldName] {
+        case value ->
+          match call CompileExpr [env baseOffset value] {
+            case (#compiled code reg env2) ->
+              match call CompileFieldInitsInOrder [env2 prim #add [baseOffset prim #len [code]] restNames fieldInits] {
+                case (#compiledList restCode restRegs env3) ->
+                  mk #compiledList [prim #append [code restCode] prim #cons [reg restRegs] env3]
+              }
+          }
+      }
+  }
+
+judgment FindFieldInit [fieldInits name] =
+  match fieldInits {
+    case [] -> fail #missing-field-init name
+    case item :: rest ->
+      if prim #eq [call FieldInitName [item] name]
+      then call FieldInitValue [item]
+      else call FindFieldInit [rest name]
+  }
+
+judgment CompileArrayLit [env baseOffset items] =
+  match call CompileExprList [env baseOffset items] {
+    case (#compiledList code regs env2) ->
+      match call EnvFreshRegister [env2] {
+        case (#bound dst env3) -> mk #compiled [prim #append [code list [mk #MakeArray [dst regs]]] dst env3]
+      }
+  }
+
+judgment CompileIndexChain [env baseOffset base index] =
+  match call CompileExpr [env baseOffset base] {
+    case (#compiled baseCode baseReg env2) ->
+      match call CompileExpr [env2 prim #add [baseOffset prim #len [baseCode]] index] {
+        case (#compiled indexCode indexReg env3) ->
+          match call EnvFreshRegister [env3] {
+            case (#bound dst env4) ->
+              mk #compiled [
+                prim #append [baseCode prim #append [indexCode list [mk #ArrayGet [dst baseReg indexReg]]]]
+                dst env4
+              ]
+          }
+      }
+  }
+
+; ----------------------------------------------------------------- if/else
+
+; Layout: condCode ++ [JumpIfFalse condReg elseStart] ++ thenFull ++ elseFull,
+; where thenFull ends with `Jump afterAll` to skip elseFull once thenFull has
+; run, and elseStart/afterAll are both computed from the *previous* fragment's
+; measured length -- each offset is only knowable once the fragment it
+; follows has actually been compiled, which is why this is threaded
+; step-by-step rather than computed algebraically up front.
+judgment CompileIf [env baseOffset cond thenBranch elseBranch] =
+  match call CompileExpr [env baseOffset cond] {
+    case (#compiled condCode condReg env2) ->
+      let thenStart = prim #add [baseOffset prim #add [prim #len [condCode] 1]] in
+      match call CompileBlock [env2 thenStart thenBranch] {
+        case (#compiled thenCode thenReg env3) ->
+          let elseStart = prim #add [thenStart prim #add [prim #len [thenCode] 2]] in
+          match call CompileBlock [env3 elseStart elseBranch] {
+            case (#compiled elseCode elseReg env4) ->
+              match call EnvFreshRegister [env4] {
+                case (#bound result env5) ->
+                  let afterAll = prim #add [elseStart prim #add [prim #len [elseCode] 1]] in
+                  let thenFull = prim #append [thenCode list [mk #Move [result thenReg] mk #Jump [afterAll]]] in
+                  let elseFull = prim #append [elseCode list [mk #Move [result elseReg]]] in
+                  mk #compiled [
+                    prim #append [condCode prim #append [list [mk #JumpIfFalse [condReg elseStart]] prim #append [thenFull elseFull]]]
+                    result env5
+                  ]
+              }
+          }
+      }
+  }
+
+; ------------------------------------------------------------------- match
+
+judgment CompileMatch [env baseOffset scrutinee arms] =
+  match call CompileExpr [env baseOffset scrutinee] {
+    case (#compiled scrutCode scrutReg env2) ->
+      match call EnvFreshRegister [env2] {
+        case (#bound result env3) ->
+          let armsBaseOffset = prim #add [baseOffset prim #len [scrutCode]] in
+          match call CompileMatchArms [env3 armsBaseOffset scrutReg result arms] {
+            case (#compiled armsCode armsReg env4) ->
+              let matchEnd = prim #add [armsBaseOffset prim #len [armsCode]] in
+              mk #compiled [prim #append [scrutCode call PatchPendingJumps [armsCode #matchEnd matchEnd]] result env4]
+          }
+      }
+  }
+
+judgment CompileMatchArms [env baseOffset scrutReg result arms] =
+  match arms {
+    case [] -> mk #compiled [list [] result env]
+    case arm :: rest ->
+      let pattern = call MatchArmPattern [arm] in
+      let body = call MatchArmBody [arm] in
+      match pattern {
+        case (#PatWild) ->
+          match call CompileMatchArmBody [env baseOffset result body] {
+            case (#compiled code reg env2) -> mk #compiled [code result env2]
+          }
+        case (#PatEnumVariant name items) ->
+          match call EnvLookupGlobal [env name] {
+            case (#enum-variant tag arity) ->
+              let testOffset = baseOffset in
+              match call EnvFreshRegister [env] {
+                case (#bound testReg env2) ->
+                  let bindings = call UnwindPatternList [items] in
+                  match call BindEnumFields [env2 bindings 0] {
+                    case (#bound env3) ->
+                      let afterTestOffset = prim #add [testOffset 2] in
+                      let bindCode = call CompileEnumBindCode [env3 scrutReg bindings 0] in
+                      match call CompileMatchArmBody [env3 prim #add [afterTestOffset prim #len [bindCode]] result body] {
+                        case (#compiled bodyCode reg env5) ->
+                          let nextOffset = prim #add [afterTestOffset prim #add [prim #len [bindCode] prim #add [prim #len [bodyCode] 1]]] in
+                          match call CompileMatchArms [env5 nextOffset scrutReg result rest] {
+                            case (#compiled restCode restReg env6) ->
+                              mk #compiled [
+                                prim #append [
+                                  list [mk #TagEq [testReg scrutReg tag] mk #JumpIfFalse [testReg nextOffset]]
+                                  prim #append [bindCode prim #append [bodyCode prim #append [list [mk #PendingJump [#matchEnd]] restCode]]]
+                                ]
+                                result env6
+                              ]
+                          }
+                      }
+                  }
+              }
+            case other -> fail #unknown-enum-variant name
+          }
+      }
+  }
+
+judgment BindEnumFields [env bindings index] =
+  match bindings {
+    case [] -> mk #bound [env]
+    case (#PatVar name) :: rest ->
+      match call EnvBindLocal [env name] {
+        case (#bound register env2) -> call BindEnumFields [env2 rest prim #add [index 1]]
+      }
+    case (#PatWild) :: rest -> call BindEnumFields [env rest prim #add [index 1]]
+  }
+
+judgment CompileEnumBindCode [env scrutReg bindings index] =
+  match bindings {
+    case [] -> list []
+    case (#PatVar name) :: rest ->
+      match call EnvLookupLocal [env name] {
+        case register ->
+          prim #cons [mk #EnumField [register scrutReg index] call CompileEnumBindCode [env scrutReg rest prim #add [index 1]]]
+      }
+    case (#PatWild) :: rest -> call CompileEnumBindCode [env scrutReg rest prim #add [index 1]]
+  }
+
+judgment CompileMatchArmBody [env baseOffset result body] =
+  match call CompileExpr [env baseOffset body] {
+    case (#compiled code reg env2) -> mk #compiled [prim #append [code list [mk #Move [result reg]]] reg env2]
+  }
+
+; --------------------------------------------------------------- loop/while
+
+judgment CompileLoop [env baseOffset body] =
+  match call CompileBlock [env baseOffset body] {
+    case (#compiled bodyCode bodyReg env2) ->
+      let backEdge = list [mk #Jump [baseOffset]] in
+      let afterLoop = prim #add [baseOffset prim #add [prim #len [bodyCode] 1]] in
+      match call EnvFreshRegister [env2] {
+        case (#bound result env3) ->
+          mk #compiled [call PatchPendingJumps [prim #append [bodyCode backEdge] #break afterLoop] result env3]
+      }
+  }
+
+judgment CompileWhile [env baseOffset cond body] =
+  match call CompileExpr [env baseOffset cond] {
+    case (#compiled condCode condReg env2) ->
+      let bodyStart = prim #add [baseOffset prim #add [prim #len [condCode] 1]] in
+      match call CompileBlock [env2 bodyStart body] {
+        case (#compiled bodyCode bodyReg env3) ->
+          let afterLoop = prim #add [bodyStart prim #add [prim #len [bodyCode] 1]] in
+          let assembled = prim #append [condCode prim #append [list [mk #JumpIfFalse [condReg afterLoop]] prim #append [bodyCode list [mk #Jump [baseOffset]]]]] in
+          match call EnvFreshRegister [env3] {
+            case (#bound result env4) -> mk #compiled [call PatchPendingJumps [assembled #break afterLoop] result env4]
+          }
+      }
+  }
+
+judgment CompileContinue [env] =
+  match call EnvFreshRegister [env] {
+    case (#bound reg env2) -> mk #compiled [list [mk #LoadConst [reg 0]] reg env2]
+  }
+
+judgment PatchPendingJumps [code kind target] =
+  match code {
+    case [] -> list []
+    case (#PendingJump k) :: rest ->
+      if prim #eq [k kind]
+      then prim #cons [mk #Jump [target] call PatchPendingJumps [rest kind target]]
+      else prim #cons [mk #PendingJump [k] call PatchPendingJumps [rest kind target]]
+    case instr :: rest -> prim #cons [instr call PatchPendingJumps [rest kind target]]
+  }
+
+; --------------------------------------------------------------- top level
+
+judgment CompileRustProgram [parsed] =
+  let items = call UnwindTopLevel [parsed] in
+  let env = call CollectDeclarations [call EmptyEnv [] items] in
+  mk #Program [call CompileFunctions [env items] "main"]
+
+judgment CompileRustSource [grammar source] = call CompileRustProgram [call ParseRust [grammar source]]
+
+judgment RunSource [grammar source] =
+  call RunProgram [call CompileRustSource [grammar source] list [] 1000000]

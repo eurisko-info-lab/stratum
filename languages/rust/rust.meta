@@ -104,6 +104,150 @@ record Semicolon []
 record Assign []
 record Word [value]
 
+; ---------------------------------------------------------- Phase 1 additions
+;
+; Records for the grammar categories added in languages/rust/rust.grammar:
+; generic-parameter headers, the expression precedence ladder, patterns,
+; statements and blocks. See that file's own comments for the parser-level
+; reasoning (no left recursion, greedy-fold hazards, and why >> is rebuilt
+; from two tokens); these records just mirror each production's bound fields.
+
+record StructDeclGeneric [name generics body]
+record EmptyFunctionDecl [name header]
+record EnumDeclGeneric [name generics body]
+record EmptyEnumDecl [name]
+record TraitDeclGeneric [name generics body]
+record EmptyTraitDecl [name]
+record EmptyModDeclBraced [name]
+
+record GenericParams [params]
+record GenericParamItem [value]
+record LifetimeParam [value]
+record ConstParam [name boundName]
+record BoundedTypeParam [name boundName]
+record TypeParam [name]
+
+record AssignExpr [target value]
+record OrExpr [left right]
+record AndExpr [left right]
+record EqExpr [left right]
+record NeExpr [left right]
+record LeExpr [left right]
+record GeExpr [left right]
+record LtExpr [left right]
+record GtExpr [left right]
+record BitOrExpr [left right]
+record BitXorExpr [left right]
+record BitAndExpr [left right]
+record ShlExpr [left right]
+record ShrExpr [left right]
+record AddExpr [left right]
+record SubExpr [left right]
+record MulExpr [left right]
+record DivExpr [left right]
+record RemExpr [left right]
+record NegExpr [operand]
+record NotExpr [operand]
+record RefMutExpr [operand]
+record RefExpr [operand]
+record DerefExpr [operand]
+
+; Produced by AssociateExpr, not by the grammar: the uniform post-association
+; shape the compiler consumes for every left-associative arithmetic operator,
+; replacing the right-leaning AddExpr/SubExpr/MulExpr/DivExpr/RemExpr chain
+; the grammar itself is forced to produce (see AssociateExpr below).
+record BinOp [op left right]
+
+record PostfixApply [base suffixes]
+record CallSuffix [args]
+record EmptyCallSuffix []
+record MethodCallSuffix [name args]
+record EmptyMethodCallSuffix [name]
+record TupleFieldSuffix [index]
+record FieldSuffix [name]
+record IndexSuffix [index]
+record TrySuffix []
+record PathSuffix [name]
+
+record NumberLit [value]
+record StringLit [value]
+record CharLitExpr [value]
+record ByteCharExpr [value]
+record TrueLit []
+record FalseLit []
+record StructLit [name fields]
+record EmptyStructLit [name]
+record ParenExpr [value]
+record ArrayLit [items]
+record EmptyArrayLit []
+record MatchExpr [scrutinee arms]
+record EmptyMatchExpr [scrutinee]
+record LoopExpr [body]
+record WhileExpr [cond body]
+record ForExpr [pattern iter body]
+record BreakValueExpr [value]
+record BreakExpr []
+record ContinueExpr []
+record ReturnValueExpr [value]
+record ReturnExpr []
+record NameExpr [name]
+
+record IfExpr [cond thenBranch elseBranch]
+record IfExprNoElse [cond thenBranch]
+record ElseIf [value]
+record ElseBlock [value]
+
+record MatchArmComma [pattern body]
+record MatchArmBlock [pattern body]
+record MatchArmLast [pattern body]
+
+record FieldInitComma [name value]
+record FieldInitLast [name value]
+
+record ExprListItem [value]
+
+record PatOrPattern [left right]
+record PatWild []
+record PatRefMut [inner]
+record PatRef [inner]
+record PatTuple [items]
+record PatEmptyTuple []
+record PatStruct [name fields]
+record PatEmptyStruct [name]
+record PatEnumVariant [name items]
+record PatEmptyEnumVariant [name]
+record PatLitNumber [value]
+record PatLitString [value]
+record PatLitTrue []
+record PatLitFalse []
+record PatMutVar [name]
+record PatVar [name]
+
+record PatternListItem [value]
+
+record PatFieldItem [name value]
+record PatFieldItemLast [name value]
+
+record Block [body]
+record EmptyBlock []
+record LetStmtTyped [pattern ty value]
+record LetStmt [pattern value]
+record ExprStmt [value]
+
+record RawTypeParen [body]
+record RawTypeEmptyParen []
+record RawTypeBracket [body]
+record RawTypeEmptyBracket []
+record RawTypeWord [value]
+record RawTypeAmp []
+record RawTypeStar []
+record RawTypeLess []
+record RawTypeGreater []
+record RawTypePathSep []
+record RawTypeComma []
+record RawTypeMut []
+record RawTypeLifetime [value]
+
 judgment ParseRust [grammar source] = call Parse [grammar source]
 judgment PrintRust [grammar syntax] = call Print [grammar syntax]
 judgment RustWellFormed [grammar source] =
@@ -471,3 +615,92 @@ judgment InferRust [grammar source] =
 
 judgment TypeCheckRust [grammar source] =
   call RustTypeErrors [call InferRust [grammar source]]
+
+; ---------------------------------------------------------- Phase 1 additions
+;
+; RustResolveItems/RustInferItems above are pre-Phase-1 shallow passes: they
+; walk a function body via `RustBody`, i.e. `FlattenSeq [body #RustDocument]`.
+; A function body is now a `block` (Block/EmptyBlock), not a RustDocument
+; fold, and FlattenSeq's own base case (languages/meta/elaborate.meta:11-17)
+; degrades a non-matching tag to a one-element list rather than erroring, so
+; these two passes still run without crashing -- they simply treat an entire
+; function body as one opaque, unrecognised item and report nothing from
+; inside it. That is a deliberate, scoped choice, not an oversight: real
+; resolve/infer semantics over the new block/expr/pattern grammar belong to
+; features/rustvm/compile.meta's own environment-threading compiler pass,
+; which recurses over this grammar directly rather than by reusing these
+; older flat-token scans.
+
+; ---------------------------------------------- expression re-association
+;
+; The grammar's binary-operator categories are right-recursive (the parser
+; is a packrat PEG with no left-recursion support -- see rust.grammar's own
+; comment), so `a - b - c` parses as SubExpr[a, SubExpr[b, c]], which
+; evaluates to the wrong value for any non-associative operator. Printing is
+; unaffected (token order never changes), so this is round-trip-safe; only a
+; consumer that evaluates the tree needs the corrected shape, which is why
+; this lives here as a compiler-only helper rather than a grammar change.
+;
+; AssociateExpr un-nests a right-leaning chain into a flat
+; (firstOperand, [(op, operand), ...]) pair and refolds it left-associatively
+; into a uniform `BinOp [op left right]` tree, recursing into whichever
+; nested chain (if any) each operand itself turns out to be. Every other
+; expression shape passes through unchanged; the compiler calls AssociateExpr
+; again whenever it recurses into a sub-expression, so association happens
+; on demand rather than as one whole-tree pass.
+
+judgment UnwindAddChainFrom [node] =
+  match node {
+    case (#AddExpr left right) ->
+      match call UnwindAddChainFrom [right] {
+        case (#chain firstOfRight restOfRight) ->
+          mk #chain [call AssociateExpr [left] prim #cons [mk #step [#add firstOfRight] restOfRight]]
+      }
+    case (#SubExpr left right) ->
+      match call UnwindAddChainFrom [right] {
+        case (#chain firstOfRight restOfRight) ->
+          mk #chain [call AssociateExpr [left] prim #cons [mk #step [#sub firstOfRight] restOfRight]]
+      }
+    case other -> mk #chain [call AssociateExpr [other] list []]
+  }
+
+judgment UnwindMulChainFrom [node] =
+  match node {
+    case (#MulExpr left right) ->
+      match call UnwindMulChainFrom [right] {
+        case (#chain firstOfRight restOfRight) ->
+          mk #chain [call AssociateExpr [left] prim #cons [mk #step [#mul firstOfRight] restOfRight]]
+      }
+    case (#DivExpr left right) ->
+      match call UnwindMulChainFrom [right] {
+        case (#chain firstOfRight restOfRight) ->
+          mk #chain [call AssociateExpr [left] prim #cons [mk #step [#div firstOfRight] restOfRight]]
+      }
+    case (#RemExpr left right) ->
+      match call UnwindMulChainFrom [right] {
+        case (#chain firstOfRight restOfRight) ->
+          mk #chain [call AssociateExpr [left] prim #cons [mk #step [#rem firstOfRight] restOfRight]]
+      }
+    case other -> mk #chain [call AssociateExpr [other] list []]
+  }
+
+judgment RefoldChainSteps [acc steps] =
+  match steps {
+    case [] -> acc
+    case (#step op operand) :: rest -> call RefoldChainSteps [mk #BinOp [op acc operand] rest]
+  }
+
+judgment RefoldChain [chain] =
+  match chain {
+    case (#chain first steps) -> call RefoldChainSteps [first steps]
+  }
+
+judgment AssociateExpr [node] =
+  match node {
+    case (#AddExpr left right) -> call RefoldChain [call UnwindAddChainFrom [node]]
+    case (#SubExpr left right) -> call RefoldChain [call UnwindAddChainFrom [node]]
+    case (#MulExpr left right) -> call RefoldChain [call UnwindMulChainFrom [node]]
+    case (#DivExpr left right) -> call RefoldChain [call UnwindMulChainFrom [node]]
+    case (#RemExpr left right) -> call RefoldChain [call UnwindMulChainFrom [node]]
+    case other -> other
+  }

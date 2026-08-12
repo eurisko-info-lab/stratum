@@ -106,6 +106,7 @@ verdict with evidence.
 | --- | --- |
 | [host-scala](host-scala) | the frozen bootstrap host |
 | [host-rust](host-rust) | an independent bootstrap host, no dependencies |
+| [rust-vm](rust-vm) | a cache-conscious native interpreter for the RustVM bytecode target (features/rustvm), checked against the Meta reference by tools/rustvm-check.sh |
 | [verifier-lean](verifier-lean) | the derivation model and its determinism proof |
 | [languages](languages) | Meta, Grammar and object language artifacts |
 | [features](features) | canonical feature artifacts added by each step |

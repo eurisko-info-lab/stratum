@@ -112,20 +112,23 @@ jobs:
           cache: sbt
       - uses: sbt/setup-sbt@bfea3c5f48abd221b04a6df4798aa5eb8b6a2baf # v1
       - run: cargo build --release --manifest-path host-rust/Cargo.toml
+      - run: cargo build --release --manifest-path rust-vm/Cargo.toml
       - name: Replay functional transcripts and run Scala suites
         env:
           STRATUM_SKIP_FOUNDATION_TRANSCRIPTS: 1
         run: >-
           sbt -batch
-          'testOnly stratum.CanonSuite stratum.HostCoreSuite stratum.NativeBoundarySuite stratum.RunbookSuite stratum.TranscriptSuite'
+          'testOnly stratum.CanonSuite stratum.HostCoreSuite stratum.NativeBoundarySuite stratum.RunbookSuite stratum.TranscriptSuite stratum.RustVmMachineSuite'
           repoTool/test
+      - name: Native rust-vm agrees with the Meta reference
+        run: ./tools/rustvm-check.sh
 
   parity:
     needs: image
     strategy:
       fail-fast: false
       matrix:
-        shard: ['0/4', '1/4', '2/4', '3/8', '7/8']
+        shard: ['0/8', '1/8', '2/8', '3/8', '4/8', '5/8', '6/8', '7/8']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
